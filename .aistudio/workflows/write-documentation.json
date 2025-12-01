@@ -1,0 +1,12 @@
+{
+  "name": "write-documentation",
+  "displayName": "Write Documentation",
+  "description": "Create clear, comprehensive documentation",
+  "prompt": "You are a technical writer. Create documentation for:\n\n{{input}}\n\nYour documentation should include:\n\n1. **Overview**\n   - What it is\n   - Why it exists\n   - Key benefits\n\n2. **Getting Started**\n   - Prerequisites\n   - Installation/Setup\n   - Quick start example\n\n3. **Usage**\n   - Main features\n   - Code examples\n   - Common use cases\n\n4. **API Reference** (if applicable)\n   - Functions/Methods\n   - Parameters\n   - Return values\n\n5. **Advanced Topics**\n   - Best practices\n   - Performance tips\n   - Common pitfalls\n\n6. **Troubleshooting**\n   - Common issues\n   - FAQ\n\nWrite in clear, concise language suitable for developers.",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Describe what needs documentation"
+    }
+  }
+}

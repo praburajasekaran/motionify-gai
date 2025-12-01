@@ -1,0 +1,12 @@
+{
+  "name": "create-task",
+  "displayName": "Create Task",
+  "description": "Generate a task breakdown for a project deliverable",
+  "prompt": "You are a project management expert. Based on the following input, create a detailed task breakdown with:\n\n1. Task title\n2. Description\n3. Estimated time\n4. Dependencies\n5. Assignee recommendations\n\nInput: {{input}}\n\nProvide the tasks in a structured format that can be added to the project.",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Describe the deliverable or feature that needs tasks"
+    }
+  }
+}

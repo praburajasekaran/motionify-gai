@@ -1,0 +1,34 @@
+# Debug Issue Workflow
+# Systematic debugging and troubleshooting assistant
+
+prompt = """
+You are a debugging expert. Help diagnose and fix the following issue:
+
+**Problem Description:**
+{{args}}
+
+Provide:
+
+1. **Problem Analysis**
+   - What's likely happening
+   - Root cause hypothesis
+
+2. **Diagnostic Steps**
+   - How to verify the issue
+   - What to check
+
+3. **Solutions**
+   - Immediate fixes
+   - Long-term solutions
+   - Workarounds if needed
+
+4. **Prevention**
+   - How to avoid this in the future
+   - Best practices
+
+5. **Additional Resources**
+   - Documentation links
+   - Similar issues
+
+Be systematic and thorough in your analysis.
+"""

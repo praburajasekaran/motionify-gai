@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "workflows": [
+    {
+      "id": "create-task",
+      "file": "workflows/create-task.json",
+      "enabled": true,
+      "category": "Project Management"
+    },
+    {
+      "id": "analyze-project",
+      "file": "workflows/analyze-project.json",
+      "enabled": true,
+      "category": "Project Management"
+    },
+    {
+      "id": "review-code",
+      "file": "workflows/review-code.json",
+      "enabled": true,
+      "category": "Development"
+    },
+    {
+      "id": "generate-test-cases",
+      "file": "workflows/generate-test-cases.json",
+      "enabled": true,
+      "category": "Testing"
+    },
+    {
+      "id": "create-prompt",
+      "file": "workflows/create-prompt.json",
+      "enabled": true,
+      "category": "AI & Prompts"
+    },
+    {
+      "id": "debug-issue",
+      "file": "workflows/debug-issue.json",
+      "enabled": true,
+      "category": "Development"
+    },
+    {
+      "id": "write-documentation",
+      "file": "workflows/write-documentation.json",
+      "enabled": true,
+      "category": "Documentation"
+    },
+    {
+      "id": "refactor-code",
+      "file": "workflows/refactor-code.json",
+      "enabled": true,
+      "category": "Development"
+    }
+  ]
+}

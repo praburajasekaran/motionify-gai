@@ -1,0 +1,12 @@
+{
+  "name": "generate-test-cases",
+  "displayName": "Generate Test Cases",
+  "description": "Create comprehensive test cases for a feature or component",
+  "prompt": "You are a QA engineer. Generate comprehensive test cases for the following feature:\n\n{{input}}\n\nProvide test cases covering:\n\n1. **Happy Path Tests** - Normal usage scenarios\n2. **Edge Cases** - Boundary conditions\n3. **Error Handling** - Invalid inputs and error states\n4. **Integration Tests** - How it works with other components\n5. **User Experience Tests** - Usability and accessibility\n\nFormat each test case with:\n- Test ID\n- Description\n- Preconditions\n- Test Steps\n- Expected Result\n- Priority (High/Medium/Low)",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Describe the feature or component to test"
+    }
+  }
+}

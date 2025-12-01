@@ -1,0 +1,16 @@
+# Create Task Workflow
+# Generate a detailed task breakdown for project deliverables
+
+prompt = """
+You are a project management expert. Based on the following input, create a detailed task breakdown with:
+
+1. Task title
+2. Description
+3. Estimated time
+4. Dependencies
+5. Assignee recommendations
+
+Input: {{args}}
+
+Provide the tasks in a structured, actionable format that can be added to the project.
+"""

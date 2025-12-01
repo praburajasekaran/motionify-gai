@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-    Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle, 
+import {
+    Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
     Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox, Mail, Crown,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen
 } from 'lucide-react';
-import { 
-    Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator, 
-    Avatar, Input, ClientLogo, Progress, Tabs, TabsList, TabsTrigger, 
+import {
+    Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
+    Avatar, Input, ClientLogo, Progress, Tabs, TabsList, TabsTrigger,
     TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn
 } from '../components/ui/design-system';
 import { MOCK_PROJECTS, TEAM_MEMBERS } from '../constants';
 import { generateProjectTasks, analyzeProjectRisk } from '../services/geminiService';
 import { ProjectStatus } from '../types';
+import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 
 // --- Battery Component ---
 const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
@@ -496,6 +497,11 @@ export const ProjectDetail = () => {
                     </div>
                 </div>
             </div>
+        </TabsContent>
+
+        {/* --- DELIVERABLES TAB --- */}
+        <TabsContent value="deliverables">
+            <DeliverablesTab />
         </TabsContent>
 
         {/* --- FILES TAB --- */}

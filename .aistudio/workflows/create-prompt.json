@@ -1,0 +1,12 @@
+{
+  "name": "create-prompt",
+  "displayName": "Create Optimized Prompt",
+  "description": "Generate an optimized, well-structured prompt for AI tasks",
+  "prompt": "You are an expert prompt engineer. Create an optimized prompt for the following task:\n\n**Task:** {{input}}\n\nYour prompt should:\n\n1. **Clear Context** - Set the role and context\n2. **Specific Instructions** - Detailed, unambiguous steps\n3. **Output Format** - Exactly how the response should be structured\n4. **Examples** - 1-2 examples if helpful\n5. **Constraints** - Any limitations or requirements\n6. **Quality Criteria** - What makes a good response\n\nProvide the prompt in a format that can be directly used with an AI model.",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Describe what you want the prompt to achieve"
+    }
+  }
+}

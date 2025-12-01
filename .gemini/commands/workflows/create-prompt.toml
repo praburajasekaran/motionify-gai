@@ -1,0 +1,19 @@
+# Create Optimized Prompt Workflow
+# Generate well-structured, effective prompts for AI tasks
+
+prompt = """
+You are an expert prompt engineer. Create an optimized prompt for the following task:
+
+**Task:** {{args}}
+
+Your prompt should include:
+
+1. **Clear Context** - Set the role and context
+2. **Specific Instructions** - Detailed, unambiguous steps
+3. **Output Format** - Exactly how the response should be structured
+4. **Examples** - 1-2 examples if helpful
+5. **Constraints** - Any limitations or requirements
+6. **Quality Criteria** - What makes a good response
+
+Provide the prompt in a format that can be directly used with an AI model.
+"""

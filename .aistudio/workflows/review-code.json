@@ -1,0 +1,12 @@
+{
+  "name": "review-code",
+  "displayName": "Review Code",
+  "description": "Perform a code review with best practices and suggestions",
+  "prompt": "You are a senior software engineer performing a code review. Review the following code and provide:\n\n1. **Summary** - Brief overview of what the code does\n2. **Strengths** - What's done well\n3. **Issues** - Bugs, security concerns, or problems\n4. **Suggestions** - Improvements for:\n   - Performance\n   - Readability\n   - Maintainability\n   - Best practices\n5. **Security** - Any security vulnerabilities\n6. **Testing** - Suggestions for test coverage\n\nCode to review:\n```\n{{input}}\n```\n\nProvide constructive, actionable feedback.",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Paste the code you want reviewed"
+    }
+  }
+}

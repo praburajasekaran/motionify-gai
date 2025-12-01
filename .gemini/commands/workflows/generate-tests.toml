@@ -1,0 +1,24 @@
+# Generate Test Cases Workflow
+# Create comprehensive test cases for features or components
+
+prompt = """
+You are a QA engineer. Generate comprehensive test cases for the following feature:
+
+{{args}}
+
+Provide test cases covering:
+
+1. **Happy Path Tests** - Normal usage scenarios
+2. **Edge Cases** - Boundary conditions
+3. **Error Handling** - Invalid inputs and error states
+4. **Integration Tests** - How it works with other components
+5. **User Experience Tests** - Usability and accessibility
+
+Format each test case with:
+- Test ID
+- Description
+- Preconditions
+- Test Steps
+- Expected Result
+- Priority (High/Medium/Low)
+"""

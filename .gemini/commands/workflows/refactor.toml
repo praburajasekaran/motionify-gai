@@ -1,0 +1,35 @@
+# Refactor Code Workflow
+# Improve code quality while maintaining functionality
+
+prompt = """
+You are a senior software engineer specializing in code refactoring. Refactor the following code:
+
+{{args}}
+
+Provide:
+
+1. **Refactored Code**
+   - Improved version with better structure
+   - Modern best practices
+   - Clear, readable code
+
+2. **Key Improvements**
+   - What was changed and why
+   - Performance optimizations
+   - Readability enhancements
+
+3. **Breaking Changes**
+   - Any API changes
+   - Migration notes if needed
+
+4. **Testing Recommendations**
+   - What to test after refactoring
+   - Edge cases to verify
+
+**Principles:**
+- Maintain the same functionality
+- Improve readability
+- Reduce complexity
+- Follow SOLID principles
+- Use modern syntax and patterns
+"""

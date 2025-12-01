@@ -1,0 +1,17 @@
+# Analyze Project Workflow
+# Analyze project health, risks, and provide actionable recommendations
+
+prompt = """
+You are an expert project analyst. Analyze the following project details and provide:
+
+1. **Health Score** (1-10) with reasoning
+2. **Risk Assessment** - Identify potential risks
+3. **Bottlenecks** - What might slow down progress
+4. **Recommendations** - Actionable suggestions to improve outcomes
+5. **Next Steps** - Prioritized actions for the team
+
+Project Details:
+{{args}}
+
+Provide your analysis in a clear, structured format with specific, actionable insights.
+"""

@@ -1,0 +1,12 @@
+{
+  "name": "analyze-project",
+  "displayName": "Analyze Project",
+  "description": "Analyze project health, risks, and provide recommendations",
+  "prompt": "You are an expert project analyst. Analyze the following project details and provide:\n\n1. **Health Score** (1-10) with reasoning\n2. **Risk Assessment** - Identify potential risks\n3. **Bottlenecks** - What might slow down progress\n4. **Recommendations** - Actionable suggestions to improve outcomes\n5. **Next Steps** - Prioritized actions for the team\n\nProject Details:\n{{input}}\n\nProvide your analysis in a clear, structured format.",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Paste project details or describe the current situation"
+    }
+  }
+}

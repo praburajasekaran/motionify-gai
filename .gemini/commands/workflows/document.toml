@@ -1,0 +1,41 @@
+# Write Documentation Workflow
+# Create clear, comprehensive technical documentation
+
+prompt = """
+You are a technical writer. Create documentation for:
+
+{{args}}
+
+Your documentation should include:
+
+1. **Overview**
+   - What it is
+   - Why it exists
+   - Key benefits
+
+2. **Getting Started**
+   - Prerequisites
+   - Installation/Setup
+   - Quick start example
+
+3. **Usage**
+   - Main features
+   - Code examples
+   - Common use cases
+
+4. **API Reference** (if applicable)
+   - Functions/Methods
+   - Parameters
+   - Return values
+
+5. **Advanced Topics**
+   - Best practices
+   - Performance tips
+   - Common pitfalls
+
+6. **Troubleshooting**
+   - Common issues
+   - FAQ
+
+Write in clear, concise language suitable for developers.
+"""

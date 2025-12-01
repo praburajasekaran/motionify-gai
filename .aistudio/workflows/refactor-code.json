@@ -1,0 +1,12 @@
+{
+  "name": "refactor-code",
+  "displayName": "Refactor Code",
+  "description": "Improve code quality while maintaining functionality",
+  "prompt": "You are a senior software engineer specializing in code refactoring. Refactor the following code:\n\n```\n{{input}}\n```\n\nProvide:\n\n1. **Refactored Code**\n   - Improved version with better structure\n   - Modern best practices\n   - Clear, readable code\n\n2. **Key Improvements**\n   - What was changed and why\n   - Performance optimizations\n   - Readability enhancements\n\n3. **Breaking Changes**\n   - Any API changes\n   - Migration notes if needed\n\n4. **Testing Recommendations**\n   - What to test after refactoring\n   - Edge cases to verify\n\n**Principles:**\n- Maintain the same functionality\n- Improve readability\n- Reduce complexity\n- Follow SOLID principles\n- Use modern syntax and patterns",
+  "parameters": {
+    "input": {
+      "type": "string",
+      "description": "Paste the code to refactor"
+    }
+  }
+}
