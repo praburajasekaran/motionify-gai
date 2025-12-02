@@ -31,6 +31,7 @@ export interface DeliverableReviewModalProps {
   onClose: () => void;
   onApprove: () => void;
   onRequestRevision: () => void;
+  onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
 }
 
 export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
@@ -39,6 +40,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
   onClose,
   onApprove,
   onRequestRevision,
+  onConvertToTask,
 }) => {
   if (!deliverable) return null;
 
@@ -68,8 +70,8 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
               deliverable.status === 'final_delivered'
                 ? 'success'
                 : deliverable.watermarked
-                ? 'warning'
-                : 'info'
+                  ? 'warning'
+                  : 'info'
             }
             className="shrink-0"
           >
@@ -89,11 +91,8 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                 src={isFinalDelivered ? deliverable.finalFileUrl || deliverable.betaFileUrl : deliverable.betaFileUrl}
                 watermarked={deliverable.watermarked && !isFinalDelivered}
                 className="w-full aspect-video"
-                timestampMarkers={
-                  deliverable.approvalHistory
-                    .flatMap((a) => a.timestampedComments || [])
-                    .map((c) => c.timestamp)
-                }
+                comments={deliverable.approvalHistory.flatMap((a) => a.timestampedComments || [])}
+                onConvertToTask={onConvertToTask}
               />
             ) : (
               <div className="w-full aspect-video bg-zinc-100 rounded-lg flex items-center justify-center">
@@ -202,7 +201,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                         (
                         {Math.ceil(
                           (new Date(deliverable.expiresAt).getTime() - Date.now()) /
-                            (1000 * 60 * 60 * 24)
+                          (1000 * 60 * 60 * 24)
                         )}{' '}
                         days remaining)
                       </span>

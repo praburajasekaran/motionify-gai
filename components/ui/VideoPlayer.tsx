@@ -11,9 +11,10 @@
 
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Plus, X } from 'lucide-react';
-import { cn } from './design-system';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Plus, X, CheckSquare } from 'lucide-react';
+import { cn, Button, Input, Select } from './design-system';
 import { TimestampedComment } from '../../types/deliverable.types';
+import { TEAM_MEMBERS } from '../../constants';
 
 export interface VideoPlayerProps {
   src: string;
@@ -23,6 +24,7 @@ export interface VideoPlayerProps {
   onAddComment?: (timestamp: number, comment: string) => void;
   onRemoveComment?: (commentId: string) => void;
   onUpdateComment?: (commentId: string, newText: string) => void;
+  onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
 }
 
 export interface VideoPlayerHandle {
@@ -37,6 +39,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
   onAddComment,
   onRemoveComment,
   onUpdateComment,
+  onConvertToTask,
 }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,6 +57,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
   const [newCommentTimestamp, setNewCommentTimestamp] = useState<number>(0);
   const [newCommentText, setNewCommentText] = useState('');
   const [tooltipPosition, setTooltipPosition] = useState({ top: 16, right: 16 });
+
+  // Convert to Task state
+  const [showConvertToTaskForm, setShowConvertToTaskForm] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskAssignee, setTaskAssignee] = useState(TEAM_MEMBERS[0].id);
 
   // Drag state for repositionable tooltip
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
@@ -226,6 +234,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
     setNewCommentText('');
     setShowAddCommentForm(false);
     setActiveCommentId(null);
+  };
+
+  const handleConvertToTaskClick = (comment: TimestampedComment) => {
+    setTaskTitle(comment.comment);
+    setTaskAssignee(TEAM_MEMBERS[0].id);
+    setShowConvertToTaskForm(true);
+    // Keep activeCommentId set so we know which comment we are converting
+  };
+
+  const submitConvertToTask = () => {
+    if (activeCommentId && onConvertToTask) {
+      onConvertToTask(activeCommentId, taskTitle, taskAssignee);
+      setShowConvertToTaskForm(false);
+      setActiveCommentId(null); // Close the tooltip after conversion
+    }
   };
 
   const handleDeleteComment = (commentId: string) => {
@@ -507,13 +530,71 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="text-sm text-zinc-700">{comment.comment}</p>
-                <button
-                  onClick={() => handleDeleteComment(comment.id)}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium"
-                >
-                  Delete comment
-                </button>
+
+                {showConvertToTaskForm ? (
+                  <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-2 text-xs font-bold text-purple-700 uppercase tracking-wider">
+                      <CheckSquare className="h-3 w-3" />
+                      Convert to Task
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-500">Task Title</label>
+                      <Input
+                        value={taskTitle}
+                        onChange={(e) => setTaskTitle(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-500">Assignee</label>
+                      <Select
+                        value={taskAssignee}
+                        onValueChange={setTaskAssignee}
+                        options={TEAM_MEMBERS.map(m => ({ label: m.name, value: m.id }))}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => setShowConvertToTaskForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                        onClick={submitConvertToTask}
+                      >
+                        Create Task
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-zinc-700">{comment.comment}</p>
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Delete
+                      </button>
+
+                      {onConvertToTask && (
+                        <button
+                          onClick={() => handleConvertToTaskClick(comment)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors"
+                        >
+                          <CheckSquare className="h-3 w-3" />
+                          Convert to Task
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })()}
@@ -552,7 +633,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                 {activeCommentId ? 'Update Comment' : 'Add Comment'}
               </button>
             </div>
-          )}
+          )
+          }
         </div>,
         document.body
       )}

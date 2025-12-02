@@ -70,6 +70,33 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
         onUpdateComment={onUpdateComment}
         className="w-full rounded-lg"
       />
+
+      {/* Comments Sidebar List */}
+      {comments.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <h4 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Timeline Comments ({comments.length})
+          </h4>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {comments.map((comment) => (
+              <button
+                key={comment.id}
+                onClick={() => videoPlayerRef.current?.seekTo(comment.timestamp)}
+                className="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="text-xs font-mono font-bold text-amber-900">
+                    {formatTime(comment.timestamp)}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-700 line-clamp-2">{comment.comment}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

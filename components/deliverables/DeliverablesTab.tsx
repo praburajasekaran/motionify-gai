@@ -16,7 +16,7 @@ import { Deliverable, DeliverableApproval } from '../../types/deliverable.types'
 import { CURRENT_USER } from '../../constants';
 
 const DeliverablesTabContent: React.FC = () => {
-  const { state, dispatch } = useDeliverables();
+  const { state, dispatch, onConvertToTask } = useDeliverables();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -98,6 +98,7 @@ const DeliverablesTabContent: React.FC = () => {
         onClose={handleCloseReviewModal}
         onApprove={handleApprove}
         onRequestRevision={handleRequestRevision}
+        onConvertToTask={onConvertToTask}
       />
 
       {/* Revision Request Form */}
@@ -118,9 +119,9 @@ const DeliverablesTabContent: React.FC = () => {
 /**
  * Main export - wrapped with DeliverableProvider
  */
-export const DeliverablesTab: React.FC = () => {
+export const DeliverablesTab: React.FC<{ onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void }> = ({ onConvertToTask }) => {
   return (
-    <DeliverableProvider>
+    <DeliverableProvider onConvertToTask={onConvertToTask}>
       <DeliverablesTabContent />
     </DeliverableProvider>
   );

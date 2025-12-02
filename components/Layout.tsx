@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Bell, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Bell, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
-import { CURRENT_USER } from '../constants';
+import { CURRENT_USER, MOCK_PROJECTS, TAB_INDEX_MAP } from '../constants';
+import { MotionifyLogo } from './brand/MotionifyLogo';
+import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 
-const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label: string, path: string, active: boolean, count?: number }) => (
+const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
   <Link to={path}>
     <div
       className={cn(
@@ -27,23 +30,59 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
   </Link>
 );
 
+// Simplified RevisionBattery Component (no line graph)
+const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
+    const remaining = Math.max(0, max - used);
+    const percentage = Math.round((remaining / max) * 100);
+
+    // Determine color based on remaining percentage
+    let colorClass = "bg-emerald-500";
+    let textColor = "text-emerald-700";
+    if (percentage <= 20) {
+        colorClass = "bg-red-500";
+        textColor = "text-red-700";
+    } else if (percentage <= 50) {
+        colorClass = "bg-amber-500";
+        textColor = "text-amber-700";
+    }
+
+    return (
+        <div className="flex items-center gap-3 bg-white border border-zinc-200/80 px-3 py-1.5 rounded-lg shadow-sm">
+            {/* Label */}
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                Revisions
+            </span>
+
+            {/* Count */}
+            <span className={cn("text-xs font-bold leading-none", textColor)}>
+                {remaining} of {max}
+            </span>
+
+            {/* Battery Icon */}
+            <div className="relative flex items-center">
+                <div className="h-4 w-7 rounded-[3px] border-2 border-zinc-300 p-0.5 relative flex items-center bg-white">
+                    <div
+                        className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
+                        style={{ width: `${percentage}%` }}
+                    />
+                </div>
+                {/* Battery Nub */}
+                <div className="h-1.5 w-0.5 bg-zinc-300 rounded-r-[1px] absolute -right-0.5" />
+
+                {/* Charging Bolt */}
+                {percentage > 0 && (
+                    <Zap className={cn("absolute -top-0.5 -right-1 h-2.5 w-2.5 fill-current stroke-white", colorClass.replace('bg-', 'text-'))} />
+                )}
+            </div>
+        </div>
+    );
+};
+
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setCommandOpen((open) => !open);
-      }
-    };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, []);
 
   const commandItems = [
       { label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' },
@@ -53,10 +92,107 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       { label: 'Toggle Sidebar', icon: Menu, action: () => setSidebarOpen(!sidebarOpen), group: 'View' },
   ];
 
+  // Global Keyboard Shortcuts
+  const globalShortcuts: KeyboardShortcut[] = [
+    // Command Palette
+    {
+      key: 'k',
+      modifiers: ['cmd'],
+      description: 'Open command palette',
+      action: () => setCommandOpen(open => !open),
+      category: 'ui',
+    },
+    // Navigation - Go to pages (g + letter)
+    {
+      key: 'd',
+      sequence: 'g d',
+      description: 'Go to Dashboard',
+      action: () => navigate('/'),
+      category: 'navigation',
+    },
+    {
+      key: 'p',
+      sequence: 'g p',
+      description: 'Go to Projects',
+      action: () => navigate('/projects'),
+      category: 'navigation',
+    },
+    {
+      key: 's',
+      sequence: 'g s',
+      description: 'Go to Settings',
+      action: () => navigate('/settings'),
+      category: 'navigation',
+    },
+    // Quick Actions
+    {
+      key: 'n',
+      modifiers: ['cmd'],
+      description: 'Create new production',
+      action: () => navigate('/projects/new'),
+      category: 'actions',
+    },
+    // Navigation - History
+    {
+      key: '[',
+      modifiers: ['cmd'],
+      description: 'Go back',
+      action: () => window.history.back(),
+      category: 'navigation',
+    },
+    {
+      key: ']',
+      modifiers: ['cmd'],
+      description: 'Go forward',
+      action: () => window.history.forward(),
+      category: 'navigation',
+    },
+    // UI
+    {
+      key: 'b',
+      modifiers: ['cmd'],
+      description: 'Toggle sidebar',
+      action: () => setSidebarOpen(open => !open),
+      category: 'ui',
+    },
+    {
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        searchInput?.focus();
+      },
+      category: 'ui',
+    },
+  ];
+
+  useKeyboardShortcuts({ shortcuts: globalShortcuts });
+
+  // Tab configuration for project pages
+  const tabConfig = [
+    { name: 'Overview', icon: LayoutDashboard, index: 1 },
+    { name: 'Tasks', icon: CheckSquare, index: 2 },
+    { name: 'Deliverables', icon: Package, index: 3 },
+    { name: 'Files', icon: Folder, index: 4 },
+    { name: 'Team', icon: Users, index: 5 },
+    { name: 'Activity', icon: Activity, index: 6 },
+  ];
+
+  // Detect if on project detail page and extract project ID from pathname
+  const projectMatch = location.pathname.match(/^\/projects\/(\d+)/);
+  const isProjectPage = !!projectMatch;
+  const projectId = projectMatch ? projectMatch[1] : null;
+  const currentProject = projectId ? MOCK_PROJECTS.find(p => p.id === projectId) : null;
+
+  // Get current tab from URL
+  const currentTabIndex = location.pathname.split('/')[3];
+  const activeTab = currentTabIndex ? parseInt(currentTabIndex) : 1;
+
   return (
     <ToastProvider>
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
-        
+        <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
+
         <div className="h-screen w-full flex overflow-hidden bg-zinc-50 font-sans text-foreground">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
@@ -68,17 +204,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         {/* Sidebar */}
         <aside className={cn(
-            "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white/70 backdrop-blur-2xl border-r border-zinc-200/60 transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]",
+            "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-zinc-200 transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-lg",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
             <div className="h-20 flex items-center px-6 shrink-0">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/25 ring-1 ring-white/20">
-                    <span className="text-white text-xl font-bold">M</span>
-                </div>
+            <div className="flex items-center gap-3 group cursor-pointer">
+                <MotionifyLogo variant="icon" size="md" animated />
                 <div>
                     <h1 className="font-bold text-lg tracking-tight text-foreground leading-tight">Motionify</h1>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">PM Portal</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Creative PM</p>
                 </div>
             </div>
             </div>
@@ -141,30 +275,61 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 h-full relative">
             {/* Top Header */}
-            <header className="h-20 bg-white/70 backdrop-blur-xl border-b border-zinc-200/50 flex items-center justify-between px-6 lg:px-10 z-30 shrink-0 sticky top-0 shadow-sm">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+            <header className="h-16 bg-white border-b border-zinc-200 z-30 shrink-0 sticky top-0 shadow-sm">
+            <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6 lg:px-10">
+            <div className="flex items-center">
+                <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
                 </Button>
-                
-                {/* Breadcrumb */}
-                <nav className="hidden md:flex items-center text-sm text-muted-foreground">
-                <span className="hover:text-foreground cursor-pointer transition-colors font-medium">Workspace</span>
-                <ChevronRight className="h-4 w-4 mx-2 text-zinc-300" />
-                <span className={cn("font-semibold text-foreground animate-in fade-in slide-in-from-left-2")}>
-                    {location.pathname === '/' ? 'Dashboard' : 
-                    location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
-                </span>
-                </nav>
+
+                {/* Breadcrumb or Project Tabs */}
+                {isProjectPage && currentProject ? (
+                  <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {tabConfig.map(({ name, icon: Icon, index }) => {
+                      const isActive = activeTab === index;
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => navigate(`/projects/${projectId}/${index}`)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-base font-extrabold transition-all duration-200",
+                            isActive
+                              ? "bg-white/20 text-primary"
+                              : "text-foreground hover:bg-white/10 hover:text-primary"
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="hidden lg:inline">{name}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                ) : (
+                  <nav className="hidden md:flex items-center text-sm text-muted-foreground">
+                    <span className="hover:text-foreground cursor-pointer transition-colors font-medium">Workspace</span>
+                    <ChevronRight className="h-4 w-4 mx-2 text-zinc-300" />
+                    <span className={cn("font-semibold text-foreground animate-in fade-in slide-in-from-left-2")}>
+                        {location.pathname === '/' ? 'Dashboard' :
+                        location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
+                    </span>
+                  </nav>
+                )}
             </div>
 
             <div className="flex items-center gap-3 md:gap-5">
+                {/* Revision Battery - only on project pages */}
+                {isProjectPage && currentProject && (
+                  <div className="hidden md:block">
+                    <RevisionBattery used={currentProject.revisionCount} max={currentProject.maxRevisions} />
+                  </div>
+                )}
+
                 <div className="hidden md:flex items-center relative group">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
-                    <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    className="h-9 w-64 rounded-full border border-zinc-200 bg-white/50 pl-10 pr-4 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-zinc-400 shadow-sm"
+                    <input
+                    type="text"
+                    placeholder="Search..."
+                    className="h-9 w-40 rounded-full border border-zinc-200 bg-white/50 pl-10 pr-4 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-zinc-400 shadow-sm"
                     onClick={() => setCommandOpen(true)}
                     readOnly
                     />
@@ -173,26 +338,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                         <kbd className="hidden sm:inline-block rounded bg-zinc-100 border border-zinc-200 px-1.5 text-[10px] font-bold text-zinc-500 shadow-sm">K</kbd>
                     </div>
                 </div>
-                
-                <div className="h-6 w-px bg-zinc-200 hidden md:block" />
 
                 <Button variant="ghost" size="icon" className="relative hover:bg-zinc-100 rounded-full">
                     <Bell className="h-5 w-5 text-zinc-500" />
                     <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
                 </Button>
-
-                <Link to="/projects/new">
-                    <Button size="sm" variant="gradient" className="hidden sm:flex gap-2 rounded-full px-5 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-                    <Plus className="h-4 w-4" />
-                    New Project
-                    </Button>
-                </Link>
+            </div>
             </div>
             </header>
 
             {/* Page Content with Entrance Animation */}
-            <div key={location.pathname} className="flex-1 p-6 lg:p-10 overflow-y-auto scroll-smooth animate-fade-in-up">
+            <div key={location.pathname} className="flex-1 overflow-y-auto scroll-smooth">
+            <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 lg:py-10 animate-fade-in-up">
             {children}
+            </div>
             </div>
         </main>
         </div>

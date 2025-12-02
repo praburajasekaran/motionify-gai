@@ -1,6 +1,28 @@
 
 import { Project, User } from './types';
 
+// Tab index mapping for URL routing (Basecamp-style numeric URLs)
+export const TAB_INDEX_MAP = {
+  overview: 1,
+  tasks: 2,
+  deliverables: 3,
+  files: 4,
+  team: 5,
+  activity: 6
+} as const;
+
+export const INDEX_TAB_MAP = {
+  1: 'overview',
+  2: 'tasks',
+  3: 'deliverables',
+  4: 'files',
+  5: 'team',
+  6: 'activity'
+} as const;
+
+export type TabIndex = keyof typeof INDEX_TAB_MAP;
+export type TabName = typeof INDEX_TAB_MAP[TabIndex];
+
 export const CURRENT_USER: User = {
   id: 'u1',
   name: 'Alex Rivera',
@@ -25,7 +47,7 @@ const generateActivity = (projectId: string): any[] => [
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 'p1',
+    id: '5823632',
     title: 'TechCorp Product Launch Q3',
     client: 'TechCorp Inc.',
     website: 'stripe.com',
@@ -54,7 +76,7 @@ export const MOCK_PROJECTS: Project[] = [
     activityLog: generateActivity('p1'),
   },
   {
-    id: 'p2',
+    id: '7629567',
     title: 'GreenEnergy Brand Story',
     client: 'GreenEnergy Co.',
     website: 'spotify.com',
@@ -80,7 +102,7 @@ export const MOCK_PROJECTS: Project[] = [
     activityLog: generateActivity('p2'),
   },
   {
-    id: 'p3',
+    id: '9145832',
     title: 'Fashion Week Recap',
     client: 'Vogue Style',
     website: 'vogue.com',
@@ -100,7 +122,7 @@ export const MOCK_PROJECTS: Project[] = [
     activityLog: generateActivity('p3'),
   },
   {
-    id: 'p4',
+    id: '4726153',
     title: 'EduTech Course Series',
     client: 'MasterClassify',
     website: 'masterclass.com',

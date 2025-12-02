@@ -5,7 +5,7 @@ import { MOCK_PROJECTS } from '../constants';
 import { Clock, CheckCircle2, AlertCircle, PlayCircle, ArrowUpRight, TrendingUp, Users } from 'lucide-react';
 
 const StatCard = ({ title, value, change, icon: Icon, trend, delay }: { title: string, value: string, change: string, icon: any, trend: 'up' | 'down' | 'neutral', delay: string }) => (
-  <Card hoverable className={cn("bg-gradient-to-br from-white to-zinc-50/50 border-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] animate-fade-in-up", delay)}>
+  <Card hoverable className={cn("bg-white border-zinc-200 animate-fade-in-up", delay)}>
     <CardContent className="p-6">
       <div className="flex items-center justify-between space-y-0 pb-2">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -43,49 +43,49 @@ export const Dashboard = () => {
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
       <div className="flex flex-col gap-1 animate-fade-in">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
-        <p className="text-muted-foreground">Overview of your creative production pipeline.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Your Creative Command Center</h2>
+        <p className="text-muted-foreground">Track your productions in motion and ship exceptional work.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Active Projects" 
-          value={activeProjects.toString()} 
-          change="+12% from last week" 
-          icon={PlayCircle} 
-          trend="up" 
+        <StatCard
+          title="In Motion"
+          value={activeProjects.toString()}
+          change="+12% from last week"
+          icon={PlayCircle}
+          trend="up"
           delay="animation-delay-[100ms]"
         />
-        <StatCard 
-          title="Completed (Month)" 
-          value={completedProjects.toString()} 
-          change="+4 vs last month" 
-          icon={CheckCircle2} 
-          trend="up" 
+        <StatCard
+          title="Shipped This Month"
+          value={completedProjects.toString()}
+          change="+4 vs last month"
+          icon={CheckCircle2}
+          trend="up"
           delay="animation-delay-[200ms]"
         />
-        <StatCard 
-          title="Pending Review" 
-          value="3" 
-          change="-2 from yesterday" 
-          icon={Clock} 
-          trend="down" 
+        <StatCard
+          title="Ready to Launch"
+          value="3"
+          change="-2 from yesterday"
+          icon={Clock}
+          trend="down"
           delay="animation-delay-[300ms]"
         />
-        <StatCard 
-          title="Team Bandwidth" 
-          value="85%" 
-          change="High Utilization" 
-          icon={Users} 
-          trend="neutral" 
+        <StatCard
+          title="Team Power"
+          value="85%"
+          change="High Utilization"
+          icon={Users}
+          trend="neutral"
           delay="animation-delay-[400ms]"
         />
       </div>
 
       <div className="grid gap-6 md:grid-cols-7">
-        <Card hoverable className="md:col-span-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border-zinc-200/60 animate-fade-in-up animation-delay-[500ms]">
+        <Card hoverable className="md:col-span-4 border-zinc-200 animate-fade-in-up animation-delay-[500ms]">
           <CardHeader>
-            <CardTitle>Weekly Production Output</CardTitle>
+            <CardTitle>Your Week in Motion</CardTitle>
           </CardHeader>
           <CardContent className="pl-0">
             <div className="h-[350px] w-full">
@@ -131,9 +131,9 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card hoverable className="md:col-span-3 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border-zinc-200/60 animate-fade-in-up animation-delay-[600ms]">
+        <Card hoverable className="md:col-span-3 border-zinc-200 animate-fade-in-up animation-delay-[600ms]">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>What's Happening</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -147,10 +147,10 @@ export const Dashboard = () => {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none text-foreground group-hover:text-primary transition-colors">
-                      Sarah updated <span className="font-bold">Nike Air Campaign</span>
+                      Sarah just dropped 3 new assets on <span className="font-bold">Nike Air Campaign</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Uploaded 3 new assets • 2 hours ago
+                        2 hours ago
                     </p>
                   </div>
                 </div>

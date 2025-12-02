@@ -299,6 +299,7 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
 interface DeliverableContextType {
   state: DeliverableState;
   dispatch: React.Dispatch<DeliverableAction>;
+  onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
 }
 
 const DeliverableContext = createContext<DeliverableContextType | undefined>(undefined);
@@ -307,11 +308,11 @@ const DeliverableContext = createContext<DeliverableContextType | undefined>(und
 // PROVIDER
 // ============================================================================
 
-export const DeliverableProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const DeliverableProvider: React.FC<{ children: ReactNode; onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void }> = ({ children, onConvertToTask }) => {
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
 
   return (
-    <DeliverableContext.Provider value={{ state, dispatch }}>
+    <DeliverableContext.Provider value={{ state, dispatch, onConvertToTask }}>
       {children}
     </DeliverableContext.Provider>
   );
