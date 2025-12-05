@@ -5,8 +5,13 @@
  * Features:
  * - Video player with watermark overlay
  * - Deliverable metadata sidebar
- * - Approve/Reject action buttons
+ * - Approve/Reject action buttons (permission-aware)
  * - Approval timeline showing history
+ *
+ * PERMISSION ENFORCEMENT:
+ * - Approve/Reject buttons only shown to users with permission
+ * - Download button only shown when user can access final files
+ * - Tooltips explain why actions are disabled
  */
 
 import React from 'react';
@@ -18,15 +23,19 @@ import {
   Download,
   Clock,
   Maximize2,
+  AlertCircle,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { VideoPlayer } from '../ui/VideoPlayer';
 import { Button, Badge, Separator } from '../ui/design-system';
 import { ApprovalTimeline } from './ApprovalTimeline';
 import { Deliverable } from '../../types/deliverable.types';
+import { Project } from '@/types';
+import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 
 export interface DeliverableReviewModalProps {
   deliverable: Deliverable | null;
+  project: Project;
   isOpen: boolean;
   onClose: () => void;
   onApprove: () => void;
@@ -36,17 +45,24 @@ export interface DeliverableReviewModalProps {
 
 export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
   deliverable,
+  project,
   isOpen,
   onClose,
   onApprove,
   onRequestRevision,
   onConvertToTask,
 }) => {
+  const permissions = useDeliverablePermissions({
+    deliverable: deliverable || undefined,
+    project,
+  });
+
   if (!deliverable) return null;
 
   const isFinalDelivered = deliverable.status === 'final_delivered';
-  const canApprove =
-    deliverable.status === 'beta_ready' || deliverable.status === 'awaiting_approval';
+  const canApprove = permissions.canApprove;
+  const canReject = permissions.canReject;
+  const canAccessFinal = permissions.canAccessFinal;
 
   return (
     <Modal
@@ -214,39 +230,67 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
             {/* Action Buttons */}
             <div className="space-y-3">
               {isFinalDelivered ? (
-                <Button
-                  variant="gradient"
-                  size="lg"
-                  className="w-full gap-2 shadow-lg"
-                  onClick={() => {
-                    // In a real app, this would trigger download
-                    window.open(deliverable.finalFileUrl, '_blank');
-                  }}
-                >
-                  <Download className="h-5 w-5" />
-                  Download Final Files
-                </Button>
-              ) : canApprove ? (
                 <>
-                  <Button
-                    variant="default"
-                    size="lg"
-                    className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                    onClick={onApprove}
-                  >
-                    <CheckCircle2 className="h-5 w-5" />
-                    Approve Deliverable
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full gap-2 border-2 border-amber-600 text-amber-700 hover:bg-amber-50"
-                    onClick={onRequestRevision}
-                  >
-                    <XCircle className="h-5 w-5" />
-                    Request Revision
-                  </Button>
+                  {canAccessFinal ? (
+                    <Button
+                      variant="gradient"
+                      size="lg"
+                      className="w-full gap-2 shadow-lg"
+                      onClick={() => {
+                        // In a real app, this would trigger download
+                        window.open(deliverable.finalFileUrl, '_blank');
+                      }}
+                    >
+                      <Download className="h-5 w-5" />
+                      Download Final Files
+                    </Button>
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold mb-1">Access Restricted</p>
+                          <p>{permissions.getDeniedReason('access_final')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
+              ) : canApprove || canReject ? (
+                <>
+                  {canApprove && (
+                    <Button
+                      variant="default"
+                      size="lg"
+                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                      onClick={onApprove}
+                    >
+                      <CheckCircle2 className="h-5 w-5" />
+                      Approve Deliverable
+                    </Button>
+                  )}
+                  {canReject && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full gap-2 border-2 border-amber-600 text-amber-700 hover:bg-amber-50"
+                      onClick={onRequestRevision}
+                    >
+                      <XCircle className="h-5 w-5" />
+                      Request Revision
+                    </Button>
+                  )}
+                </>
+              ) : !permissions.isClientPM ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold mb-1">View Only</p>
+                      <p>Only the Primary Contact can approve or request revisions.</p>
+                    </div>
+                  </div>
+                </div>
               ) : null}
 
               {deliverable.watermarked && !isFinalDelivered && (

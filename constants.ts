@@ -26,17 +26,17 @@ export type TabName = typeof INDEX_TAB_MAP[TabIndex];
 export const CURRENT_USER: User = {
   id: 'u1',
   name: 'Alex Rivera',
-  role: 'Project Manager',
+  role: 'project_manager', // Fixed: was using display name 'Project Manager'
   email: 'alex@motionify.com',
   avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
 };
 
 export const TEAM_MEMBERS: User[] = [
   CURRENT_USER,
-  { id: 'u2', name: 'Sarah Chen', role: 'Admin', email: 'sarah@motionify.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
-  { id: 'u3', name: 'Mike Ross', role: 'Client', email: 'mike@techcorp.com', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
-  { id: 'u4', name: 'Jessica Day', role: 'Editor', email: 'jess@motionify.com', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
-  { id: 'u5', name: 'David Kim', role: 'Designer', email: 'david@motionify.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  { id: 'u2', name: 'Sarah Chen', role: 'super_admin', email: 'sarah@motionify.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  { id: 'u3', name: 'Mike Ross', role: 'client', email: 'mike@techcorp.com', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  { id: 'u4', name: 'Jessica Day', role: 'team_member', email: 'jess@motionify.com', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  { id: 'u5', name: 'David Kim', role: 'team_member', email: 'david@motionify.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
 ];
 
 const generateActivity = (projectId: string): any[] => [

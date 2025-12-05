@@ -3,12 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
     Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox, Mail, Crown,
-    ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder
+    ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
     Avatar, Input, ClientLogo, Progress, Tabs, TabsList, TabsTrigger,
-    TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast
+    TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast, Switch
 } from '../components/ui/design-system';
 import { MOCK_PROJECTS, TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { generateProjectTasks, analyzeProjectRisk } from '../services/geminiService';
@@ -202,113 +202,25 @@ export const ProjectDetail = () => {
         switch (status) {
             case 'Active': return 'default';
             case 'Completed': return 'success';
-            case 'In Review': return 'warning';
+            case 'Awaiting Payment': return 'warning';
             case 'On Hold': return 'destructive';
             default: return 'outline';
         }
     };
 
+    // Tab configuration for project pages
+    const tabConfig = [
+        { name: 'Overview', icon: LayoutDashboard, index: 1 },
+        { name: 'Tasks', icon: CheckSquare, index: 2 },
+        { name: 'Deliverables', icon: Package, index: 3 },
+        { name: 'Files', icon: Folder, index: 4 },
+        { name: 'Team', icon: Users, index: 5 },
+        { name: 'Activity', icon: Activity, index: 6 },
+    ];
+
     return (
         <div className="space-y-8 max-w-7xl mx-auto pb-20">
 
-            {/* --- HERO SECTION --- */}
-            <div className="relative">
-                {/* Background Gradient Blob */}
-                <div className="absolute -top-20 -left-20 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-3xl -z-10 pointer-events-none mix-blend-multiply" />
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-100/40 rounded-full blur-3xl -z-10 pointer-events-none mix-blend-multiply" />
-
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                        <div className="flex gap-6">
-                            <ClientLogo
-                                clientName={project.client}
-                                website={project.website}
-                                className="h-24 w-24 rounded-2xl shadow-xl shadow-blue-900/5 border border-white ring-1 ring-zinc-200/50 hidden sm:flex shrink-0 bg-white"
-                            />
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 flex items-center gap-3 group">
-                                        {project.title}
-                                        <Link to={`/projects/${project.id}/settings`}>
-                                            <button className="opacity-0 group-hover:opacity-100 transition-all p-1.5 hover:bg-white rounded-full shadow-sm ring-1 ring-zinc-200" aria-label="Edit Project">
-                                                <Edit2 className="h-4 w-4 text-zinc-400 hover:text-primary" />
-                                            </button>
-                                        </Link>
-                                    </h1>
-                                    <DropdownMenu trigger={
-                                        <Badge variant={getStatusVariant(project.status)} className="cursor-pointer hover:opacity-80 transition-opacity px-3 py-1 text-sm shadow-sm">
-                                            {project.status} <Edit2 className="ml-2 h-3 w-3 opacity-50" />
-                                        </Badge>
-                                    }>
-                                        <DropdownMenuItem>Active</DropdownMenuItem>
-                                        <DropdownMenuItem>In Review</DropdownMenuItem>
-                                        <DropdownMenuItem>Completed</DropdownMenuItem>
-                                        <DropdownMenuItem>On Hold</DropdownMenuItem>
-                                    </DropdownMenu>
-                                </div>
-
-                                <div className="flex items-center gap-6 text-sm text-zinc-500 font-medium">
-                                    <span className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200/80 shadow-sm">
-                                        <Users className="h-4 w-4 text-zinc-400" /> {project.client}
-                                    </span>
-                                    <span className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200/80 shadow-sm">
-                                        <Calendar className="h-4 w-4 text-zinc-400" /> {new Date(project.startDate).toLocaleDateString()} - {new Date(project.dueDate).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 shrink-0">
-                            <Link to={`/projects/${project.id}/settings`}>
-                                <Button variant="outline" className="hidden sm:flex bg-white/80 hover:bg-white shadow-sm" aria-label="Edit Project Details">Edit Details</Button>
-                            </Link>
-                            <Button className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40" variant="gradient" aria-label="Upload Asset">
-                                <PlusCircle className="h-4 w-4" />
-                                Upload Asset
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                        <Card className="bg-white border-zinc-200 hover:border-blue-200 transition-colors group">
-                            <CardContent className="p-5 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Tasks</p>
-                                    <p className="text-3xl font-extrabold text-zinc-900">{tasks.filter(t => t.status === 'Done').length} <span className="text-zinc-400 text-xl font-medium">/ {tasks.length}</span></p>
-                                </div>
-                                <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition-colors">
-                                    <CheckSquare className="h-6 w-6" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-white border-zinc-200 hover:border-purple-200 transition-colors group">
-                            <CardContent className="p-5 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Deliverables</p>
-                                    <p className="text-3xl font-extrabold text-zinc-900">{project.deliverables.filter(d => d.status === 'Approved').length} <span className="text-zinc-400 text-xl font-medium">/ {project.deliverablesCount}</span></p>
-                                </div>
-                                <div className="h-12 w-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
-                                    <FileBox className="h-6 w-6" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-white border-zinc-200 hover:border-emerald-200 transition-colors group">
-                            <CardContent className="p-5 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold text-emerald-600/90 uppercase tracking-wider mb-1">Team</p>
-                                    <p className="text-3xl font-extrabold text-zinc-900">{project.team.length}</p>
-                                </div>
-                                <div className="h-12 w-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors">
-                                    <Users className="h-6 w-6" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            </div>
-
-            {/* --- TAB CONTENT --- */}
             <Tabs
                 value={activeTab}
                 onValueChange={(tabName) => {
@@ -317,6 +229,84 @@ export const ProjectDetail = () => {
                 }}
                 className="w-full"
             >
+                {/* --- COMPACT HEADER SECTION --- */}
+                <div className="flex flex-col gap-4 pt-2">
+                    {/* Top Row: Title, Team, Actions */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 overflow-hidden">
+                            {/* Project Icon */}
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                                <LayoutDashboard className="h-5 w-5" />
+                            </div>
+
+                            {/* Title & Status */}
+                            <div className="flex items-center gap-3 min-w-0">
+                                <h1 className="text-xl font-bold tracking-tight text-zinc-900 truncate">
+                                    {project.title}
+                                </h1>
+                                <DropdownMenu trigger={
+                                    <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
+                                        <ChevronDown className="h-4 w-4" />
+                                    </button>
+                                }>
+                                    <DropdownMenuItem>Active</DropdownMenuItem>
+                                    <DropdownMenuItem>Awaiting Payment</DropdownMenuItem>
+                                    <DropdownMenuItem>Completed</DropdownMenuItem>
+                                    <DropdownMenuItem>On Hold</DropdownMenuItem>
+                                </DropdownMenu>
+
+                                <Badge variant={getStatusVariant(project.status)} className="h-6 px-2 text-xs font-medium">
+                                    <Zap className="h-3 w-3 mr-1 fill-current" />
+                                    {project.status}
+                                </Badge>
+                            </div>
+
+                            {/* Vertical Divider */}
+                            <div className="h-6 w-px bg-zinc-200 hidden md:block mx-2" />
+
+                            {/* Team Avatars */}
+                            <div className="flex items-center -space-x-2 hidden md:flex">
+                                {project.team.slice(0, 4).map((member) => (
+                                    <Avatar key={member.id} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                ))}
+                                <button className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10">
+                                    <Users className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Toggle & Actions */}
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center gap-2 bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100">
+                                <span className="text-xs font-medium text-zinc-600">Auto-Milestones</span>
+                                <Switch />
+                            </div>
+
+                            <div className="h-4 w-px bg-zinc-200 hidden sm:block" />
+
+                            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-900">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Bottom Row: Minimal Tabs */}
+                    <div className="border-b border-zinc-200 pb-1">
+                        <TabsList className="bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/60 inline-flex h-auto gap-1 justify-start overflow-x-auto no-scrollbar max-w-full">
+                            {tabConfig.map(({ name, index }) => (
+                                <TabsTrigger
+                                    key={name}
+                                    value={Object.keys(TAB_INDEX_MAP).find(key => TAB_INDEX_MAP[key as TabName] === index) || 'overview'}
+                                    className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm hover:bg-zinc-200/50 hover:text-zinc-900 text-zinc-500"
+                                >
+                                    {name}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
+                </div>
+
+                {/* --- TAB CONTENT --- */}
                 {/* --- OVERVIEW TAB --- */}
                 <TabsContent value="overview">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -376,8 +366,8 @@ export const ProjectDetail = () => {
                                                         </div>
                                                         <Progress value={del.progress} className="h-1.5" />
                                                     </div>
-                                                    <Badge variant={del.status === 'Approved' ? 'success' : del.status === 'In Review' ? 'warning' : 'secondary'}>
-                                                        {del.status}
+                                                    <Badge variant={del.status === 'approved' ? 'success' : del.status === 'awaiting_approval' ? 'warning' : 'secondary'}>
+                                                        {del.status.replace('_', ' ')}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -467,7 +457,7 @@ export const ProjectDetail = () => {
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {project.team.map((member) => (
                             <Card key={member.id} hoverable className="group relative border-zinc-200/60">
-                                {member.role === 'Project Manager' && (
+                                {member.role === 'project_manager' && (
                                     <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
                                         <Crown className="h-3.5 w-3.5" />
                                     </div>
@@ -502,80 +492,96 @@ export const ProjectDetail = () => {
                 </TabsContent>
 
                 {/* --- TASKS TAB --- */}
-                <TabsContent value="tasks">
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
+                <TabsContent value="tasks" className="mt-6">
+                    <div className="space-y-6 max-w-4xl mx-auto">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <h3 className="text-lg font-bold">Tasks & Kanban</h3>
-                                <p className="text-sm text-zinc-500">Track progress and assign items.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Tasks</h3>
+                                <p className="text-sm text-zinc-500">Manage your project tasks and track progress.</p>
                             </div>
-                            <Button onClick={handleGenerateTasks} disabled={isGenerating} variant="gradient" className="gap-2 shadow-lg shadow-purple-500/20">
-                                <Sparkles className="h-4 w-4" />
-                                {isGenerating ? 'Analyzing...' : 'Generate Plan with AI'}
+                            <Button onClick={handleGenerateTasks} disabled={isGenerating} variant="outline" className="gap-2 bg-white hover:bg-zinc-50 text-zinc-700 border-zinc-200 shadow-sm">
+                                <Sparkles className="h-4 w-4 text-purple-500" />
+                                {isGenerating ? 'Analyzing...' : 'AI Suggestions'}
                             </Button>
                         </div>
 
-                        <div className="grid gap-4">
+                        {/* AI Generated Tasks */}
+                        {aiTasks.length > 0 && (
+                            <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles className="h-4 w-4 text-purple-600" />
+                                    <h4 className="font-semibold text-purple-900 text-sm">Suggested Tasks</h4>
+                                </div>
+                                <div className="grid gap-2">
+                                    {aiTasks.map((task, idx) => (
+                                        <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-md border border-purple-100 shadow-sm group hover:border-purple-200 transition-colors">
+                                            <span className="text-sm text-zinc-700">{task}</span>
+                                            <Button size="sm" variant="ghost" className="h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2">
+                                                <PlusCircle className="h-3.5 w-3.5 mr-1.5" /> Add
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
                             {tasks.map(task => (
-                                <Card key={task.id} hoverable className="group border-l-4 border-l-transparent hover:border-l-primary transition-all">
-                                    <CardContent className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <button className={`h-6 w-6 rounded-full border flex items-center justify-center transition-all ${task.status === 'Done' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-zinc-300 hover:border-primary text-transparent hover:text-primary/20 bg-white'}`}>
-                                                <CheckSquare className="h-3.5 w-3.5" />
-                                            </button>
-                                            <span className={task.status === 'Done' ? 'text-zinc-400 line-through decoration-zinc-300' : 'text-zinc-900 font-medium'}>{task.title}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            {task.assignee && (
-                                                <div className="flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full border border-zinc-200">
-                                                    <Avatar src={task.assignee.avatar} fallback={task.assignee.name[0]} className="h-4 w-4" />
-                                                    {task.assignee.name}
-                                                </div>
+                                <div key={task.id} className="group flex items-center justify-between p-4 rounded-lg border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all duration-200">
+                                    <div className="flex items-center gap-4">
+                                        <button
+                                            className={cn(
+                                                "h-5 w-5 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
+                                                task.status === 'Done'
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "border-zinc-300 hover:border-primary bg-white"
                                             )}
-                                            <Badge variant="secondary" className="bg-zinc-100 text-zinc-600">{task.status}</Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        >
+                                            {task.status === 'Done' && <CheckSquare className="h-3.5 w-3.5" />}
+                                        </button>
+                                        <span className={cn(
+                                            "text-sm font-medium transition-colors",
+                                            task.status === 'Done' ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
+                                        )}>
+                                            {task.title}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {task.assignee && (
+                                            <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
+                                                <Avatar src={task.assignee.avatar} fallback={task.assignee.name[0]} className="h-4 w-4" />
+                                                <span className="hidden sm:inline">{task.assignee.name}</span>
+                                            </div>
+                                        )}
+                                        <Badge variant="secondary" className="bg-zinc-100 text-zinc-500 font-normal border border-zinc-200">{task.status}</Badge>
+                                    </div>
+                                </div>
                             ))}
 
                             {tasks.length === 0 && !aiTasks.length && (
                                 <EmptyState
                                     title="No tasks yet"
-                                    description="Create tasks to track your team's work."
+                                    description="Get started by adding a task or using AI suggestions."
                                     icon={ClipboardList}
+                                    className="py-16 bg-zinc-50/50 border-dashed"
                                 />
                             )}
+                        </div>
 
-                            {/* AI Generated Tasks */}
-                            {aiTasks.length > 0 && (
-                                <div className="rounded-xl border border-purple-100 bg-purple-50/50 overflow-hidden shadow-sm">
-                                    <div className="px-4 py-3 bg-purple-50 border-b border-purple-100 flex items-center gap-2">
-                                        <Sparkles className="h-4 w-4 text-purple-600" />
-                                        <h4 className="font-bold text-purple-900 text-sm">AI Suggestions</h4>
-                                    </div>
-                                    <div className="p-4 space-y-2">
-                                        {aiTasks.map((task, idx) => (
-                                            <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-lg border border-purple-100 shadow-sm hover:shadow-md transition-all">
-                                                <span className="text-sm text-zinc-800 font-medium">{task}</span>
-                                                <Button size="sm" variant="ghost" className="h-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50">
-                                                    <PlusCircle className="h-4 w-4 mr-1" /> Add
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex gap-2 mt-4 bg-white p-1 rounded-xl shadow-sm border border-zinc-200">
+                        {/* Add Task Input */}
+                        <div className="flex gap-3 items-center pt-2">
+                            <div className="relative flex-1">
                                 <Input
                                     placeholder="Add a new task..."
                                     value={newTaskInput}
                                     onChange={(e) => setNewTaskInput(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                    className="bg-transparent border-none shadow-none focus-visible:ring-0 px-4 h-10"
+                                    className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
                                 />
-                                <Button onClick={handleAddTask} size="icon" className="h-10 w-10 rounded-lg" aria-label="Add Task"><PlusCircle className="h-5 w-5" /></Button>
                             </div>
+                            <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
+                                <PlusCircle className="h-4 w-4 mr-2" /> Add Task
+                            </Button>
                         </div>
                     </div>
                 </TabsContent>

@@ -3,22 +3,31 @@
  *
  * Main entry point for the deliverables feature.
  * Integrates all sub-components and manages the workflow.
+ *
+ * PERMISSION ENFORCEMENT:
+ * - Now uses real authentication instead of mock CURRENT_USER
+ * - Approval/rejection actions validated through DeliverableContext
+ * - Requires currentProject prop for permission checks
  */
 
 import React, { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { DeliverableProvider, useDeliverables } from './DeliverableContext';
 import { RevisionQuotaIndicator } from './RevisionQuotaIndicator';
 import { DeliverablesList } from './DeliverablesList';
 import { DeliverableReviewModal } from './DeliverableReviewModal';
 import { RevisionRequestForm } from './RevisionRequestForm';
 import { Deliverable, DeliverableApproval } from '../../types/deliverable.types';
-import { CURRENT_USER } from '../../constants';
+import { Project } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 const DeliverablesTabContent: React.FC = () => {
-  const { state, dispatch, onConvertToTask } = useDeliverables();
+  const { state, dispatch, onConvertToTask, approveDeliverable, rejectDeliverable } = useDeliverables();
+  const { user } = useAuth();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleReviewDeliverable = (deliverable: Deliverable) => {
     dispatch({ type: 'OPEN_REVIEW_MODAL', deliverable });
@@ -38,18 +47,20 @@ const DeliverablesTabContent: React.FC = () => {
     );
 
     if (confirmed) {
-      dispatch({
-        type: 'APPROVE_DELIVERABLE',
-        id: state.selectedDeliverable.id,
-        userId: CURRENT_USER.id,
-        userName: CURRENT_USER.name,
-        userEmail: CURRENT_USER.email || 'user@example.com',
-      });
+      try {
+        // Use permission-aware approve method
+        approveDeliverable(state.selectedDeliverable.id);
 
-      // Show success message
-      setSuccessMessage('Deliverable approved successfully! Payment link will be sent to your email.');
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 5000);
+        // Show success message
+        setSuccessMessage('Deliverable approved successfully! Payment link will be sent to your email.');
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 5000);
+      } catch (error) {
+        // Show error message if permission denied
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to approve deliverable');
+        setShowErrorMessage(true);
+        setTimeout(() => setShowErrorMessage(false), 5000);
+      }
     }
   };
 
@@ -58,12 +69,20 @@ const DeliverablesTabContent: React.FC = () => {
   };
 
   const handleSubmitRevision = (approval: DeliverableApproval) => {
-    dispatch({ type: 'REJECT_DELIVERABLE', id: approval.deliverableId, approval });
+    try {
+      // Use permission-aware reject method
+      rejectDeliverable(approval.deliverableId, approval);
 
-    // Show success message
-    setSuccessMessage('Revision request submitted successfully! The team will review within 2-3 business days.');
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 5000);
+      // Show success message
+      setSuccessMessage('Revision request submitted successfully! The team will review within 2-3 business days.');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 5000);
+    } catch (error) {
+      // Show error message if permission denied
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit revision request');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 5000);
+    }
   };
 
   return (
@@ -74,6 +93,16 @@ const DeliverablesTabContent: React.FC = () => {
           <div className="bg-emerald-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
             <CheckCircle2 className="h-5 w-5 shrink-0" />
             <p className="text-sm font-medium">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message Toast */}
+      {showErrorMessage && (
+        <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-top-4 duration-300">
+          <div className="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="text-sm font-medium">{errorMessage}</p>
           </div>
         </div>
       )}
@@ -108,9 +137,9 @@ const DeliverablesTabContent: React.FC = () => {
         onClose={() => dispatch({ type: 'CLOSE_REVISION_FORM' })}
         onSubmit={handleSubmitRevision}
         quota={state.quota}
-        currentUserId={CURRENT_USER.id}
-        currentUserName={CURRENT_USER.name}
-        currentUserEmail={CURRENT_USER.email || 'user@example.com'}
+        currentUserId={user?.id || ''}
+        currentUserName={user?.name || ''}
+        currentUserEmail={user?.email || ''}
       />
     </div>
   );
@@ -118,10 +147,24 @@ const DeliverablesTabContent: React.FC = () => {
 
 /**
  * Main export - wrapped with DeliverableProvider
+ *
+ * @param project - Current project (required for permission checks)
+ * @param onConvertToTask - Optional callback for converting comments to tasks
  */
-export const DeliverablesTab: React.FC<{ onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void }> = ({ onConvertToTask }) => {
+interface DeliverablesTabProps {
+  project: Project;
+  onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
+}
+
+export const DeliverablesTab: React.FC<DeliverablesTabProps> = ({ project, onConvertToTask }) => {
+  const { user } = useAuth();
+
   return (
-    <DeliverableProvider onConvertToTask={onConvertToTask}>
+    <DeliverableProvider
+      currentUser={user}
+      currentProject={project}
+      onConvertToTask={onConvertToTask}
+    >
       <DeliverablesTabContent />
     </DeliverableProvider>
   );

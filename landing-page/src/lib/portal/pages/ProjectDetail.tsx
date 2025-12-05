@@ -391,7 +391,7 @@ export const ProjectDetail = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {project.team.map((member) => (
                     <Card key={member.id} hoverable className="group relative border-zinc-200/60">
-                        {member.role === 'Project Manager' && (
+                        {member.role === 'project_manager' && (
                             <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
                                 <Crown className="h-3.5 w-3.5" />
                             </div>

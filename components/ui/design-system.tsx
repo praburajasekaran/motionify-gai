@@ -259,6 +259,7 @@ CardContent.displayName = "CardContent";
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
   className?: string;
+  children?: React.ReactNode;
 }
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   return (

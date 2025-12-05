@@ -627,7 +627,7 @@ export const ProjectSettings = () => {
                                                                 <div>
                                                                     <div className="font-medium flex items-center gap-2 text-foreground">
                                                                         {user.name}
-                                                                        {user.role === 'Project Manager' && (
+                                                                        {user.role === 'project_manager' && (
                                                                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-1 bg-amber-50 text-amber-700 border border-amber-200/60 shadow-none hover:bg-amber-100">
                                                                                 <Crown className="h-3 w-3" /> Primary
                                                                             </Badge>
@@ -638,15 +638,14 @@ export const ProjectSettings = () => {
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-3 align-middle">
-                                                            <Select 
-                                                                value={user.role} 
+                                                            <Select
+                                                                value={user.role}
                                                                 onValueChange={(v) => updateTeamRole(user.id, v)}
                                                                 options={[
-                                                                    { label: 'Project Manager', value: 'Project Manager' },
-                                                                    { label: 'Editor', value: 'Editor' },
-                                                                    { label: 'Designer', value: 'Designer' },
-                                                                    { label: 'Client', value: 'Client' },
-                                                                    { label: 'Admin', value: 'Admin' },
+                                                                    { label: 'Super Admin', value: 'super_admin' },
+                                                                    { label: 'Motionify Support', value: 'project_manager' },
+                                                                    { label: 'Team Member', value: 'team_member' },
+                                                                    { label: 'Client', value: 'client' },
                                                                 ]}
                                                                 className="w-40"
                                                                 triggerClassName="h-8 text-xs w-40 bg-white border-zinc-200"

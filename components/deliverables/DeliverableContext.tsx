@@ -3,6 +3,11 @@
  *
  * Provides centralized state management for the deliverable approval workflow.
  * Handles deliverable list, approvals, rejections, revision tracking, and modal states.
+ *
+ * PERMISSION ENFORCEMENT:
+ * - Approve/Reject actions now validate user permissions before execution
+ * - Only Client Primary Contact can approve/reject when deliverable is awaiting_approval
+ * - Permission violations throw errors with user-friendly messages
  */
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
@@ -17,6 +22,12 @@ import {
   FeedbackAttachment,
 } from '../../types/deliverable.types';
 import { MOCK_DELIVERABLES, MOCK_REVISION_QUOTA } from './mockDeliverables';
+import { Project, User } from '@/types';
+import {
+  canApproveDeliverable,
+  canRequestRevisions,
+  getPermissionDeniedReason,
+} from '@/utils/deliverablePermissions';
 
 // ============================================================================
 // STATE INTERFACE
@@ -300,6 +311,10 @@ interface DeliverableContextType {
   state: DeliverableState;
   dispatch: React.Dispatch<DeliverableAction>;
   onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
+
+  // Permission-aware action helpers
+  approveDeliverable: (deliverableId: string) => void;
+  rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => void;
 }
 
 const DeliverableContext = createContext<DeliverableContextType | undefined>(undefined);
@@ -308,11 +323,94 @@ const DeliverableContext = createContext<DeliverableContextType | undefined>(und
 // PROVIDER
 // ============================================================================
 
-export const DeliverableProvider: React.FC<{ children: ReactNode; onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void }> = ({ children, onConvertToTask }) => {
+interface DeliverableProviderProps {
+  children: ReactNode;
+  currentUser: User | null;
+  currentProject: Project;
+  onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
+}
+
+export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
+  children,
+  currentUser,
+  currentProject,
+  onConvertToTask,
+}) => {
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
 
+  /**
+   * Permission-aware approve action
+   * Validates user permissions before dispatching APPROVE_DELIVERABLE
+   */
+  const approveDeliverable = (deliverableId: string) => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to approve deliverables');
+    }
+
+    const deliverable = state.deliverables.find(d => d.id === deliverableId);
+    if (!deliverable) {
+      throw new Error('Deliverable not found');
+    }
+
+    // Check permission
+    if (!canApproveDeliverable(currentUser, deliverable, currentProject)) {
+      const reason = getPermissionDeniedReason('approve', currentUser, deliverable, currentProject);
+      throw new Error(reason);
+    }
+
+    // Permission granted - dispatch action
+    dispatch({
+      type: 'APPROVE_DELIVERABLE',
+      id: deliverableId,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userEmail: currentUser.email || '',
+    });
+  };
+
+  /**
+   * Permission-aware reject action
+   * Validates user permissions before dispatching REJECT_DELIVERABLE
+   */
+  const rejectDeliverable = (deliverableId: string, approval: DeliverableApproval) => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to request revisions');
+    }
+
+    const deliverable = state.deliverables.find(d => d.id === deliverableId);
+    if (!deliverable) {
+      throw new Error('Deliverable not found');
+    }
+
+    // Check permission
+    if (!canRequestRevisions(currentUser, deliverable, currentProject)) {
+      const reason = getPermissionDeniedReason('reject', currentUser, deliverable, currentProject);
+      throw new Error(reason);
+    }
+
+    // Check revision quota
+    if (state.quota.remaining <= 0) {
+      throw new Error('No revision quota remaining. Please contact support to request additional revisions.');
+    }
+
+    // Permission granted - dispatch action
+    dispatch({
+      type: 'REJECT_DELIVERABLE',
+      id: deliverableId,
+      approval,
+    });
+  };
+
   return (
-    <DeliverableContext.Provider value={{ state, dispatch, onConvertToTask }}>
+    <DeliverableContext.Provider
+      value={{
+        state,
+        dispatch,
+        onConvertToTask,
+        approveDeliverable,
+        rejectDeliverable,
+      }}
+    >
       {children}
     </DeliverableContext.Provider>
   );
