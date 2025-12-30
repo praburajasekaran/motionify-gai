@@ -1,0 +1,208 @@
+'use client';
+
+import React, { useContext, useMemo, useState, useRef, useEffect } from 'react';
+import { AppContext } from '@/lib/portal/AppContext';
+import { UserRole, TaskStatus, Task, Deliverable } from '@/lib/portal/types';
+import Card from './ui/Card';
+import TaskItem from './TaskItem';
+import Button from './ui/Button';
+import TaskModal from './CreateTaskModal';
+
+interface TaskListProps {
+  focusedDeliverableId: string | null;
+  setFocusedDeliverableId: (id: string | null) => void;
+}
+
+const statusOrder: TaskStatus[] = [
+  TaskStatus.AWAITING_APPROVAL,
+  TaskStatus.REVISION_REQUESTED,
+  TaskStatus.IN_PROGRESS,
+  TaskStatus.PENDING,
+  TaskStatus.COMPLETED,
+];
+
+const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListProps) => {
+  const { project, currentUser } = useContext(AppContext);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [filterMyTasks, setFilterMyTasks] = useState(false);
+  const deliverableRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  // Fix Bug #10: Scroll timing race condition
+  // Use requestAnimationFrame to retry until element ref is populated
+  useEffect(() => {
+    if (!focusedDeliverableId) return;
+
+    let animationFrameId: number;
+    let retryCount = 0;
+    const maxRetries = 60; // Try for ~1 second (60 frames at 60fps)
+
+    const attemptScroll = () => {
+      const element = deliverableRefs.current.get(focusedDeliverableId);
+
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        element.classList.add('highlight-animation');
+        const timer = setTimeout(() => {
+          element.classList.remove('highlight-animation');
+          setFocusedDeliverableId(null);
+        }, 1500);
+        return () => clearTimeout(timer);
+      } else if (retryCount < maxRetries) {
+        // Retry on next frame if element not ready yet
+        retryCount++;
+        animationFrameId = requestAnimationFrame(attemptScroll);
+      } else {
+        // Give up after max retries - element doesn't exist
+        console.warn(`Could not find deliverable element: ${focusedDeliverableId}`);
+        setFocusedDeliverableId(null);
+      }
+    };
+
+    // Start the scroll attempt
+    animationFrameId = requestAnimationFrame(attemptScroll);
+
+    // Cleanup on unmount or when focusedDeliverableId changes
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [focusedDeliverableId, setFocusedDeliverableId]);
+
+  const visibleTasks = useMemo(() => {
+    if (!project || !currentUser) return [];
+    
+    const isInternalUser = currentUser.role === UserRole.MOTIONIFY_MEMBER || currentUser.role === UserRole.PROJECT_MANAGER;
+    
+    let tasks = isInternalUser
+      ? project.tasks
+      : project.tasks.filter(task => task.visibleToClient);
+
+    if (filterMyTasks) {
+      tasks = tasks.filter(task => task.assigneeId === currentUser.id);
+    }
+    
+    return tasks;
+  }, [project, currentUser, filterMyTasks]);
+  
+  const tasksByDeliverable = useMemo(() => {
+    if (!project) return [];
+
+    const deliverableMap = new Map<string, Deliverable>(
+      project.scope.deliverables.map(d => [d.id, d])
+    );
+    deliverableMap.set('general', { id: 'general', name: 'General Tasks' });
+
+    const grouped = new Map<string, Deliverable & { tasks: Task[] }>();
+    for (const task of visibleTasks) {
+      const deliverableId = task.deliverableId || 'general';
+      if (!grouped.has(deliverableId)) {
+        grouped.set(deliverableId, {
+          ...deliverableMap.get(deliverableId)!,
+          tasks: [],
+        });
+      }
+      grouped.get(deliverableId)!.tasks.push(task);
+    }
+    
+    return Array.from(grouped.values()).filter(group => group.tasks.length > 0);
+  }, [visibleTasks, project]);
+
+  const handleAddTaskClick = () => {
+    setEditingTask(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTask(null);
+  };
+  
+  const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
+
+  if (!project) {
+    return (
+      <Card title="Tasks">
+        <p className="text-white/60">No project selected.</p>
+      </Card>
+    );
+  }
+  
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-4">
+      <div className="flex items-center">
+        <label htmlFor="my-tasks-toggle" className="text-sm font-medium text-white/70 mr-2 whitespace-nowrap">
+          My tasks only
+        </label>
+        <button
+          type="button"
+          className={`${
+            filterMyTasks ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-white/10 backdrop-blur'
+          } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-all ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 focus:ring-cyan-500`}
+          role="switch"
+          aria-checked={filterMyTasks}
+          onClick={() => setFilterMyTasks(!filterMyTasks)}
+          id="my-tasks-toggle"
+        >
+          <span className="sr-only">Show my tasks only</span>
+          <span
+            aria-hidden="true"
+            className={`${
+              filterMyTasks ? 'translate-x-5' : 'translate-x-0'
+            } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transform ring-0 transition ease-in-out duration-200`}
+          />
+        </button>
+      </div>
+      {isInternalUser && <Button onClick={handleAddTaskClick}>Add Task</Button>}
+    </div>
+  );
+
+  return (
+    <>
+      <Card title="Tasks" headerActions={headerActions}>
+        {visibleTasks.length > 0 ? (
+          <div className="space-y-8">
+            {tasksByDeliverable.map(group => {
+              const sortedTasks = [...group.tasks].sort((a, b) => {
+                return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
+              });
+              
+              return (
+                <div
+                  key={group.id}
+                  ref={el => { deliverableRefs.current.set(group.id, el); }}
+                  className="rounded-lg p-1"
+                >
+                  <h3 className="text-xl font-semibold text-white mb-4 px-2">{group.name}</h3>
+                   <div className="space-y-4">
+                      {sortedTasks.map(task => (
+                         <TaskItem key={task.id} task={task} onEdit={handleEditTask} />
+                      ))}
+                   </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-white/60">
+            {filterMyTasks ? "You have no tasks assigned to you." : "No tasks to display at the moment."}
+          </p>
+        )}
+      </Card>
+      <TaskModal 
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        taskToEdit={editingTask}
+      />
+    </>
+  );
+};
+
+export default TaskList;
+

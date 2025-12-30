@@ -11,10 +11,11 @@
 
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Plus, X, CheckSquare } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Plus, X, CheckSquare, Send } from 'lucide-react';
 import { cn, Button, Input, Select } from './design-system';
 import { TimestampedComment } from '../../types/deliverable.types';
 import { TEAM_MEMBERS } from '../../constants';
+import { Avatar } from './Avatar';
 
 export interface VideoPlayerProps {
   src: string;
@@ -234,6 +235,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
     setNewCommentText('');
     setShowAddCommentForm(false);
     setActiveCommentId(null);
+  };
+
+  // Handle Enter key for submitting comments (Shift+Enter for new line)
+  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddComment();
+    }
+    // Shift+Enter allows new line (default textarea behavior)
   };
 
   const handleConvertToTaskClick = (comment: TimestampedComment) => {
@@ -574,6 +584,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   </div>
                 ) : (
                   <>
+                    {/* Commenter Avatar + Name (Basecamp-style) */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar
+                        name={comment.userName}
+                        avatarUrl={comment.userAvatar}
+                        size="sm"
+                      />
+                      <span className="text-sm font-semibold text-zinc-900">
+                        {comment.userName}
+                      </span>
+                    </div>
                     <p className="text-sm text-zinc-700">{comment.comment}</p>
                     <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
                       <button
@@ -599,9 +620,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
             );
           })()}
 
-          {/* Add Comment Form */}
+          {/* Add Comment Form - Compact Design */}
           {showAddCommentForm && (
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-2">
               <div className="flex items-start justify-between drag-handle cursor-grab">
                 <span className="text-sm font-bold text-amber-900">
                   {activeCommentId
@@ -617,21 +638,27 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <textarea
-                value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
-                placeholder="Describe the issue at this timestamp..."
-                className="w-full min-h-[80px] px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-                autoFocus
-              />
-              <button
-                onClick={handleAddComment}
-                disabled={!newCommentText.trim()}
-                className="w-full px-3 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {activeCommentId ? 'Update Comment' : 'Add Comment'}
-              </button>
+              <div className="flex items-center gap-2">
+                <textarea
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  onKeyDown={handleCommentKeyDown}
+                  placeholder="Describe the issue... (Enter to submit, Shift+Enter for new line)"
+                  className="flex-1 min-h-[60px] px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={!newCommentText.trim()}
+                  className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                  title={activeCommentId ? 'Update Comment (Enter)' : 'Add Comment (Enter)'}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500">
+                Press Enter to submit, Shift+Enter for new line
+              </p>
             </div>
           )
           }

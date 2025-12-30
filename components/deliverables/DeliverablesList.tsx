@@ -20,7 +20,6 @@ export interface DeliverablesListProps {
   sortBy: 'dueDate' | 'status' | 'updated';
   onFilterChange: (filter: DeliverableStatus | 'all') => void;
   onSortChange: (sortBy: 'dueDate' | 'status' | 'updated') => void;
-  onReviewDeliverable: (deliverable: Deliverable) => void;
   className?: string;
 }
 
@@ -30,7 +29,6 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
   sortBy,
   onFilterChange,
   onSortChange,
-  onReviewDeliverable,
   className,
 }) => {
   // Filter deliverables
@@ -130,7 +128,6 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
             <DeliverableCard
               key={deliverable.id}
               deliverable={deliverable}
-              onReview={onReviewDeliverable}
             />
           ))}
         </div>

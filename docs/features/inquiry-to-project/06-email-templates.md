@@ -12,8 +12,140 @@ This document specifies all email notifications for the inquiry-to-project workf
 
 ## Customer Email Templates
 
-### 1. Inquiry Confirmation Email
+### 1. Welcome Email (New Prospect Account)
 
+**Trigger:** Immediately after quiz submission (when email does NOT exist in database)
+**To:** Customer email from inquiry
+**Subject:** `Welcome to Motionify! Your Inquiry #{{inquiryNumber}}`
+**Includes:** Magic link for portal access + inquiry confirmation + quiz summary
+
+```
+Hi {{contactName}},
+
+Welcome to Motionify! 👋
+
+Thank you for submitting your video project inquiry through our quiz. We've
+created your personal portal account so you can track your inquiry and review
+proposals when they're ready.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR INQUIRY DETAILS
+
+Inquiry Number: {{inquiryNumber}}
+Recommended Video Type: {{recommendedVideoType}}
+Submitted: {{createdAt}}
+
+Your Video Preferences (from quiz):
+• Niche: {{quizAnswers.niche}}
+• Target Audience: {{quizAnswers.audience}}
+• Style: {{quizAnswers.style}}
+• Mood: {{quizAnswers.mood}}
+• Duration: {{quizAnswers.duration}}
+
+{{#if projectNotes}}
+Your Additional Notes:
+"{{projectNotes}}"
+{{/if}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ACCESS YOUR PORTAL
+
+Click the secure link below to access your portal dashboard:
+
+{{magicLinkUrl}}
+
+This link expires in 24 hours. If it expires, you can request a new one anytime.
+
+In your portal, you can:
+✓ Track your inquiry status
+✓ View and review proposals
+✓ Negotiate pricing and deliverables
+✓ Communicate with our team
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT HAPPENS NEXT?
+
+1. Our team will review your inquiry (within 1-2 business days)
+2. We'll prepare a customized proposal based on your preferences
+3. You'll receive a notification when your proposal is ready
+4. Review and approve the proposal in your portal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Questions? Reply to this email or contact us at hello@motionify.studio
+
+Best regards,
+The Motionify Team
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Motionify | Video Production for Modern Brands
+https://motionify.studio
+```
+
+**Variables:**
+- `contactName`: Customer's full name
+- `inquiryNumber`: e.g., "INQ-2025-042"
+- `recommendedVideoType`: Generated from quiz
+- `createdAt`: Formatted timestamp
+- `quizAnswers.niche`: Selected niche from quiz
+- `quizAnswers.audience`: Target audience from quiz
+- `quizAnswers.style`: Video style from quiz
+- `quizAnswers.mood`: Video mood from quiz
+- `quizAnswers.duration`: Video duration from quiz
+- `projectNotes`: Optional customer notes
+- `magicLinkUrl`: Portal login URL with token
+
+---
+
+### 2. Inquiry Confirmation Email (Existing User)
+
+**Trigger:** Immediately after inquiry submission (when email EXISTS in database)
+**To:** Customer email from inquiry
+**Subject:** `New Inquiry Received - {{inquiryNumber}}`
+**Note:** For users who already have an account (no magic link needed)
+
+```
+Hi {{contactName}},
+
+Thank you for submitting a new inquiry!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR INQUIRY DETAILS
+
+Inquiry Number: {{inquiryNumber}}
+Recommended Video Type: {{recommendedVideoType}}
+Submitted: {{createdAt}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VIEW IN YOUR PORTAL
+
+Log in to your existing portal account to track this inquiry:
+
+{{portalUrl}}/inquiries/{{inquiryId}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Our team will review your inquiry and send you a customized proposal
+within 1-2 business days.
+
+Best regards,
+The Motionify Team
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Motionify | Video Production for Modern Brands
+https://motionify.studio
+```
+
+---
+
+### 3. Inquiry Confirmation Email (Legacy - Deprecated)
+
+**Note:** This template is being replaced by templates 1 and 2 above.
 **Trigger:** Immediately after inquiry submission
 **To:** Customer email from inquiry
 **Subject:** `Your Motionify Inquiry ({{inquiryNumber}})`
@@ -331,6 +463,21 @@ Email: {{contactEmail}}
 Phone: {{contactPhone}}
 
 PROJECT DETAILS
+Recommended Type: {{recommendedVideoType}}
+
+Quiz Answers:
+• Niche: {{quizAnswers.niche}}
+• Audience: {{quizAnswers.audience}}
+• Style: {{quizAnswers.style}}
+• Mood: {{quizAnswers.mood}}
+• Duration: {{quizAnswers.duration}}
+
+{{#if projectNotes}}
+Customer Notes:
+"{{projectNotes}}"
+{{/if}}
+
+Legacy Fields (if applicable):
 Type: {{projectType}}
 Budget: {{estimatedBudget}}
 Timeline: {{desiredTimeline}}

@@ -54,6 +54,17 @@ POST /api/inquiries
   "targetAudience": "B2B SaaS customers",
   "specificRequirements": "Modern animation, upbeat music",
   "referenceLinks": ["https://youtube.com/watch?v=example1"],
+
+  "quizAnswers": {
+    "niche": "Technology",
+    "audience": "Young Adults 18-25",
+    "style": "Modern & Minimalist",
+    "mood": "Energetic & Upbeat",
+    "duration": "30-60 seconds"
+  },
+  "projectNotes": "Additional project requirements and details not captured in quiz",
+  "recommendedVideoType": "Tech Product Launch Video",
+
   "utmSource": "google",
   "utmMedium": "cpc",
   "utmCampaign": "winter-2025-saas",
@@ -79,20 +90,41 @@ POST /api/inquiries
 {
   "success": true,
   "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "inquiryNumber": "INQ-2025-042",
-    "status": "new",
-    "createdAt": "2025-01-11T14:30:00Z",
-    "contactEmail": "john@acme.com"
+    "inquiry": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "inquiryNumber": "INQ-2025-042",
+      "status": "new",
+      "createdAt": "2025-01-11T14:30:00Z",
+      "contactEmail": "john@acme.com"
+    },
+    "user": {
+      "id": "770e8400-e29b-41d4-a716-446655440099",
+      "email": "john@acme.com",
+      "fullName": "John Smith",
+      "role": "prospect",
+      "isProspect": true,
+      "isNewUser": true
+    },
+    "portalAccess": {
+      "magicLinkSent": true,
+      "portalUrl": "https://portal.motionify.studio"
+    }
   },
-  "message": "Inquiry submitted successfully. We'll be in touch within 1-2 business days."
+  "message": "Inquiry submitted successfully. Check your email for portal access!"
 }
 ```
 
 **Side Effects:**
-- Creates inquiry record with status 'new'
+- Creates inquiry record with status 'new' (includes quiz answers and project notes)
 - Generates unique inquiry number
-- Sends confirmation email to customer
+- Checks if user exists by email
+- If new user:
+  - Creates user account with role 'prospect'
+  - Generates magic link token
+  - Sends welcome email with portal login link + inquiry confirmation
+- If existing user:
+  - Links inquiry to existing user account
+  - Sends inquiry confirmation email (no new account created)
 - Sends alert email to admin team
 - Logs activity
 

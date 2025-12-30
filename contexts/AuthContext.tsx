@@ -69,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setUser(null);
     localStorage.removeItem('mockUser');
-    // window.location.href = '/login';
+    window.location.href = '/#/login';
   };
 
   const value: AuthContextType = {
@@ -139,8 +139,8 @@ export const MOCK_USERS: Record<string, User> = {
     role: 'client',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
     projectTeamMemberships: {
-      'project-1': {
-        projectId: 'project-1',
+      '5823632': {
+        projectId: '5823632',
         isPrimaryContact: true,
         joinedAt: '2025-01-01',
       },
@@ -153,8 +153,8 @@ export const MOCK_USERS: Record<string, User> = {
     role: 'client',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob',
     projectTeamMemberships: {
-      'project-1': {
-        projectId: 'project-1',
+      '5823632': {
+        projectId: '5823632',
         isPrimaryContact: false,
         joinedAt: '2025-01-01',
       },

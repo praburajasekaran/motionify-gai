@@ -6,12 +6,13 @@ This document defines all TypeScript interfaces and types for the feedback and r
 
 1. [TaskComment Model](#taskcomment-model)
 2. [FileComment Model](#filecomment-model)
-3. [RevisionRequest Model](#revisionrequest-model)
-4. [AdditionalRevisionRequest Model](#additionalrevisionrequest-model)
-5. [CommentMention Model](#commentmention-model)
-6. [Supporting Types](#supporting-types)
-7. [Relationships](#relationships)
-8. [Validation Rules](#validation-rules)
+3. [DeliverableComment Model](#deliverablecomment-model)
+4. [RevisionRequest Model](#revisionrequest-model)
+5. [AdditionalRevisionRequest Model](#additionalrevisionrequest-model)
+6. [CommentMention Model](#commentmention-model)
+7. [Supporting Types](#supporting-types)
+8. [Relationships](#relationships)
+9. [Validation Rules](#validation-rules)
 
 ---
 
@@ -101,6 +102,91 @@ export interface FileComment {
   // Counts
   replyCount: number;
 }
+```
+
+---
+
+## DeliverableComment Model
+
+Draft comments on video deliverables for collaborative feedback before formal revision request submission.
+
+**Purpose**: These are temporary comments that allow team members to collaboratively provide timestamped feedback on deliverables during the review process. When the Primary Contact submits a revision request, all draft comments are automatically bundled into the revision request and then deleted from the draft comments table.
+
+**Lifecycle**: Draft → Bundled into revision request → Preserved in approval history → Draft comments deleted
+
+**Key Differences from File Comments**:
+- **Deliverable-specific**: Only for deliverable videos in review
+- **Temporary/ephemeral**: Automatically deleted after bundling
+- **Collaborative**: Multiple team members can comment before submission
+- **Status-dependent**: Only visible for deliverables in `awaiting_approval` status
+
+```typescript
+export interface DeliverableComment {
+  // Core Identification
+  id: string;                    // UUID
+  deliverableId: string;         // UUID of parent deliverable
+  projectId: string;             // UUID of project (for easier queries)
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Content
+  timestamp: number;             // Seconds from video start (e.g., 32 for 0:32)
+  comment: string;               // Comment text
+
+  // Author
+  authorId: string;              // UUID of user who created comment
+  authorName: string;            // Cached for display (from users table)
+
+  // Status
+  resolved: boolean;             // Whether the comment has been addressed
+
+  // Lifecycle
+  isDraft: boolean;              // True until bundled into revision request
+}
+```
+
+### Lifecycle Phases
+
+**1. Draft Phase**: Comments are stored in `deliverable_comments` table
+- Users add timestamped comments while reviewing deliverable
+- Multiple team members can see and add comments
+- Comments can be edited by author
+- Comments can be deleted by author or Primary Contact (moderation)
+
+**2. Bundling Phase**: Primary Contact submits revision request
+- All draft comments are collected
+- Comments are bundled into `DeliverableApproval.timestampedComments[]` array
+- `isDraft` flag is conceptually set to `false` (though records are deleted)
+
+**3. Archive Phase**: Comments are preserved in approval history
+- Comments stored permanently in `approval_history.timestamped_comments` JSONB field
+- Provides audit trail and historical reference
+
+**4. Cleanup Phase**: Draft comments are deleted
+- Records removed from `deliverable_comments` table
+- Prevents data duplication
+- Single source of truth: approval history
+
+### Example Data
+
+```typescript
+const sampleDeliverableComment: DeliverableComment = {
+  id: "j9k0l1m2-9012-3456-2345-678901234567",
+  deliverableId: "g7h8i9j0-7890-1234-f123-456789012345",
+  projectId: "c3d4e5f6-3456-7890-bcde-f12345678901",
+  createdAt: new Date("2025-01-15T10:30:00Z"),
+  updatedAt: new Date("2025-01-15T10:30:00Z"),
+
+  timestamp: 32,
+  comment: "The logo transition feels too fast here",
+
+  authorId: "d4e5f6g7-4567-8901-cdef-123456789012",
+  authorName: "John Doe",
+
+  resolved: false,
+
+  isDraft: true,
+};
 ```
 
 ---

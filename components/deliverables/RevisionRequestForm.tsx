@@ -2,7 +2,7 @@
  * RevisionRequestForm Component
  *
  * Comprehensive feedback form for requesting revisions.
- * Includes all feedback methods: text, timestamped comments, categories, priority, attachments.
+ * Includes all feedback methods: text, timestamped comments, categories, attachments.
  * Features real-time validation and feedback summary sidebar.
  */
 
@@ -11,7 +11,6 @@ import { AlertTriangle, Send } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button, Textarea } from '../ui/design-system';
 import { VideoCommentTimeline, VideoCommentTimelineHandle } from './VideoCommentTimeline';
-import { PrioritySelector } from './PrioritySelector';
 import { FileUploadZone } from './FileUploadZone';
 import { useDeliverables } from './DeliverableContext';
 import { Deliverable, DeliverableApproval } from '../../types/deliverable.types';
@@ -25,6 +24,7 @@ export interface RevisionRequestFormProps {
   currentUserId: string;
   currentUserName: string;
   currentUserEmail: string;
+  currentUserAvatar?: string;
 }
 
 export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
@@ -36,6 +36,7 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
   currentUserId,
   currentUserName,
   currentUserEmail,
+  currentUserAvatar,
 }) => {
   const { state, dispatch } = useDeliverables();
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -65,7 +66,6 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
       feedback: revisionFeedback.text,
       timestampedComments: revisionFeedback.timestampedComments,
       issueCategories: revisionFeedback.issueCategories, // Will be empty or inferred
-      priority: revisionFeedback.priority,
       attachments: revisionFeedback.attachments,
     };
 
@@ -111,6 +111,9 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
                   type: 'ADD_TIMESTAMP_COMMENT',
                   timestamp,
                   comment,
+                  userId: currentUserId,
+                  userName: currentUserName,
+                  userAvatar: currentUserAvatar,
                 })
               }
               onRemoveComment={(commentId) =>
@@ -156,15 +159,6 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
               </span>
             </div>
           </div>
-
-          {/* Priority Level - Horizontal Layout */}
-          <PrioritySelector
-            selectedPriority={revisionFeedback.priority}
-            onSelectPriority={(priority) =>
-              dispatch({ type: 'SET_PRIORITY', priority })
-            }
-            layout="horizontal"
-          />
 
           {/* File Attachments */}
           <FileUploadZone

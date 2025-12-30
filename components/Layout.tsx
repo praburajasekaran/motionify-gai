@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Bell, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Bell, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
-import { CURRENT_USER, MOCK_PROJECTS, TAB_INDEX_MAP } from '../constants';
+import { MOCK_PROJECTS, TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+import { useAuthContext } from '../contexts/AuthContext';
+import { isSuperAdmin, getRoleLabel } from '../lib/permissions';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
   <Link to={path}>
@@ -81,6 +83,7 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuthContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -90,6 +93,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { label: 'Go to Settings', icon: Settings, action: () => navigate('/settings'), group: 'Navigation' },
     { label: 'Create New Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
     { label: 'Toggle Sidebar', icon: Menu, action: () => setSidebarOpen(!sidebarOpen), group: 'View' },
+    { label: 'Logout', icon: LogOut, action: () => logout(), group: 'Account' },
   ];
 
   // Global Keyboard Shortcuts
@@ -164,6 +168,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       },
       category: 'ui',
     },
+    // Logout
+    {
+      key: 'l',
+      modifiers: ['cmd', 'shift'],
+      description: 'Logout',
+      action: () => logout(),
+      category: 'actions',
+    },
   ];
 
   useKeyboardShortcuts({ shortcuts: globalShortcuts });
@@ -231,6 +243,23 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             </div>
 
+            {/* Admin Section - Only for Super Admin */}
+            {isSuperAdmin(user) && (
+              <div>
+                <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                  Admin
+                </div>
+                <div className="space-y-1">
+                  <SidebarItem
+                    icon={Mail}
+                    label="Inquiries"
+                    path="/admin/inquiries"
+                    active={location.pathname.startsWith('/admin/inquiries')}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                 System
@@ -253,11 +282,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
 
           <div className="p-4 border-t border-zinc-100 shrink-0">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-white to-zinc-50 border border-zinc-200/60 hover:border-zinc-300 transition-colors cursor-pointer group shadow-sm hover:shadow-md">
-              <Avatar src={CURRENT_USER.avatar} fallback="ME" className="h-9 w-9 ring-2 ring-white" />
+            <div
+              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-white to-zinc-50 border border-zinc-200/60 hover:border-zinc-300 transition-colors cursor-pointer group shadow-sm hover:shadow-md"
+              onClick={logout}
+              title="Logout"
+            >
+              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-9 w-9 ring-2 ring-white" />
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-semibold truncate text-foreground">{CURRENT_USER.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{CURRENT_USER.role}</p>
+                <p className="text-sm font-semibold truncate text-foreground">{user?.name || 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
               </div>
               <LogOut className="h-4 w-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
             </div>

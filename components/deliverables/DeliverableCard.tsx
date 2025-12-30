@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileVideo,
   FileImage,
@@ -26,7 +27,6 @@ import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 
 export interface DeliverableCardProps {
   deliverable: Deliverable;
-  onReview: (deliverable: Deliverable) => void;
   className?: string;
 }
 
@@ -86,9 +86,9 @@ const STATUS_CONFIG: Record<
 
 export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   deliverable,
-  onReview,
   className,
 }) => {
+  const navigate = useNavigate();
   const Icon = TYPE_ICONS[deliverable.type];
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
@@ -100,6 +100,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     deliverable.status === 'awaiting_approval' ||
     deliverable.status === 'final_delivered';
 
+  // Navigate to deliverable detail page
+  const handleNavigate = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Prevent double navigation if button inside card is clicked
+    }
+    navigate(`/projects/${deliverable.projectId}/deliverables/${deliverable.id}`);
+  };
+
   const getActionButton = () => {
     if (deliverable.status === 'final_delivered') {
       return (
@@ -107,7 +115,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           variant="gradient"
           size="sm"
           className="gap-2"
-          onClick={() => onReview(deliverable)}
+          onClick={handleNavigate}
         >
           <Download className="h-4 w-4" />
           Download
@@ -121,7 +129,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           variant="default"
           size="sm"
           className="gap-2"
-          onClick={() => onReview(deliverable)}
+          onClick={handleNavigate}
         >
           <Eye className="h-4 w-4" />
           Review Beta
@@ -139,7 +147,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         isActionable && 'cursor-pointer',
         className
       )}
-      onClick={() => isActionable && onReview(deliverable)}
+      onClick={() => isActionable && handleNavigate()}
     >
       {/* Thumbnail/Icon Area */}
       <div className="relative aspect-video bg-gradient-to-br from-zinc-100 to-zinc-50 flex items-center justify-center overflow-hidden">

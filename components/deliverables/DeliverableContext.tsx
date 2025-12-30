@@ -18,7 +18,6 @@ import {
   RevisionQuota,
   TimestampedComment,
   IssueCategory,
-  Priority,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
 import { MOCK_DELIVERABLES, MOCK_REVISION_QUOTA } from './mockDeliverables';
@@ -47,7 +46,6 @@ interface DeliverableState {
     text: string;
     timestampedComments: TimestampedComment[];
     issueCategories: IssueCategory[];
-    priority: Priority;
     attachments: FeedbackAttachment[];
   };
 }
@@ -65,12 +63,13 @@ type DeliverableAction =
   | { type: 'CLOSE_REVISION_FORM' }
   | { type: 'SET_FILTER'; filter: DeliverableStatus | 'all' }
   | { type: 'SET_SORT'; sortBy: 'dueDate' | 'status' | 'updated' }
-  | { type: 'ADD_TIMESTAMP_COMMENT'; timestamp: number; comment: string }
+  | { type: 'LOAD_DELIVERABLE_BY_ID'; deliverableId: string }
+  | { type: 'ADD_TIMESTAMP_COMMENT'; timestamp: number; comment: string; userId: string; userName: string; userAvatar?: string }
   | { type: 'REMOVE_TIMESTAMP_COMMENT'; commentId: string }
+  | { type: 'DELETE_COMMENT_BY_ID'; commentId: string; userId: string; isPrimaryContact: boolean }
   | { type: 'UPDATE_TIMESTAMP_COMMENT'; commentId: string; newText: string }
   | { type: 'UPDATE_FEEDBACK_TEXT'; text: string }
   | { type: 'TOGGLE_ISSUE_CATEGORY'; category: IssueCategory }
-  | { type: 'SET_PRIORITY'; priority: Priority }
   | { type: 'ADD_ATTACHMENT'; file: FeedbackAttachment }
   | { type: 'REMOVE_ATTACHMENT'; fileId: string }
   | { type: 'RESET_REVISION_FORM' };
@@ -91,7 +90,6 @@ const initialState: DeliverableState = {
     text: '',
     timestampedComments: [],
     issueCategories: [],
-    priority: 'important',
     attachments: [],
   },
 };
@@ -195,12 +193,24 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
         sortBy: action.sortBy,
       };
 
+    case 'LOAD_DELIVERABLE_BY_ID': {
+      const deliverable = state.deliverables.find(d => d.id === action.deliverableId);
+      return {
+        ...state,
+        selectedDeliverable: deliverable || null,
+      };
+    }
+
     case 'ADD_TIMESTAMP_COMMENT': {
       const newComment: TimestampedComment = {
         id: `comment-${Date.now()}`,
         timestamp: action.timestamp,
         comment: action.comment,
         resolved: false,
+        userId: action.userId,
+        userName: action.userName,
+        userAvatar: action.userAvatar,
+        createdAt: new Date(),
       };
 
       return {
@@ -225,6 +235,28 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
           ),
         },
       };
+
+    case 'DELETE_COMMENT_BY_ID': {
+      // Permission check: Can delete if own comment OR is primary contact
+      const canDelete = action.isPrimaryContact ||
+        state.revisionFeedback.timestampedComments.find(c =>
+          c.id === action.commentId && c.userId === action.userId
+        );
+
+      if (!canDelete) {
+        throw new Error('You can only delete your own comments');
+      }
+
+      return {
+        ...state,
+        revisionFeedback: {
+          ...state.revisionFeedback,
+          timestampedComments: state.revisionFeedback.timestampedComments.filter(
+            c => c.id !== action.commentId
+          ),
+        },
+      };
+    }
 
     case 'UPDATE_TIMESTAMP_COMMENT':
       return {
@@ -262,15 +294,6 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
         },
       };
     }
-
-    case 'SET_PRIORITY':
-      return {
-        ...state,
-        revisionFeedback: {
-          ...state.revisionFeedback,
-          priority: action.priority,
-        },
-      };
 
     case 'ADD_ATTACHMENT':
       return {
@@ -315,6 +338,10 @@ interface DeliverableContextType {
   // Permission-aware action helpers
   approveDeliverable: (deliverableId: string) => void;
   rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => void;
+
+  // Context data
+  currentProject: Project;
+  currentUser: User | null;
 }
 
 const DeliverableContext = createContext<DeliverableContextType | undefined>(undefined);
@@ -409,6 +436,8 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         onConvertToTask,
         approveDeliverable,
         rejectDeliverable,
+        currentProject,
+        currentUser,
       }}
     >
       {children}

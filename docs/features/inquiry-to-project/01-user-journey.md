@@ -13,16 +13,56 @@ Customer visits Motionify landing page
 Interested in video production services
     ↓
 
-STEP 2: Inquiry Submission
+STEP 2: Inquiry Submission (Quiz + Contact Info)
     ↓
-Customer fills out 5-step quiz/form:
-  - Contact information
-  - Project type selection
-  - Project details (budget, timeline, length)
-  - Additional requirements
-  - Review and submit
+Customer fills out 5-step quiz:
+  - Niche (e.g., "Technology", "E-commerce")
+  - Target audience (e.g., "Young Adults 18-25")
+  - Video style (e.g., "Modern & Minimalist")
+  - Mood (e.g., "Energetic & Upbeat")
+  - Duration (e.g., "30-60 seconds")
     ↓
+System generates video recommendation using Google Veo 3
+Customer sees recommended video concept
+    ↓
+Step 6: Contact Information + Project Notes
+  - Full name (required)
+  - Email (required)
+  - Company name (optional)
+  - Phone (optional)
+  - Project notes (textarea, optional but encouraged)
+    → "Tell us more about your video project requirements"
+    → Captures additional details not covered in quiz
+    ↓
+Customer clicks "Send Me a Proposal"
+    ↓
+System creates Inquiry with quiz answers + contact info + notes
 System creates Inquiry (status: 'new')
+    ↓
+
+STEP 2.5: Prospect Account Creation (NEW!)
+    ↓
+System checks if email exists in user database
+    ↓
+IF email does NOT exist:
+  - Create user account:
+    * Email: customer's email
+    * Full name: from contact form
+    * Company: from contact form
+    * Phone: from contact form
+    * Role: 'prospect'
+    * isProspect: true (until proposal accepted)
+  - Generate magic link token
+  - Send welcome email with magic link
+  - Email includes:
+    → Inquiry confirmation with ID
+    → Portal login link (magic link)
+    → "Track your inquiry and view proposals"
+    ↓
+IF email exists:
+  - Link inquiry to existing user account
+  - Send inquiry confirmation email (no new account)
+    ↓
 System sends confirmation email to customer
 System sends alert email to Motionify admin
     ↓
@@ -412,6 +452,7 @@ Send welcome email           Customer can retry payment
 | Trigger Event | Recipients | Email Type |
 |--------------|------------|------------|
 | Inquiry submitted | Customer | Confirmation with inquiry number |
+| Inquiry submitted (new user) | Customer | Welcome email with magic link + inquiry confirmation |
 | Inquiry submitted | Admin | New inquiry alert |
 | Proposal sent | Customer | Review link with proposal details |
 | Proposal viewed | Admin | Notification that customer opened it |

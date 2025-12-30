@@ -588,7 +588,7 @@ export const ProjectDetail = () => {
 
                 {/* --- DELIVERABLES TAB --- */}
                 <TabsContent value="deliverables">
-                    <DeliverablesTab onConvertToTask={handleConvertToTask} />
+                    <DeliverablesTab project={project} onConvertToTask={handleConvertToTask} />
                 </TabsContent>
 
                 {/* --- FILES TAB --- */}

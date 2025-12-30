@@ -9,6 +9,7 @@ import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { VideoPlayer, VideoPlayerHandle } from '../ui/VideoPlayer';
 import { TimestampedComment } from '../../types/deliverable.types';
+import { Avatar } from '../ui/Avatar';
 
 export interface VideoCommentTimelineHandle {
   seekTo: (timestamp: number) => void;
@@ -85,13 +86,27 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
                 onClick={() => videoPlayerRef.current?.seekTo(comment.timestamp)}
                 className="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-xs font-mono font-bold text-amber-900">
-                    {formatTime(comment.timestamp)}
-                  </span>
+                <div className="flex items-start gap-2 mb-2">
+                  <Avatar
+                    name={comment.userName}
+                    avatarUrl={comment.userAvatar}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-zinc-900">
+                        {comment.userName}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span className="text-xs font-mono text-amber-900">
+                          {formatTime(comment.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-zinc-700 line-clamp-2">{comment.comment}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-zinc-700 line-clamp-2">{comment.comment}</p>
               </button>
             ))}
           </div>

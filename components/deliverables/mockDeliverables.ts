@@ -15,7 +15,7 @@ export const MOCK_DELIVERABLES: Deliverable[] = [
   // 1. BETA READY - Main demo deliverable (client can review this)
   {
     id: 'del-001',
-    projectId: '1',
+    projectId: '5823632',
     title: 'Final Product Video',
     description: '2-minute product explainer video showcasing features and benefits',
     type: 'Video',
@@ -36,7 +36,7 @@ export const MOCK_DELIVERABLES: Deliverable[] = [
   // 2. AWAITING APPROVAL - Client needs to take action
   {
     id: 'del-002',
-    projectId: '1',
+    projectId: '5823632',
     title: 'Social Media Cuts (9:16)',
     description: 'Vertical video formats optimized for Instagram, TikTok, and YouTube Shorts',
     type: 'Video',
@@ -57,7 +57,7 @@ export const MOCK_DELIVERABLES: Deliverable[] = [
   // 3. REJECTED - Example with rich feedback to showcase feedback system
   {
     id: 'del-003',
-    projectId: '1',
+    projectId: '5823632',
     title: 'Brand Animation Intro',
     description: '10-second animated logo reveal for video intros',
     type: 'Video',
@@ -129,7 +129,7 @@ export const MOCK_DELIVERABLES: Deliverable[] = [
   // 4. APPROVED - Simple approval for contrast
   {
     id: 'del-004',
-    projectId: '1',
+    projectId: '5823632',
     title: 'Script & Concept Document',
     description: 'Approved creative concept and final script',
     type: 'Document',
@@ -161,7 +161,7 @@ export const MOCK_DELIVERABLES: Deliverable[] = [
   // 5. FINAL DELIVERED - Success state with download
   {
     id: 'del-005',
-    projectId: '1',
+    projectId: '5823632',
     title: 'Behind the Scenes B-Roll',
     description: 'Raw footage for social media and website use',
     type: 'Video',

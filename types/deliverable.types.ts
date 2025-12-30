@@ -52,6 +52,7 @@ export type DeliverableType = 'Video' | 'Image' | 'Document';
 /**
  * Timestamped comment on a video deliverable
  * Allows clients to provide feedback at specific points in the video timeline
+ * Supports collaborative commenting with ownership tracking
  * Note: Category is set at the project-level in Issue Categories, not per comment
  */
 export interface TimestampedComment {
@@ -59,6 +60,10 @@ export interface TimestampedComment {
   timestamp: number; // Seconds from video start (e.g., 32 for 0:32)
   comment: string;
   resolved: boolean; // Whether the team has addressed this comment
+  userId: string; // ID of user who created this comment
+  userName: string; // Display name of comment author
+  userAvatar?: string; // Avatar URL or undefined for initials fallback
+  createdAt: Date; // When the comment was created
 }
 
 /**
@@ -94,7 +99,6 @@ export interface DeliverableApproval {
   feedback?: string; // General text feedback
   timestampedComments?: TimestampedComment[]; // Video timeline comments
   issueCategories?: IssueCategory[]; // Selected issue types
-  priority?: Priority; // Urgency level
   attachments?: FeedbackAttachment[]; // Reference files
 }
 

@@ -34,7 +34,12 @@ CREATE TABLE IF NOT EXISTS inquiries (
   contact_phone VARCHAR(50),
   referral_source VARCHAR(255),  -- "How did you hear about us?"
 
-  -- Project Requirements
+  -- Quiz Answers (from landing page quiz)
+  quiz_answers JSONB,  -- {niche, audience, style, mood, duration}
+  project_notes TEXT,  -- Additional customer requirements (max 2000 chars)
+  recommended_video_type VARCHAR(255),  -- Generated recommendation from quiz
+
+  -- Project Requirements (legacy fields for backwards compatibility)
   project_type VARCHAR(100) NOT NULL,
   project_description TEXT NOT NULL,
   estimated_budget VARCHAR(50),
@@ -53,6 +58,9 @@ CREATE TABLE IF NOT EXISTS inquiries (
 
   -- Internal Management
   assigned_to_admin_id UUID REFERENCES users(id) ON DELETE SET NULL,
+
+  -- User Account Link (links prospect to their portal account)
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
 
   -- Proposal Relationship
   proposal_id UUID,  -- Foreign key added after proposals table created
@@ -92,6 +100,7 @@ CREATE INDEX idx_inquiries_status ON inquiries(status);
 CREATE INDEX idx_inquiries_created_at ON inquiries(created_at DESC);
 CREATE INDEX idx_inquiries_contact_email ON inquiries(contact_email);
 CREATE INDEX idx_inquiries_assigned_to ON inquiries(assigned_to_admin_id) WHERE assigned_to_admin_id IS NOT NULL;
+CREATE INDEX idx_inquiries_user_id ON inquiries(user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX idx_inquiries_converted ON inquiries(converted_to_project_id) WHERE converted_to_project_id IS NOT NULL;
 
 -- Full-text search index for searching inquiries

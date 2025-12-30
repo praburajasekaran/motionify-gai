@@ -22,8 +22,7 @@ import { Project } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
 const DeliverablesTabContent: React.FC = () => {
-  const { state, dispatch, onConvertToTask, approveDeliverable, rejectDeliverable } = useDeliverables();
-  const { user } = useAuth();
+  const { state, dispatch, onConvertToTask, approveDeliverable, rejectDeliverable, currentProject, currentUser } = useDeliverables();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showErrorMessage, setShowErrorMessage] = useState(false);
@@ -117,12 +116,12 @@ const DeliverablesTabContent: React.FC = () => {
         sortBy={state.sortBy}
         onFilterChange={(filter) => dispatch({ type: 'SET_FILTER', filter })}
         onSortChange={(sortBy) => dispatch({ type: 'SET_SORT', sortBy })}
-        onReviewDeliverable={handleReviewDeliverable}
       />
 
       {/* Review Modal */}
       <DeliverableReviewModal
         deliverable={state.selectedDeliverable}
+        project={currentProject}
         isOpen={state.isReviewModalOpen}
         onClose={handleCloseReviewModal}
         onApprove={handleApprove}
@@ -137,9 +136,10 @@ const DeliverablesTabContent: React.FC = () => {
         onClose={() => dispatch({ type: 'CLOSE_REVISION_FORM' })}
         onSubmit={handleSubmitRevision}
         quota={state.quota}
-        currentUserId={user?.id || ''}
-        currentUserName={user?.name || ''}
-        currentUserEmail={user?.email || ''}
+        currentUserId={currentUser?.id || ''}
+        currentUserName={currentUser?.name || ''}
+        currentUserEmail={currentUser?.email || ''}
+        currentUserAvatar={currentUser?.avatar}
       />
     </div>
   );
@@ -158,6 +158,14 @@ interface DeliverablesTabProps {
 
 export const DeliverablesTab: React.FC<DeliverablesTabProps> = ({ project, onConvertToTask }) => {
   const { user } = useAuth();
+
+  if (!user || !project) {
+    return (
+      <div className="flex items-center justify-center py-12 text-zinc-500">
+        <p>Loading deliverables...</p>
+      </div>
+    );
+  }
 
   return (
     <DeliverableProvider

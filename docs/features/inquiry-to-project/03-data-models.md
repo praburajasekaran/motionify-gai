@@ -35,7 +35,18 @@ export interface Inquiry {
   contactPhone?: string;         // Optional phone number
   referralSource?: string;       // "How did you hear about us?" - Optional
 
-  // Project Requirements (from quiz)
+  // Quiz Answers (from landing page 5-step quiz)
+  quizAnswers?: {
+    niche: string;               // e.g., "Technology", "E-commerce"
+    audience: string;            // e.g., "Young Adults 18-25"
+    style: string;               // e.g., "Modern & Minimalist"
+    mood: string;                // e.g., "Energetic & Upbeat"
+    duration: string;            // e.g., "30-60 seconds"
+  };
+  projectNotes?: string;         // Additional requirements from customer (max 2000 chars)
+  recommendedVideoType?: string; // Generated recommendation from quiz
+
+  // Project Requirements (legacy/optional - for backwards compatibility)
   projectType: ProjectType;
   projectDescription: string;    // Required, max 2000 chars
   estimatedBudget?: BudgetRange;
@@ -54,6 +65,9 @@ export interface Inquiry {
 
   // Internal Management
   assignedToAdminId?: string;    // UUID of admin user
+
+  // User Account Link (NEW - links prospect to their portal account)
+  userId?: string;               // UUID of user account created/linked
 
   // Proposal Relationship
   proposalId?: string;           // UUID of associated proposal
@@ -307,6 +321,67 @@ export interface InquiryNote {
   updatedAt: Date;
   isInternal: boolean;           // Always true (not visible to customer)
   isPinned?: boolean;            // Optional: pin important notes to top
+}
+```
+
+---
+
+## Prospect User Model
+
+Represents a potential customer who submitted an inquiry but hasn't become a client yet.
+
+```typescript
+export interface ProspectUser {
+  // Core Identification
+  id: string;                    // UUID
+  email: string;                 // Required, unique, valid email
+  fullName: string;              // Required, from inquiry contact form
+  company?: string;              // Optional, from inquiry
+  phone?: string;                // Optional, from inquiry
+
+  // Role & Status
+  role: 'prospect';              // Always 'prospect' until proposal accepted
+  isProspect: boolean;           // true until proposal accepted and payment made
+
+  // Authentication
+  magicLinkToken?: string;       // UUID token for passwordless login
+  tokenExpiry?: Date;            // Token expiration timestamp
+  lastLoginAt?: Date;            // Last portal access timestamp
+
+  // Linked Data
+  inquiryId?: string;            // UUID of inquiry that created this account
+
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### User State Transition
+
+```
+PROSPECT → CLIENT
+
+When:
+- Proposal is accepted
+- Advance payment is completed
+
+Changes:
+- role: 'prospect' → 'client'
+- isProspect: true → false
+- Added to project.clientTeam
+- Full portal access granted
+```
+
+### Magic Link Authentication
+
+```typescript
+export interface MagicLinkToken {
+  token: string;                 // UUID
+  userId: string;                // UUID of user
+  expiresAt: Date;              // Token validity (24 hours)
+  createdAt: Date;
+  usedAt?: Date;                // When token was used
 }
 ```
 
