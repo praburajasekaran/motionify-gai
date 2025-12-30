@@ -66,9 +66,9 @@ export function useQuiz() {
   }, []);
 
   // New function to handle inquiry submission
-  const submitInquiry = useCallback((contactInfo: ContactInfo, recommendedVideoType: string) => {
+  const submitInquiry = useCallback(async (contactInfo: ContactInfo, recommendedVideoType: string) => {
     try {
-      const inquiry = createInquiry({
+      const inquiry = await createInquiry({
         quizAnswers: selections,
         contactInfo,
         recommendedVideoType,

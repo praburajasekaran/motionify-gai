@@ -1,4 +1,4 @@
-import Image from "next/image";
+// Using standard img tags
 
 export default function SupportSection() {
   const team = [
@@ -40,7 +40,7 @@ export default function SupportSection() {
             {team.map((t, idx) => (
               <div key={t.name} className="team-card rounded-2xl overflow-hidden bg-white/60 ring-1 ring-gray-200/50 shadow-lg hover:shadow-2xl backdrop-blur" style={{ animation: `teamCardReveal .6s ease-out ${0.1 + idx * 0.1}s both` }}>
                 <div className="aspect-[3/4] relative">
-                  <Image src={t.img} alt={`${t.name} - ${t.role}`} width={600} height={800} className="w-full h-full object-cover" />
+                  <img src={t.img} alt={`${t.name} - ${t.role}`} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-orange-50/20 to-transparent opacity-60" />
                   <div className="hover-overlay absolute inset-0 bg-gradient-to-br from-[#FFAA88]/95 to-[#FF8B7B]/95 opacity-0 transition-opacity flex flex-col items-center justify-center p-6">
                     <h3 className="text-xl font-semibold text-white mb-2">{t.name}</h3>

@@ -1,4 +1,4 @@
-import Image from "next/image";
+// Using standard img tags
 
 export default function PortfolioGrid() {
   const videos = [

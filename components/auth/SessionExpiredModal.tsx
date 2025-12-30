@@ -4,7 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Clock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+
 
 interface SessionExpiredModalProps {
     isOpen: boolean;

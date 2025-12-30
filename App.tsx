@@ -9,11 +9,13 @@ import { ProjectSettings } from './pages/ProjectSettings';
 import { CreateProject } from './pages/CreateProject';
 import { Login } from './pages/Login';
 import { LandingPage } from './pages/LandingPage';
+import { InquiryTracking } from './pages/InquiryTracking';
 import PermissionTest from './pages/PermissionTest';
 import { DeliverableReview } from './pages/DeliverableReview';
 import { InquiryDashboard } from './pages/admin/InquiryDashboard';
 import { InquiryDetail } from './pages/admin/InquiryDetail';
 import { ProposalBuilder } from './pages/admin/ProposalBuilder';
+import { ProposalDetail } from './pages/admin/ProposalDetail';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Wrapper for routes that need layout
@@ -28,6 +30,7 @@ function App() {
         <Routes>
           {/* Public routes - no layout */}
           <Route path="/landing" element={<LandingPage />} />
+          <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
           <Route path="/login" element={<Login />} />
 
           {/* Protected routes - with layout */}
@@ -42,6 +45,7 @@ function App() {
           <Route path="/admin/inquiries" element={<ProtectedRoute><InquiryDashboard /></ProtectedRoute>} />
           <Route path="/admin/inquiries/:inquiryId/proposal" element={<ProtectedRoute><ProposalBuilder /></ProtectedRoute>} />
           <Route path="/admin/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
+          <Route path="/admin/proposals/:proposalId" element={<ProtectedRoute><ProposalDetail /></ProtectedRoute>} />
 
           {/* Permission Testing - Development Only */}
           <Route path="/test/permissions" element={<ProtectedRoute><PermissionTest /></ProtectedRoute>} />

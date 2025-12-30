@@ -1,179 +1,135 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mail, CheckCircle2, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { User, ArrowRight } from 'lucide-react';
+
+// Mock users for development - matches the root portal
+const MOCK_USERS = {
+  superAdmin: {
+    id: 'user-1',
+    email: 'admin@motionify.studio',
+    fullName: 'Super Admin',
+    role: 'super_admin' as const,
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+  },
+  motionifySupport: {
+    id: 'user-2',
+    email: 'john@motionify.studio',
+    fullName: 'John Support',
+    role: 'project_manager' as const,
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
+  },
+  teamMember: {
+    id: 'user-3',
+    email: 'sarah@motionify.studio',
+    fullName: 'Sarah Designer',
+    role: 'team_member' as const,
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
+  },
+  clientPrimary: {
+    id: 'user-4',
+    email: 'alex@acmecorp.com',
+    fullName: 'Alex Client',
+    role: 'client' as const,
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
+  },
+  clientTeam: {
+    id: 'user-5',
+    email: 'bob@acmecorp.com',
+    fullName: 'Bob Viewer',
+    role: 'client' as const,
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob',
+  },
+};
+
+const userOptions = [
+  { key: 'superAdmin', label: 'Super Admin', description: 'Full system access' },
+  { key: 'motionifySupport', label: 'Project Manager', description: 'Manage projects and teams' },
+  { key: 'teamMember', label: 'Team Member', description: 'Work on assigned tasks' },
+  { key: 'clientPrimary', label: 'Client (Primary Contact)', description: 'Approve deliverables' },
+  { key: 'clientTeam', label: 'Client (Team Member)', description: 'View-only access' },
+];
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
-  const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for login action
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
+  useEffect(() => {
+    const savedUser = localStorage.getItem('portal_user');
+    if (savedUser) {
+      router.push('/portal/dashboard');
+    } else {
+      setIsLoading(false);
     }
+  }, [router]);
 
-    setIsSubmitting(true);
-    try {
-      await login(email);
-      setIsSubmitted(true);
-      // Start countdown
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  const handleLogin = (userKey: string) => {
+    const user = MOCK_USERS[userKey as keyof typeof MOCK_USERS];
+    if (user) {
+      localStorage.setItem('portal_user', JSON.stringify(user));
+      document.cookie = `sb-session=mock-session-${user.id}; path=/; max-age=86400`;
+      router.push('/portal/dashboard');
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  if (isSubmitted) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center space-y-2">
-            <div className="mx-auto bg-blue-50 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-2">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Check Your Inbox!</CardTitle>
-            <CardDescription className="text-base">
-              We've sent a magic link to <span className="font-medium text-foreground">{email}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm space-y-2">
-              <p className="font-medium flex items-center gap-2 text-blue-900">
-                <CheckCircle2 className="h-4 w-4" />
-                What to do next:
-              </p>
-              <ol className="list-decimal list-inside space-y-1 ml-1 text-blue-800">
-                <li>Check your email (and spam folder)</li>
-                <li>Click the "Log In to Motionify Portal" button</li>
-                <li>You'll be automatically logged in</li>
-              </ol>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <p>Link expires in 15 minutes.</p>
-            </div>
-
-            {/* Development Helper - Removed invalid placeholder token */}
-            {/* To test: Request a real magic link and use the token from your email */}
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 border-t bg-muted/50 p-6">
-            <div className="text-center w-full">
-              <p className="text-sm text-muted-foreground mb-2">Email taking too long?</p>
-              <Button
-                variant="ghost"
-                className="text-primary"
-                disabled={countdown > 0}
-                onClick={() => { setIsSubmitted(false); setCountdown(300); }}
-              >
-                {countdown > 0 ? `Resend available in ${formatTime(countdown)}` : 'Resend Magic Link'}
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 flex items-center justify-center">
+        <div className="text-zinc-500">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <div className="relative h-10 w-40 mx-auto mb-4">
-            <Image
-              src="/motionify-light-logo.png"
-              alt="Motionify Studio"
-              fill
-              className="object-contain"
-              priority
-            />
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="relative h-10 w-40">
+              <Image
+                src="/motionify-light-logo.png"
+                alt="Motionify Studio"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back</CardTitle>
-          <CardDescription className="text-base">
-            Log in with your email - no password needed
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={error ? "border-destructive focus-visible:ring-destructive" : ""}
-                disabled={isSubmitting}
-                required
-                autoComplete="email"
-              />
-              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-            </div>
+          <h1 className="text-3xl font-bold text-zinc-900 mb-2 font-[family-name:var(--font-fraunces)]">
+            Welcome Back
+          </h1>
+          <p className="text-zinc-500">Select a user to login (Development Mode)</p>
+        </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                disabled={isSubmitting}
-              />
-              <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
-                Remember me for 30 days
-              </Label>
-            </div>
+        <div className="bg-white rounded-2xl shadow-lg border border-zinc-200 p-6 space-y-4">
+          {userOptions.map((option) => (
+            <button
+              key={option.key}
+              onClick={() => handleLogin(option.key)}
+              className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-zinc-200 hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-100 transition-colors">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-zinc-900">{option.label}</p>
+                  <p className="text-sm text-zinc-500">{option.description}</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+            </button>
+          ))}
+        </div>
 
-            <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending Magic Link...
-                </>
-              ) : (
-                'Send Magic Link'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="text-center text-sm text-muted-foreground border-t pt-6">
-          <p className="w-full">
-            We'll send a secure login link to your email.<br />
-            The link expires in 15 minutes.
+        <div className="mt-6 text-center">
+          <p className="text-xs text-zinc-400">
+            Development Mode - Authentication will be implemented in production
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

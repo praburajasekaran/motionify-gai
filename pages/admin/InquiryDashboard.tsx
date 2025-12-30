@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { getInquiries, getInquiryStats, seedSampleInquiries, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
+import { getInquiries, getInquiryStats, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
@@ -40,12 +40,14 @@ export function InquiryDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all');
   const [stats, setStats] = useState<ReturnType<typeof getInquiryStats> | null>(null);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   // Wait for auth to load before checking permissions
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-white/60">Loading...</div>
+        <div className="text-gray-600">Loading...</div>
       </div>
     );
   }
@@ -54,22 +56,42 @@ export function InquiryDashboard() {
   if (!Permissions.canManageInquiries(user)) {
     return <Navigate to="/" replace />;
   }
-
-  // Load inquiries from localStorage and seed sample data if empty
+  
+  // Load inquiries from API
   useEffect(() => {
-    seedSampleInquiries(); // Auto-seed if empty
+    const loadInquiries = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const [allInquiries, inquiryStats] = await Promise.all([
+          getInquiries(),
+          getInquiryStats(),
+        ]);
+        
+        setInquiries(allInquiries as Inquiry[]);
+        setFilteredInquiries(allInquiries as Inquiry[]);
+        setStats(inquiryStats);
+      } catch (err) {
+        console.error('Failed to load inquiries:', err);
+        setError('Failed to load inquiries. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     loadInquiries();
   }, []);
 
   // Apply filters
   useEffect(() => {
     let filtered = inquiries;
-
+  
     // Filter by status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(inq => inq.status === statusFilter);
     }
-
+  
     // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
@@ -80,17 +102,9 @@ export function InquiryDashboard() {
         inq.companyName?.toLowerCase().includes(term)
       );
     }
-
+  
     setFilteredInquiries(filtered);
   }, [inquiries, searchTerm, statusFilter]);
-
-  const loadInquiries = () => {
-    const allInquiries = getInquiries();
-    const inquiryStats = getInquiryStats();
-    setInquiries(allInquiries);
-    setFilteredInquiries(allInquiries);
-    setStats(inquiryStats);
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -99,12 +113,12 @@ export function InquiryDashboard() {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
+  
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-
+  
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
@@ -113,55 +127,55 @@ export function InquiryDashboard() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-white">Inquiries</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
         </div>
-        <p className="text-white/60">Manage customer inquiries and create proposals</p>
+        <p className="text-gray-600">Manage customer inquiries and create proposals</p>
       </div>
-
+  
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white/5 rounded-xl p-4 ring-1 ring-white/10">
+          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/60">Total Inquiries</p>
-                <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
+                <p className="text-sm text-gray-600">Total Inquiries</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-blue-400" />
               </div>
             </div>
           </div>
-
-          <div className="bg-white/5 rounded-xl p-4 ring-1 ring-white/10">
+  
+          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/60">New</p>
-                <p className="text-2xl font-bold text-white mt-1">{stats.new}</p>
+                <p className="text-sm text-gray-600">New</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.new}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                 <Mail className="w-6 h-6 text-emerald-400" />
               </div>
             </div>
           </div>
-
-          <div className="bg-white/5 rounded-xl p-4 ring-1 ring-white/10">
+  
+          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/60">Proposal Sent</p>
-                <p className="text-2xl font-bold text-white mt-1">{stats.proposalSent}</p>
+                <p className="text-sm text-gray-600">Proposal Sent</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.proposalSent}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
                 <User className="w-6 h-6 text-purple-400" />
               </div>
             </div>
           </div>
-
-          <div className="bg-white/5 rounded-xl p-4 ring-1 ring-white/10">
+  
+          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/60">Converted</p>
-                <p className="text-2xl font-bold text-white mt-1">{stats.converted}</p>
+                <p className="text-sm text-gray-600">Converted</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.converted}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-green-400" />
@@ -170,32 +184,32 @@ export function InquiryDashboard() {
           </div>
         </div>
       )}
-
+  
       {/* Filters */}
-      <div className="bg-white/5 rounded-xl p-4 ring-1 ring-white/10 mb-6">
+      <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by inquiry #, name, email, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
               />
             </div>
           </div>
-
+  
           {/* Status Filter */}
           <div className="sm:w-48">
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | 'all')}
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="new">New</option>
@@ -210,97 +224,117 @@ export function InquiryDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Inquiries List */}
-      <div className="bg-white/5 rounded-xl ring-1 ring-white/10 overflow-hidden">
-        {filteredInquiries.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-white/40" />
-            </div>
-            <p className="text-white/60 mb-2">No inquiries found</p>
-            <p className="text-sm text-white/40">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Try adjusting your filters'
-                : 'Inquiries will appear here when customers submit the landing page quiz'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {filteredInquiries.map((inquiry) => (
-              <Link
-                key={inquiry.id}
-                to={`/admin/inquiries/${inquiry.id}`}
-                className="block p-4 hover:bg-white/5 transition-colors group"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Inquiry Number & Status */}
-                    <div className="flex items-center gap-3 mb-2">
-                      <code className="text-base font-semibold text-white font-mono">
-                        {inquiry.inquiryNumber}
-                      </code>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                        {STATUS_LABELS[inquiry.status]}
-                      </span>
-                    </div>
-
-                    {/* Contact Info */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-1">
-                      <div className="flex items-center gap-1.5 text-white">
-                        <User className="w-4 h-4 text-white/60" />
-                        <span className="font-medium">{inquiry.contactName}</span>
-                      </div>
-                      {inquiry.companyName && (
-                        <span className="text-white/60">{inquiry.companyName}</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-sm text-white/60 mb-2">
-                      <Mail className="w-4 h-4" />
-                      <span>{inquiry.contactEmail}</span>
-                    </div>
-
-                    {/* Video Type */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-white/40">Recommended:</span>
-                      <span className="text-violet-400">{inquiry.recommendedVideoType}</span>
-                    </div>
-                  </div>
-
-                  {/* Right Side: Date & Action */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <div className="flex items-center gap-1.5 text-xs text-white/40">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDate(inquiry.createdAt)}
-                    </div>
-
-                    {inquiry.status === 'new' && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Create Proposal
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Results Count */}
-      {filteredInquiries.length > 0 && (
-        <div className="mt-4 text-center text-sm text-white/40">
-          Showing {filteredInquiries.length} of {inquiries.length} inquiries
+  
+      {/* Loading State */}
+      {loading ? (
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-700">Loading inquiries...</p>
         </div>
+      ) : error ? (
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Inquiries List */}
+          <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+            {filteredInquiries.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-700 mb-2">No inquiries found</p>
+                <p className="text-sm text-gray-500">
+                  {searchTerm || statusFilter !== 'all'
+                    ? 'Try adjusting your filters'
+                    : 'Inquiries will appear here when customers submit landing page quiz'}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {filteredInquiries.map((inquiry) => (
+                  <Link
+                    key={inquiry.id}
+                    to={`/admin/inquiries/${inquiry.id}`}
+                    className="block p-4 hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        {/* Inquiry Number & Status */}
+                        <div className="flex items-center gap-3 mb-2">
+                          <code className="text-base font-semibold text-gray-900 font-mono">
+                            {inquiry.inquiryNumber}
+                          </code>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
+                            {STATUS_LABELS[inquiry.status]}
+                          </span>
+                        </div>
+                    
+                        {/* Contact Info */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-1">
+                          <div className="flex items-center gap-1.5 text-gray-900">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="font-medium">{inquiry.contactName}</span>
+                          </div>
+                          {inquiry.companyName && (
+                            <span className="text-gray-700">{inquiry.companyName}</span>
+                          )}
+                        </div>
+                    
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700 mb-2">
+                          <Mail className="w-4 h-4" />
+                          <span>{inquiry.contactEmail}</span>
+                        </div>
+                    
+                        {/* Video Type */}
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-600">Recommended:</span>
+                          <span className="text-violet-600">{inquiry.recommendedVideoType}</span>
+                        </div>
+                      </div>
+                    
+                      {/* Right Side: Date & Action */}
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDate(inquiry.createdAt)}
+                        </div>
+                    
+                        {inquiry.status === 'new' && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Create Proposal
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Results Count */}
+          {filteredInquiries.length > 0 && (
+            <div className="mt-4 text-center text-sm text-gray-500">
+              Showing {filteredInquiries.length} of {inquiries.length} inquiries
+            </div>
+          )}
+        </>
       )}
     </div>
   );

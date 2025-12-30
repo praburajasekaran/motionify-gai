@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
-import { getInquiryById, type InquiryStatus } from '../../lib/inquiries';
-import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, CheckCircle2, Clock, Send } from 'lucide-react';
+import { getInquiryById, type InquiryStatus, type Inquiry } from '../../lib/inquiries';
+import { getProposalById, type Proposal } from '../../lib/proposals';
+import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, CheckCircle2, Clock, Send, Eye, Copy } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 
@@ -37,35 +38,97 @@ export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isLoading } = useAuthContext();
+  const [copied, setCopied] = useState(false);
 
-  // Wait for auth to load before checking permissions
-  if (isLoading) {
+  const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!id) {
+        setDataLoading(false);
+        return;
+      }
+      try {
+        const inquiryData = await getInquiryById(id);
+        setInquiry(inquiryData);
+        
+        if (inquiryData?.proposalId) {
+          const proposalData = await getProposalById(inquiryData.proposalId);
+          setProposal(proposalData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
+
+  if (isLoading || dataLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-white/60">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
-  // Permission check - Only Super Admin can access
   if (!Permissions.canManageInquiries(user)) {
     return <Navigate to="/" replace />;
   }
 
-  const inquiry = id ? getInquiryById(id) : null;
+  const handleCopyProposalLink = () => {
+    if (!inquiry?.proposalId || !proposal) return;
+    
+    // Create proposal data for URL
+    const proposalData = {
+      proposal: {
+        id: proposal.id,
+        inquiryId: proposal.inquiryId,
+        status: proposal.status,
+        version: proposal.version,
+        createdAt: proposal.createdAt,
+        updatedAt: proposal.updatedAt,
+        description: proposal.description,
+        deliverables: proposal.deliverables,
+        currency: proposal.currency,
+        totalPrice: proposal.totalPrice,
+        advancePercentage: proposal.advancePercentage,
+        advanceAmount: proposal.advanceAmount,
+        balanceAmount: proposal.balanceAmount,
+      },
+      inquiry: {
+        id: inquiry.id,
+        inquiryNumber: inquiry.inquiryNumber,
+        contactName: inquiry.contactName,
+        contactEmail: inquiry.contactEmail,
+        companyName: inquiry.companyName,
+      }
+    };
+    
+    // Encode data for URL
+    const encodedData = btoa(JSON.stringify(proposalData));
+    const link = `http://localhost:5174/proposal/${inquiry.proposalId}?data=${encodedData}`;
+    
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (!inquiry) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-8 h-8 text-white/40" />
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Inquiry Not Found</h2>
-          <p className="text-white/60 mb-6">The inquiry you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Inquiry Not Found</h2>
+          <p className="text-muted-foreground mb-6">The inquiry you're looking for doesn't exist.</p>
           <button
             onClick={() => navigate('/admin/inquiries')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Inquiries
@@ -91,7 +154,7 @@ export function InquiryDetail() {
       <div className="mb-6">
         <button
           onClick={() => navigate('/admin/inquiries')}
-          className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors mb-4"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Inquiries
@@ -100,20 +163,20 @@ export function InquiryDetail() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <code className="text-2xl font-bold text-white font-mono">
+              <code className="text-2xl font-bold text-foreground font-mono">
                 {inquiry.inquiryNumber}
               </code>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
                 {STATUS_LABELS[inquiry.status]}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-white/60">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
               <span>Submitted {formatDate(inquiry.createdAt)}</span>
             </div>
           </div>
 
-          {inquiry.status === 'new' && (
+          {inquiry.status === 'new' ? (
             <button
               onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
@@ -121,7 +184,15 @@ export function InquiryDetail() {
               <Plus className="w-4 h-4" />
               Create Proposal
             </button>
-          )}
+          ) : inquiry.proposalId ? (
+            <button
+              onClick={() => navigate(`/admin/proposals/${inquiry.proposalId}`)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              View Proposal
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -129,22 +200,22 @@ export function InquiryDetail() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Contact Information */}
-          <div className="bg-white/5 rounded-xl p-6 ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">Contact Information</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">Contact Information</h2>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <User className="w-5 h-5 text-white/60 mt-0.5" />
+                <User className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm text-white/60">Name</p>
-                  <p className="text-white font-medium">{inquiry.contactName}</p>
+                  <p className="text-sm text-muted-foreground">Name</p>
+                  <p className="text-card-foreground font-medium">{inquiry.contactName}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-white/60 mt-0.5" />
+                <Mail className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm text-white/60">Email</p>
-                  <a href={`mailto:${inquiry.contactEmail}`} className="text-violet-400 hover:text-violet-300 transition-colors">
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <a href={`mailto:${inquiry.contactEmail}`} className="text-primary hover:text-primary/80 transition-colors">
                     {inquiry.contactEmail}
                   </a>
                 </div>
@@ -152,20 +223,20 @@ export function InquiryDetail() {
 
               {inquiry.companyName && (
                 <div className="flex items-start gap-3">
-                  <Building2 className="w-5 h-5 text-white/60 mt-0.5" />
+                  <Building2 className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm text-white/60">Company</p>
-                    <p className="text-white font-medium">{inquiry.companyName}</p>
+                    <p className="text-sm text-muted-foreground">Company</p>
+                    <p className="text-card-foreground font-medium">{inquiry.companyName}</p>
                   </div>
                 </div>
               )}
 
               {inquiry.contactPhone && (
                 <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 text-white/60 mt-0.5" />
+                  <Phone className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm text-white/60">Phone</p>
-                    <a href={`tel:${inquiry.contactPhone}`} className="text-white font-medium hover:text-violet-400 transition-colors">
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <a href={`tel:${inquiry.contactPhone}`} className="text-card-foreground font-medium hover:text-primary transition-colors">
                       {inquiry.contactPhone}
                     </a>
                   </div>
@@ -174,10 +245,10 @@ export function InquiryDetail() {
 
               {inquiry.projectNotes && (
                 <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-white/60 mt-0.5" />
+                  <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm text-white/60 mb-1">Additional Notes</p>
-                    <p className="text-white/80 text-sm leading-relaxed bg-white/5 rounded-lg p-3 border border-white/10">
+                    <p className="text-sm text-muted-foreground mb-1">Additional Notes</p>
+                    <p className="text-card-foreground text-sm leading-relaxed bg-muted rounded-lg p-3 border border-border">
                       {inquiry.projectNotes}
                     </p>
                   </div>
@@ -187,32 +258,32 @@ export function InquiryDetail() {
           </div>
 
           {/* Quiz Answers */}
-          <div className="bg-white/5 rounded-xl p-6 ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">Quiz Answers</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">Quiz Answers</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Industry/Niche</p>
-                <p className="text-white font-medium">{inquiry.quizAnswers.niche}</p>
+              <div className="bg-muted rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Industry/Niche</p>
+                <p className="text-foreground font-medium">{inquiry.quizAnswers.niche}</p>
               </div>
 
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Target Audience</p>
-                <p className="text-white font-medium">{inquiry.quizAnswers.audience}</p>
+              <div className="bg-muted rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Target Audience</p>
+                <p className="text-foreground font-medium">{inquiry.quizAnswers.audience}</p>
               </div>
 
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Video Style</p>
-                <p className="text-white font-medium">{inquiry.quizAnswers.style}</p>
+              <div className="bg-muted rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Video Style</p>
+                <p className="text-foreground font-medium">{inquiry.quizAnswers.style}</p>
               </div>
 
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Mood/Tone</p>
-                <p className="text-white font-medium">{inquiry.quizAnswers.mood}</p>
+              <div className="bg-muted rounded-lg p-4 border border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Mood/Tone</p>
+                <p className="text-foreground font-medium">{inquiry.quizAnswers.mood}</p>
               </div>
 
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10 sm:col-span-2">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Video Duration</p>
-                <p className="text-white font-medium">{inquiry.quizAnswers.duration}</p>
+              <div className="bg-muted rounded-lg p-4 border border-border sm:col-span-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Video Duration</p>
+                <p className="text-foreground font-medium">{inquiry.quizAnswers.duration}</p>
               </div>
             </div>
 
@@ -223,8 +294,8 @@ export function InquiryDetail() {
                   <CheckCircle2 className="w-4 h-4 text-violet-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Recommended Video Type</p>
-                  <p className="text-white font-semibold text-lg">{inquiry.recommendedVideoType}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Recommended Video Type</p>
+                  <p className="text-foreground font-semibold text-lg">{inquiry.recommendedVideoType}</p>
                 </div>
               </div>
             </div>
@@ -234,19 +305,19 @@ export function InquiryDetail() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Activity Timeline */}
-          <div className="bg-white/5 rounded-xl p-6 ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">Activity Timeline</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">Activity Timeline</h2>
             <div className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
                     <Clock className="w-4 h-4 text-blue-400" />
                   </div>
-                  <div className="w-px h-full bg-white/10 mt-2" />
+                  <div className="w-px h-full bg-border mt-2" />
                 </div>
                 <div className="pb-6">
-                  <p className="text-white font-medium mb-1">Inquiry Created</p>
-                  <p className="text-xs text-white/60">{formatDate(inquiry.createdAt)}</p>
+                  <p className="text-card-foreground font-medium mb-1">Inquiry Created</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(inquiry.createdAt)}</p>
                 </div>
               </div>
 
@@ -256,11 +327,11 @@ export function InquiryDetail() {
                     <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
                       <Send className="w-4 h-4 text-purple-400" />
                     </div>
-                    <div className="w-px h-full bg-white/10 mt-2" />
+                    <div className="w-px h-full bg-border mt-2" />
                   </div>
                   <div className="pb-6">
-                    <p className="text-white font-medium mb-1">Proposal Sent</p>
-                    <p className="text-xs text-white/60">{formatDate(inquiry.updatedAt)}</p>
+                    <p className="text-card-foreground font-medium mb-1">Proposal Sent</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(inquiry.updatedAt)}</p>
                   </div>
                 </div>
               )}
@@ -273,8 +344,8 @@ export function InquiryDetail() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-white font-medium mb-1">Proposal Accepted</p>
-                    <p className="text-xs text-white/60">{formatDate(inquiry.updatedAt)}</p>
+                    <p className="text-card-foreground font-medium mb-1">Proposal Accepted</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(inquiry.updatedAt)}</p>
                   </div>
                 </div>
               )}
@@ -287,8 +358,8 @@ export function InquiryDetail() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-white font-medium mb-1">Converted to Project</p>
-                    <p className="text-xs text-white/60">{formatDate(inquiry.convertedAt)}</p>
+                    <p className="text-card-foreground font-medium mb-1">Converted to Project</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(inquiry.convertedAt)}</p>
                   </div>
                 </div>
               )}
@@ -296,10 +367,10 @@ export function InquiryDetail() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white/5 rounded-xl p-6 ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              {inquiry.status === 'new' && (
+              {inquiry.status === 'new' ? (
                 <button
                   onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
@@ -307,11 +378,44 @@ export function InquiryDetail() {
                   <span>Create Proposal</span>
                   <Plus className="w-4 h-4" />
                 </button>
+              ) : null}
+
+              {inquiry.proposalId && (
+                <>
+                  <button
+                    onClick={handleCopyProposalLink}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                  >
+                    <span>
+                      {copied ? 'Link Copied!' : 'Copy Proposal Link'}
+                      {proposal && proposal.version > 1 && (
+                        <span className="ml-2 text-xs opacity-75">(v{proposal.version})</span>
+                      )}
+                    </span>
+                    {copied ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {/* Show client feedback if changes requested */}
+                  {inquiry.status === 'negotiating' && proposal?.feedback && (
+                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                      <p className="text-xs font-medium text-orange-800 mb-1">
+                        Client Feedback:
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        {proposal.feedback}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               <a
                 href={`mailto:${inquiry.contactEmail}?subject=Re: Your inquiry ${inquiry.inquiryNumber}`}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-colors border border-white/10"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
               >
                 <span>Send Email</span>
                 <Mail className="w-4 h-4" />
@@ -320,7 +424,7 @@ export function InquiryDetail() {
               {inquiry.contactPhone && (
                 <a
                   href={`tel:${inquiry.contactPhone}`}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-colors border border-white/10"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
                 >
                   <span>Call Contact</span>
                   <Phone className="w-4 h-4" />

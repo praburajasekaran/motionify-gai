@@ -1,0 +1,18 @@
+# Maestro Configuration
+# https://docs.maestro.dev/
+
+# Default base URL for all flows
+# Override with: maestro test --env URL=https://staging.example.com
+env:
+  URL: "http://localhost:5173"
+  
+  # Test user data
+  TEST_NAME: "John Doe"
+  TEST_EMAIL: "john.doe@example.com"
+  TEST_COMPANY: "Acme Inc"
+  TEST_PHONE: "+1 555 123 4567"
+  TEST_NOTES: "We need a 60-second product demo video for our new SaaS launch."
+
+# Global settings
+onFlowStart:
+  - evalScript: ${output.startTime = Date.now()}

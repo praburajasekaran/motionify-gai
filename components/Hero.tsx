@@ -1,4 +1,4 @@
-import Image from "next/image";
+// Using standard img tags instead of next/image
 
 export default function Hero() {
   return (
@@ -88,18 +88,18 @@ export default function Hero() {
                 <div className="relative grid grid-cols-2 gap-3">
                   <div className="space-y-3">
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-lens-minimal.png" alt="Cinema Lens" width={700} height={900} className="w-full h-full object-cover opacity-90" />
+                      <img src="/images/hero/hero-lens-minimal.png" alt="Cinema Lens" className="w-full h-full object-cover opacity-90" />
                     </div>
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-waveform-minimal.png" alt="Digital Waveform" width={700} height={525} className="w-full h-full object-cover opacity-90" />
+                      <img src="/images/hero/hero-waveform-minimal.png" alt="Digital Waveform" className="w-full h-full object-cover opacity-90" />
                     </div>
                   </div>
                   <div className="space-y-3 pt-6">
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-light-minimal.png" alt="Volumetric Light" width={700} height={525} className="w-full h-full object-cover opacity-90" />
+                      <img src="/images/hero/hero-light-minimal.png" alt="Volumetric Light" className="w-full h-full object-cover opacity-90" />
                     </div>
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-bokeh-minimal.png" alt="Abstract Bokeh" width={700} height={933} className="w-full h-full object-cover opacity-90" />
+                      <img src="/images/hero/hero-bokeh-minimal.png" alt="Abstract Bokeh" className="w-full h-full object-cover opacity-90" />
                     </div>
                   </div>
                 </div>

@@ -1,0 +1,91 @@
+# Quiz Back Navigation Tests
+# Tests the ability to go back through quiz steps and modify selections
+#
+# Run: maestro test maestro/flows/quiz/back-navigation.yaml
+
+url: ${URL}
+name: "Quiz - Back Navigation"
+tags:
+  - quiz
+  - navigation
+---
+
+# ============================================
+# Setup: Start Quiz
+# ============================================
+- launchApp
+
+- scrollUntilVisible:
+    element: "Create Your Video Project"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn: "Get Started"
+
+# ============================================
+# Test 1: Complete first 3 questions
+# ============================================
+- assertVisible: "What's your niche?"
+- tapOn: "Tech"
+
+- assertVisible: "Who's your target audience?"
+- tapOn: "Businesses"
+
+- assertVisible: "What kind of video style appeals to you?"
+- tapOn: "Animation"
+
+# ============================================
+# Test 2: Go back and change selection
+# ============================================
+- assertVisible: "4 of 5"
+
+- tapOn: "Back"
+
+- assertVisible: "3 of 5"
+- assertVisible: "What kind of video style appeals to you?"
+
+# Change selection from Animation to Live Action
+- tapOn: "Live Action"
+
+# ============================================
+# Test 3: Continue forward with new selection
+# ============================================
+- assertVisible: "What mood or tone best fits your message?"
+- tapOn: "Inspirational"
+
+- assertVisible: "What's your ideal duration?"
+- tapOn: "Demo"
+
+# ============================================
+# Test 4: Verify recommendation reflects selections
+# ============================================
+- assertVisible:
+    text: "Our Recommendation"
+    timeout: 15000
+
+# The recommendation should reflect Live Action + Inspirational + Demo choices
+- takeScreenshot: "recommendation-after-back-nav"
+
+# ============================================
+# Test 5: Back from contact form to quiz
+# ============================================
+- tapOn: "Start This Project"
+
+- assertVisible: "Almost There!"
+
+- tapOn: "Back"
+
+# Should return to last quiz question
+- assertVisible: "What's your ideal duration?"
+- assertVisible: "5 of 5"
+
+# ============================================
+# Test 6: Can still complete quiz after backing
+# ============================================
+- tapOn: "Reels"
+
+- assertVisible:
+    text: "Our Recommendation"
+    timeout: 15000
+
+- takeScreenshot: "back-navigation-complete"

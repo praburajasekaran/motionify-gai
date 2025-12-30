@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ArrowRight, Copy, Check } from 'lucide-react';
+import { CheckCircle2, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 
 interface InquirySuccessProps {
@@ -97,11 +97,11 @@ export default function InquirySuccess({ inquiryNumber, contactEmail, onReset }:
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Action Button */}
+      <div className="flex justify-center">
         <button
           onClick={onReset}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-medium bg-white/5 ring-1 ring-white/10 text-white/90 hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-8 py-3.5 text-base font-medium text-white shadow-lg hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -120,14 +120,6 @@ export default function InquirySuccess({ inquiryNumber, contactEmail, onReset }:
           </svg>
           <span>Submit Another Inquiry</span>
         </button>
-
-        <a
-          href={`/#/inquiry-status/${inquiryNumber}`}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-6 py-3.5 text-base font-medium text-white shadow-lg hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-        >
-          <span>Track My Inquiry</span>
-          <ArrowRight size={18} />
-        </a>
       </div>
 
       {/* Help Text */}

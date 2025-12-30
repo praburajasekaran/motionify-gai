@@ -1,124 +1,142 @@
-/**
- * Proposal Management Library
- * Handles proposal creation, storage, and retrieval using localStorage
- */
-
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
+const API_BASE_URL = '/.netlify/functions';
 
 export type ProposalStatus =
-  | 'sent'             // Proposal sent to client
-  | 'accepted'         // Client accepted proposal
-  | 'rejected'         // Client rejected proposal
-  | 'changes_requested'; // Client requested changes
+  | 'sent'
+  | 'accepted'
+  | 'rejected'
+  | 'changes_requested';
 
 export interface ProposalDeliverable {
-  id: string;                      // UUID - preserved through conversion to project
+  id: string;
   name: string;
   description: string;
   estimatedCompletionWeek: number;
 }
 
+export interface ProposalEditHistory {
+  version: number;
+  editedAt: string;
+  reason?: string;
+}
+
 export interface Proposal {
-  // Core Identification
-  id: string;                      // UUID
-  inquiryId: string;               // Reference to inquiry
-  status: ProposalStatus;
-  createdAt: string;               // ISO date string
-  updatedAt: string;               // ISO date string
-
-  // Content
-  description: string;             // Rich text/markdown
-  deliverables: ProposalDeliverable[];
-
-  // Pricing (all amounts in paise - INR)
-  totalPrice: number;              // Total cost in paise
-  advancePercentage: number;       // 40, 50, or 60
-  advanceAmount: number;           // Calculated
-  balanceAmount: number;           // Calculated
-
-  // Response tracking
-  acceptedAt?: string;             // ISO date string
-  rejectedAt?: string;             // ISO date string
-  feedback?: string;               // For rejection or change requests
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const STORAGE_KEY = 'motionify_proposals';
-
-// ============================================================================
-// localStorage Operations
-// ============================================================================
-
-/**
- * Get all proposals from localStorage
- */
-export function getProposals(): Proposal[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-
-    const proposals = JSON.parse(data) as Proposal[];
-
-    // Sort by creation date (newest first)
-    return proposals.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } catch (error) {
-    console.error('Error reading proposals from localStorage:', error);
-    return [];
-  }
-}
-
-/**
- * Get a single proposal by ID
- */
-export function getProposalById(id: string): Proposal | null {
-  const proposals = getProposals();
-  return proposals.find(p => p.id === id) || null;
-}
-
-/**
- * Get proposals by inquiry ID
- */
-export function getProposalsByInquiryId(inquiryId: string): Proposal[] {
-  const proposals = getProposals();
-  return proposals.filter(p => p.inquiryId === inquiryId);
-}
-
-/**
- * Save proposals array to localStorage
- */
-function saveProposals(proposals: Proposal[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(proposals));
-  } catch (error) {
-    console.error('Error saving proposals to localStorage:', error);
-    throw new Error('Failed to save proposal. Please try again.');
-  }
-}
-
-// ============================================================================
-// CRUD Operations
-// ============================================================================
-
-/**
- * Create a new proposal
- */
-export function createProposal(data: {
+  id: string;
   inquiryId: string;
+  status: ProposalStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
   description: string;
   deliverables: ProposalDeliverable[];
+  currency: 'INR' | 'USD';
   totalPrice: number;
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
-}): Proposal {
-  // Validate required fields
+  acceptedAt?: string;
+  rejectedAt?: string;
+  feedback?: string;
+  editHistory?: ProposalEditHistory[];
+}
+
+export async function getProposals(): Promise<Proposal[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/proposals`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.map((proposal: any) => ({
+      ...proposal,
+      inquiryId: proposal.inquiry_id,
+      createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
+      totalPrice: proposal.total_price,
+      advancePercentage: proposal.advance_percentage,
+      advanceAmount: proposal.advance_amount,
+      balanceAmount: proposal.balance_amount,
+      acceptedAt: proposal.accepted_at,
+      rejectedAt: proposal.rejected_at,
+      editHistory: proposal.edit_history,
+      deliverables: typeof proposal.deliverables === 'string' 
+        ? JSON.parse(proposal.deliverables) 
+        : proposal.deliverables,
+    }));
+  } catch (error) {
+    console.error('Error fetching proposals:', error);
+    return [];
+  }
+}
+
+export async function getProposalById(id: string): Promise<Proposal | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`);
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const proposal = await response.json();
+    return {
+      ...proposal,
+      inquiryId: proposal.inquiry_id,
+      createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
+      totalPrice: proposal.total_price,
+      advancePercentage: proposal.advance_percentage,
+      advanceAmount: proposal.advance_amount,
+      balanceAmount: proposal.balance_amount,
+      acceptedAt: proposal.accepted_at,
+      rejectedAt: proposal.rejected_at,
+      editHistory: proposal.edit_history,
+      deliverables: typeof proposal.deliverables === 'string' 
+        ? JSON.parse(proposal.deliverables) 
+        : proposal.deliverables,
+    };
+  } catch (error) {
+    console.error('Error fetching proposal:', error);
+    return null;
+  }
+}
+
+export async function getProposalsByInquiryId(inquiryId: string): Promise<Proposal[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/proposals?inquiryId=${inquiryId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.map((proposal: any) => ({
+      ...proposal,
+      inquiryId: proposal.inquiry_id,
+      createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
+      totalPrice: proposal.total_price,
+      advancePercentage: proposal.advance_percentage,
+      advanceAmount: proposal.advance_amount,
+      balanceAmount: proposal.balance_amount,
+      acceptedAt: proposal.accepted_at,
+      rejectedAt: proposal.rejected_at,
+      editHistory: proposal.edit_history,
+      deliverables: typeof proposal.deliverables === 'string' 
+        ? JSON.parse(proposal.deliverables) 
+        : proposal.deliverables,
+    }));
+  } catch (error) {
+    console.error('Error fetching proposals by inquiry:', error);
+    return [];
+  }
+}
+
+export async function createProposal(data: {
+  inquiryId: string;
+  description: string;
+  deliverables: ProposalDeliverable[];
+  currency: 'INR' | 'USD';
+  totalPrice: number;
+  advancePercentage: number;
+  advanceAmount: number;
+  balanceAmount: number;
+}): Promise<Proposal> {
   if (!data.inquiryId || data.inquiryId.trim() === '') {
     throw new Error('Inquiry ID is required');
   }
@@ -139,112 +157,132 @@ export function createProposal(data: {
     throw new Error('Advance percentage must be 40, 50, or 60');
   }
 
-  // Generate unique ID
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
+  const response = await fetch(`${API_BASE_URL}/proposals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
 
-  const proposal: Proposal = {
-    id,
-    inquiryId: data.inquiryId,
-    status: 'sent',
-    createdAt: now,
-    updatedAt: now,
-
-    description: data.description.trim(),
-    deliverables: data.deliverables.map(d => ({
-      id: d.id,
-      name: d.name.trim(),
-      description: d.description.trim(),
-      estimatedCompletionWeek: d.estimatedCompletionWeek,
-    })),
-
-    totalPrice: data.totalPrice,
-    advancePercentage: data.advancePercentage,
-    advanceAmount: data.advanceAmount,
-    balanceAmount: data.balanceAmount,
-  };
-
-  // Save to localStorage
-  const proposals = getProposals();
-  proposals.unshift(proposal); // Add to beginning (newest first)
-  saveProposals(proposals);
-
-  return proposal;
-}
-
-/**
- * Update a proposal
- */
-export function updateProposal(id: string, updates: Partial<Proposal>): Proposal {
-  const proposals = getProposals();
-  const index = proposals.findIndex(p => p.id === id);
-
-  if (index === -1) {
-    throw new Error('Proposal not found');
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to create proposal');
   }
 
-  const updatedProposal: Proposal = {
-    ...proposals[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
+  const result = await response.json();
+  return {
+    ...result,
+    inquiryId: result.inquiry_id,
+    createdAt: result.created_at,
+    updatedAt: result.updated_at,
+    totalPrice: result.total_price,
+    advancePercentage: result.advance_percentage,
+    advanceAmount: result.advance_amount,
+    balanceAmount: result.balance_amount,
+    acceptedAt: result.accepted_at,
+    rejectedAt: result.rejected_at,
+    editHistory: result.edit_history,
+    deliverables: typeof result.deliverables === 'string' 
+      ? JSON.parse(result.deliverables) 
+      : result.deliverables,
   };
-
-  proposals[index] = updatedProposal;
-  saveProposals(proposals);
-
-  return updatedProposal;
 }
 
-/**
- * Update proposal status
- */
-export function updateProposalStatus(
+export async function updateProposal(id: string, updates: Partial<Proposal>): Promise<Proposal> {
+  const snakeCaseUpdates: any = {};
+  
+  if (updates.description !== undefined) snakeCaseUpdates.description = updates.description;
+  if (updates.deliverables !== undefined) snakeCaseUpdates.deliverables = updates.deliverables;
+  if (updates.currency !== undefined) snakeCaseUpdates.currency = updates.currency;
+  if (updates.totalPrice !== undefined) snakeCaseUpdates.total_price = updates.totalPrice;
+  if (updates.advancePercentage !== undefined) snakeCaseUpdates.advance_percentage = updates.advancePercentage;
+  if (updates.advanceAmount !== undefined) snakeCaseUpdates.advance_amount = updates.advanceAmount;
+  if (updates.balanceAmount !== undefined) snakeCaseUpdates.balance_amount = updates.balanceAmount;
+  if (updates.status !== undefined) snakeCaseUpdates.status = updates.status;
+  if (updates.feedback !== undefined) snakeCaseUpdates.feedback = updates.feedback;
+
+  const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(snakeCaseUpdates),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to update proposal');
+  }
+
+  const result = await response.json();
+  return {
+    ...result,
+    inquiryId: result.inquiry_id,
+    createdAt: result.created_at,
+    updatedAt: result.updated_at,
+    totalPrice: result.total_price,
+    advancePercentage: result.advance_percentage,
+    advanceAmount: result.advance_amount,
+    balanceAmount: result.balance_amount,
+    acceptedAt: result.accepted_at,
+    rejectedAt: result.rejected_at,
+    editHistory: result.edit_history,
+    deliverables: typeof result.deliverables === 'string' 
+      ? JSON.parse(result.deliverables) 
+      : result.deliverables,
+  };
+}
+
+export async function updateProposalStatus(
   id: string,
   status: ProposalStatus,
   additionalData?: {
     feedback?: string;
   }
-): Proposal {
-  const updates: Partial<Proposal> = { status };
+): Promise<Proposal> {
+  const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, feedback: additionalData?.feedback }),
+  });
 
-  if (status === 'accepted') {
-    updates.acceptedAt = new Date().toISOString();
-  } else if (status === 'rejected') {
-    updates.rejectedAt = new Date().toISOString();
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to update proposal status');
   }
 
-  if (additionalData?.feedback) {
-    updates.feedback = additionalData.feedback;
-  }
-
-  return updateProposal(id, updates);
+  const result = await response.json();
+  return {
+    ...result,
+    inquiryId: result.inquiry_id,
+    createdAt: result.created_at,
+    updatedAt: result.updated_at,
+    totalPrice: result.total_price,
+    advancePercentage: result.advance_percentage,
+    advanceAmount: result.advance_amount,
+    balanceAmount: result.balance_amount,
+    acceptedAt: result.accepted_at,
+    rejectedAt: result.rejected_at,
+    editHistory: result.edit_history,
+    deliverables: typeof result.deliverables === 'string' 
+      ? JSON.parse(result.deliverables) 
+      : result.deliverables,
+  };
 }
 
-/**
- * Delete a proposal
- */
-export function deleteProposal(id: string): void {
-  const proposals = getProposals();
-  const filtered = proposals.filter(p => p.id !== id);
-
-  if (filtered.length === proposals.length) {
-    throw new Error('Proposal not found');
-  }
-
-  saveProposals(filtered);
+export async function deleteProposal(id: string): Promise<void> {
+  throw new Error('Delete proposal not supported - mark as rejected instead');
 }
 
-/**
- * Get proposals by status
- */
-export function getProposalsByStatus(status: ProposalStatus): Proposal[] {
-  const proposals = getProposals();
+export async function getProposalsByStatus(status: ProposalStatus): Promise<Proposal[]> {
+  const proposals = await getProposals();
   return proposals.filter(p => p.status === status);
 }
 
-/**
- * Clear all proposals (for testing/demo purposes)
- */
+export async function incrementProposalVersion(
+  proposalId: string,
+  reason?: string
+): Promise<Proposal> {
+  throw new Error('incrementProposalVersion not yet implemented');
+}
+
 export function clearAllProposals(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  throw new Error('clearAllProposals not supported with database backend');
 }

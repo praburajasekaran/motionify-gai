@@ -1,0 +1,607 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { getProposalById, updateProposal, type Proposal, type ProposalDeliverable } from '../../lib/proposals';
+import { getInquiryById, type Inquiry } from '../../lib/inquiries';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { Permissions } from '../../lib/permissions';
+
+interface DeliverableInput {
+  id: string;
+  name: string;
+  description: string;
+  estimatedCompletionWeek: number;
+}
+
+export function ProposalDetail() {
+  const { proposalId } = useParams<{ proposalId: string }>();
+  const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuthContext();
+
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [description, setDescription] = useState('');
+  const [deliverables, setDeliverables] = useState<DeliverableInput[]>([]);
+  const [totalPrice, setTotalPrice] = useState<string>('');
+  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
+  const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!proposalId) {
+        setIsDataLoading(false);
+        return;
+      }
+      
+      setIsDataLoading(true);
+      const fetchedProposal = await getProposalById(proposalId);
+      setProposal(fetchedProposal);
+      
+      if (fetchedProposal?.inquiryId) {
+        const fetchedInquiry = await getInquiryById(fetchedProposal.inquiryId);
+        setInquiry(fetchedInquiry);
+      }
+      setIsDataLoading(false);
+    }
+    fetchData();
+  }, [proposalId]);
+
+  useEffect(() => {
+    if (isEditMode && proposal) {
+      setDescription(proposal.description);
+      setDeliverables(proposal.deliverables.map(d => ({ ...d })));
+      setTotalPrice((proposal.totalPrice / 100).toString());
+      setCurrency(proposal.currency);
+      setAdvancePercentage(proposal.advancePercentage as 40 | 50 | 60);
+    }
+  }, [isEditMode, proposal]);
+
+  if (authLoading || isDataLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!Permissions.canCreateProposals(user)) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!proposal) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Proposal Not Found</h2>
+          <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist.</p>
+          <button
+            onClick={() => navigate('/admin/inquiries')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Inquiries
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleAddDeliverable = () => {
+    setDeliverables([
+      ...deliverables,
+      {
+        id: crypto.randomUUID(),
+        name: '',
+        description: '',
+        estimatedCompletionWeek: deliverables.length + 1,
+      },
+    ]);
+  };
+
+  const handleRemoveDeliverable = (id: string) => {
+    if (deliverables.length === 1) {
+      alert('You must have at least one deliverable');
+      return;
+    }
+    setDeliverables(deliverables.filter((d) => d.id !== id));
+  };
+
+  const handleDeliverableChange = (
+    id: string,
+    field: keyof DeliverableInput,
+    value: string | number
+  ) => {
+    setDeliverables(
+      deliverables.map((d) =>
+        d.id === id ? { ...d, [field]: value } : d
+      )
+    );
+  };
+
+  const calculatePricing = () => {
+    const priceInPaise = parseFloat(totalPrice) * 100;
+    if (isNaN(priceInPaise)) return null;
+
+    const advanceAmount = Math.round((priceInPaise * advancePercentage) / 100);
+    const balanceAmount = priceInPaise - advanceAmount;
+
+    return {
+      totalPrice: priceInPaise,
+      advanceAmount,
+      balanceAmount,
+    };
+  };
+
+  const formatCurrency = (amountInSmallestUnit: number, curr: 'INR' | 'USD' = proposal.currency) => {
+    const locale = curr === 'INR' ? 'en-IN' : 'en-US';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: curr,
+      maximumFractionDigits: 0,
+    }).format(amountInSmallestUnit / 100);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const validateForm = (): string | null => {
+    if (!description.trim()) {
+      return 'Please enter a project description';
+    }
+
+    for (const deliverable of deliverables) {
+      if (!deliverable.name.trim()) {
+        return 'All deliverables must have a name';
+      }
+      if (!deliverable.description.trim()) {
+        return 'All deliverables must have a description';
+      }
+      if (deliverable.estimatedCompletionWeek < 1) {
+        return 'Estimated completion week must be at least 1';
+      }
+    }
+
+    if (!totalPrice.trim() || parseFloat(totalPrice) <= 0) {
+      return 'Please enter a valid total price';
+    }
+
+    return null;
+  };
+
+  const handleSaveChanges = async () => {
+    const error = validateForm();
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    const pricing = calculatePricing();
+    if (!pricing) {
+      alert('Invalid pricing');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const updatedProposal = await updateProposal(proposal.id, {
+        description: description.trim(),
+        deliverables: deliverables.map((d) => ({
+          id: d.id,
+          name: d.name.trim(),
+          description: d.description.trim(),
+          estimatedCompletionWeek: d.estimatedCompletionWeek,
+        })),
+        currency,
+        totalPrice: pricing.totalPrice,
+        advancePercentage,
+        advanceAmount: pricing.advanceAmount,
+        balanceAmount: pricing.balanceAmount,
+      });
+
+      setProposal(updatedProposal);
+      alert('Proposal updated successfully!');
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Error updating proposal:', error);
+      alert('Failed to update proposal. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+  };
+
+  const STATUS_CONFIG = {
+    sent: {
+      label: 'Sent',
+      icon: Clock,
+      color: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
+      iconColor: 'text-purple-400',
+    },
+    accepted: {
+      label: 'Accepted',
+      icon: CheckCircle2,
+      color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+      iconColor: 'text-emerald-400',
+    },
+    rejected: {
+      label: 'Rejected',
+      icon: XCircle,
+      color: 'bg-red-500/10 text-red-400 ring-red-500/20',
+      iconColor: 'text-red-400',
+    },
+    changes_requested: {
+      label: 'Changes Requested',
+      icon: MessageSquare,
+      color: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
+      iconColor: 'text-orange-400',
+    },
+  };
+
+  const statusInfo = STATUS_CONFIG[proposal.status];
+  const StatusIcon = statusInfo.icon;
+
+  const pricing = isEditMode ? calculatePricing() : {
+    totalPrice: proposal.totalPrice,
+    advanceAmount: proposal.advanceAmount,
+    balanceAmount: proposal.balanceAmount,
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries')}
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Inquiry
+        </button>
+
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">Proposal</h1>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${statusInfo.color}`}>
+                <StatusIcon className={`w-4 h-4 ${statusInfo.iconColor}`} />
+                {statusInfo.label}
+              </span>
+            </div>
+            {inquiry && (
+              <p className="text-gray-600">
+                For inquiry <code className="text-violet-600 font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
+              </p>
+            )}
+            <p className="text-sm text-gray-500 mt-1">
+              Created {formatDate(proposal.createdAt)}
+              {proposal.updatedAt !== proposal.createdAt && ` • Updated ${formatDate(proposal.updatedAt)}`}
+            </p>
+          </div>
+
+          {!isEditMode && proposal.status === 'sent' && (
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors font-medium"
+            >
+              <Edit2 className="w-4 h-4" />
+              Edit Proposal
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* Project Description */}
+        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            Project Description {isEditMode && <span className="text-red-600">*</span>}
+          </label>
+          {isEditMode ? (
+            <>
+              <p className="text-xs text-gray-600 mb-3">
+                Describe the scope of work, objectives, and what the client can expect
+              </p>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
+                placeholder="Enter detailed project description..."
+              />
+            </>
+          ) : (
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+          )}
+        </div>
+
+        {/* Deliverables */}
+        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Deliverables</h2>
+              <p className="text-xs text-gray-600 mt-1">
+                {isEditMode ? 'Define what will be delivered to the client' : `${proposal.deliverables.length} deliverable${proposal.deliverables.length !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+            {isEditMode && (
+              <button
+                onClick={handleAddDeliverable}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Add Deliverable
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {isEditMode ? (
+              deliverables.map((deliverable, index) => (
+                <div
+                  key={deliverable.id}
+                  className="bg-gray-50 border border-gray-300 rounded-lg p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-2 mt-2">
+                      <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
+                      <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
+                    </div>
+
+                    <div className="flex-1 space-y-3">
+                      <input
+                        type="text"
+                        value={deliverable.name}
+                        onChange={(e) =>
+                          handleDeliverableChange(deliverable.id, 'name', e.target.value)
+                        }
+                        placeholder="Deliverable name (e.g., 'Product Demo Video')"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
+                      />
+
+                      <textarea
+                        value={deliverable.description}
+                        onChange={(e) =>
+                          handleDeliverableChange(deliverable.id, 'description', e.target.value)
+                        }
+                        placeholder="Describe what's included in this deliverable..."
+                        rows={3}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none text-sm"
+                      />
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600">Estimated completion:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={deliverable.estimatedCompletionWeek}
+                          onChange={(e) =>
+                            handleDeliverableChange(
+                              deliverable.id,
+                              'estimatedCompletionWeek',
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="w-20 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                        />
+                        <span className="text-xs text-gray-600">
+                          week{deliverable.estimatedCompletionWeek !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleRemoveDeliverable(deliverable.id)}
+                      className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                      title="Remove deliverable"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              proposal.deliverables.map((deliverable, index) => (
+                <div
+                  key={deliverable.id}
+                  className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 bg-violet-100 text-violet-700 rounded-full font-semibold text-sm">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">{deliverable.name}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{deliverable.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>
+                          Estimated completion: Week {deliverable.estimatedCompletionWeek}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Pricing */}
+        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
+
+          {isEditMode ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Total Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Total Project Cost ({currency}) <span className="text-red-600">*</span>
+                  </label>
+
+                  {/* Currency Selector */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('INR')}
+                      className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'INR'
+                          ? 'bg-violet-500 text-white ring-2 ring-violet-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      INR (₹)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('USD')}
+                      className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'USD'
+                          ? 'bg-violet-500 text-white ring-2 ring-violet-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      USD ($)
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    {currency === 'INR' ? (
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    ) : (
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    )}
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={totalPrice}
+                      onChange={(e) => setTotalPrice(e.target.value)}
+                      placeholder="80000"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Advance Percentage */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Advance Payment Percentage
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[40, 50, 60].map((percentage) => (
+                      <button
+                        key={percentage}
+                        onClick={() => setAdvancePercentage(percentage as 40 | 50 | 60)}
+                        className={`px-4 py-3 rounded-lg font-medium transition-all ${advancePercentage === percentage
+                          ? 'bg-violet-500 text-white ring-2 ring-violet-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                      >
+                        {percentage}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {/* Pricing Breakdown */}
+          {pricing && (
+            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-lg border border-violet-200`}>
+              <h3 className="text-sm font-medium text-gray-800 mb-3">Payment Breakdown</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Advance Payment ({isEditMode ? advancePercentage : proposal.advancePercentage}%)</span>
+                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.advanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Balance Payment ({isEditMode ? 100 - advancePercentage : 100 - proposal.advancePercentage}%)</span>
+                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.balanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                </div>
+                <div className="h-px bg-gray-300 my-2" />
+                <div className="flex justify-between">
+                  <span className="text-gray-900 font-medium">Total Project Cost</span>
+                  <span className="text-gray-900 font-bold text-lg">{formatCurrency(pricing.totalPrice, isEditMode ? currency : proposal.currency)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Response Tracking */}
+        {(proposal.acceptedAt || proposal.rejectedAt || proposal.feedback) && (
+          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Client Response</h2>
+            <div className="space-y-3">
+              {proposal.acceptedAt && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Accepted on {formatDate(proposal.acceptedAt)}</span>
+                </div>
+              )}
+              {proposal.rejectedAt && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <XCircle className="w-4 h-4" />
+                  <span>Rejected on {formatDate(proposal.rejectedAt)}</span>
+                </div>
+              )}
+              {proposal.feedback && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-gray-900 mb-1">Feedback:</p>
+                  <p className="text-sm text-gray-700">{proposal.feedback}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {isEditMode && (
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+            <button
+              onClick={handleCancelEdit}
+              className="px-4 py-2.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+              disabled={isSaving}
+            >
+              <X className="w-4 h-4 inline mr-2" />
+              Cancel
+            </button>
+
+            <button
+              onClick={handleSaveChanges}
+              disabled={isSaving || validateForm() !== null}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

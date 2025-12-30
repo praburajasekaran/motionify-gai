@@ -1,53 +1,43 @@
-/**
- * Inquiry Management Library
- * Handles inquiry creation, storage, and retrieval using localStorage
- */
-
-import { QuizSelections } from '../components/Quiz/useQuiz';
-
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
+'use client';
 
 export type InquiryStatus =
-  | 'new'              // Just submitted by customer
-  | 'reviewing'        // Admin is reviewing
-  | 'proposal_sent'    // Proposal has been sent to customer
-  | 'negotiating'      // Customer requested changes
-  | 'accepted'         // Customer accepted proposal
-  | 'project_setup'    // Admin is setting up project
-  | 'payment_pending'  // Project setup complete, payment request sent
-  | 'paid'             // Payment received
-  | 'converted'        // Successfully converted to project
-  | 'rejected'         // Customer declined proposal
-  | 'archived';        // Closed without conversion
+  | 'new'
+  | 'reviewing'
+  | 'proposal_sent'
+  | 'negotiating'
+  | 'accepted'
+  | 'project_setup'
+  | 'payment_pending'
+  | 'paid'
+  | 'converted'
+  | 'rejected'
+  | 'archived';
+
+export interface QuizSelections {
+  niche?: string | null;
+  audience?: string | null;
+  style?: string | null;
+  mood?: string | null;
+  duration?: string | null;
+}
 
 export interface Inquiry {
-  // Core Identification
-  id: string;                     // UUID
-  inquiryNumber: string;          // "INQ-2025-001"
+  id: string;
+  inquiryNumber: string;
   status: InquiryStatus;
-  createdAt: string;              // ISO date string
-  updatedAt: string;              // ISO date string
-
-  // Contact Information
-  contactName: string;            // Required
-  contactEmail: string;           // Required, validated
-  companyName?: string;           // Optional
-  contactPhone?: string;          // Optional
-  projectNotes?: string;          // Optional additional requirements
-
-  // Quiz Answers (from landing page 5-step quiz)
+  createdAt: string;
+  updatedAt: string;
+  contactName: string;
+  contactEmail: string;
+  companyName?: string;
+  contactPhone?: string;
+  projectNotes?: string;
   quizAnswers: QuizSelections;
-  recommendedVideoType: string;   // Generated recommendation title
-
-  // Relationships
-  proposalId?: string;            // UUID of associated proposal
-  convertedToProjectId?: string;  // UUID of created project
-  convertedAt?: string;           // ISO date string
-
-  // Internal Management
-  assignedToAdminId?: string;     // UUID of admin user
+  recommendedVideoType: string;
+  proposalId?: string;
+  convertedToProjectId?: string;
+  convertedAt?: string;
+  assignedToAdminId?: string;
 }
 
 export interface ContactInfo {
@@ -58,123 +48,54 @@ export interface ContactInfo {
   projectNotes?: string;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+const API_BASE_URL = '/api/inquiries';
 
-const STORAGE_KEY = 'motionify_inquiries';
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Generate a unique inquiry number in format: INQ-YYYY-NNN
- */
-export function generateInquiryNumber(): string {
-  const year = new Date().getFullYear();
-  const inquiries = getInquiries();
-
-  // Find the highest number for this year
-  const currentYearInquiries = inquiries.filter(inq =>
-    inq.inquiryNumber.startsWith(`INQ-${year}`)
-  );
-
-  let maxNumber = 0;
-  currentYearInquiries.forEach(inq => {
-    const match = inq.inquiryNumber.match(/INQ-\d{4}-(\d+)/);
-    if (match) {
-      const num = parseInt(match[1], 10);
-      if (num > maxNumber) maxNumber = num;
-    }
-  });
-
-  const nextNumber = maxNumber + 1;
-  return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
-}
-
-/**
- * Validate email format
- */
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-/**
- * Validate phone format (basic validation)
- */
 export function isValidPhone(phone: string): boolean {
-  // Allow +, -, spaces, parentheses, and digits
   const phoneRegex = /^[\d\s\-\+\(\)]+$/;
   return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
 }
 
-// ============================================================================
-// localStorage Operations
-// ============================================================================
-
-/**
- * Get all inquiries from localStorage
- */
-export function getInquiries(): Inquiry[] {
+export async function fetchInquiries(): Promise<Inquiry[]> {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-
-    const inquiries = JSON.parse(data) as Inquiry[];
-
-    // Sort by creation date (newest first)
-    return inquiries.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const response = await fetch(API_BASE_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
   } catch (error) {
-    console.error('Error reading inquiries from localStorage:', error);
+    console.error('Error fetching inquiries:', error);
     return [];
   }
 }
 
-/**
- * Get a single inquiry by ID
- */
-export function getInquiryById(id: string): Inquiry | null {
-  const inquiries = getInquiries();
-  return inquiries.find(inq => inq.id === id) || null;
-}
-
-/**
- * Get a single inquiry by inquiry number
- */
-export function getInquiryByNumber(inquiryNumber: string): Inquiry | null {
-  const inquiries = getInquiries();
-  return inquiries.find(inq => inq.inquiryNumber === inquiryNumber) || null;
-}
-
-/**
- * Save inquiries array to localStorage
- */
-function saveInquiries(inquiries: Inquiry[]): void {
+export async function fetchInquiryById(id: string): Promise<Inquiry | null> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(inquiries));
+    const response = await fetch(`${API_BASE_URL}/${id}`);
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
   } catch (error) {
-    console.error('Error saving inquiries to localStorage:', error);
-    throw new Error('Failed to save inquiry. Please try again.');
+    console.error('Error fetching inquiry:', error);
+    return null;
   }
 }
 
-// ============================================================================
-// CRUD Operations
-// ============================================================================
+export async function fetchInquiryByNumber(inquiryNumber: string): Promise<Inquiry | null> {
+  return fetchInquiryById(inquiryNumber);
+}
 
-/**
- * Create a new inquiry
- */
-export function createInquiry(data: {
+export async function createInquiry(data: {
   quizAnswers: QuizSelections;
   contactInfo: ContactInfo;
   recommendedVideoType: string;
-}): Inquiry {
-  // Validate required fields
+}): Promise<Inquiry> {
   if (!data.contactInfo.contactName || data.contactInfo.contactName.trim() === '') {
     throw new Error('Contact name is required');
   }
@@ -191,72 +112,53 @@ export function createInquiry(data: {
     throw new Error('Invalid phone number format');
   }
 
-  // Generate unique ID and inquiry number
-  const id = crypto.randomUUID();
-  const inquiryNumber = generateInquiryNumber();
-  const now = new Date().toISOString();
-
-  const inquiry: Inquiry = {
-    id,
-    inquiryNumber,
-    status: 'new',
-    createdAt: now,
-    updatedAt: now,
-
-    // Contact info
+  const inquiry = {
     contactName: data.contactInfo.contactName.trim(),
     contactEmail: data.contactInfo.contactEmail.trim().toLowerCase(),
     companyName: data.contactInfo.companyName?.trim(),
     contactPhone: data.contactInfo.contactPhone?.trim(),
     projectNotes: data.contactInfo.projectNotes?.trim(),
-
-    // Quiz data
     quizAnswers: data.quizAnswers,
     recommendedVideoType: data.recommendedVideoType,
   };
 
-  // Save to localStorage
-  const inquiries = getInquiries();
-  inquiries.unshift(inquiry); // Add to beginning (newest first)
-  saveInquiries(inquiries);
+  const response = await fetch(API_BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(inquiry),
+  });
 
-  return inquiry;
-}
-
-/**
- * Update an inquiry
- */
-export function updateInquiry(id: string, updates: Partial<Inquiry>): Inquiry {
-  const inquiries = getInquiries();
-  const index = inquiries.findIndex(inq => inq.id === id);
-
-  if (index === -1) {
-    throw new Error('Inquiry not found');
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to create inquiry');
   }
 
-  const updatedInquiry: Inquiry = {
-    ...inquiries[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  inquiries[index] = updatedInquiry;
-  saveInquiries(inquiries);
-
-  return updatedInquiry;
+  return await response.json();
 }
 
-/**
- * Update inquiry status
- */
-export function updateInquiryStatus(
+export async function updateInquiry(id: string, updates: Partial<Inquiry>): Promise<Inquiry> {
+  const response = await fetch(`${API_BASE_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to update inquiry');
+  }
+
+  return await response.json();
+}
+
+export async function updateInquiryStatus(
   id: string,
   status: InquiryStatus,
   additionalData?: {
     proposalId?: string;
     convertedToProjectId?: string;
   }
-): Inquiry {
+): Promise<Inquiry> {
   const updates: Partial<Inquiry> = { status };
 
   if (additionalData?.proposalId) {
@@ -271,33 +173,32 @@ export function updateInquiryStatus(
   return updateInquiry(id, updates);
 }
 
-/**
- * Delete an inquiry
- */
-export function deleteInquiry(id: string): void {
-  const inquiries = getInquiries();
-  const filtered = inquiries.filter(inq => inq.id !== id);
+export async function deleteInquiry(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/${id}`, {
+    method: 'DELETE',
+  });
 
-  if (filtered.length === inquiries.length) {
-    throw new Error('Inquiry not found');
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to delete inquiry');
   }
-
-  saveInquiries(filtered);
 }
 
-/**
- * Get inquiries by status
- */
-export function getInquiriesByStatus(status: InquiryStatus): Inquiry[] {
-  const inquiries = getInquiries();
+export async function fetchInquiriesByStatus(status: InquiryStatus): Promise<Inquiry[]> {
+  const inquiries = await fetchInquiries();
   return inquiries.filter(inq => inq.status === status);
 }
 
-/**
- * Get inquiry statistics
- */
-export function getInquiryStats() {
-  const inquiries = getInquiries();
+export async function getInquiryStats(): Promise<{
+  total: number;
+  new: number;
+  reviewing: number;
+  proposalSent: number;
+  accepted: number;
+  converted: number;
+  rejected: number;
+}> {
+  const inquiries = await fetchInquiries();
 
   return {
     total: inquiries.length,
@@ -310,30 +211,15 @@ export function getInquiryStats() {
   };
 }
 
-/**
- * Clear all inquiries (for testing/demo purposes)
- */
-export function clearAllInquiries(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-/**
- * Seed sample inquiries for testing/demo
- */
-export function seedSampleInquiries(): void {
-  const existingInquiries = getInquiries();
+export async function seedSampleInquiries(): Promise<void> {
+  const existingInquiries = await fetchInquiries();
   if (existingInquiries.length > 0) {
     console.log('Sample inquiries already exist. Skipping seed.');
     return;
   }
 
-  const sampleInquiries: Inquiry[] = [
+  const sampleInquiries = [
     {
-      id: crypto.randomUUID(),
-      inquiryNumber: 'INQ-2025-001',
-      status: 'new',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       contactName: 'Sarah Johnson',
       contactEmail: 'sarah@techstartup.com',
       companyName: 'TechStartup Inc.',
@@ -349,11 +235,6 @@ export function seedSampleInquiries(): void {
       recommendedVideoType: 'SaaS Product Explainer',
     },
     {
-      id: crypto.randomUUID(),
-      inquiryNumber: 'INQ-2025-002',
-      status: 'proposal_sent',
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      updatedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
       contactName: 'Michael Chen',
       contactEmail: 'michael@healthapp.io',
       companyName: 'HealthApp',
@@ -369,11 +250,6 @@ export function seedSampleInquiries(): void {
       recommendedVideoType: 'App Feature Showcase',
     },
     {
-      id: crypto.randomUUID(),
-      inquiryNumber: 'INQ-2025-003',
-      status: 'new',
-      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-      updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
       contactName: 'Emily Rodriguez',
       contactEmail: 'emily@fashionbrand.com',
       companyName: 'StyleCo Fashion',
@@ -387,48 +263,15 @@ export function seedSampleInquiries(): void {
       },
       recommendedVideoType: 'Social Media Campaign',
     },
-    {
-      id: crypto.randomUUID(),
-      inquiryNumber: 'INQ-2025-004',
-      status: 'accepted',
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-      updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-      contactName: 'David Park',
-      contactEmail: 'david@edtech.edu',
-      companyName: 'EduTech Solutions',
-      contactPhone: '+1 (555) 345-6789',
-      projectNotes: 'Educational video series for online course platform',
-      quizAnswers: {
-        niche: 'Education',
-        audience: 'Students',
-        style: 'Mixed Media',
-        mood: 'Inspirational',
-        duration: 'Demo',
-      },
-      recommendedVideoType: 'Educational Course Content',
-    },
-    {
-      id: crypto.randomUUID(),
-      inquiryNumber: 'INQ-2025-005',
-      status: 'reviewing',
-      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-      updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-      contactName: 'Jennifer Lee',
-      contactEmail: 'jennifer@realestate.pro',
-      companyName: 'Prime Properties',
-      contactPhone: '+1 (555) 456-7890',
-      projectNotes: 'Property showcase videos for luxury listings',
-      quizAnswers: {
-        niche: 'Real Estate',
-        audience: 'Investors',
-        style: 'Live Action',
-        mood: 'Corporate',
-        duration: 'Demo',
-      },
-      recommendedVideoType: 'Property Tour Video',
-    },
   ];
 
-  saveInquiries(sampleInquiries);
-  console.log('✅ Seeded 5 sample inquiries');
+  for (const inquiry of sampleInquiries) {
+    await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inquiry),
+    });
+  }
+
+  console.log('Seeded sample inquiries');
 }

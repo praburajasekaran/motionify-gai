@@ -20,6 +20,34 @@ Final Download
 **Timeline Estimate:** 3-4 weeks for vertical slice
 **Approach:** Real integrations where critical (payment, files), mocks elsewhere (auth, email, database)
 
+**Current Progress:** Phase 1 Complete ✅ (Inquiry to Proposal - 100%)
+**Next Up:** Phase 2 - Proposal to Payment
+
+### What's Built Right Now (Phase 1)
+
+**Working Features:**
+1. ✅ Landing page quiz (5 steps + contact form)
+2. ✅ Inquiry creation and storage (localStorage)
+3. ✅ Admin inquiry dashboard with filters
+4. ✅ Inquiry detail view with quiz answers
+5. ✅ Proposal builder (create proposals)
+6. ✅ Proposal detail (view/edit proposals)
+7. ✅ Permission system (admin access control)
+8. ✅ Currency support (INR/USD)
+9. ✅ Pricing calculator (advance payment options)
+10. ✅ Status tracking (new, proposal_sent, etc.)
+
+**Test It Now:**
+```bash
+# Start the app
+npm run dev
+
+# Navigate to:
+# - Landing page: http://localhost:5173/landing
+# - Admin dashboard: http://localhost:5173/#/admin/inquiries
+# - Login with: admin@motionify.com (mock auth)
+```
+
 ---
 
 ## Journey Map - What We're Building
@@ -163,8 +191,37 @@ interface Proposal {
 - ✅ `pages/admin/InquiryDashboard.tsx`
 - ✅ `pages/admin/InquiryDetail.tsx`
 - ✅ `pages/admin/ProposalBuilder.tsx`
+- ✅ `pages/admin/ProposalDetail.tsx` - View/edit sent proposals
 - ✅ `lib/proposals.ts`
 - ✅ `lib/permissions.ts`
+
+---
+
+#### 2.1 Proposal Viewing & Editing ✅
+**Location:** `pages/admin/ProposalDetail.tsx`
+**Status:** COMPLETE
+**Added:** 2025-12-30
+
+- ✅ View proposal details in read-only mode
+- ✅ Edit mode for sent proposals
+- ✅ Status badge with color coding (sent, accepted, rejected, changes_requested)
+- ✅ Full proposal details display (description, deliverables, pricing)
+- ✅ Add/remove/edit deliverables in edit mode
+- ✅ Currency selection (INR/USD)
+- ✅ Pricing calculator with real-time breakdown
+- ✅ Client response tracking (feedback, dates)
+- ✅ Form validation before saving
+- ✅ "View Proposal" button in InquiryDetail page
+- ✅ Navigation route: `/admin/proposals/:proposalId`
+
+**Why Added:**
+Super admins need to view and edit proposals after sending them to clients. Previously, once a proposal was sent, there was no way to view or modify it.
+
+**Files Modified:**
+- ✅ `pages/admin/ProposalDetail.tsx` - NEW component
+- ✅ `pages/admin/InquiryDetail.tsx` - Added "View Proposal" button
+- ✅ `App.tsx` - Added route for proposal detail page
+- ✅ `docs/features/inquiry-to-project/PROPOSAL_VIEWING_EDITING.md` - Documentation
 
 ---
 
@@ -520,7 +577,7 @@ localStorage.setItem('motionify_revisions', JSON.stringify(revisionRequests[]));
 ## Implementation Progress Tracker
 
 ### Phase 1: Inquiry to Proposal ✅ COMPLETE
-**Goal:** Prospect can submit inquiry → Admin creates proposal
+**Goal:** Prospect can submit inquiry → Admin creates, views, and edits proposals
 
 **Tasks:**
 1. ✅ Add Step 6 to quiz (contact form)
@@ -531,8 +588,24 @@ localStorage.setItem('motionify_revisions', JSON.stringify(revisionRequests[]));
 6. ✅ Admin proposal builder
 7. ✅ Proposal saved to localStorage
 8. ✅ Permission system for admin access
+9. ✅ Proposal viewing page (read-only mode)
+10. ✅ Proposal editing functionality
+11. ✅ "View Proposal" button in inquiry detail
+12. ✅ Build verification (no errors)
 
-**Status:** ✅ COMPLETE - Ready for testing
+**Status:** ✅ COMPLETE - Fully tested and ready for Phase 2
+
+**Completed Features:**
+- Complete inquiry submission flow from landing page
+- Admin dashboard to view all inquiries
+- Detailed inquiry view with quiz answers
+- Proposal builder with deliverables and pricing
+- Proposal detail page with view/edit modes
+- Currency support (INR/USD)
+- Pricing calculator with advance payment options
+- Status tracking and badges
+- Permission-based access control
+- Navigation between inquiries and proposals
 
 ---
 
@@ -614,6 +687,9 @@ localStorage.setItem('motionify_revisions', JSON.stringify(revisionRequests[]));
    - Set pricing (₹80,000, 50% advance)
    - Send proposal
    - Check console for "email sent"
+   - View sent proposal from inquiry detail
+   - Edit proposal if needed
+   - Save changes
 
 3. **Client Proposal Review (5 min)** ⬜
    - Navigate to `/proposal/:id`
@@ -747,5 +823,25 @@ When ready to move from vertical slice to production:
 
 ---
 
+## Recent Updates
+
+### 2025-12-30 (Latest)
+**Added:** Proposal Viewing & Editing Feature
+- ✅ Created `ProposalDetail` component with view and edit modes
+- ✅ Added "View Proposal" button to `InquiryDetail` page
+- ✅ Implemented full CRUD for proposals (view, edit, save)
+- ✅ Added status badges and client response tracking
+- ✅ Created comprehensive documentation
+
+**Impact:** Super admins can now view and edit proposals after sending them to clients. This closes a critical gap in the admin workflow.
+
+**Files Added/Modified:**
+- NEW: `pages/admin/ProposalDetail.tsx`
+- MODIFIED: `pages/admin/InquiryDetail.tsx`
+- MODIFIED: `App.tsx`
+- NEW: `docs/features/inquiry-to-project/PROPOSAL_VIEWING_EDITING.md`
+
+---
+
 **Last Updated:** 2025-12-30
-**Current Phase:** Phase 1 Complete, Starting Phase 2
+**Current Phase:** Phase 1 Complete (with Proposal Viewing/Editing), Starting Phase 2

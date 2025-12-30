@@ -65,17 +65,16 @@ export function useQuiz() {
     setCurrent(5);
   }, []);
 
-  // New function to handle inquiry submission
-  const submitInquiry = useCallback((contactInfo: ContactInfo, recommendedVideoType: string) => {
+  const submitInquiry = useCallback(async (contactInfo: ContactInfo, recommendedVideoType: string) => {
     try {
-      const inquiry = createInquiry({
+      const inquiry = await createInquiry({
         quizAnswers: selections,
         contactInfo,
         recommendedVideoType,
       });
 
       setSubmittedInquiry(inquiry);
-      setCurrent(6); // Move to success screen
+      setCurrent(6);
       return inquiry;
     } catch (error) {
       console.error('Error creating inquiry:', error);

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+// Using standard img tags
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function SolutionsSlider() {
@@ -201,11 +201,9 @@ export default function SolutionsSlider() {
               <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm hover:shadow-xl transition ease-out hover:-translate-y-0.5 overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
                 {/* Solution image/illustration */}
                 <div className={`h-32 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}>
-                  <Image
+                  <img
                     src={s.image}
                     alt={s.title}
-                    width={320}
-                    height={200}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300" />

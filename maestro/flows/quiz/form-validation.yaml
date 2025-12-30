@@ -1,0 +1,110 @@
+# Contact Form Validation Tests
+# Tests form validation behavior on the contact form step
+#
+# Run: maestro test maestro/flows/quiz/form-validation.yaml
+
+url: ${URL}
+name: "Contact Form - Validation Tests"
+tags:
+  - quiz
+  - validation
+  - form
+---
+
+# ============================================
+# Setup: Navigate to Contact Form
+# ============================================
+- launchApp
+
+- scrollUntilVisible:
+    element: "Create Your Video Project"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn: "Get Started"
+
+# Complete quiz quickly to reach contact form
+- tapOn: "Tech"
+- tapOn: "Businesses"  
+- tapOn: "Motion Graphics"
+- tapOn: "Corporate"
+- tapOn: "Explainer"
+
+- assertVisible:
+    text: "Our Recommendation"
+    timeout: 15000
+
+- tapOn: "Start This Project"
+
+- assertVisible: "Almost There!"
+
+# ============================================
+# Test 1: Submit with empty required fields
+# ============================================
+- tapOn: "Send Me a Proposal"
+
+# Button should be disabled (form not valid), nothing should happen
+- assertVisible: "Almost There!"
+- assertNotVisible: "Inquiry Submitted!"
+
+# ============================================
+# Test 2: Invalid email format
+# ============================================
+- tapOn:
+    id: "contactName"
+- inputText: "John Doe"
+
+- tapOn:
+    id: "contactEmail"
+- inputText: "invalid-email"
+
+# Tap outside to trigger blur validation
+- tapOn: "Almost There!"
+
+- assertVisible: "Invalid email format"
+
+# ============================================
+# Test 3: Fix email and verify error clears
+# ============================================
+- tapOn:
+    id: "contactEmail"
+- clearText
+- inputText: "john@example.com"
+
+- tapOn: "Almost There!"
+
+- assertNotVisible: "Invalid email format"
+
+# ============================================
+# Test 4: Invalid phone number
+# ============================================
+- tapOn:
+    id: "contactPhone"
+- inputText: "123"
+
+- tapOn: "Almost There!"
+
+- assertVisible: "Invalid phone number"
+
+# ============================================
+# Test 5: Fix phone and verify error clears
+# ============================================
+- tapOn:
+    id: "contactPhone"
+- clearText
+- inputText: "+1 555 123 4567"
+
+- tapOn: "Almost There!"
+
+- assertNotVisible: "Invalid phone number"
+
+# ============================================
+# Test 6: Successful submission after fixes
+# ============================================
+- tapOn: "Send Me a Proposal"
+
+- assertVisible:
+    text: "Inquiry Submitted!"
+    timeout: 10000
+
+- takeScreenshot: "validation-test-success"

@@ -1,10 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
-@plugin "tailwindcss-animate";
 
 :root {
   --background: oklch(1.0000 0 0);
@@ -42,6 +39,8 @@
   --font-sans: Open Sans, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
+  --font-inter: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-fraunces: Fraunces, Georgia, serif;
   --radius: 1.3rem;
   --shadow-x: 0px;
   --shadow-y: 2px;
@@ -125,7 +124,8 @@
   --letter-spacing: 0em;
 }
 
-@theme inline {
+/* CSS variables for Tailwind v3 compatibility - mapped in tailwind.config.js */
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -158,61 +158,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-
-  /* Todoist color palette for Tailwind utilities */
-  --color-todoist-red: var(--todoist-red);
-  --color-todoist-red-hover: var(--todoist-red-hover);
-  --color-todoist-red-light: var(--todoist-red-light);
-  --color-todoist-red-dark: var(--todoist-red-dark);
-  --color-todoist-gray-50: var(--todoist-gray-50);
-  --color-todoist-gray-100: var(--todoist-gray-100);
-  --color-todoist-gray-200: var(--todoist-gray-200);
-  --color-todoist-gray-300: var(--todoist-gray-300);
-  --color-todoist-gray-400: var(--todoist-gray-400);
-  --color-todoist-gray-500: var(--todoist-gray-500);
-  --color-todoist-gray-600: var(--todoist-gray-600);
-  --color-todoist-gray-700: var(--todoist-gray-700);
-  --color-todoist-gray-800: var(--todoist-gray-800);
-  --color-todoist-gray-900: var(--todoist-gray-900);
-  --color-todoist-green: var(--todoist-green);
-  --color-todoist-green-light: var(--todoist-green-light);
-  --color-todoist-orange: var(--todoist-orange);
-  --color-todoist-orange-light: var(--todoist-orange-light);
-  --color-todoist-blue: var(--todoist-blue);
-  --color-todoist-blue-light: var(--todoist-blue-light);
-
-  --font-sans: var(--font-sans);
-  --font-mono: Menlo, monospace;
-  --font-serif: var(--font-fraunces);
-
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
-  --shadow-2xs: var(--shadow-2xs);
-  --shadow-xs: var(--shadow-xs);
-  --shadow-sm: var(--shadow-sm);
-  --shadow: var(--shadow);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
-  --shadow-xl: var(--shadow-xl);
-  --shadow-2xl: var(--shadow-2xl);
-  --radius: 1.3rem;
-  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
-  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
-  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
-  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
-  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
-  --tracking-normal: var(--tracking-normal);
-  --spacing: var(--spacing);
-  --letter-spacing: var(--letter-spacing);
-  --shadow-offset-y: var(--shadow-offset-y);
-  --shadow-offset-x: var(--shadow-offset-x);
-  --shadow-spread: var(--shadow-spread);
-  --shadow-blur: var(--shadow-blur);
-  --shadow-opacity: var(--shadow-opacity);
-  --color-shadow-color: var(--shadow-color);
 }
 
 .dark {
@@ -959,10 +904,11 @@ html {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
   }
 }
