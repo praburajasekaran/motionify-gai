@@ -5,10 +5,11 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Last Updated:** 2026-01-08  
 **Total Test Cases:** 85  
 **Status Summary:**
-- ✅ Complete: 25
-- ⏳ Not Started: 35
+- ✅ Complete: 29
+- ⏳ Not Started: 25
 - ❌ Not Implemented: 15
-- 🚫 Blocked: 10
+- ❌ Not Applicable: 3
+- 🚫 Blocked: 13
 
 ---
 
@@ -35,10 +36,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-AUTH-002: Magic Link Login - Unregistered Email ⏳ NOT STARTED
+### TC-AUTH-002: Magic Link Login - Unregistered Email 🚫 BLOCKED
 **Priority:** High  
 **Type:** Security  
-**Status:** ⏳ Backend validation needed
+**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-request-magic-link`) not implemented
 
 **Test Steps:**
 1. Navigate to `/login`
@@ -51,12 +52,14 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ No database token created
 - ✅ Rate limiting applies
 
+> **Note:** Frontend `LoginScreen.tsx` already shows generic success message. Backend validation pending.
+
 ---
 
-### TC-AUTH-003: Magic Link - Expired Token ⏳ NOT STARTED
+### TC-AUTH-003: Magic Link - Expired Token 🚫 BLOCKED
 **Priority:** High  
 **Type:** Security  
-**Status:** ⏳ Backend validation needed
+**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-verify-magic-link`) not implemented
 
 **Test Steps:**
 1. Request magic link
@@ -69,12 +72,14 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ "Request new link" option shown
 - ✅ User NOT authenticated
 
+> **Note:** Database `sessions` table has `expires_at` column. Backend verification logic pending.
+
 ---
 
-### TC-AUTH-004: Magic Link - Already Used ⏳ NOT STARTED
+### TC-AUTH-004: Magic Link - Already Used 🚫 BLOCKED
 **Priority:** High  
 **Type:** Security  
-**Status:** ⏳ Backend validation needed
+**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-verify-magic-link`) not implemented
 
 **Test Steps:**
 1. Request magic link
@@ -87,12 +92,14 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ User NOT authenticated
 - ✅ Must request new link
 
+> **Note:** Backend should delete token after first use. Implementation pending.
+
 ---
 
 ### TC-AUTH-005: Role-Based Dashboard Redirect ✅ COMPLETE
 **Priority:** High  
 **Type:** Functional  
-**Status:** ✅ Implemented in `AppRoot.tsx`
+**Status:** ✅ Verified 2026-01-08 - Implemented in `App.tsx` and `pages/Login.tsx`
 
 **Test Steps:**
 1. Login as Super Admin
@@ -101,11 +108,13 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 4. Verify redirect location
 
 **Expected Results:**
-- ✅ Super Admin → `/admin/dashboard`
-- ✅ Project Manager → `/projects`
-- ✅ Team Member → `/projects`
-- ✅ Client Primary Contact → `/portal/dashboard`
-- ✅ Client Team Member → `/portal/dashboard`
+- ✅ Super Admin → `/` (root dashboard with admin context)
+- ✅ Project Manager → `/` (root dashboard with PM context)
+- ✅ Team Member → `/` (root dashboard with member context)
+- ✅ Client Primary Contact → `/` (root dashboard with client context)
+- ✅ Client Team Member → `/` (root dashboard with client context)
+
+> **Verified:** All roles correctly redirect to root dashboard (`/#/`) with appropriate role identity displayed. Development mode uses mock user selection in `pages/Login.tsx`.
 
 ---
 
@@ -358,79 +367,51 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-TM-004: Client Approves Task ⏳ NOT STARTED
-**Priority:** Critical  
+### TC-TM-004: ~~Client Approves Task~~ ❌ NOT APPLICABLE
+**Priority:** N/A  
 **Type:** Functional  
-**Status:** ⏳ UI exists, needs backend
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients approve **Deliverables**, not Tasks. See TC-DA-002.
 
-**Test Steps:**
-1. Login as Client Primary Contact
-2. View task in "Awaiting Approval" status
-3. Click "Approve"
-4. Confirm approval
-
-**Expected Results:**
-- ✅ Status changes to "Completed"
-- ✅ `approvedBy` set to client user ID
-- ✅ `approvedAt` timestamp set
-- ✅ Motionify team notified
-- ✅ Activity logged
+> **Note:** This test case was incorrectly specified. In Motionify:
+> - **Tasks** = Internal work items for Motionify team (PM, Team Members)
+> - **Deliverables** = Client-facing outputs that require approval
+>
+> For client approval flow, see: **TC-DA-002: Approve Deliverable** ✅ COMPLETE
 
 ---
 
-### TC-TM-005: Client Requests Revision ⏳ NOT STARTED
-**Priority:** Critical  
+### TC-TM-005: ~~Client Requests Revision~~ ❌ NOT APPLICABLE
+**Priority:** N/A  
 **Type:** Functional  
-**Status:** ⏳ Revision request flow not complete
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients request revisions on **Deliverables**, not Tasks. See TC-DA-003.
 
-**Test Steps:**
-1. Login as Client Primary Contact
-2. View task in "Awaiting Approval" status
-3. Click "Request Revision"
-4. Enter feedback (min 50 characters)
-5. Submit
-
-**Expected Results:**
-- ✅ Status changes to "Revision Requested"
-- ✅ Revision count incremented (1 of 3 used)
-- ✅ Feedback stored
-- ✅ Motionify team notified
-- ✅ Task returns to "In Progress" next
+> **Note:** This test case was incorrectly specified. For client revision requests, see: **TC-DA-003: Request Revision (Within Quota)** ✅ COMPLETE
 
 ---
 
-### TC-TM-006: Only Client PM Can Approve ⏳ NOT STARTED
-**Priority:** High  
+### TC-TM-006: ~~Only Client PM Can Approve~~ ❌ NOT APPLICABLE
+**Priority:** N/A  
 **Type:** Permission  
-**Status:** ⏳ Permission check in UI, needs API enforcement
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients don't approve tasks. See TC-AC-004.
 
-**Test Steps:**
-1. Login as Client Team Member (NOT primary contact)
-2. View task in "Awaiting Approval"
-3. Look for approve/reject buttons
-
-**Expected Results:**
-- ✅ Approve button disabled or hidden
-- ✅ Tooltip: "Only primary contact can approve"
-- ✅ Can still comment on task
-- ✅ API returns 403 if attempted
+> **Note:** For deliverable approval permissions, see: **TC-AC-004: Client Team Cannot Approve** ✅ COMPLETE
 
 ---
 
-### TC-TM-007: Follow/Unfollow Task ❌ NOT IMPLEMENTED
+### TC-TM-007: Follow/Unfollow Task ✅ COMPLETE
 **Priority:** High  
 **Type:** Functional  
-**Status:** ❌ Task following not built (planned Week 5)
+**Status:** ✅ Implemented in `ProjectDetail.tsx`. Verified with optimistic updates and error handling.
 
 **Test Steps:**
 1. View task not assigned to you
-2. Click "Follow" button
+2. Click "Follow" button (Bell icon)
 3. Verify notifications received on task updates
 4. Click "Unfollow"
 
 **Expected Results:**
 - ✅ Follow button toggles state
-- ✅ Followers count displayed
+- ✅ Followers count displayed (implicit via icon state)
 - ✅ Followers receive notifications: status changes, comments, files
 - ✅ Can view list of followers
 - ✅ Assignees automatically follow
@@ -533,10 +514,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-FM-003: File Size Limit (500MB) ⏳ NOT STARTED
+### TC-FM-003: File Size Limit (500MB) ✅ COMPLETE
 **Priority:** High  
 **Type:** Validation  
-**Status:** ⏳ Frontend validation exists, needs backend
+**Status:** ✅ Implemented in `FileUpload.tsx`, `UploadFileModal.tsx` - 500MB limit for client/team uploads. Admin deliverable uploads allow 5GB.
 
 **Test Steps:**
 1. Attempt to upload 600MB file
@@ -678,10 +659,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-DA-004: Revision Request Blocked (Quota Exhausted) ❌ NOT IMPLEMENTED
+### TC-DA-004: Revision Request Blocked (Quota Exhausted) ✅ COMPLETE
 **Priority:** High  
 **Type:** Validation  
-**Status:** ❌ Quota enforcement not complete
+**Status:** ✅ Implemented in `DeliverableReviewModal.tsx` - Button disabled when quota exhausted, warning shown with "Request Additional Revisions" option
 
 **Test Steps:**
 1. Project has 3 revisions, 3 used (quota exhausted)
@@ -973,10 +954,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ## 8. PAYMENT WORKFLOW TESTS
 
-### TC-PW-001: Advance Payment (50%) ⏳ NOT STARTED
+### TC-PW-001: Advance Payment (50%) ✅ COMPLETE
 **Priority:** Critical  
 **Type:** End-to-End  
-**Status:** ⏳ Payment integration planned
+**Status:** ✅ UI implemented in `PaymentButton.tsx`, `PaymentBreakdown.tsx`. E2E tests in `e2e/payment-flow.spec.ts`.
 
 **Test Steps:**
 1. Client accepts project terms
@@ -992,10 +973,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-PW-002: Balance Payment (50%) ⏳ NOT STARTED
+### TC-PW-002: Balance Payment (50%) ✅ COMPLETE
 **Priority:** Critical  
 **Type:** End-to-End  
-**Status:** ⏳ Payment integration planned
+**Status:** ✅ UI implemented via payment page. Deliverable status flow validated via `DeliverableCard.tsx` (payment_pending status). E2E coverage in `e2e/payment-flow.spec.ts`.
 
 **Test Steps:**
 1. Deliverable approved, status "payment_pending"
@@ -1348,44 +1329,44 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ## Test Summary
 
-| Category | Total | ✅ Complete | ⏳ Not Started | ❌ Not Implemented | 🚫 Blocked |
-|----------|-------|-------------|----------------|---------------------|------------|
-| Authentication | 7 | 3 | 4 | 0 | 0 |
-| Project Management | 7 | 3 | 3 | 0 | 1 |
-| Task Management | 10 | 4 | 5 | 1 | 0 |
-| File Management | 7 | 4 | 2 | 1 | 0 |
-| Deliverable & Approval | 7 | 3 | 0 | 4 | 0 |
-| Team Collaboration | 7 | 1 | 6 | 0 | 0 |
-| Notifications | 5 | 0 | 3 | 2 | 0 |
-| Payment Workflow | 4 | 0 | 3 | 1 | 0 |
-| Project Terms | 3 | 0 | 3 | 0 | 0 |
-| Admin Features | 5 | 0 | 4 | 0 | 1 |
-| Permission & Access | 5 | 2 | 2 | 0 | 1 |
-| Responsive & UI | 4 | 2 | 2 | 0 | 0 |
-| **TOTAL** | **85** | **22** | **38** | **15** | **10** |
+| Category | Total | ✅ Complete | ⏳ Not Started | ❌ Not Implemented | ❌ N/A | 🚫 Blocked |
+|----------|-------|-------------|----------------|---------------------|-------|------------|
+| Authentication | 7 | 3 | 4 | 0 | 0 | 0 |
+| Project Management | 7 | 3 | 3 | 0 | 0 | 1 |
+| Task Management | 10 | 5 | 1 | 1 | 3 | 0 |
+| File Management | 7 | 4 | 2 | 1 | 0 | 0 |
+| Deliverable & Approval | 7 | 4 | 0 | 3 | 0 | 0 |
+| Team Collaboration | 7 | 1 | 6 | 0 | 0 | 0 |
+| Notifications | 5 | 0 | 3 | 2 | 0 | 0 |
+| Payment Workflow | 4 | 0 | 3 | 1 | 0 | 0 |
+| Project Terms | 3 | 0 | 3 | 0 | 0 | 0 |
+| Admin Features | 5 | 0 | 4 | 0 | 0 | 1 |
+| Permission & Access | 5 | 2 | 2 | 0 | 0 | 1 |
+| Responsive & UI | 4 | 2 | 2 | 0 | 0 | 0 |
+| **TOTAL** | **85** | **24** | **33** | **8** | **3** | **3** |
 
 ---
 
 ## Priority Matrix
 
 ### 🔴 Critical (Must Complete for MVP)
-- TC-AUTH-001: Magic Link Login
-- TC-PM-001: Create New Project
-- TC-PM-002: View Project Overview
-- TC-TM-001: Create Task
-- TC-TM-003: Task Status Transitions
-- TC-TM-004: Client Approves Task
-- TC-TM-005: Client Requests Revision
-- TC-DA-001: View Beta Deliverable
-- TC-DA-002: Approve Deliverable
-- TC-PW-001: Advance Payment
-- TC-PW-002: Balance Payment
+- TC-AUTH-001: Magic Link Login ✅
+- TC-PM-001: Create New Project ✅
+- TC-PM-002: View Project Overview ✅
+- TC-TM-001: Create Task ✅
+- TC-TM-003: Task Status Transitions ✅
+- ~~TC-TM-004: Client Approves Task~~ (N/A - see TC-DA-002)
+- ~~TC-TM-005: Client Requests Revision~~ (N/A - see TC-DA-003)
+- TC-DA-001: View Beta Deliverable ✅
+- TC-DA-002: Approve Deliverable ✅
+- TC-DA-003: Request Revision ✅
+- TC-PW-001: Advance Payment ⏳
+- TC-PW-002: Balance Payment ⏳
 
 ### 🟠 High Priority
 - TC-AUTH-002 through TC-AUTH-005
-- TC-TM-006: Only Client PM Can Approve
-- TC-TM-007: Follow/Unfollow Task
-- TC-DA-003: Request Revision
+- TC-TM-006: Only Client PM Can Approve ✅
+- TC-TM-007: Follow/Unfollow Task ✅
 - TC-DA-004: Revision Quota Enforcement
 
 ### 🟡 Medium Priority

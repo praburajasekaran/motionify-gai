@@ -11,6 +11,9 @@ interface UploadFileModalProps {
   onClose: () => void;
 }
 
+// File size limit: 500MB for standard file uploads
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+
 const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) => {
   const { project, addFile } = useContext(AppContext);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -20,9 +23,25 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [fileSizeError, setFileSizeError] = useState<string | null>(null);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFileSizeError(null);
     if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+
+      // Validate file size (500MB limit)
+      if (file.size > MAX_FILE_SIZE) {
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        setFileSizeError(`File exceeds 500MB limit (${fileSizeMB}MB). Compress file or contact admin.`);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
+      setSelectedFile(file);
     }
   };
 
@@ -32,8 +51,9 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
     setDescription('');
     setIsUploading(false);
     setUploadProgress(0);
+    setFileSizeError(null);
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   }
 
@@ -116,10 +136,12 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
-                  {selectedFile ? (
-                      <p className="text-sm text-gray-500">{selectedFile.name}</p>
+                  {fileSizeError ? (
+                    <p className="text-sm text-red-500 font-medium">{fileSizeError}</p>
+                  ) : selectedFile ? (
+                    <p className="text-sm text-gray-500">{selectedFile.name}</p>
                   ) : (
-                      <p className="text-xs text-gray-500">Any file type, up to 500MB</p>
+                    <p className="text-xs text-gray-500">Any file type, up to 500MB</p>
                   )}
                 </div>
               </div>

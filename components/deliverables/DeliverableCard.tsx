@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { cn, Badge, Progress, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
+import { storageService } from '../../services/storage';
+import { generateThumbnail } from '../../utils/thumbnail';
+import { Upload, Loader2, Play } from 'lucide-react';
 
 export interface DeliverableCardProps {
   deliverable: Deliverable;
@@ -36,6 +39,15 @@ const TYPE_ICONS = {
   Image: FileImage,
   Document: FileText,
 };
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB for admin deliverables
+const ALLOWED_FILE_TYPES = [
+  'video/',
+  'image/',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // .xlsx
+];
 
 // Status badge variants and labels
 const STATUS_CONFIG: Record<
@@ -89,6 +101,12 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   className,
 }) => {
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
+
   const Icon = TYPE_ICONS[deliverable.type];
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
@@ -108,6 +126,173 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     navigate(`/projects/${deliverable.projectId}/deliverables/${deliverable.id}`);
   };
 
+  // Load thumbnail if video
+  React.useEffect(() => {
+    const loadThumbnail = async () => {
+      // Determine key: beta or final
+      const key = deliverable.finalFileKey || deliverable.betaFileKey;
+
+      if (deliverable.type === 'Video' && key) {
+        // Assume thumbnail convention: key-thumb.jpg
+        // e.g. .mp4 -> -thumb.jpg
+        const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
+
+        try {
+          // If final, try public URL first (faster)
+          if (deliverable.status === 'final_delivered') {
+            setThumbnailUrl(storageService.getPublicUrl(thumbKey));
+          } else {
+            // For beta/private, get signed URL
+            const url = await storageService.getDownloadUrl(thumbKey);
+            if (url) setThumbnailUrl(url);
+          }
+        } catch (e) {
+          console.warn('Failed to load thumbnail', e);
+        }
+      }
+    };
+
+    loadThumbnail();
+  }, [deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, deliverable.type]);
+
+  const handleUploadClick = (type: 'beta' | 'final', e: React.MouseEvent) => {
+    e.stopPropagation();
+    uploadTypeRef.current = type;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Validate File Size
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File is too large (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB). Max size is 5GB.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // 2. Validate File Type
+    const isValidType = ALLOWED_FILE_TYPES.some(type => {
+      if (type.endsWith('/')) {
+        return file.type.startsWith(type);
+      }
+      return file.type === type;
+    });
+
+    if (!isValidType) {
+      alert('Invalid file type. Allowed: Video, Image, PDF, DOCX, XLSX.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const folder = uploadTypeRef.current === 'beta' ? 'beta' : 'final';
+      const key = await storageService.uploadFile(
+        file,
+        deliverable.projectId,
+        folder,
+        (progress) => setUploadProgress(progress)
+      );
+
+      console.log(`Uploaded ${uploadTypeRef.current} file:`, key);
+
+      // 3. If Video, Generate and Upload Thumbnail
+      if (file.type.startsWith('video/')) {
+        try {
+          console.log('Generating thumbnail...');
+          const thumbnailFile = await generateThumbnail(file);
+          if (thumbnailFile) {
+            const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
+            await storageService.uploadFile(
+              thumbnailFile,
+              deliverable.projectId,
+              folder,
+              undefined, // no progress tracking for thumb
+              thumbKey // Force specific key to match video
+            );
+            console.log('Thumbnail uploaded:', thumbKey);
+
+            // Optimistically set thumbnail URL
+            setThumbnailUrl(URL.createObjectURL(thumbnailFile));
+          }
+        } catch (thumbErr) {
+          console.error('Thumbnail generation failed:', thumbErr);
+          // Non-fatal error, proceed
+        }
+      }
+
+      // Save key to database
+      const updateData = uploadTypeRef.current === 'beta'
+        ? { beta_file_key: key }
+        : { final_file_key: key };
+
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update deliverable record');
+      }
+
+      alert(`${uploadTypeRef.current === 'beta' ? 'Beta' : 'Final'} file uploaded and saved successfully!`);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Upload failed. Check console for details.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // Prefer R2 key if available
+      const key = deliverable.status === 'final_delivered'
+        ? deliverable.finalFileKey
+        : deliverable.betaFileKey;
+
+      if (key) {
+        // Use CDN Public URL for final delivered files
+        if (deliverable.status === 'final_delivered') {
+          const url = storageService.getPublicUrl(key);
+          window.open(url, '_blank');
+          return;
+        }
+
+        // Use Presigned URL for private/beta files
+        const url = await storageService.getDownloadUrl(key);
+        window.open(url, '_blank');
+        return;
+      }
+
+      // Fallback to legacy URLs if no key
+      const legacyUrl = deliverable.status === 'final_delivered'
+        ? deliverable.finalFileUrl
+        : deliverable.betaFileUrl;
+
+      if (legacyUrl) {
+        window.open(legacyUrl, '_blank');
+      } else {
+        alert('No file available');
+      }
+    } catch (err) {
+      console.error("Download error", err);
+      alert("Failed to get download URL");
+    }
+  };
+
+
   const getActionButton = () => {
     if (deliverable.status === 'final_delivered') {
       return (
@@ -115,7 +300,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           variant="gradient"
           size="sm"
           className="gap-2"
-          onClick={handleNavigate}
+          onClick={handleDownload}
         >
           <Download className="h-4 w-4" />
           Download
@@ -140,6 +325,62 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     return null;
   };
 
+  // Admin Actions (Uploads) - Simplified for Demo
+  const getAdminActions = () => {
+    // Upload Beta when in progress or rejected
+    if (deliverable.status === 'in_progress' || deliverable.status === 'rejected') {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 w-full mt-2"
+          onClick={(e) => handleUploadClick('beta', e)}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <div className="flex items-center gap-2 w-full justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>{uploadProgress}%</span>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-4 w-4" />
+              Upload Beta
+            </>
+          )}
+        </Button>
+      );
+    }
+
+    // Upload Final when approved or payment pending
+    if (deliverable.status === 'approved' || deliverable.status === 'payment_pending') {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 w-full mt-2"
+          onClick={(e) => handleUploadClick('final', e)}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <div className="flex items-center gap-2 w-full justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>{uploadProgress}%</span>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-4 w-4" />
+              Upload Final
+            </>
+          )}
+        </Button>
+      );
+    }
+
+    return null;
+  };
+
+
   return (
     <div
       className={cn(
@@ -152,9 +393,23 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       {/* Thumbnail/Icon Area */}
       <div className="relative aspect-video bg-gradient-to-br from-zinc-100 to-zinc-50 flex items-center justify-center overflow-hidden">
         {deliverable.betaFileUrl && deliverable.type === 'Video' ? (
-          <div className="relative w-full h-full bg-zinc-900">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Icon className="h-16 w-16 text-white/20" />
+          <div className="relative w-full h-full bg-zinc-900 group-hover:scale-105 transition-transform duration-500">
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt={deliverable.title}
+                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Icon className="h-16 w-16 text-white/20" />
+              </div>
+            )}
+
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
+                <Play className="h-6 w-6 text-white" fill="currentColor" />
+              </div>
             </div>
             {deliverable.watermarked && (
               <div className="absolute top-2 right-2">
@@ -239,8 +494,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
                 deliverable.progress > 80
                   ? 'bg-emerald-500'
                   : deliverable.progress > 50
-                  ? 'bg-blue-500'
-                  : 'bg-amber-500'
+                    ? 'bg-blue-500'
+                    : 'bg-amber-500'
               }
             />
           </div>
@@ -248,6 +503,16 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
 
         {/* Action Button */}
         {getActionButton()}
+        {getAdminActions()}
+
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
 
         {/* Approval History Count */}
         {deliverable.approvalHistory.length > 0 && (
