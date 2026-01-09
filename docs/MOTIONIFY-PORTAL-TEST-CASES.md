@@ -5,11 +5,11 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Last Updated:** 2026-01-09  
 **Total Test Cases:** 85  
 **Status Summary:**
-- ✅ Complete: 31
+- ✅ Complete: 32
 - ⏳ Not Started: 25
 - ❌ Not Implemented: 13
 - ❌ Not Applicable: 3
-- 🚫 Blocked: 13
+- 🚫 Blocked: 10
 
 ---
 
@@ -36,10 +36,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-AUTH-002: Magic Link Login - Unregistered Email 🚫 BLOCKED
+### TC-AUTH-002: Magic Link Login - Unregistered Email ✅ COMPLETE
 **Priority:** High  
 **Type:** Security  
-**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-request-magic-link`) not implemented
+**Status:** ✅ Verified 2026-01-09 - Backend: `netlify/functions/auth-request-magic-link.ts`, Frontend: `LoginScreen.tsx`
 
 **Test Steps:**
 1. Navigate to `/login`
@@ -52,14 +52,12 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ No database token created
 - ✅ Rate limiting applies
 
-> **Note:** Frontend `LoginScreen.tsx` already shows generic success message. Backend validation pending.
+> **Verified:** Backend returns generic "If this email exists..." message for ALL emails. Frontend shows "Check Your Inbox!" success screen regardless of email existence.
 
----
-
-### TC-AUTH-003: Magic Link - Expired Token 🚫 BLOCKED
+### TC-AUTH-003: Magic Link - Expired Token ✅ COMPLETE
 **Priority:** High  
 **Type:** Security  
-**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-verify-magic-link`) not implemented
+**Status:** ✅ Verified 2026-01-09 - Backend: `netlify/functions/auth-verify-magic-link.ts` (lines 183-199)
 
 **Test Steps:**
 1. Request magic link
@@ -72,14 +70,12 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ "Request new link" option shown
 - ✅ User NOT authenticated
 
-> **Note:** Database `sessions` table has `expires_at` column. Backend verification logic pending.
+> **Verified:** Backend checks `expires_at` timestamp and returns `TOKEN_EXPIRED` error code with message "This magic link has expired. Please request a new one."
 
----
-
-### TC-AUTH-004: Magic Link - Already Used 🚫 BLOCKED
+### TC-AUTH-004: Magic Link - Already Used ✅ COMPLETE
 **Priority:** High  
 **Type:** Security  
-**Status:** 🚫 Blocked - Backend Netlify auth functions (`auth-verify-magic-link`) not implemented
+**Status:** ✅ Verified 2026-01-09 - Backend: `netlify/functions/auth-verify-magic-link.ts` (lines 167-181)
 
 **Test Steps:**
 1. Request magic link
@@ -92,7 +88,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ User NOT authenticated
 - ✅ Must request new link
 
-> **Note:** Backend should delete token after first use. Implementation pending.
+> **Verified:** Backend marks token as used (`used_at` timestamp) after first use. Subsequent attempts return `TOKEN_ALREADY_USED` error.
 
 ---
 
