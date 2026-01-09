@@ -2,12 +2,12 @@
 
 Comprehensive test cases for the Motionify Project Management Portal - a client collaboration platform for video production.
 
-**Last Updated:** 2026-01-08  
+**Last Updated:** 2026-01-09  
 **Total Test Cases:** 85  
 **Status Summary:**
-- ✅ Complete: 29
+- ✅ Complete: 31
 - ⏳ Not Started: 25
-- ❌ Not Implemented: 15
+- ❌ Not Implemented: 13
 - ❌ Not Applicable: 3
 - 🚫 Blocked: 13
 
@@ -677,10 +677,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-DA-005: Request Additional Revisions (Paid) ❌ NOT IMPLEMENTED
+### TC-DA-005: Request Additional Revisions (Paid) ✅ COMPLETE
 **Priority:** High  
 **Type:** Functional  
-**Status:** ❌ Additional revision flow not built
+**Status:** ✅ Implemented in `AdditionalRevisionRequestModal.tsx`, integrated into `DeliverableReviewModal.tsx`
 
 **Test Steps:**
 1. Quota exhausted (3 of 3 used)
@@ -691,16 +691,16 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 **Expected Results:**
 - ✅ Request created with status "pending"
-- ✅ Email sent to Admin for approval
+- ✅ Email sent to Admin for approval (mocked)
 - ✅ Client sees: "Pending admin review"
 - ✅ Cannot request new revision until approved
 
 ---
 
-### TC-DA-006: Admin Approves Additional Revisions ❌ NOT IMPLEMENTED
+### TC-DA-006: Admin Approves Additional Revisions ✅ COMPLETE
 **Priority:** High  
 **Type:** Functional  
-**Status:** ❌ Admin approval flow not built
+**Status:** ✅ Implemented in `AdminRevisionRequestsPanel.tsx`
 
 **Test Steps:**
 1. Login as Super Admin
@@ -712,7 +712,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Expected Results:**
 - ✅ Project quota: 3 → 5 total revisions
 - ✅ Request status → "approved"
-- ✅ Client notified via email
+- ✅ Client notified via email (mocked)
 - ✅ Client can now request revision
 
 ---

@@ -103,6 +103,45 @@ export interface DeliverableApproval {
 }
 
 // ============================================================================
+// ADDITIONAL REVISION REQUESTS
+// ============================================================================
+
+/**
+ * Request status for additional revisions
+ */
+export type AdditionalRevisionRequestStatus = 'pending' | 'approved' | 'declined';
+
+/**
+ * Request for additional revisions when quota is exhausted
+ * Submitted by Client PM, reviewed by Super Admin
+ */
+export interface AdditionalRevisionRequest {
+  id: string;
+  projectId: string;
+  requestedCount: number; // 1-5 additional revisions requested
+  reason: string; // Min 100 characters
+  requestedBy: string; // User ID
+  requestedByName: string;
+  status: AdditionalRevisionRequestStatus;
+
+  // Quota snapshot at time of request
+  quotaSnapshotTotal: number;
+  quotaSnapshotUsed: number;
+
+  // Admin review fields
+  reviewedAt?: string; // ISO date
+  reviewedBy?: string; // Admin user ID
+  reviewerName?: string;
+  approvedCount?: number; // May differ from requestedCount
+  declineReason?: string;
+  internalNotes?: string;
+
+  // Timestamps
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ============================================================================
 // REVISION QUOTA
 // ============================================================================
 
@@ -139,6 +178,7 @@ export interface Deliverable {
 
   // Beta Delivery
   betaFileUrl?: string; // URL to beta file (watermarked)
+  betaFileKey?: string; // R2 storage key
   watermarked: boolean; // Whether current file has watermark
   duration?: string; // Video duration (e.g., "2:45")
   format?: string; // File format (e.g., "MP4")
@@ -149,6 +189,7 @@ export interface Deliverable {
 
   // Final Delivery
   finalFileUrl?: string; // URL to final file (no watermark)
+  finalFileKey?: string; // R2 storage key
   finalDeliveredAt?: Date; // When final was delivered
   expiresAt?: Date; // 365 days after final delivery
 }
