@@ -114,6 +114,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 - [x] `03-03-PLAN.md` — Gap closure: Client portal notification infrastructure
 - [x] `03-04-PLAN.md` — Gap closure: Backend robustness (CORS, DB safety)
 - [x] `03-05-PLAN.md` — Gap closure: Client API path and validation fixes
+- [ ] `03-06-gap-closure-fix-PLAN.md` — Gap closure: Re-apply backend fixes (DB tables, R2 function)
 
 ---
 
