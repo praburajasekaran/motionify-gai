@@ -209,21 +209,23 @@ export const handler = async (
                 
                 // Get the other party's info based on commenter role
                 let recipientEmail: string | null = null;
+                let recipientUserId: string | null = null;
                 let proposalNumber: string | undefined;
                 
                 if (user.role === 'client') {
                     // Client posted comment - notify superadmin(s)
-                    // Get superadmin email for this proposal (first admin user)
+                    // Get superadmin email and user ID for this proposal
                     const adminResult = await client.query(
-                        `SELECT email FROM users WHERE role IN ('super_admin', 'project_manager') ORDER BY created_at ASC LIMIT 1`
+                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'project_manager') ORDER BY created_at ASC LIMIT 1`
                     );
                     if (adminResult.rows.length > 0) {
                         recipientEmail = adminResult.rows[0].email;
+                        recipientUserId = adminResult.rows[0].id;
                     }
                 } else {
                     // Admin posted comment - notify client
                     const proposalResult = await client.query(
-                        `SELECT p.id, i.contact_email, i.inquiry_number 
+                        `SELECT p.id, i.contact_email, i.inquiry_number, p.client_user_id 
                          FROM proposals p 
                          JOIN inquiries i ON p.inquiry_id = i.id 
                          WHERE p.id = $1`,
@@ -231,6 +233,7 @@ export const handler = async (
                     );
                     if (proposalResult.rows.length > 0) {
                         recipientEmail = proposalResult.rows[0].contact_email;
+                        recipientUserId = proposalResult.rows[0].client_user_id;
                         proposalNumber = proposalResult.rows[0].inquiry_number;
                     }
                 }
@@ -249,6 +252,35 @@ export const handler = async (
                     console.log(`✅ Comment notification sent to ${recipientEmail}`);
                 } else {
                     console.warn(`⚠️ Could not find recipient email for comment notification on proposal ${proposalId}`);
+                }
+                
+                // ========================================================================
+                // Create in-app notification record
+                // ========================================================================
+                if (recipientUserId && recipientUserId !== user.id) {
+                    try {
+                        const commentPreview = trimmedContent.substring(0, 100);
+                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/proposal/${proposalId}`;
+                        
+                        await client.query(
+                            `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                            [
+                                recipientUserId,
+                                proposalId,
+                                'comment_created',
+                                'New Comment',
+                                `"${user.fullName}" commented: "${commentPreview}"`,
+                                proposalUrl,
+                                user.id,
+                                user.fullName,
+                            ]
+                        );
+                        console.log(`✅ In-app notification created for user ${recipientUserId}`);
+                    } catch (notifError) {
+                        // Log but don't fail
+                        console.error('❌ Failed to create in-app notification:', notifError);
+                    }
                 }
             } catch (emailError) {
                 // Log but don't fail the comment creation
