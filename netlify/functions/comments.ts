@@ -63,7 +63,7 @@ export const handler = async (
 
         if (event.httpMethod === 'GET') {
             const params = event.queryStringParameters || {};
-            const { proposalId } = params;
+            const { proposalId, since } = params;
 
             if (!proposalId || !isValidUUID(proposalId)) {
                 return {
@@ -76,21 +76,40 @@ export const handler = async (
                 };
             }
 
-            const result = await client.query(
-                `SELECT 
-                    id,
-                    proposal_id as "proposalId",
-                    user_id as "userId",
-                    user_name as "userName",
-                    content,
-                    is_edited as "isEdited",
-                    created_at as "createdAt",
-                    updated_at as "updatedAt"
-                FROM proposal_comments
-                WHERE proposal_id = $1
-                ORDER BY created_at ASC`,
-                [proposalId]
-            );
+            // Build query with optional since filter for efficient polling
+            let query = `SELECT 
+                id,
+                proposal_id as "proposalId",
+                user_id as "userId",
+                user_name as "userName",
+                content,
+                is_edited as "isEdited",
+                created_at as "createdAt",
+                updated_at as "updatedAt"
+            FROM proposal_comments
+            WHERE proposal_id = $1`;
+            const queryParams: string[] = [proposalId];
+
+            if (since) {
+                // Validate since is a valid ISO timestamp
+                const sinceDate = new Date(since);
+                if (isNaN(sinceDate.getTime())) {
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({
+                            success: false,
+                            error: 'Invalid since parameter - must be valid ISO timestamp',
+                        }),
+                    };
+                }
+                query += ` AND created_at > $2`;
+                queryParams.push(sinceDate.toISOString());
+            }
+
+            query += ` ORDER BY created_at ASC`;
+
+            const result = await client.query(query, queryParams);
 
             const comments: Comment[] = result.rows.map(row => ({
                 id: row.id,
