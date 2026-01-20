@@ -16,11 +16,17 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 1: Foundation |
-| **Current Plan** | 01-01-foundation-impl-PLAN.md (Complete) |
+| **Current Phase** | Phase 2: Core Comment Experience |
+| **Current Plan** | 02-01-comment-editing-PLAN.md (Complete) |
 | **Status** | Phase in progress |
-| **Progress** | 🟢 Foundation complete - 1/1 plans done |
+| **Progress** | 🟢 Comment editing complete - 1/1 plans done |
 
+```
+Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
+Phase 2: Core Comment Experience (Posting, Real-time) [In Progress]
+Phase 3: Attachments & Notifications                  [Pending]
+────────────────────────────────────────────────────────────────
+Overall: 33% complete | 1/3 phases done | 1/2 plans done in Phase 2
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [Pending]
@@ -83,7 +89,6 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 |-----|-------|-----------------|
 | R2 presign CORS for direct uploads | Phase 3 | Review existing `/api/r2-presign` implementation |
 | Ably pricing at scale | v2 | Evaluate if polling UX sufficient before upgrade |
-| Comment editing UI | Phase 2 | Add edit mode to CommentItem, PUT endpoint |
 | Real-time updates | Phase 2 | Add polling or Ably integration |
 | @mentions parsing/rendering | Phase 2 | Implement mention detection and notifications |
 | Comment replies/threading | Phase 2 | Add parent_id FK to comments table |
@@ -98,23 +103,26 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 2. **Requirements defined** in `.planning/REQUIREMENTS.md` (8 requirements)
 3. **Research synthesized** from `.planning/research/SUMMARY.md`
 4. **Roadmap created** with 3 phases covering all requirements
-5. **Phase 1 planned** with 6 tasks and detailed implementation breakdown
-6. **Phase 1 executed** - All 5 tasks completed
+5. **Phase 1 planned and executed** - All 5 tasks completed
    - Database migration created and committed
    - Comments API implemented with auth
    - React components created for both portals
    - Admin integration complete
    - Client integration complete
+6. **Phase 2 planned and executed** - Comment editing
+   - PUT endpoint added to comments API
+   - Edit UI added to admin CommentItem
+   - Edit UI added to client CommentItem
 
 ### Next Actions
 
-1. **Plan Phase 2** - Create detailed plan for core comment experience:
-   - Comment editing (PUT endpoint + edit UI)
+1. **Phase 2 continued** - Plan next task for core comment experience:
    - Real-time updates (polling or Ably)
    - @mentions parsing and notifications
    - Comment threading/replies (optional)
 
 **Phase 1 Summary:** `.planning/phases/01-foundation/01-01-foundation-impl-SUMMARY.md`
+**Phase 2 Summary:** `.planning/phases/02-core-comment-experience/02-01-SUMMARY.md`
 
 ---
 
@@ -126,6 +134,7 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 | `.planning/REQUIREMENTS.md` | Formal requirements with REQ-IDs |
 | `.planning/ROADMAP.md` | Phase structure and success criteria |
 | `.planning/phases/01-foundation/01-01-foundation-impl-SUMMARY.md` | Phase 1 completion report |
+| `.planning/phases/02-core-comment-experience/02-01-SUMMARY.md` | Phase 2 Plan 1 completion report |
 | `.planning/research/SUMMARY.md` | Research synthesis (stack, architecture, pitfalls) |
 
 ---
