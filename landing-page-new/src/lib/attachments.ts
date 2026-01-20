@@ -62,7 +62,7 @@ export async function getPresignedUploadUrl(
     projectId: string
 ): Promise<{ uploadUrl: string; key: string } | null> {
     try {
-        const response = await fetch(`${API_BASE}/api/r2-presign`, {
+        const response = await fetch(`${API_BASE}/r2-presign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileName, fileType, projectId, folder: 'comment-attachments' }),
