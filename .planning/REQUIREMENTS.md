@@ -154,12 +154,12 @@ The following are explicitly excluded from v1:
 
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
-| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | Pending |
-| COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | Pending |
+| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
+| COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | ✅ Complete |
 | COMM-03: File Attachments on Comments | Phase 3 | Should Have | Pending |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | Pending |
 | COMM-05: In-App Notifications | Phase 3 | Should Have | Pending |
-| COMM-06: Comment Editing | Phase 2 | Could Have | Pending |
+| COMM-06: Comment Editing | Phase 2 | Could Have | ✅ Complete |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 

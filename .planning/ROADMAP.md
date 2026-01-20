@@ -16,7 +16,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
-| **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | 📋 Planning |
+| **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | Pending |
 
 ---
@@ -74,8 +74,8 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
    Once another user replies to a comment, the "Edit" button disappears from that comment. The user can no longer edit that comment.
 
 ### Plans
-- [ ] `02-01-comment-editing-PLAN.md` — PUT endpoint + edit UI for both portals
-- [ ] `02-02-realtime-polling-PLAN.md` — Polling for real-time updates + API URL fix
+- [x] `02-01-comment-editing-PLAN.md` — PUT endpoint + edit UI for both portals
+- [x] `02-02-realtime-polling-PLAN.md` — Polling for real-time updates + API URL fix
 
 ---
 
@@ -126,14 +126,14 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3
 
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
-| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | Pending |
-| COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | Pending |
+| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
+| COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | ✅ Complete |
 | COMM-03: File Attachments on Comments | Phase 3 | Should Have | Pending |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | Pending |
 | COMM-05: In-App Notifications | Phase 3 | Should Have | Pending |
-| COMM-06: Comment Editing | Phase 2 | Could Have | Pending |
-| COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | Pending |
-| COMM-08: Persistent Comments | Phase 1 | Must Have | Pending |
+| COMM-06: Comment Editing | Phase 2 | Could Have | ✅ Complete |
+| COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
+| COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)  
 **Phases:** 3 (optimized for "quick" depth)

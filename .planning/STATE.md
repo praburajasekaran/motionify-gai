@@ -18,9 +18,15 @@
 |-------|-------|
 | **Current Phase** | Phase 2: Core Comment Experience |
 | **Current Plan** | 02-02-realtime-polling-PLAN.md (Complete) |
-| **Status** | Phase in progress |
-| **Progress** | 🟢 Real-time polling complete - 2/2 plans done |
+| **Status** | Phase complete |
+| **Progress** | 🟢 Core Comment Experience complete - 2/2 plans done |
 
+```
+Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
+Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
+Phase 3: Attachments & Notifications                  [Pending]
+────────────────────────────────────────────────────────────────
+Overall: 66% complete | 2/3 phases done | Ready for Phase 3
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [In Progress]
@@ -47,6 +53,9 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 | Dependencies Resolved | 5/5 | Existing infrastructure | ✅ |
 | Phase 1 Plans Completed | 1/1 | 100% | ✅ |
 | Phase 1 Duration | ~15 min | 4-6 hours | ✅ Under budget |
+| Phase 2 Plans Completed | 2/2 | 100% | ✅ |
+| Phase 2 Duration | ~7 min | 2-4 hours | ✅ Under budget |
+| Phase 2 Gaps Fixed | 2/2 | 100% | ✅ |
 
 ---
 
@@ -124,16 +133,22 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
    - Polling added to admin CommentThread (10-second interval)
    - Polling added to client CommentThread (10-second interval)
    - Hardcoded localhost URL fixed with environment variable
+8. **Phase 2 verified and gaps fixed**
+   - onEdit handler connected in both portals
+   - Scroll position preservation added to polling
+   - Phase 2 verified PASSED (8/8 must-haves)
 
 ### Next Actions
 
-1. **Phase 2 continued** - Plan next task for core comment experience:
-   - @mentions parsing and notifications
-   - Comment threading/replies (optional)
+1. **Phase 3** - Create detailed plan for attachments & notifications:
+   - File attachments (COMM-03)
+   - Email notifications (COMM-04)
+   - In-app notifications (COMM-05)
 
 **Phase 1 Summary:** `.planning/phases/01-foundation/01-01-foundation-impl-SUMMARY.md`
 **Phase 2 Summary:** `.planning/phases/02-core-comment-experience/02-01-SUMMARY.md`
 **Phase 2 Plan 2 Summary:** `.planning/phases/02-core-comment-experience/02-02-SUMMARY.md`
+**Phase 2 Verification:** `.planning/phases/02-core-comment-experience/02-VERIFICATION.md`
 
 ---
 
@@ -147,6 +162,7 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 | `.planning/phases/01-foundation/01-01-foundation-impl-SUMMARY.md` | Phase 1 completion report |
 | `.planning/phases/02-core-comment-experience/02-01-SUMMARY.md` | Phase 2 Plan 1 completion report |
 | `.planning/phases/02-core-comment-experience/02-02-SUMMARY.md` | Phase 2 Plan 2 completion report |
+| `.planning/phases/02-core-comment-experience/02-VERIFICATION.md` | Phase 2 verification report |
 | `.planning/research/SUMMARY.md` | Research synthesis (stack, architecture, pitfalls) |
 
 ---
