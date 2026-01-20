@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { CommentItem } from './CommentItem';
 import { CommentInput } from './CommentInput';
 import { MessageSquare } from 'lucide-react';
+import { createAttachment, type PendingAttachment } from '@/lib/attachments';
 
 interface Comment {
     id: string;
@@ -65,6 +66,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [error, setError] = useState<string | null>(null);
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
 
     // Track scroll position before updates
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
@@ -161,6 +163,17 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
         const newComment = await createComment({ proposalId, content });
         if (newComment) {
+            for (const pending of pendingAttachmentsRef.current) {
+                await createAttachment(
+                    newComment.id,
+                    pending.fileName,
+                    pending.fileType,
+                    pending.fileSize,
+                    pending.r2Key
+                );
+            }
+            
+            pendingAttachmentsRef.current = [];
             setComments(prev => [...prev, newComment]);
         }
     };
@@ -259,6 +272,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             <div className="p-6 pt-2">
                 {isAuthenticated ? (
                     <CommentInput
+                        proposalId={proposalId}
                         onSubmit={handleSubmit}
                         placeholder="Write a comment..."
                     />
