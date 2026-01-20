@@ -17,7 +17,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 |-------|------|--------------|--------|
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
 | **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
-| **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | In Progress (gap closure) |
+| **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
 
 ---
 
@@ -111,7 +111,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 ### Plans
 - [x] `03-01-PLAN.md` — File attachments infrastructure (database, API, UI)
 - [x] `03-02-PLAN.md` — Email + in-app notifications (admin portal complete)
-- [ ] `03-03-PLAN.md` — Gap closure: Client portal notification infrastructure
+- [x] `03-03-PLAN.md` — Gap closure: Client portal notification infrastructure
 
 ---
 
@@ -135,14 +135,14 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3
 | COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | ✅ Complete |
 | COMM-03: File Attachments on Comments | Phase 3 | Should Have | ✅ Complete |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
-| COMM-05: In-App Notifications | Phase 3 | Should Have | ⚠️ Admin OK, Client pending |
+| COMM-05: In-App Notifications | Phase 3 | Should Have | ✅ Complete |
 | COMM-06: Comment Editing | Phase 2 | Could Have | ✅ Complete |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)
 **Phases:** 3 (optimized for "quick" depth)
-**Phase 3:** 3/3 plans created (including gap closure)
+**Phase 3:** 3/3 plans complete (including gap closure)
 
 ---
 

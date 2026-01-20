@@ -164,9 +164,9 @@ Overall: 100% complete | 7/7 plans done | Phase 3 complete with gaps closed
 
 ### Next Actions
 
-1. **Verify Phase 3 goal** - Run verification to confirm all requirements met
-2. **Update ROADMAP.md** - Mark Phase 3 as complete
-3. **Complete milestone** - Audit and archive v1.0
+1. ~~**Verify Phase 3 goal** - Run verification to confirm all requirements met~~ ✅ Done
+2. ~~**Update ROADMAP.md** - Mark Phase 3 as complete~~ ✅ Done
+3. **Complete milestone** - Audit and archive v1.0 → `/gsd:audit-milestone`
 
 **Phase 3 Plans:**
 - `.planning/phases/03-attachments-and-notifications/03-01-PLAN.md`
