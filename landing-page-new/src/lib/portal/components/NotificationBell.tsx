@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useContext } from 'react';
-import { AppContext } from '@/lib/portal/AppContext';
+import React from 'react';
+import { useNotifications, type AppNotification, NOTIFICATION_ICONS } from '@/contexts/NotificationContext';
 import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,40 +12,76 @@ import {
 import NotificationDropdown from './NotificationDropdown';
 import { formatUnreadCount } from '@/lib/portal/utils/notification-utils';
 import { cn } from '@/lib/utils';
-import type { Notification as NewNotification } from '@/lib/portal/types/notification-types';
+import type { Notification, NotificationCategory } from '@/lib/portal/types/notification-types';
 
 /**
  * NotificationBell Component
- * 
+ *
  * Displays notification bell icon with unread count badge and dropdown menu.
- * Matches test case TC-NOT-004 requirements with ShadCN components and proper styling.
+ * Uses NotificationContext for real notification data from the API.
  */
 const NotificationBell: React.FC = () => {
   const {
     notifications,
-    markNotificationAsRead,
-    markNotificationsAsRead
-  } = useContext(AppContext);
+    unreadCount,
+    markAsRead,
+    markAllAsRead
+  } = useNotifications();
 
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Calculate unread count - using old notification structure for now
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   const handleMarkAsRead = (notificationId: string) => {
-    markNotificationAsRead(notificationId);
+    markAsRead(notificationId);
   };
 
   const handleMarkAllAsRead = () => {
-    markNotificationsAsRead();
+    markAllAsRead();
   };
 
   const handleClose = () => {
     setIsOpen(false);
   };
 
-  // Type cast old notifications to new format (temporary until we add proper mock data)
-  const typedNotifications = notifications as unknown as NewNotification[];
+  // Map AppNotification to Notification format expected by NotificationDropdown
+  const mapToNotification = (n: AppNotification): Notification => {
+    // Map notification type to category
+    const categoryMapping: Record<string, NotificationCategory> = {
+      'task_assigned': 'task_updates',
+      'task_status_changed': 'task_updates',
+      'comment_mention': 'comments_mentions',
+      'comment_created': 'comments_mentions',
+      'file_uploaded': 'file_updates',
+      'approval_request': 'approvals_revisions',
+      'revision_requested': 'approvals_revisions',
+      'payment_received': 'project_updates',
+      'team_member_added': 'team_changes',
+      'project_status_changed': 'project_updates',
+    };
+
+    return {
+      id: n.id,
+      userId: '', // Not used in display
+      projectId: n.projectId || '',
+      type: n.type as Notification['type'],
+      category: categoryMapping[n.type] || 'project_updates',
+      read: n.read,
+      createdAt: new Date(n.timestamp),
+      readAt: n.read ? new Date(n.timestamp) : null,
+      deletedAt: null,
+      title: n.title,
+      message: n.message,
+      icon: NOTIFICATION_ICONS[n.type] || '🔔',
+      actionUrl: n.actionUrl || null,
+      actionLabel: n.actionUrl ? 'View' : null,
+      metadata: {
+        projectName: undefined,
+      },
+      actorId: null,
+      actorName: n.actorName || null,
+    };
+  };
+
+  const typedNotifications: Notification[] = notifications.map(mapToNotification);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -88,4 +124,3 @@ const NotificationBell: React.FC = () => {
 };
 
 export default NotificationBell;
-
