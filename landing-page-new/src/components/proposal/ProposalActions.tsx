@@ -7,6 +7,7 @@ import { updateInquiryStatus } from '@/lib/inquiries';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { Check, X, MessageSquare, AlertTriangle, Loader2 } from 'lucide-react';
+import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 interface ProposalActionsProps {
   proposal: Proposal;
@@ -27,17 +28,23 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
   const hasResponded = proposal.status !== 'sent';
 
   // Handle Accept Proposal
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (hasResponded) return;
 
     setIsSubmitting(true);
 
     try {
+      // Validate inquiry.id before proceeding
+      if (!inquiry.id) {
+        console.error('Cannot accept proposal: inquiry.id is missing', { inquiry });
+        throw new Error('Inquiry ID is missing. Please reload the page and try again.');
+      }
+
       // Update proposal status
-      updateProposalStatus(proposal.id, 'accepted');
-      
+      await updateProposalStatus(proposal.id, 'accepted');
+
       // Update inquiry status
-      updateInquiryStatus(inquiry.id, 'accepted');
+      await updateInquiryStatus(inquiry.id, 'accepted');
 
       // Log email notification
       const pricing = formatCurrencyWithConversion(proposal.totalPrice, proposal.currency);
@@ -54,6 +61,17 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Advance Due:', advance.primary);
       console.log('========================================');
 
+      // Log activity: Proposal Accepted
+      logProposalAccepted({
+        accepterId: inquiry.contactEmail, // Use email as identifier since we don't have user ID on client side
+        accepterName: inquiry.contactName,
+        senderId: 'motionify-admin', // Admin who sent the proposal (we don't have this info on client side)
+        senderName: 'Motionify',
+        inquiryId: inquiry.id,
+        proposalId: proposal.id,
+        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
+      }).catch((err) => console.error('Failed to log activity:', err));
+
       // Redirect to payment page
       router.push(`/payment/${proposal.id}`);
     } catch (error) {
@@ -64,9 +82,9 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
   };
 
   // Handle Request Changes
-  const handleRequestChanges = () => {
+  const handleRequestChanges = async () => {
     setValidationError('');
-    
+
     if (feedback.trim().length < 10) {
       setValidationError('Please provide at least 10 characters of feedback.');
       return;
@@ -75,11 +93,17 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
     setIsSubmitting(true);
 
     try {
+      // Validate inquiry.id before proceeding
+      if (!inquiry.id) {
+        console.error('Cannot request changes: inquiry.id is missing', { inquiry });
+        throw new Error('Inquiry ID is missing. Please reload the page and try again.');
+      }
+
       // Update proposal status with feedback
-      updateProposalStatus(proposal.id, 'changes_requested', feedback.trim());
-      
+      await updateProposalStatus(proposal.id, 'changes_requested', feedback.trim());
+
       // Update inquiry status to negotiating
-      updateInquiryStatus(inquiry.id, 'negotiating');
+      await updateInquiryStatus(inquiry.id, 'negotiating');
 
       // Log email notification
       console.log('📧 EMAIL SENT TO ADMIN:');
@@ -91,11 +115,23 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log(feedback.trim());
       console.log('========================================');
 
+      // Log activity: Proposal Changes Requested
+      logProposalChangesRequested({
+        requesterId: inquiry.contactEmail,
+        requesterName: inquiry.contactName,
+        senderId: 'motionify-admin',
+        senderName: 'Motionify',
+        inquiryId: inquiry.id,
+        proposalId: proposal.id,
+        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
+        feedback: feedback.trim(),
+      }).catch((err) => console.error('Failed to log activity:', err));
+
       // Close modal and refresh
       setShowChangesModal(false);
       setFeedback('');
       onStatusChange();
-      
+
       // Show success message
       alert('Your feedback has been sent to our team. We will update the proposal and get back to you soon.');
     } catch (error) {
@@ -107,19 +143,25 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
   };
 
   // Handle Reject Proposal
-  const handleReject = () => {
+  const handleReject = async () => {
     setIsSubmitting(true);
 
     try {
+      // Validate inquiry.id before proceeding
+      if (!inquiry.id) {
+        console.error('Cannot reject proposal: inquiry.id is missing', { inquiry });
+        throw new Error('Inquiry ID is missing. Please reload the page and try again.');
+      }
+
       // Update proposal status with optional reason
-      updateProposalStatus(
-        proposal.id, 
-        'rejected', 
+      await updateProposalStatus(
+        proposal.id,
+        'rejected',
         rejectReason.trim() || undefined
       );
-      
+
       // Update inquiry status
-      updateInquiryStatus(inquiry.id, 'rejected');
+      await updateInquiryStatus(inquiry.id, 'rejected');
 
       // Log email notification
       console.log('📧 EMAIL SENT TO ADMIN:');
@@ -129,6 +171,18 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Proposal Version:', proposal.version || 1);
       console.log('Reason:', rejectReason.trim() || 'Not provided');
       console.log('========================================');
+
+      // Log activity: Proposal Rejected
+      logProposalRejected({
+        rejecterId: inquiry.contactEmail,
+        rejecterName: inquiry.contactName,
+        senderId: 'motionify-admin',
+        senderName: 'Motionify',
+        inquiryId: inquiry.id,
+        proposalId: proposal.id,
+        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
+        reason: rejectReason.trim() || undefined,
+      }).catch((err) => console.error('Failed to log activity:', err));
 
       // Close modal and refresh
       setShowRejectModal(false);

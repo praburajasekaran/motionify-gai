@@ -1,4 +1,8 @@
 {
+  "exclude": [
+    "landing-page-new/**/*",
+    "node_modules"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

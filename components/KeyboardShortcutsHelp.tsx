@@ -91,7 +91,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
 
                 {/* Shortcuts List */}
                 <div className="space-y-2 ml-10">
-                  {categoryShortcuts.map((shortcut, index) => (
+                  {(categoryShortcuts as KeyboardShortcut[]).map((shortcut, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-zinc-50 transition-colors group"

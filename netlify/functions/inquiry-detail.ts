@@ -21,7 +21,7 @@ const getDbClient = () => {
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL not configured');
   }
-  
+
   return new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -59,8 +59,12 @@ export const handler = async (
     await client.connect();
 
     if (event.httpMethod === 'GET') {
+      // Support lookup by UUID or by inquiry_number (e.g., INQ-2026-001)
+      const isInquiryNumber = id.startsWith('INQ-');
+      const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
+
       const result = await client.query(
-        `SELECT * FROM inquiries WHERE id = $1`,
+        `SELECT * FROM inquiries WHERE ${lookupColumn} = $1`,
         [id]
       );
 

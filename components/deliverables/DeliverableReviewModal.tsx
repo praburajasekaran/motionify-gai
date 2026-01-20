@@ -378,7 +378,18 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                       </div>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  /* Client PM logic when actions disabled (e.g. Terms not accepted) */
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold mb-1">Action Required</p>
+                        <p>{permissions.getDeniedReason('approve') || permissions.getDeniedReason('reject')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {deliverable.watermarked && !isFinalDelivered && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">

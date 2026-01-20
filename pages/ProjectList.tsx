@@ -47,6 +47,7 @@ export const ProjectList = () => {
             case 'Completed': return 'success';
             case 'In Review': return 'warning';
             case 'On Hold': return 'destructive';
+            case 'Archived': return 'outline';
             default: return 'outline';
         }
     };
@@ -54,7 +55,10 @@ export const ProjectList = () => {
     const filteredProjects = MOCK_PROJECTS.filter(p => {
         const matchesSearch = p.title.toLowerCase().includes(filter.toLowerCase()) ||
             p.client.toLowerCase().includes(filter.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+        // Hide archived from "all" filter, only show when explicitly selected
+        const matchesStatus = statusFilter === 'all'
+            ? p.status !== 'Archived'
+            : p.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
@@ -117,7 +121,7 @@ export const ProjectList = () => {
     return (
         <div className="space-y-8 max-w-[1600px] mx-auto pb-20">
             {/* Header Section */}
-            <div className="flex flex-col gap-6 animate-fade-in-up">
+            <div className="flex flex-col gap-6 animate-fade-in-up relative z-50">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-3">
@@ -139,7 +143,7 @@ export const ProjectList = () => {
                 </div>
 
                 {/* Toolbar - Sticky */}
-                <div className="sticky top-2 z-sticky flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-2xl border border-zinc-200 shadow-md transition-all">
+                <div className="sticky top-2 z-40 flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-2xl border border-zinc-200 shadow-md transition-all">
                     <div className="flex items-center gap-2 w-full md:w-auto px-1 flex-col md:flex-row">
                         <div className="relative w-full md:w-72 group">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
@@ -159,6 +163,7 @@ export const ProjectList = () => {
                                 { label: 'In Review', value: 'In Review' },
                                 { label: 'Completed', value: 'Completed' },
                                 { label: 'On Hold', value: 'On Hold' },
+                                { label: '📦 View Archived', value: 'Archived' },
                             ]}
                             value={statusFilter}
                             onValueChange={setStatusFilter}

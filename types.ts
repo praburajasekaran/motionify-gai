@@ -17,6 +17,7 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
 export type ProjectStatus =
   | 'Draft'             // Only Admin/PM can view
   | 'Active'            // Full permissions as documented
+  | 'In Review'         // Deliverables under review
   | 'Awaiting Payment'  // Client PM cannot approve new deliverables
   | 'On Hold'           // No file uploads except Admin
   | 'Completed'         // Read-only except Admin, files accessible 365 days
@@ -48,9 +49,15 @@ export interface User {
 export interface Task {
   id: string;
   title: string;
-  status: 'Todo' | 'In Progress' | 'Done';
+  status: 'Todo' | 'In Progress' | 'Done' | 'pending' | 'in_progress' | 'awaiting_approval' | 'completed' | 'revision_requested';
   assignee?: User;
   assignees?: User[]; // Support for multiple assignees (team members can upload beta files only to assigned tasks)
+  createdBy?: string; // User ID of task creator
+  createdAt?: string; // ISO date string
+  deadline?: string; // ISO date string
+  assigneeId?: string; // Used by backend API
+  followers?: string[]; // Array of user IDs following this task
+  visibleToClient?: boolean;
 }
 
 // Deliverable status workflow
@@ -92,6 +99,17 @@ export interface ActivityLog {
   timestamp: string; // ISO date string
 }
 
+export interface ProjectFile {
+  id: string;
+  projectId: string; // Foreign key
+  name: string;
+  type: string; // MIME type
+  size: number; // Bytes
+  key: string; // Storage key (R2)
+  uploadedBy: User; // Who uploaded it
+  uploadedAt: string; // ISO Date
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -107,8 +125,26 @@ export interface Project {
   team: User[];
   budget: number;
   deliverables: Deliverable[];
+  files: ProjectFile[]; // Added files array
   deliverablesCount: number; // Keep for backwards compatibility if needed, or derive
   revisionCount: number;
   maxRevisions: number;
   activityLog: ActivityLog[];
+  // Terms acceptance tracking
+  termsAcceptedAt?: string; // ISO date string
+  termsAcceptedBy?: string; // User ID
+}
+
+export interface Payment {
+  id: string;
+  project_id?: string;
+  proposal_id?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  payment_type: 'advance' | 'balance';
+  created_at: string;
+  paid_at?: string;
+  razorpay_payment_id?: string;
+  invoice_url?: string;
 }

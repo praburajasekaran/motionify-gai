@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans, Fraunces } from "next/font/google";
+import { Open_Sans, Fraunces, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 const openSans = Open_Sans({
@@ -11,6 +11,13 @@ const openSans = Open_Sans({
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: "--font-ibm-plex-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -28,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${openSans.variable} ${fraunces.variable} antialiased`}>
+      <body className={`${openSans.variable} ${fraunces.variable} ${ibmPlexSans.variable} antialiased`}>
         <AuthProvider>
           {children}
         </AuthProvider>

@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS deliverables (
   -- File URLs (Cloudflare R2)
   beta_file_url TEXT,
   final_file_url TEXT,
+  beta_file_key TEXT,
+  final_file_key TEXT,
   
   -- Approval tracking
   approved_at TIMESTAMPTZ,

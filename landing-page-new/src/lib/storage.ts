@@ -28,7 +28,7 @@ async function ensureDataDir(): Promise<void> {
 export async function readJSON<T>(filename: string): Promise<T[]> {
   await ensureDataDir();
   const filePath = path.join(DATA_DIR, filename);
-  
+
   try {
     const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as T[];
@@ -53,4 +53,5 @@ export async function writeJSON<T>(filename: string, data: T[]): Promise<void> {
 export const STORAGE_FILES = {
   PROPOSALS: 'proposals.json',
   INQUIRIES: 'inquiries.json',
+  PAYMENTS: 'payments.json',
 } as const;

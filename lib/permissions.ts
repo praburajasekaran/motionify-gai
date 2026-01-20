@@ -72,17 +72,19 @@ export function getRoleLabel(role: UserRole): string {
 export const Permissions = {
   /**
    * Can access inquiry management dashboard
-   * ONLY Super Admin - not project managers
+   * Super Admins see all inquiries, Clients see only their own
    */
   canManageInquiries(user: User | null): boolean {
-    return isSuperAdmin(user);
+    if (!user) return false;
+    return isSuperAdmin(user) || isClient(user);
   },
 
   /**
    * Can create proposals from inquiries
+   * Only super_admin can create proposals
    */
   canCreateProposals(user: User | null): boolean {
-    return isMotionifyAdmin(user);
+    return isSuperAdmin(user);
   },
 
   /**

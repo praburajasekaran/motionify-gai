@@ -11,7 +11,8 @@
 - ✅ **Implemented** - Feature is complete
 - 🔄 **Partial** - Partially implemented, needs work
 - 📋 **Planned** - Documented but not started
-- ❌ **Not Started** - Not yet implemented
+| 03 | Restrict Client Invite to Client Team only | ✅ Complete | InviteModal |
+| 04 | Allow PM/Admin to Invite Members | ✅ Complete | ProjectDetail |yet implemented
 
 **Priority:**
 - 🔴 **CRITICAL (MVP)** - Must have for launch

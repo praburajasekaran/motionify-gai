@@ -34,7 +34,7 @@ We make users feel capable and in control.
 
 **Do:**
 - "You're in control"
-- "Your creative command center"
+- "Welcome Back"
 - "Everything you need, nothing you don't"
 - "Make it yours"
 
@@ -152,7 +152,7 @@ We communicate with clarity and conviction.
 
 | Generic | Motionify |
 |---------|-----------|
-| Dashboard | Your Creative Command Center |
+| Dashboard | Welcome Back |
 | Projects | Productions in Motion |
 | Team Settings | Your Crew Configuration |
 | Notifications | What's Happening |

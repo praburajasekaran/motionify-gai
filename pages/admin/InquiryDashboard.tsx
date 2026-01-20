@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { getInquiries, getInquiryStats, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
-import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp } from 'lucide-react';
+import { getInquiries, getInquiriesByClientUserId, getInquiryStats, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
+import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { Permissions } from '../../lib/permissions';
+import { Permissions, isClient } from '../../lib/permissions';
+import { NewInquiryModal } from '../../components/admin/NewInquiryModal';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -33,6 +34,44 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
   archived: 'Archived',
 };
 
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className: string }>;
+  color: 'blue' | 'amber' | 'purple' | 'green' | 'emerald';
+}
+
+function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
+  const bgColors = {
+    blue: 'bg-blue-500/10',
+    amber: 'bg-amber-500/10',
+    purple: 'bg-purple-500/10',
+    green: 'bg-green-500/10',
+    emerald: 'bg-emerald-500/10',
+  };
+  const iconColors = {
+    blue: 'text-blue-400',
+    amber: 'text-amber-400',
+    purple: 'text-purple-400',
+    green: 'text-green-400',
+    emerald: 'text-emerald-400',
+  };
+
+  return (
+    <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-600">{label}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        </div>
+        <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
+          <Icon className={`w-6 h-6 ${iconColors[color]}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InquiryDashboard() {
   const { user, isLoading } = useAuthContext();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -42,46 +81,41 @@ export function InquiryDashboard() {
   const [stats, setStats] = useState<ReturnType<typeof getInquiryStats> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Wait for auth to load before checking permissions
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
-  }
 
-  // Permission check - Only Motionify admins can access inquiry management
-  if (!Permissions.canManageInquiries(user)) {
-    return <Navigate to="/" replace />;
-  }
-  
-  // Load inquiries from API
-  useEffect(() => {
-    const loadInquiries = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const [allInquiries, inquiryStats] = await Promise.all([
-          getInquiries(),
-          getInquiryStats(),
-        ]);
-        
-        setInquiries(allInquiries as Inquiry[]);
-        setFilteredInquiries(allInquiries as Inquiry[]);
-        setStats(inquiryStats);
-      } catch (err) {
-        console.error('Failed to load inquiries:', err);
-        setError('Failed to load inquiries. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadInquiries = async () => {
+    if (!user) return;
     
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let allInquiries: Inquiry[];
+      let inquiryStats;
+      
+      if (isClient(user)) {
+        allInquiries = await getInquiriesByClientUserId(user.id);
+        inquiryStats = await getInquiryStats(user.id);
+      } else {
+        allInquiries = await getInquiries();
+        inquiryStats = await getInquiryStats();
+      }
+      
+      setInquiries(allInquiries);
+      setFilteredInquiries(allInquiries);
+      setStats(inquiryStats);
+    } catch (err) {
+      console.error('Failed to load inquiries:', err);
+      setError('Failed to load inquiries. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadInquiries();
-  }, []);
+  }, [user]);
 
   // Apply filters
   useEffect(() => {
@@ -106,6 +140,21 @@ export function InquiryDashboard() {
     setFilteredInquiries(filtered);
   }, [inquiries, searchTerm, statusFilter]);
 
+
+  // Wait for auth to load before checking permissions
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Permission check - Only Motionify admins can access inquiry management
+  if (!Permissions.canManageInquiries(user)) {
+    return <Navigate to="/" replace />;
+  }
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -124,64 +173,84 @@ export function InquiryDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
+          {isClient(user) && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:brightness-110 transition shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              New Inquiry
+            </button>
+          )}
         </div>
-        <p className="text-gray-600">Manage customer inquiries and create proposals</p>
+        <p className="text-gray-600">
+          {isClient(user) 
+            ? 'View your inquiries and track proposals' 
+            : 'Manage customer inquiries and create proposals'}
+        </p>
       </div>
   
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Inquiries</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-400" />
-              </div>
-            </div>
-          </div>
-  
-          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">New</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.new}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Mail className="w-6 h-6 text-emerald-400" />
-              </div>
-            </div>
-          </div>
-  
-          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Proposal Sent</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.proposalSent}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-purple-400" />
-              </div>
-            </div>
-          </div>
-  
-          <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Converted</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.converted}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-400" />
-              </div>
-            </div>
-          </div>
+          {isClient(user) ? (
+            <>
+              <StatCard 
+                label="Total Inquiries"
+                value={stats.total}
+                icon={TrendingUp}
+                color="blue"
+              />
+              <StatCard 
+                label="Pending Response"
+                value={stats.pendingResponse}
+                icon={Clock}
+                color="amber"
+              />
+              <StatCard 
+                label="Proposal Received"
+                value={stats.proposalReceived}
+                icon={FileText}
+                color="purple"
+              />
+              <StatCard 
+                label="Accepted"
+                value={stats.accepted}
+                icon={CheckCircle}
+                color="green"
+              />
+            </>
+          ) : (
+            <>
+              <StatCard 
+                label="Total Inquiries"
+                value={stats.total}
+                icon={TrendingUp}
+                color="blue"
+              />
+              <StatCard 
+                label="New"
+                value={stats.new}
+                icon={Mail}
+                color="emerald"
+              />
+              <StatCard 
+                label="Proposal Sent"
+                value={stats.proposalSent}
+                icon={User}
+                color="purple"
+              />
+              <StatCard 
+                label="Converted"
+                value={stats.converted}
+                icon={Calendar}
+                color="green"
+              />
+            </>
+          )}
         </div>
       )}
   
@@ -300,27 +369,27 @@ export function InquiryDashboard() {
                         </div>
                       </div>
                     
-                      {/* Right Side: Date & Action */}
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {formatDate(inquiry.createdAt)}
-                        </div>
-                    
-                        {inquiry.status === 'new' && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Create Proposal
-                          </button>
-                        )}
+                    {/* Right Side: Date & Action */}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDate(inquiry.createdAt)}
                       </div>
+                  
+                      {inquiry.status === 'new' && Permissions.canCreateProposals(user) && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Create Proposal
+                        </button>
+                      )}
+                    </div>
                     </div>
                   </Link>
                 ))}
@@ -336,6 +405,13 @@ export function InquiryDashboard() {
           )}
         </>
       )}
+
+      <NewInquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={loadInquiries}
+        user={user}
+      />
     </div>
   );
 }

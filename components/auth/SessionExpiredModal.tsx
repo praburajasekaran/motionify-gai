@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Clock } from 'lucide-react';
 
@@ -12,11 +13,11 @@ interface SessionExpiredModalProps {
 }
 
 export function SessionExpiredModal({ isOpen, onLogin }: SessionExpiredModalProps) {
-    const router = useRouter();
+    const navigate = useNavigate();
 
     const handleLogin = () => {
         onLogin();
-        router.push('/login');
+        navigate('/login');
     };
 
     return (

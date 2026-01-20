@@ -12,15 +12,19 @@ interface InviteModalProps {
   onClose: () => void;
   projectId?: string;
   onInviteSent?: () => void;
+  currentUserRole?: string;
 }
 
-const InviteModal = ({ isOpen, onClose, projectId, onInviteSent }: InviteModalProps) => {
+const InviteModal = ({ isOpen, onClose, projectId, onInviteSent, currentUserRole }: InviteModalProps) => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'client' | 'team'>('team');
+  const [role, setRole] = useState<'client' | 'team'>('client');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  // Determine if user can invite team members
+  const canInviteTeam = currentUserRole !== 'client';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +70,7 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent }: InviteModalPr
       setTimeout(() => {
         onClose();
         setEmail('');
-        setRole('team');
+        setRole('client');
         setSuccess(null);
       }, 1500);
     } else {
@@ -86,7 +90,7 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent }: InviteModalPr
     // Reset form after modal closes
     setTimeout(() => {
       setEmail('');
-      setRole('team');
+      setRole('client');
       setEmailError(null);
       setGeneralError(null);
       setSuccess(null);
@@ -128,11 +132,10 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent }: InviteModalPr
               value={email}
               onChange={handleEmailChange}
               disabled={isSending}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)] focus:border-transparent ${
-                emailError
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)] focus:border-transparent ${emailError
                   ? 'border-red-500 focus:ring-red-500'
                   : 'border-[var(--todoist-gray-300)]'
-              }`}
+                }`}
               placeholder="colleague@example.com"
               required
             />
@@ -154,7 +157,7 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent }: InviteModalPr
               disabled={isSending}
               className="w-full px-4 py-2 border border-[var(--todoist-gray-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)] focus:border-transparent"
             >
-              <option value="team">Team Member</option>
+              {canInviteTeam && <option value="team">Team Member</option>}
               <option value="client">Client</option>
             </select>
             <p className="mt-1 text-xs text-[var(--todoist-gray-500)]">

@@ -10,7 +10,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (email: string, rememberMe?: boolean) => Promise<void>;
-    verifyToken: (token: string, email: string) => Promise<boolean>;
+    verifyToken: (token: string, email: string) => Promise<{ success: boolean; data?: any }>;
     logout: () => Promise<void>;
     updateProfile: (data: { fullName?: string; avatarUrl?: string; preferences?: any }) => Promise<void>;
     refreshSession: () => Promise<void>;
@@ -23,19 +23,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    // Load user from storage on mount
     useEffect(() => {
         const loadUser = async () => {
-            // OPTIMIZATION 1: If user is already set (e.g., from verification),
-            // skip the API call and just clear loading state
             if (user) {
                 console.log('[AuthContext] User already set, skipping getCurrentUser call');
                 setIsLoading(false);
                 return;
             }
 
-            // OPTIMIZATION 2: Check if session cookie exists before making API call
-            // This prevents unnecessary 401 errors when user is not logged in
+            const savedUser = localStorage.getItem('portal_user');
+            if (savedUser) {
+                try {
+                    const parsedUser = JSON.parse(savedUser);
+                    console.log('[AuthContext] Loading user from localStorage:', parsedUser);
+                    setUser(parsedUser);
+                } catch (error) {
+                    console.error('[AuthContext] Failed to parse saved user:', error);
+                    localStorage.removeItem('portal_user');
+                }
+                setIsLoading(false);
+                return;
+            }
+
             const hasCookie = typeof document !== 'undefined' && document.cookie.includes('sb-session=');
             if (!hasCookie) {
                 console.log('[AuthContext] No session cookie found, skipping auth check');
@@ -43,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            console.log('[AuthContext] Session cookie found, loading user');
+            console.log('[AuthContext] Session cookie found, loading user from API');
             try {
                 const response = await authApi.getCurrentUser();
                 if (response.success && 'data' in response) {
@@ -57,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         loadUser();
-    }, []); // Note: 'user' is intentionally not in deps to only run on mount
+    }, []);
 
     // Auto-refresh session every 15 minutes
     useEffect(() => {
@@ -83,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const verifyToken = useCallback(async (token: string, email: string): Promise<boolean> => {
+    const verifyToken = useCallback(async (token: string, email: string): Promise<{ success: boolean; data?: any }> => {
         console.log('[AuthContext] verifyToken called');
         try {
             const response = await authApi.verifyMagicLinkWithEmail(token, email);
@@ -94,26 +103,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // This allows the portal to render faster
                 setUser(response.data.user);
                 setIsLoading(false);
-                return true;
+                return { success: true, data: response.data };
             }
 
             console.log('[AuthContext] Token invalid');
             setIsLoading(false);
-            return false;
+            return { success: false };
         } catch (error) {
             console.error('[AuthContext] Token verification failed:', error);
             setIsLoading(false);
-            return false;
+            return { success: false };
         }
     }, []);
 
     const logout = useCallback(async () => {
         setIsLoading(true);
         try {
+            localStorage.removeItem('portal_user');
+            document.cookie = 'sb-session=; path=/; max-age=0';
             await authApi.logout();
+        } catch (error) {
+            console.error('[AuthContext] Logout error:', error);
         } finally {
             setUser(null);
-            router.push('/login');
+            router.replace('/login');
             setIsLoading(false);
         }
     }, [router]);

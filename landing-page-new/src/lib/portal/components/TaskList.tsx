@@ -7,6 +7,7 @@ import Card from './ui/Card';
 import TaskItem from './TaskItem';
 import Button from './ui/Button';
 import TaskModal from './CreateTaskModal';
+import { parseTaskInput } from '@/lib/portal/utils/taskParser';
 
 interface TaskListProps {
   focusedDeliverableId: string | null;
@@ -22,10 +23,11 @@ const statusOrder: TaskStatus[] = [
 ];
 
 const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListProps) => {
-  const { project, currentUser } = useContext(AppContext);
+  const { project, currentUser, addTask } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterMyTasks, setFilterMyTasks] = useState(false);
+  const [quickAddInput, setQuickAddInput] = useState('');
   const deliverableRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
   // Fix Bug #10: Scroll timing race condition
@@ -72,9 +74,9 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
 
   const visibleTasks = useMemo(() => {
     if (!project || !currentUser) return [];
-    
+
     const isInternalUser = currentUser.role === UserRole.MOTIONIFY_MEMBER || currentUser.role === UserRole.PROJECT_MANAGER;
-    
+
     let tasks = isInternalUser
       ? project.tasks
       : project.tasks.filter(task => task.visibleToClient);
@@ -82,10 +84,10 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     if (filterMyTasks) {
       tasks = tasks.filter(task => task.assigneeId === currentUser.id);
     }
-    
+
     return tasks;
   }, [project, currentUser, filterMyTasks]);
-  
+
   const tasksByDeliverable = useMemo(() => {
     if (!project) return [];
 
@@ -105,7 +107,7 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
       }
       grouped.get(deliverableId)!.tasks.push(task);
     }
-    
+
     return Array.from(grouped.values()).filter(group => group.tasks.length > 0);
   }, [visibleTasks, project]);
 
@@ -123,7 +125,25 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     setIsModalOpen(false);
     setEditingTask(null);
   };
-  
+
+  const handleQuickAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickAddInput.trim() || !project) return;
+
+    const allMembers = [...project.clientTeam, ...project.motionifyTeam];
+    const parsed = parseTaskInput(quickAddInput, allMembers);
+
+    addTask({
+      title: parsed.title,
+      description: parsed.title, // Use title as description for quick add
+      visibleToClient: true, // Default to visible
+      assigneeId: parsed.assigneeId,
+      deadline: parsed.deadline,
+    });
+
+    setQuickAddInput('');
+  };
+
   const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
 
   if (!project) {
@@ -133,7 +153,7 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
       </Card>
     );
   }
-  
+
   const headerActions = (
     <div className="flex flex-wrap items-center gap-4">
       <div className="flex items-center">
@@ -142,9 +162,8 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
         </label>
         <button
           type="button"
-          className={`${
-            filterMyTasks ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-white/10 backdrop-blur'
-          } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-all ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 focus:ring-cyan-500`}
+          className={`${filterMyTasks ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-white/10 backdrop-blur'
+            } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-all ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 focus:ring-cyan-500`}
           role="switch"
           aria-checked={filterMyTasks}
           onClick={() => setFilterMyTasks(!filterMyTasks)}
@@ -153,9 +172,8 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
           <span className="sr-only">Show my tasks only</span>
           <span
             aria-hidden="true"
-            className={`${
-              filterMyTasks ? 'translate-x-5' : 'translate-x-0'
-            } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transform ring-0 transition ease-in-out duration-200`}
+            className={`${filterMyTasks ? 'translate-x-5' : 'translate-x-0'
+              } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transform ring-0 transition ease-in-out duration-200`}
           />
         </button>
       </div>
@@ -166,13 +184,40 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
   return (
     <>
       <Card title="Tasks" headerActions={headerActions}>
+        {/* Quick-add form - only visible to Motionify team members */}
+        {isInternalUser && (
+          <div className="mb-6">
+            <form onSubmit={handleQuickAdd} className="relative">
+              <input
+                type="text"
+                value={quickAddInput}
+                onChange={(e) => setQuickAddInput(e.target.value)}
+                placeholder="Quick add task: Fix bug @john tomorrow..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-12 py-3 text-white placeholder-white/40 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+              />
+              <button
+                type="submit"
+                disabled={!quickAddInput.trim()}
+                className="absolute right-2 top-2 p-1.5 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </form>
+            <p className="text-xs text-white/40 mt-2 ml-1">
+              Tip: Use <strong>@name</strong> to assign and words like <strong>tomorrow</strong> for deadlines.
+            </p>
+          </div>
+        )}
+
         {visibleTasks.length > 0 ? (
           <div className="space-y-8">
             {tasksByDeliverable.map(group => {
               const sortedTasks = [...group.tasks].sort((a, b) => {
                 return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
               });
-              
+
               return (
                 <div
                   key={group.id}
@@ -180,11 +225,11 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
                   className="rounded-lg p-1"
                 >
                   <h3 className="text-xl font-semibold text-white mb-4 px-2">{group.name}</h3>
-                   <div className="space-y-4">
-                      {sortedTasks.map(task => (
-                         <TaskItem key={task.id} task={task} onEdit={handleEditTask} />
-                      ))}
-                   </div>
+                  <div className="space-y-4">
+                    {sortedTasks.map(task => (
+                      <TaskItem key={task.id} task={task} onEdit={handleEditTask} />
+                    ))}
+                  </div>
                 </div>
               );
             })}
@@ -195,7 +240,7 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
           </p>
         )}
       </Card>
-      <TaskModal 
+      <TaskModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         taskToEdit={editingTask}

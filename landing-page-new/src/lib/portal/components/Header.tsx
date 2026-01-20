@@ -41,6 +41,22 @@ const Header = ({ currentUser, onLogout, isProjectView, onBack, projectName, cli
                 &larr; All Projects
               </Button>
             )}
+            {currentUser && (
+              <nav className="hidden md:flex items-center space-x-4">
+                <Link 
+                  href="/portal/dashboard" 
+                  className="text-sm font-medium text-[var(--todoist-gray-600)] hover:text-[var(--todoist-gray-900)] transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/portal/inquiries" 
+                  className="text-sm font-medium text-[var(--todoist-gray-600)] hover:text-[var(--todoist-gray-900)] transition-colors"
+                >
+                  Inquiries
+                </Link>
+              </nav>
+            )}
           </div>
           {currentUser && (
             <div className="flex items-center space-x-4">

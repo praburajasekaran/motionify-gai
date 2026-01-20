@@ -5,6 +5,7 @@ import { useQuiz } from "./useQuiz";
 import { generateRecommendation } from "./recommendation";
 import ContactForm from "./ContactForm";
 import InquirySuccess from "./InquirySuccess";
+import VerificationSent from "./VerificationSent";
 import type { ContactInfo } from "../../lib/inquiries";
 
 type Option = { key: keyof ReturnType<typeof useQuiz>["selections"]; value: string; label: string };
@@ -26,6 +27,8 @@ export default function Quiz() {
     showContactForm,
     submitInquiry,
     submittedInquiry,
+    verificationSent,
+    contactEmail,
   } = useQuiz();
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -236,14 +239,19 @@ export default function Quiz() {
               />
             )}
 
-            {/* Success Screen - Step 7 */}
-            {isSuccessScreen && submittedInquiry && (
+            {/* Success Screen - Step 7 (Verification or Inquiry Success) */}
+            {isSuccessScreen && (verificationSent ? (
+              <VerificationSent
+                contactEmail={contactEmail}
+                onReset={reset}
+              />
+            ) : submittedInquiry ? (
               <InquirySuccess
                 inquiryNumber={submittedInquiry.inquiryNumber}
                 contactEmail={submittedInquiry.contactEmail}
                 onReset={reset}
               />
-            )}
+            ) : null)}
           </div>
 
           <div className="lg:col-span-5">
@@ -399,4 +407,3 @@ function iconFor(key: keyof ReturnType<typeof useQuiz>["selections"], opt: strin
 
   return (<svg {...commonProps}><circle cx="12" cy="12" r="9"></circle></svg>);
 }
-

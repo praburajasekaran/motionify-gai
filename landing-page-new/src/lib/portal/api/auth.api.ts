@@ -10,6 +10,7 @@ import type {
     UserProfileResponse,
 } from '../types/auth.types';
 import { safeJsonParse } from '../utils/api-helpers';
+import { apiCall } from '../utils/api-transformers';
 import { API_BASE } from '../utils/api-config';
 import { transformUser } from '../utils/user-transform';
 
@@ -20,32 +21,34 @@ import { transformUser } from '../utils/user-transform';
 export async function requestMagicLink(
     body: MagicLinkRequestBody
 ): Promise<MagicLinkRequestResponse> {
-    try {
-        const response = await fetch(`${API_BASE}/auth-request-magic-link`, {
+    const result = await apiCall<any>(
+        () => fetch(`${API_BASE}/auth-request-magic-link`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
-        });
-
-        const data = await safeJsonParse(response);
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to request magic link');
+        }),
+        {
+            defaultError: 'Failed to request magic link',
+            transformData: (data: any) => ({
+                message: data.message || 'Magic link sent'
+            }),
+            operationName: 'requesting magic link',
         }
+    );
 
-        return {
-            success: true,
-            message: data.message || 'Magic link sent',
-        };
-    } catch (error: any) {
-        console.error('Error requesting magic link:', error);
+    if (!result.success) {
         return {
             success: false,
-            message: error.message || 'Failed to request magic link',
+            message: result.error || 'Failed to request magic link',
         };
     }
+
+    return {
+        success: true,
+        message: result.message,
+    };
 }
 
 /**
@@ -105,18 +108,18 @@ export async function verifyMagicLinkWithEmail(
 
         const data = await safeJsonParse(response);
 
-        console.log('[auth.api] verifyMagicLinkWithEmail response:', { 
-            status: response.status, 
-            ok: response.ok, 
-            data 
+        console.log('[auth.api] verifyMagicLinkWithEmail response:', {
+            status: response.status,
+            ok: response.ok,
+            data
         });
 
         if (!response.ok) {
-            const errorCode = data.code || 'VERIFY_FAILED';
-            const errorMessage = data.message || data.error || 'Verification failed';
-            
+            const errorCode = data.code || data.error?.code || 'VERIFY_FAILED';
+            const errorMessage = data.message || data.error?.message || data.error || 'Verification failed';
+
             console.log('[auth.api] Verification failed:', { errorCode, errorMessage });
-            
+
             return {
                 success: false,
                 error: {
@@ -127,9 +130,12 @@ export async function verifyMagicLinkWithEmail(
             };
         }
 
+        // Backend returns { success, data: { user, token, expiresAt, inquiryCreated?, inquiryNumber? }, message }
+        const responseData = data.data || data; // Handle both wrapped and unwrapped responses
+
         // Transform the user object from database format to frontend format
-        const transformedUser = transformUser(data.user);
-        
+        const transformedUser = transformUser(responseData.user);
+
         if (!transformedUser) {
             throw new Error('User data is missing from response');
         }
@@ -138,23 +144,26 @@ export async function verifyMagicLinkWithEmail(
             success: true,
             data: {
                 user: transformedUser,
-                token: data.token,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+                token: responseData.token,
+                expiresAt: responseData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                inquiryCreated: responseData.inquiryCreated || false,
+                inquiryId: responseData.inquiryId,
+                inquiryNumber: responseData.inquiryNumber,
             },
-            message: 'Login successful',
+            message: data.message || 'Login successful',
         };
     } catch (error: any) {
         // Check if it's a connection/service error
-        const isServiceError = error.message?.includes('Function') || 
-                              error.message?.includes('Service unavailable') ||
-                              error.message?.includes('SERVICE_UNAVAILABLE') ||
-                              error.message?.includes('cannot connect');
-        
+        const isServiceError = error.message?.includes('Function') ||
+            error.message?.includes('Service unavailable') ||
+            error.message?.includes('SERVICE_UNAVAILABLE') ||
+            error.message?.includes('cannot connect');
+
         return {
             success: false,
             error: {
                 code: isServiceError ? 'SERVICE_UNAVAILABLE' : 'VERIFY_FAILED',
-                message: isServiceError 
+                message: isServiceError
                     ? 'The authentication service is not available. Please make sure Netlify Dev is running.'
                     : error.message || 'Verification failed',
                 field: 'token',
@@ -168,15 +177,18 @@ export async function verifyMagicLinkWithEmail(
  * POST /api/auth/logout
  */
 export async function logout(): Promise<{ success: boolean; message: string }> {
-    try {
-        await fetch(`${API_BASE}/auth-logout`, { 
+    await apiCall(
+        () => fetch(`${API_BASE}/auth-logout`, {
             method: 'POST',
             credentials: 'include',
-        });
-        return { success: true, message: 'Logged out successfully' };
-    } catch (error) {
-        return { success: false, message: 'Logout failed' };
-    }
+        }),
+        {
+            defaultError: 'Logout failed',
+            operationName: 'logging out',
+        }
+    );
+    // Always return success for logout
+    return { success: true, message: 'Logged out successfully' };
 }
 
 /**
@@ -220,7 +232,7 @@ export async function getCurrentUser(): Promise<UserProfileResponse | AuthErrorR
 
         // Transform the user object from database format to frontend format
         const transformedUser = transformUser(data.user);
-        
+
         if (!transformedUser) {
             return {
                 success: false,

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Project, User, UserRole, Task, TaskStatus, ProjectStatus, Deliverable, Client, Notification, Comment, ProjectFile } from './types';
+import { Project, User, UserRole, Task, TaskStatus, ProjectStatus, Deliverable, Client, Notification, Comment, ProjectFile, Milestone } from './types';
 import { MOCK_PROJECTS } from './data';
 import { AppContext } from './AppContext';
 import Header from './components/Header';
@@ -36,6 +36,12 @@ import {
   createTeamUpdatedActivity
 } from './utils/activityLogger';
 import { isValidTransition } from './utils/taskStateTransitions';
+import {
+  fetchTasksForProject,
+  createTask,
+  updateTaskAPI,
+  addTaskComment
+} from './api/tasks.api';
 
 type AddTaskData = {
   title: string;
@@ -49,11 +55,11 @@ type AddTaskData = {
 type UpdateTaskData = AddTaskData;
 
 type AddFileData = {
-    name: string;
-    size: number;
-    type: string;
-    deliverableId?: string;
-    description?: string;
+  name: string;
+  size: number;
+  type: string;
+  deliverableId?: string;
+  description?: string;
 };
 
 const AppRoot: React.FC = () => {
@@ -64,8 +70,8 @@ const AppRoot: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const selectedProject = useMemo(() => 
-    projectsData.find(p => p.id === selectedProjectId), 
+  const selectedProject = useMemo(() =>
+    projectsData.find(p => p.id === selectedProjectId),
     [projectsData, selectedProjectId]
   );
 
@@ -87,7 +93,7 @@ const AppRoot: React.FC = () => {
   // Auto-select project for client users when loaded from localStorage
   useEffect(() => {
     if (currentUser && (currentUser.role === UserRole.PRIMARY_CONTACT || currentUser.role === UserRole.TEAM_MEMBER) && !selectedProjectId) {
-      const projectForUser = projectsData.find(p => 
+      const projectForUser = projectsData.find(p =>
         p.clientTeam.some(u => u.id === currentUser.id)
       );
       if (projectForUser) {
@@ -95,6 +101,27 @@ const AppRoot: React.FC = () => {
       }
     }
   }, [currentUser, projectsData, selectedProjectId]);
+
+  // Load tasks from API when project is selected
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    const loadProjectTasks = async () => {
+      try {
+        const tasks = await fetchTasksForProject(selectedProjectId, true);
+
+        setProjectsData(prevData =>
+          prevData.map(p =>
+            p.id === selectedProjectId ? { ...p, tasks } : p
+          )
+        );
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
+    };
+
+    loadProjectTasks();
+  }, [selectedProjectId]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -178,7 +205,7 @@ const AppRoot: React.FC = () => {
         }
 
         const tasks = p.tasks.map(task =>
-            task.id === taskId ? { ...task, status } : task
+          task.id === taskId ? { ...task, status } : task
         );
         updatedTask = tasks.find(t => t.id === taskId);
 
@@ -201,8 +228,8 @@ const AppRoot: React.FC = () => {
 
   }, [selectedProjectId, currentUser]);
 
-  const requestRevision = useCallback((taskId: string, details: string) => {
-    if (!selectedProjectId) return;
+  const requestRevision = useCallback(async (taskId: string, details: string) => {
+    if (!selectedProjectId || !currentUser) return;
 
     let updatedProject: Project | undefined;
     let updatedTask: Task | undefined;
@@ -234,13 +261,35 @@ const AppRoot: React.FC = () => {
 
     // Only send notification if revision was actually allowed
     if (revisionAllowed && updatedProject && updatedTask) {
-        const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.PROJECT_MANAGER);
-        if (projectManager) {
-          addNotification(`A revision was requested for task '${updatedTask.title}'.`, projectManager.id, updatedProject.id);
-        }
+      const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.PROJECT_MANAGER);
+      if (projectManager) {
+        addNotification(`A revision was requested for task '${updatedTask.title}'.`, projectManager.id, updatedProject.id);
+      }
+
+      // --- API Integration ---
+      try {
+        // 1. Add details as a comment
+        await addTaskComment(taskId, {
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          content: `[Revision Request] ${details}`
+        });
+
+        // 2. Update task status (Backend triggers email and inc revisions)
+        // Note: Backend handles revision count increment, so local state is optimistic.
+        await updateTaskAPI(taskId, {
+          status: TaskStatus.REVISION_REQUESTED
+        });
+        console.log('[API] Revision request synced to backend');
+
+      } catch (error) {
+        console.error('[API] Failed to sync revision request:', error);
+        // In a real app, we might want to revert the optimistic update here.
+        // For now, we rely on the error log.
+      }
     }
 
-  }, [selectedProjectId]);
+  }, [selectedProjectId, currentUser]);
 
   const addTeamMember = useCallback((name: string, email: string) => {
     if (!selectedProjectId) return;
@@ -257,90 +306,111 @@ const AppRoot: React.FC = () => {
       })
     );
   }, [selectedProjectId]);
-  
-  const addTask = useCallback((taskData: AddTaskData) => {
+
+  const addTask = useCallback(async (taskData: AddTaskData) => {
     if (!selectedProjectId || !currentUser) return;
 
-    const newTask: Task = {
-      id: generateTaskId(),
-      status: TaskStatus.PENDING,
-      comments: [],
-      ...taskData
-    };
+    try {
+      // Call API to create task
+      const newTask = await createTask({
+        project_id: selectedProjectId,
+        title: taskData.title,
+        description: taskData.description,
+        visible_to_client: taskData.visibleToClient,
+        deliverable_id: taskData.deliverableId,
+        assignee_id: taskData.assigneeId,
+        deadline: taskData.deadline
+      });
 
-    let projectForNotification: Project | undefined;
+      let projectForNotification: Project | undefined;
 
-    // Fix Bug #2: Add activity logging for task creation
-    setProjectsData(prevData => prevData.map(p => {
-      if (p.id !== selectedProjectId) return p;
-      const activity = createTaskCreatedActivity(currentUser, newTask);
-      projectForNotification = {
-        ...p,
-        tasks: [newTask, ...p.tasks],
-        activities: [activity, ...p.activities]
-      };
-      return projectForNotification;
-    }));
-
-    if (newTask.assigneeId && projectForNotification) {
-      const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
-      const assignee = allUsers.find(u => u.id === newTask.assigneeId);
-      if (assignee) {
-        addNotification(`You have been assigned a new task: '${newTask.title}'.`, assignee.id, projectForNotification.id);
-      }
-    }
-  }, [selectedProjectId, currentUser]);
-  
-  const updateTask = useCallback((taskId: string, taskData: UpdateTaskData) => {
-    if (!selectedProjectId || !currentUser) return;
-
-    let originalTask: Task | undefined;
-    let updatedTask: Task | undefined;
-    let projectForNotification: Project | undefined;
-
-    // Fix Bug #2: Add activity logging for task updates
-    setProjectsData(prevData =>
-      prevData.map(p => {
+      // Update local state with API response
+      setProjectsData(prevData => prevData.map(p => {
         if (p.id !== selectedProjectId) return p;
+        const activity = createTaskCreatedActivity(currentUser, newTask);
+        projectForNotification = {
+          ...p,
+          tasks: [newTask, ...p.tasks],
+          activities: [activity, ...p.activities]
+        };
+        return projectForNotification;
+      }));
 
-        projectForNotification = p;
-        originalTask = p.tasks.find(task => task.id === taskId);
-
-        const newTasks = p.tasks.map(task => {
-          if (task.id === taskId) {
-            updatedTask = { ...task, ...taskData };
-            return updatedTask;
-          }
-          return task;
-        });
-
-        // Detect changes and log activity
-        const changes: string[] = [];
-        if (originalTask && updatedTask) {
-          if (originalTask.title !== updatedTask.title) changes.push('title');
-          if (originalTask.description !== updatedTask.description) changes.push('description');
-          if (originalTask.assigneeId !== updatedTask.assigneeId) changes.push('assignee');
-          if (originalTask.deadline !== updatedTask.deadline) changes.push('deadline');
-          if (originalTask.deliverableId !== updatedTask.deliverableId) changes.push('deliverable');
-        }
-
-        const activities = changes.length > 0 && updatedTask
-          ? [createTaskUpdatedActivity(currentUser, updatedTask, changes), ...p.activities]
-          : p.activities;
-
-        return { ...p, tasks: newTasks, activities };
-      })
-    );
-
-    if (originalTask && updatedTask && originalTask.assigneeId !== updatedTask.assigneeId && updatedTask.assigneeId && projectForNotification) {
+      if (newTask.assigneeId && projectForNotification) {
         const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
-        const assignee = allUsers.find(u => u.id === updatedTask!.assigneeId);
+        const assignee = allUsers.find(u => u.id === newTask.assigneeId);
         if (assignee) {
-            addNotification(`You have been assigned to the task: '${updatedTask.title}'.`, assignee.id, projectForNotification.id);
+          addNotification(`You have been assigned a new task: '${newTask.title}'.`, assignee.id, projectForNotification.id);
         }
+      }
+    } catch (error) {
+      console.error('Failed to add task:', error);
+    }
+  }, [selectedProjectId, currentUser]);
+
+  const updateTask = useCallback(async (taskId: string, taskData: UpdateTaskData) => {
+    if (!selectedProjectId || !currentUser) return;
+
+    try {
+      let originalTask: Task | undefined;
+
+      // Get the original task before updating
+      const project = projectsData.find(p => p.id === selectedProjectId);
+      originalTask = project?.tasks.find(task => task.id === taskId);
+
+      // Call API to update task
+      const updatedTask = await updateTaskAPI(taskId, {
+        title: taskData.title,
+        description: taskData.description,
+        visibleToClient: taskData.visibleToClient,
+        deliverableId: taskData.deliverableId,
+        assigneeId: taskData.assigneeId,
+        deadline: taskData.deadline
+      });
+
+      let projectForNotification: Project | undefined;
+
+      // Update local state with API response
+      setProjectsData(prevData =>
+        prevData.map(p => {
+          if (p.id !== selectedProjectId) return p;
+
+          projectForNotification = p;
+
+          const newTasks = p.tasks.map(task =>
+            task.id === taskId ? updatedTask : task
+          );
+
+          // Detect changes and log activity
+          const changes: string[] = [];
+          if (originalTask && updatedTask) {
+            if (originalTask.title !== updatedTask.title) changes.push('title');
+            if (originalTask.description !== updatedTask.description) changes.push('description');
+            if (originalTask.assigneeId !== updatedTask.assigneeId) changes.push('assignee');
+            if (originalTask.deadline !== updatedTask.deadline) changes.push('deadline');
+            if (originalTask.deliverableId !== updatedTask.deliverableId) changes.push('deliverable');
+          }
+
+          const activities = changes.length > 0
+            ? [createTaskUpdatedActivity(currentUser, updatedTask, changes), ...p.activities]
+            : p.activities;
+
+          return { ...p, tasks: newTasks, activities };
+        })
+      );
+
+      if (originalTask && updatedTask && originalTask.assigneeId !== updatedTask.assigneeId && updatedTask.assigneeId && projectForNotification) {
+        const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
+        const assignee = allUsers.find(u => u.id === updatedTask.assigneeId);
+        if (assignee) {
+          addNotification(`You have been assigned to the task: '${updatedTask.title}'.`, assignee.id, projectForNotification.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task:', error);
     }
 
-  }, [selectedProjectId, currentUser]);
+  }, [selectedProjectId, currentUser, projectsData]);
 
   const addComment = useCallback((taskId: string, content: string) => {
     if (!selectedProjectId || !currentUser) return;
@@ -369,28 +439,28 @@ const AppRoot: React.FC = () => {
     if (!selectedProjectId || !currentUser) return;
 
     const newFile: ProjectFile = {
-        id: generateFileId(),
-        url: '#', // Placeholder URL for mock data
-        uploadedAt: Date.now(),
-        uploadedById: currentUser.id,
-        comments: [],
-        ...fileData,
+      id: generateFileId(),
+      url: '#', // Placeholder URL for mock data
+      uploadedAt: Date.now(),
+      uploadedById: currentUser.id,
+      comments: [],
+      ...fileData,
     };
 
     setProjectsData(prevData => prevData.map(p => {
-        if (p.id !== selectedProjectId) return p;
-        return { ...p, files: [newFile, ...p.files] };
+      if (p.id !== selectedProjectId) return p;
+      return { ...p, files: [newFile, ...p.files] };
     }));
   }, [selectedProjectId, currentUser]);
 
   const renameFile = useCallback((fileId: string, newName: string) => {
     if (!selectedProjectId) return;
     setProjectsData(prevData => prevData.map(p => {
-        if (p.id !== selectedProjectId) return p;
-        const newFiles = p.files.map(file => 
-            file.id === fileId ? { ...file, name: newName } : file
-        );
-        return { ...p, files: newFiles };
+      if (p.id !== selectedProjectId) return p;
+      const newFiles = p.files.map(file =>
+        file.id === fileId ? { ...file, name: newName } : file
+      );
+      return { ...p, files: newFiles };
     }));
   }, [selectedProjectId]);
 
@@ -415,7 +485,7 @@ const AppRoot: React.FC = () => {
     }));
   }, [selectedProjectId, currentUser]);
 
-  const addProject = (newProjectData: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number; }) => {
+  const addProject = (newProjectData: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number; milestones?: Milestone[] }) => {
     const newProject: Project = {
       id: generateProjectId(),
       status: ProjectStatus.IN_PROGRESS,
@@ -425,13 +495,14 @@ const AppRoot: React.FC = () => {
       clientTeam: [],
       motionifyTeam: currentUser ? [currentUser] : [],
       activities: [],
+      milestones: newProjectData.milestones || [],
       ...newProjectData,
     };
     setProjectsData(prevData => [newProject, ...prevData]);
   };
 
   const updateProjectStatus = (projectId: string, status: ProjectStatus) => {
-    setProjectsData(prevData => prevData.map(p => 
+    setProjectsData(prevData => prevData.map(p =>
       p.id === projectId ? { ...p, status } : p
     ));
   };
@@ -457,20 +528,20 @@ const AppRoot: React.FC = () => {
 
   const updateMotionifyTeam = useCallback((memberIds: string[]) => {
     if (!selectedProjectId) return;
-    
+
     const newTeam = allMotionifyUsers.filter(u => memberIds.includes(u.id));
 
     setProjectsData(prevData =>
       prevData.map(p => {
         if (p.id !== selectedProjectId) return p;
-        
+
         // Ensure the project always has at least one PM
         const hasPM = newTeam.some(u => u.role === UserRole.PROJECT_MANAGER);
-        if(!hasPM) {
-            const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.PROJECT_MANAGER);
-            if (pmToAdd && !newTeam.some(u => u.id === pmToAdd.id)) {
-                newTeam.push(pmToAdd);
-            }
+        if (!hasPM) {
+          const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.PROJECT_MANAGER);
+          if (pmToAdd && !newTeam.some(u => u.id === pmToAdd.id)) {
+            newTeam.push(pmToAdd);
+          }
         }
 
         return { ...p, motionifyTeam: newTeam };
@@ -500,7 +571,7 @@ const AppRoot: React.FC = () => {
     updateProjectStatus,
     addProject,
   }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, addComment, addFile, updateMotionifyTeam, renameFile, addFileComment, updateProjectStatus, addProject]);
-  
+
   const renderContent = () => {
     if (!currentUser) {
       const allUsers = projectsData.flatMap(p => [...p.clientTeam, ...p.motionifyTeam]);
@@ -515,8 +586,8 @@ const AppRoot: React.FC = () => {
       const projectsForUser = currentUser.role === UserRole.PROJECT_MANAGER
         ? projectsData
         : projectsData.filter(p => p.motionifyTeam.some(u => u.id === currentUser.id));
-      
-      return <ProjectManagerDashboard 
+
+      return <ProjectManagerDashboard
         projects={projectsForUser}
         currentUser={currentUser}
         onSelectProject={handleSelectProject}
@@ -531,16 +602,16 @@ const AppRoot: React.FC = () => {
       }
       return <Dashboard />;
     }
-    
+
     return <div className="text-center p-10">No project selected or found for this user.</div>;
   };
 
   return (
     <AppContext.Provider value={contextValue}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans flex flex-col h-screen">
-        <Header 
-          currentUser={currentUser} 
-          onLogout={handleLogout} 
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
           isProjectView={!!selectedProjectId}
           onBack={handleBackToProjects}
           projectName={selectedProject?.name}

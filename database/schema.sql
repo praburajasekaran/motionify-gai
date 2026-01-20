@@ -148,6 +148,8 @@ CREATE TABLE deliverables (
   -- File URLs (Cloudflare R2)
   beta_file_url TEXT,
   final_file_url TEXT,
+  beta_file_key TEXT,
+  final_file_key TEXT,
   
   -- Approval tracking
   approved_at TIMESTAMPTZ,
@@ -297,6 +299,59 @@ CREATE TRIGGER update_deliverables_updated_at BEFORE UPDATE ON deliverables
 
 CREATE TRIGGER update_revision_requests_updated_at BEFORE UPDATE ON revision_requests
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- 9. PROJECT_INVITATIONS TABLE
+-- ============================================================================
+CREATE TABLE project_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  
+  -- Invitee information
+  email VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('client', 'team')),
+  
+  -- Invitation token (URL-safe)
+  token VARCHAR(500) UNIQUE NOT NULL,
+  
+  -- Status tracking
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  
+  -- Inviter information
+  invited_by UUID REFERENCES users(id),
+  
+  -- Timestamps
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Constraints
+  CHECK (status IN ('pending', 'accepted', 'revoked', 'expired'))
+);
+
+-- Indexes for performance
+CREATE INDEX idx_invitations_project ON project_invitations(project_id);
+CREATE INDEX idx_invitations_token ON project_invitations(token);
+CREATE INDEX idx_invitations_email ON project_invitations(email);
+CREATE INDEX idx_invitations_status ON project_invitations(status);
+CREATE INDEX idx_invitations_expires ON project_invitations(expires_at);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_project_invitations_updated_at 
+  BEFORE UPDATE ON project_invitations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- INDEXES FOR INVITATIONS
+-- ============================================================================
+
+-- Payments
+CREATE INDEX idx_payments_proposal ON payments(proposal_id);
+CREATE INDEX idx_payments_project ON payments(project_id);
+CREATE INDEX idx_payments_status ON payments(status);
+CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 
 -- ============================================================================
 -- SEED DATA (Admin user for testing)

@@ -122,7 +122,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // Base styles with enhanced transitions
           "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium",
           "transition-all duration-200 ease-out",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--todoist-red)] focus-visible:ring-offset-2",
           // Enhanced disabled state
           "disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50",
           // Enhanced active state with shadow feedback
@@ -130,27 +130,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // Not disabled: add hover scale
           !disabled && !isLoading && "hover:scale-[1.02]",
           {
-            // Default variant: Enhanced shadow elevation on hover
-            'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md hover:shadow-primary/25': variant === 'default',
+            // Default variant: Todoist Red with solid hover
+            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)] shadow-sm hover:shadow-md hover:shadow-[var(--todoist-red)]/25': variant === 'default',
 
-            // Gradient variant: Animated gradient with enhanced shadow
-            'bg-gradient-to-br from-zinc-800 to-zinc-950 text-white shadow-md border border-zinc-700/50': variant === 'gradient',
-            'hover:from-zinc-700 hover:to-zinc-900 hover:shadow-lg hover:shadow-zinc-500/30 hover:border-zinc-600/50': variant === 'gradient' && !disabled && !isLoading,
+            // Gradient variant: Animated gradient with enhanced shadow (Replaced with specific blue/purple for consistency if needed, but keeping gradient intent with specific colors)
+            'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md border border-blue-500/20': variant === 'gradient',
+            'hover:from-blue-500 hover:to-indigo-500 hover:shadow-lg hover:shadow-blue-500/30 hover:border-blue-400/30': variant === 'gradient' && !disabled && !isLoading,
 
-            // Destructive: Enhanced shadow
-            'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-md hover:shadow-destructive/20': variant === 'destructive',
+            // Destructive: Todoist Red (same as default/primary for this system usually, but kept explicit)
+            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)] shadow-sm hover:shadow-md hover:shadow-red-500/20': variant === 'destructive',
 
-            // Outline: Enhanced border and background transition
-            'border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 hover:text-accent-foreground shadow-sm': variant === 'outline',
+            // Outline: Gray border, light gray hover
+            'border border-[var(--todoist-gray-300)] bg-white text-[var(--todoist-gray-800)] hover:bg-[var(--todoist-gray-50)] hover:border-[var(--todoist-gray-400)] shadow-sm': variant === 'outline',
 
-            // Secondary: Smooth background transition
-            'bg-secondary text-secondary-foreground hover:bg-secondary/70 shadow-sm': variant === 'secondary',
+            // Secondary: Light gray background, dark text
+            'bg-[var(--todoist-gray-100)] text-[var(--todoist-gray-800)] hover:bg-[var(--todoist-gray-200)] shadow-sm': variant === 'secondary',
 
             // Ghost: Subtle background on hover
-            'hover:bg-zinc-100/80 hover:text-accent-foreground': variant === 'ghost',
+            'hover:bg-[var(--todoist-gray-100)] hover:text-[var(--todoist-gray-900)]': variant === 'ghost',
 
-            // Link: Keep simple
-            'text-primary underline-offset-4 hover:underline': variant === 'link',
+            // Link: Primary color
+            'text-[var(--todoist-red)] underline-offset-4 hover:underline': variant === 'link',
 
             // Sizes
             'h-10 px-4 py-2': size === 'default',
@@ -816,3 +816,36 @@ export const useToast = () => {
   if (!context) throw new Error("useToast must be used within ToastProvider");
   return context;
 };
+
+// --- TABLE ---
+export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(({ className, ...props }, ref) => (
+  <div className="w-full overflow-auto">
+    <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+  </div>
+));
+Table.displayName = "Table";
+
+export const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(({ className, ...props }, ref) => (
+  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+));
+TableHeader.displayName = "TableHeader";
+
+export const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(({ className, ...props }, ref) => (
+  <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props} />
+));
+TableBody.displayName = "TableBody";
+
+export const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(({ className, ...props }, ref) => (
+  <tr ref={ref} className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", className)} {...props} />
+));
+TableRow.displayName = "TableRow";
+
+export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
+  <th ref={ref} className={cn("h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)} {...props} />
+));
+TableHead.displayName = "TableHead";
+
+export const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
+  <td ref={ref} className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+));
+TableCell.displayName = "TableCell";

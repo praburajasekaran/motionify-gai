@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Bell, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { MOCK_PROJECTS, TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
@@ -8,6 +8,7 @@ import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShor
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useAuthContext } from '../contexts/AuthContext';
 import { isSuperAdmin, getRoleLabel } from '../lib/permissions';
+import { NotificationBell } from './notifications';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
   <Link to={path}>
@@ -194,6 +195,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <ToastProvider>
+      {/* Accessibility: Skip to content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
+      >
+        Skip to content
+      </a>
+
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
       <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
 
@@ -212,13 +221,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="h-20 flex items-center px-6 shrink-0">
-            <div className="flex items-center gap-3 group cursor-pointer">
-              <MotionifyLogo variant="icon" size="md" animated />
-              <div>
-                <h1 className="font-bold text-lg tracking-tight text-foreground leading-tight">Motionify</h1>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Creative PM</p>
-              </div>
-            </div>
+            <Link to="/" className="flex items-center group cursor-pointer">
+              <img
+                src="/motionify-studio-dark.png"
+                alt="Motionify Studio"
+                className="h-16 w-auto object-contain"
+              />
+            </Link>
           </div>
 
           <div className="flex-1 py-6 px-4 space-y-8 overflow-y-auto">
@@ -238,27 +247,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   label="Projects"
                   path="/projects"
                   active={location.pathname.startsWith('/projects')}
-                  count={12}
+                  count={MOCK_PROJECTS.length}
+                />
+                <SidebarItem
+                  icon={Mail}
+                  label="Inquiries"
+                  path="/admin/inquiries"
+                  active={location.pathname.startsWith('/admin/inquiries')}
                 />
               </div>
             </div>
-
-            {/* Admin Section - Only for Super Admin */}
-            {isSuperAdmin(user) && (
-              <div>
-                <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                  Admin
-                </div>
-                <div className="space-y-1">
-                  <SidebarItem
-                    icon={Mail}
-                    label="Inquiries"
-                    path="/admin/inquiries"
-                    active={location.pathname.startsWith('/admin/inquiries')}
-                  />
-                </div>
-              </div>
-            )}
 
             <div>
               <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
@@ -277,12 +275,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   path="/team"
                   active={location.pathname === '/team'}
                 />
+                <div
+                  onClick={logout}
+                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut className="h-4.5 w-4.5 transition-colors text-muted-foreground group-hover:text-foreground" />
+                    Log Out
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="p-4 border-t border-zinc-100 shrink-0">
             <div
+              id="logout-btn"
               className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-white to-zinc-50 border border-zinc-200/60 hover:border-zinc-300 transition-colors cursor-pointer group shadow-sm hover:shadow-md"
               onClick={logout}
               title="Logout"
@@ -298,12 +306,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 h-full relative">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 h-full relative focus:outline-none"
+        >
           {/* Top Header */}
           <header className="h-16 bg-white border-b border-zinc-200 z-30 shrink-0 sticky top-0 shadow-sm">
             <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6 lg:px-10">
               <div className="flex items-center">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)}>
+                <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
                   <Menu className="h-5 w-5" />
                 </Button>
 
@@ -340,10 +352,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   </div>
                 </div>
 
-                <Button variant="ghost" size="icon" className="relative hover:bg-zinc-100 rounded-full">
-                  <Bell className="h-5 w-5 text-zinc-500" />
-                  <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
-                </Button>
+                <NotificationBell />
               </div>
             </div>
           </header>

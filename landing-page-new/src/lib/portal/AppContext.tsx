@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Project, User, UserRole, TaskStatus, Task, Comment, ProjectFile, ProjectStatus, Client, Deliverable, Notification } from './types';
+import { Project, User, UserRole, TaskStatus, Task, Comment, ProjectFile, ProjectStatus, Client, Deliverable, Notification, Milestone } from './types';
 import { MOCK_PROJECTS, MOCK_NOTIFICATIONS } from './data';
 import {
   generateNotificationId,
@@ -18,9 +18,17 @@ import {
   createTaskStatusChangedActivity,
   createTaskCreatedActivity,
   createTaskUpdatedActivity,
+  createFileRenamedActivity,
+  createTeamMemberRemovedActivity,
 } from './utils/activityLogger';
 import { isValidTransition } from './utils/taskStateTransitions';
 import { useAuth } from '@/context/AuthContext';
+import {
+  fetchTasksForProject,
+  createTask,
+  updateTaskAPI,
+  addTaskComment
+} from './api/tasks.api';
 
 type AddTaskData = {
   title: string;
@@ -50,15 +58,17 @@ export const AppContext = React.createContext<{
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   requestRevision: (taskId: string, details: string) => void;
   addTeamMember: (name: string, email: string) => void;
+  removeClientTeamMember: (userId: string) => void;
   addTask: (taskData: AddTaskData) => void;
   updateTask: (taskId: string, taskData: UpdateTaskData) => void;
   addRevision: (projectId: string) => void;
   markNotificationsAsRead: () => void;
   markNotificationAsRead: (notificationId: string) => void;
   addComment: (taskId: string, content: string) => void;
+  editComment: (taskId: string, commentId: string, content: string) => boolean;
   addFile: (fileData: AddFileData) => void;
   updateMotionifyTeam: (memberIds: string[]) => void;
-  renameFile: (fileId: string, newName: string) => void;
+  renameFile: (fileId: string, newName: string) => { success: boolean; error?: string };
   addFileComment: (fileId: string, content: string) => void;
   updateProjectStatus: (projectId: string, status: ProjectStatus) => void;
   addProject: (data: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number }) => void;
@@ -73,15 +83,17 @@ export const AppContext = React.createContext<{
   updateTaskStatus: () => { },
   requestRevision: () => { },
   addTeamMember: () => { },
+  removeClientTeamMember: () => { },
   addTask: () => { },
   updateTask: () => { },
   addRevision: () => { },
   markNotificationsAsRead: () => { },
   markNotificationAsRead: () => { },
   addComment: () => { },
+  editComment: () => false,
   addFile: () => { },
   updateMotionifyTeam: () => { },
-  renameFile: () => { },
+  renameFile: () => ({ success: false }),
   addFileComment: () => { },
   updateProjectStatus: () => { },
   addProject: () => { },
@@ -128,6 +140,27 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     const uniqueUsers: User[] = Array.from(new Map<string, User>(allUsers.map(item => [item.id, item])).values());
     return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.PROJECT_MANAGER);
   }, [projectsData]);
+
+  // Load tasks from API when project is selected
+  useEffect(() => {
+    if (!projectId) return;
+
+    const loadProjectTasks = async () => {
+      try {
+        const tasks = await fetchTasksForProject(projectId, true);
+
+        setProjectsData(prevData =>
+          prevData.map(p =>
+            p.id === projectId ? { ...p, tasks } : p
+          )
+        );
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
+    };
+
+    loadProjectTasks();
+  }, [projectId]);
 
   // Update projectId when selectedProjectId prop changes or when localStorage changes
   useEffect(() => {
@@ -275,87 +308,147 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     );
   }, [projectId]);
 
-  const addTask = useCallback((taskData: AddTaskData) => {
+  const removeClientTeamMember = useCallback((userId: string) => {
     if (!projectId || !currentUser) return;
-
-    const newTask: Task = {
-      id: generateTaskId(),
-      status: TaskStatus.PENDING,
-      comments: [],
-      ...taskData
-    };
-
-    let projectForNotification: Project | undefined;
-
-    setProjectsData(prevData => prevData.map(p => {
-      if (p.id !== projectId) return p;
-      const activity = createTaskCreatedActivity(currentUser, newTask);
-      projectForNotification = {
-        ...p,
-        tasks: [newTask, ...p.tasks],
-        activities: [activity, ...p.activities]
-      };
-      return projectForNotification;
-    }));
-
-    if (newTask.assigneeId && projectForNotification) {
-      const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
-      const assignee = allUsers.find(u => u.id === newTask.assigneeId);
-      if (assignee) {
-        addNotification(`You have been assigned a new task: '${newTask.title}'.`, assignee.id, projectForNotification.id);
-      }
-    }
-  }, [projectId, currentUser]);
-
-  const updateTask = useCallback((taskId: string, taskData: UpdateTaskData) => {
-    if (!projectId || !currentUser) return;
-
-    let originalTask: Task | undefined;
-    let updatedTask: Task | undefined;
-    let projectForNotification: Project | undefined;
 
     setProjectsData(prevData =>
       prevData.map(p => {
         if (p.id !== projectId) return p;
 
-        projectForNotification = p;
-        originalTask = p.tasks.find(task => task.id === taskId);
+        // Find the user being removed for activity logging
+        const removedUser = p.clientTeam.find(u => u.id === userId);
+        if (!removedUser) return p;
 
-        const newTasks = p.tasks.map(task => {
-          if (task.id === taskId) {
-            updatedTask = { ...task, ...taskData };
-            return updatedTask;
-          }
-          return task;
-        });
-
-        const changes: string[] = [];
-        if (originalTask && updatedTask) {
-          if (originalTask.title !== updatedTask.title) changes.push('title');
-          if (originalTask.description !== updatedTask.description) changes.push('description');
-          if (originalTask.assigneeId !== updatedTask.assigneeId) changes.push('assignee');
-          if (originalTask.deadline !== updatedTask.deadline) changes.push('deadline');
-          if (originalTask.deliverableId !== updatedTask.deliverableId) changes.push('deliverable');
+        // Prevent removing self
+        if (removedUser.id === currentUser.id) {
+          console.warn('Cannot remove self from project team');
+          return p;
         }
 
-        const activities = changes.length > 0 && updatedTask
-          ? [createTaskUpdatedActivity(currentUser, updatedTask, changes), ...p.activities]
-          : p.activities;
+        // Filter out the removed user
+        const newClientTeam = p.clientTeam.filter(u => u.id !== userId);
 
-        return { ...p, tasks: newTasks, activities };
+        // Log activity
+        const activity = createTeamMemberRemovedActivity(
+          currentUser,
+          removedUser.name,
+          removedUser.email
+        );
+
+        return {
+          ...p,
+          clientTeam: newClientTeam,
+          activities: [activity, ...p.activities]
+        };
       })
     );
+  }, [projectId, currentUser]);
 
-    if (originalTask && updatedTask && originalTask.assigneeId !== updatedTask.assigneeId && updatedTask.assigneeId && projectForNotification) {
-      const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
-      const assignee = allUsers.find(u => u.id === updatedTask!.assigneeId);
-      if (assignee) {
-        addNotification(`You have been assigned to the task: '${updatedTask.title}'.`, assignee.id, projectForNotification.id);
+  const addTask = useCallback(async (taskData: AddTaskData) => {
+    if (!projectId || !currentUser) return;
+
+    try {
+      // Call API to create task
+      const newTask = await createTask({
+        project_id: projectId,
+        title: taskData.title,
+        description: taskData.description,
+        visible_to_client: taskData.visibleToClient,
+        deliverable_id: taskData.deliverableId,
+        assignee_id: taskData.assigneeId,
+        deadline: taskData.deadline
+      });
+
+      let projectForNotification: Project | undefined;
+
+      // Update local state with API response
+      setProjectsData(prevData => prevData.map(p => {
+        if (p.id !== projectId) return p;
+        const activity = createTaskCreatedActivity(currentUser, newTask);
+        projectForNotification = {
+          ...p,
+          tasks: [newTask, ...p.tasks],
+          activities: [activity, ...p.activities]
+        };
+        return projectForNotification;
+      }));
+
+      if (newTask.assigneeId && projectForNotification) {
+        const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
+        const assignee = allUsers.find(u => u.id === newTask.assigneeId);
+        if (assignee) {
+          addNotification(`You have been assigned a new task: '${newTask.title}'.`, assignee.id, projectForNotification.id);
+        }
       }
+    } catch (error) {
+      console.error('Failed to add task:', error);
     }
   }, [projectId, currentUser]);
 
-  const addComment = useCallback((taskId: string, content: string) => {
+  const updateTask = useCallback(async (taskId: string, taskData: UpdateTaskData) => {
+    if (!projectId || !currentUser) return;
+
+    try {
+      let originalTask: Task | undefined;
+
+      // Get the original task before updating
+      const project = projectsData.find(p => p.id === projectId);
+      originalTask = project?.tasks.find(task => task.id === taskId);
+
+      // Call API to update task
+      const updatedTask = await updateTaskAPI(taskId, {
+        title: taskData.title,
+        description: taskData.description,
+        visibleToClient: taskData.visibleToClient,
+        deliverableId: taskData.deliverableId,
+        assigneeId: taskData.assigneeId,
+        deadline: taskData.deadline
+      });
+
+      let projectForNotification: Project | undefined;
+
+      // Update local state with API response
+      setProjectsData(prevData =>
+        prevData.map(p => {
+          if (p.id !== projectId) return p;
+
+          projectForNotification = p;
+
+          const newTasks = p.tasks.map(task =>
+            task.id === taskId ? updatedTask : task
+          );
+
+          // Detect changes and log activity
+          const changes: string[] = [];
+          if (originalTask && updatedTask) {
+            if (originalTask.title !== updatedTask.title) changes.push('title');
+            if (originalTask.description !== updatedTask.description) changes.push('description');
+            if (originalTask.assigneeId !== updatedTask.assigneeId) changes.push('assignee');
+            if (originalTask.deadline !== updatedTask.deadline) changes.push('deadline');
+            if (originalTask.deliverableId !== updatedTask.deliverableId) changes.push('deliverable');
+          }
+
+          const activities = changes.length > 0
+            ? [createTaskUpdatedActivity(currentUser, updatedTask, changes), ...p.activities]
+            : p.activities;
+
+          return { ...p, tasks: newTasks, activities };
+        })
+      );
+
+      if (originalTask && updatedTask && originalTask.assigneeId !== updatedTask.assigneeId && updatedTask.assigneeId && projectForNotification) {
+        const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
+        const assignee = allUsers.find(u => u.id === updatedTask.assigneeId);
+        if (assignee) {
+          addNotification(`You have been assigned to the task: '${updatedTask.title}'.`, assignee.id, projectForNotification.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  }, [projectId, currentUser, projectsData]);
+
+  const addComment = useCallback(async (taskId: string, content: string) => {
     if (!projectId || !currentUser) return;
 
     const newComment: Comment = {
@@ -366,16 +459,95 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       timestamp: Date.now(),
     };
 
+    // Get project for mention parsing
+    const currentProject = projectsData.find(p => p.id === projectId);
+    const allProjectUsers = currentProject
+      ? [...currentProject.clientTeam, ...currentProject.motionifyTeam]
+      : [];
+
+    // Parse @mentions from content
+    const mentionRegex = /@([A-Za-z][A-Za-z\s]*?)(?=\s@|\s|,|\.|\\!|\\?|$)/g;
+    const mentionedNames = Array.from(content.matchAll(mentionRegex), m => m[1].trim());
+
+    // Find mentioned users (excluding self)
+    const mentionedUsers = mentionedNames
+      .map(name => {
+        const normalizedMention = name.toLowerCase();
+        return allProjectUsers.find(user =>
+          user.name.toLowerCase().includes(normalizedMention) ||
+          user.name.toLowerCase().startsWith(normalizedMention)
+        );
+      })
+      .filter((user): user is NonNullable<typeof user> =>
+        user !== undefined && user.id !== currentUser.id
+      );
+
+    // Get the task for notification message
+    const task = currentProject?.tasks.find(t => t.id === taskId);
+
+    // Update local state immediately for responsive UI
     setProjectsData(prevData => prevData.map(p => {
       if (p.id !== projectId) return p;
-      const newTasks = p.tasks.map(task => {
-        if (task.id === taskId) {
-          return { ...task, comments: [...task.comments, newComment] };
+      const newTasks = p.tasks.map(taskItem => {
+        if (taskItem.id === taskId) {
+          return { ...taskItem, comments: [...taskItem.comments, newComment] };
         }
-        return task;
+        return taskItem;
       });
       return { ...p, tasks: newTasks };
     }));
+
+    // Create in-app notifications for mentioned users
+    mentionedUsers.forEach(user => {
+      const taskName = task?.title || 'a task';
+      addNotification(
+        `${currentUser.name} mentioned you in a comment on "${taskName}"`,
+        user.id,
+        projectId
+      );
+    });
+
+    // Call backend API to persist comment and trigger email notifications
+    try {
+      await addTaskComment(taskId, {
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        content,
+      });
+      console.log('[API] Comment saved and @mention emails triggered');
+    } catch (error) {
+      console.error('[API] Failed to save comment:', error);
+      // Comment is already in local state, so UI remains responsive
+      // Could show a toast warning here if needed
+    }
+  }, [projectId, currentUser, projectsData]);
+
+  const editComment = useCallback((taskId: string, commentId: string, content: string): boolean => {
+    if (!projectId || !currentUser) return false;
+
+    let wasEdited = false;
+    const oneHourMs = 60 * 60 * 1000;
+
+    setProjectsData(prevData => prevData.map(p => {
+      if (p.id !== projectId) return p;
+      const newTasks = p.tasks.map(task => {
+        if (task.id !== taskId) return task;
+        const newComments = task.comments.map(comment => {
+          if (comment.id !== commentId) return comment;
+          // Only allow edit if within 1 hour and by the same user
+          const timeSincePosted = Date.now() - comment.timestamp;
+          if (timeSincePosted > oneHourMs || comment.userId !== currentUser.id) {
+            return comment;
+          }
+          wasEdited = true;
+          return { ...comment, content, editedAt: Date.now() };
+        });
+        return { ...task, comments: newComments };
+      });
+      return { ...p, tasks: newTasks };
+    }));
+
+    return wasEdited;
   }, [projectId, currentUser]);
 
   const addFile = useCallback((fileData: AddFileData) => {
@@ -396,16 +568,53 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     }));
   }, [projectId, currentUser]);
 
-  const renameFile = useCallback((fileId: string, newName: string) => {
-    if (!projectId) return;
+  const renameFile = useCallback((fileId: string, newName: string): { success: boolean; error?: string } => {
+    if (!projectId || !currentUser) return { success: false, error: 'Not authenticated' };
+
+    const project = projectsData.find(p => p.id === projectId);
+    if (!project) return { success: false, error: 'Project not found' };
+
+    const file = project.files.find(f => f.id === fileId);
+    if (!file) return { success: false, error: 'File not found' };
+
+    // Extract extension from original filename
+    const originalExt = file.name.includes('.') ? '.' + file.name.split('.').pop() : '';
+
+    // Ensure new name doesn't include extension (user only edits basename)
+    let baseName = newName.trim();
+    if (originalExt && baseName.toLowerCase().endsWith(originalExt.toLowerCase())) {
+      baseName = baseName.slice(0, -originalExt.length);
+    }
+
+    const finalName = baseName + originalExt;
+
+    // Check for duplicate names (case-insensitive)
+    const isDuplicate = project.files.some(
+      f => f.id !== fileId && f.name.toLowerCase() === finalName.toLowerCase()
+    );
+    if (isDuplicate) {
+      return { success: false, error: 'A file with this name already exists' };
+    }
+
+    // No actual change
+    if (finalName === file.name) {
+      return { success: true };
+    }
+
+    const oldName = file.name;
+
     setProjectsData(prevData => prevData.map(p => {
       if (p.id !== projectId) return p;
-      const newFiles = p.files.map(file =>
-        file.id === fileId ? { ...file, name: newName } : file
+      const newFiles = p.files.map(f =>
+        f.id === fileId ? { ...f, name: finalName } : f
       );
-      return { ...p, files: newFiles };
+      // Add activity log
+      const activity = createFileRenamedActivity(currentUser, oldName, finalName);
+      return { ...p, files: newFiles, activities: [activity, ...p.activities] };
     }));
-  }, [projectId]);
+
+    return { success: true };
+  }, [projectId, currentUser, projectsData]);
 
   const addFileComment = useCallback((fileId: string, content: string) => {
     if (!projectId || !currentUser) return;
@@ -483,7 +692,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     ));
   }, []);
 
-  const addProject = useCallback((newProjectData: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number }) => {
+  const addProject = useCallback((newProjectData: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number; milestones?: Milestone[] }) => {
     const newProject: Project = {
       id: generateProjectId(),
       status: ProjectStatus.IN_PROGRESS,
@@ -493,6 +702,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       clientTeam: [],
       motionifyTeam: currentUser ? [currentUser] : [],
       activities: [],
+      milestones: newProjectData.milestones || [],
       ...newProjectData,
     };
     setProjectsData(prevData => [newProject, ...prevData]);
@@ -507,12 +717,14 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     updateTaskStatus,
     requestRevision,
     addTeamMember,
+    removeClientTeamMember,
     addTask,
     updateTask,
     addRevision,
     markNotificationsAsRead,
     markNotificationAsRead,
     addComment,
+    editComment,
     addFile,
     updateMotionifyTeam,
     renameFile,
@@ -521,7 +733,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     addProject,
     isLoading: isAuthLoading,
     logout: authLogout,
-  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, addFile, updateMotionifyTeam, renameFile, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
+  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
 
 
   return (

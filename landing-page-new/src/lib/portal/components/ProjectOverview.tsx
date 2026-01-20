@@ -1,89 +1,446 @@
 'use client';
 
 import React, { useContext, useState } from 'react';
-import { ActivityType, TaskStatus, UserRole } from '@/lib/portal/types';
+import { Activity, ActivityType, TaskStatus, UserRole } from '@/lib/portal/types';
 import { AppContext } from '@/lib/portal/AppContext';
 import Card from './ui/Card';
 import ProgressBar from './ui/ProgressBar';
 import Button from './ui/Button';
 import RequestRevisionModal from './RequestRevisionModal';
 import TaskItem from './TaskItem';
-import { AlertCircle, CheckCircle2, FileUp, MessageSquare, PlusCircle, PenSquare, CornerDownRight } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileUp,
+  MessageSquare,
+  PlusCircle,
+  PenSquare,
+  CornerDownRight,
+  Send,
+  ThumbsUp,
+  ThumbsDown,
+  FileEdit,
+  CreditCard,
+  Bell,
+  FolderPlus,
+  FileCheck,
+  Upload,
+  Download,
+  UserPlus,
+  UserMinus,
+  Users
+} from 'lucide-react';
 import { timeAgo } from '@/lib/portal/utils/dateUtils';
 
 interface ProjectHomeProps {
   onSelectDeliverable: (deliverableId: string) => void;
 }
 
+/**
+ * Get role-aware activity message and icon
+ * Adjusts phrasing based on whether the viewer is the actor, recipient, or third party
+ */
+const getActivityDetails = (activity: Activity, currentUserId: string | undefined) => {
+  const { type, userId, userName, targetUserId, targetUserName, details } = activity;
+
+  // Helper to determine relationship
+  const isActor = currentUserId === userId;
+  const isRecipient = currentUserId === targetUserId;
+
+  // Helper to get actor name (use "You" if current user is the actor)
+  const actorName = isActor ? 'You' : userName;
+  const recipientName = isRecipient ? 'you' : targetUserName;
+
+  // Style for names
+  const nameClass = "font-semibold text-white";
+  const highlightClass = "font-semibold text-cyan-400";
+
+  let icon: React.ReactNode;
+  let message: React.ReactNode;
+
+  switch (type) {
+    // Task activities
+    case ActivityType.TASK_STATUS_CHANGED:
+      icon = <CheckCircle2 className="h-5 w-5 text-emerald-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> updated task "{details.taskTitle}" to{' '}
+          <span className={highlightClass}>{details.newStatus}</span>.
+        </p>
+      );
+      break;
+
+    case ActivityType.TASK_CREATED:
+      icon = <PlusCircle className="h-5 w-5 text-blue-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> created a new task: "{details.taskTitle}".
+        </p>
+      );
+      break;
+
+    case ActivityType.TASK_UPDATED:
+      icon = <PenSquare className="h-5 w-5 text-amber-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> updated task "{details.taskTitle}".
+        </p>
+      );
+      break;
+
+    case ActivityType.REVISION_REQUESTED:
+      icon = <AlertCircle className="h-5 w-5 text-orange-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> requested a revision on "{details.taskTitle}".
+        </p>
+      );
+      break;
+
+    case ActivityType.COMMENT_ADDED:
+      icon = <MessageSquare className="h-5 w-5 text-blue-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> commented on "{details.taskTitle}".
+        </p>
+      );
+      break;
+
+    // File activities
+    case ActivityType.FILE_UPLOADED:
+      icon = <FileUp className="h-5 w-5 text-purple-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> uploaded file "{details.fileName}".
+        </p>
+      );
+      break;
+
+    case ActivityType.FILE_RENAMED:
+      icon = <FileEdit className="h-5 w-5 text-purple-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> renamed "{details.oldName}" to "{details.newName}".
+        </p>
+      );
+      break;
+
+    case ActivityType.FILE_DOWNLOADED:
+      icon = <Download className="h-5 w-5 text-purple-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> downloaded "{details.fileName}".
+        </p>
+      );
+      break;
+
+    // Team activities
+    case ActivityType.TEAM_MEMBER_INVITED:
+      icon = <UserPlus className="h-5 w-5 text-teal-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> invited {details.invitedMemberName} to the team.
+        </p>
+      );
+      break;
+
+    case ActivityType.TEAM_MEMBER_REMOVED:
+      icon = <UserMinus className="h-5 w-5 text-red-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> removed {details.removedMemberName} from the team.
+        </p>
+      );
+      break;
+
+    case ActivityType.TEAM_UPDATED:
+      icon = <Users className="h-5 w-5 text-teal-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> updated the team: {details.changeDescription}.
+        </p>
+      );
+      break;
+
+    // Proposal activities (role-aware)
+    case ActivityType.PROPOSAL_SENT:
+      icon = <Send className="h-5 w-5 text-blue-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> sent a proposal to <span className={nameClass}>{targetUserName}</span>.
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> received a proposal from <span className={nameClass}>{userName}</span>.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> sent a proposal to <span className={nameClass}>{targetUserName}</span>.
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.PROPOSAL_ACCEPTED:
+      icon = <ThumbsUp className="h-5 w-5 text-emerald-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> accepted the proposal.
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> accepted your proposal.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> accepted the proposal from <span className={nameClass}>{targetUserName}</span>.
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.PROPOSAL_REJECTED:
+      icon = <ThumbsDown className="h-5 w-5 text-red-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> declined the proposal.
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> declined your proposal.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> declined the proposal.
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.PROPOSAL_CHANGES_REQUESTED:
+      icon = <FileEdit className="h-5 w-5 text-amber-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> requested changes to the proposal.
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> requested changes to your proposal.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> requested changes to the proposal.
+          </p>
+        );
+      }
+      break;
+
+    // Deliverable activities (role-aware)
+    case ActivityType.DELIVERABLE_UPLOADED:
+      icon = <Upload className="h-5 w-5 text-purple-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> uploaded "{details.deliverableName}"{details.version ? ` (${details.version})` : ''}.
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> uploaded "{details.deliverableName}" for your review.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> uploaded "{details.deliverableName}".
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.DELIVERABLE_APPROVED:
+      icon = <FileCheck className="h-5 w-5 text-emerald-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> approved "{details.deliverableName}".
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> approved your deliverable "{details.deliverableName}".
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> approved "{details.deliverableName}".
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.DELIVERABLE_REJECTED:
+      icon = <ThumbsDown className="h-5 w-5 text-red-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> requested revisions on "{details.deliverableName}".
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> requested revisions on "{details.deliverableName}".
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> requested revisions on "{details.deliverableName}".
+          </p>
+        );
+      }
+      break;
+
+    // Payment activities (role-aware)
+    case ActivityType.PAYMENT_RECEIVED:
+      icon = <CreditCard className="h-5 w-5 text-emerald-400" />;
+      if (isActor) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> made a payment of {details.amount} ({details.paymentType}).
+          </p>
+        );
+      } else if (isRecipient) {
+        message = (
+          <p>
+            Payment received from <span className={nameClass}>{userName}</span> ({details.paymentType}).
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            <span className={nameClass}>{userName}</span> made a payment ({details.paymentType}).
+          </p>
+        );
+      }
+      break;
+
+    case ActivityType.PAYMENT_REMINDER_SENT:
+      icon = <Bell className="h-5 w-5 text-amber-400" />;
+      if (isRecipient) {
+        message = (
+          <p>
+            <span className={nameClass}>You</span> received a payment reminder.
+          </p>
+        );
+      } else {
+        message = (
+          <p>
+            Payment reminder sent to <span className={nameClass}>{targetUserName}</span>.
+          </p>
+        );
+      }
+      break;
+
+    // Project activities
+    case ActivityType.PROJECT_CREATED:
+      icon = <FolderPlus className="h-5 w-5 text-blue-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> created the project.
+        </p>
+      );
+      break;
+
+    case ActivityType.TERMS_ACCEPTED:
+      icon = <FileCheck className="h-5 w-5 text-emerald-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> accepted the project terms.
+        </p>
+      );
+      break;
+
+    default:
+      icon = <PenSquare className="h-5 w-5 text-white/40" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> made an update.
+        </p>
+      );
+      break;
+  }
+
+  return { icon, message };
+};
+
 const ActivityFeed = () => {
-    const { project } = useContext(AppContext);
-    const sortedActivities = project?.activities.sort((a, b) => b.timestamp - a.timestamp) || [];
+  const { project, currentUser } = useContext(AppContext);
+  const sortedActivities = [...(project?.activities || [])].sort((a, b) => b.timestamp - a.timestamp);
 
-    const getActivityDetails = (activity: any) => {
-        const { type, userName, details } = activity;
-        let icon, message;
-
-        switch (type) {
-            case ActivityType.TASK_STATUS_CHANGED:
-                icon = <CheckCircle2 className="h-5 w-5 text-[var(--todoist-green)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> updated task "{details.taskTitle}" to <span className="font-semibold text-[var(--todoist-red)]">{details.newStatus}</span>.</p>;
-                break;
-            case ActivityType.COMMENT_ADDED:
-                icon = <MessageSquare className="h-5 w-5 text-[var(--todoist-blue)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> commented on "{details.taskTitle}".</p>;
-                break;
-            case ActivityType.FILE_UPLOADED:
-                icon = <FileUp className="h-5 w-5 text-[var(--todoist-red)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> uploaded file "{details.fileName}".</p>;
-                break;
-            case ActivityType.TASK_CREATED:
-                icon = <PlusCircle className="h-5 w-5 text-[var(--todoist-blue)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> created a new task: "{details.taskTitle}".</p>;
-                break;
-             case ActivityType.REVISION_REQUESTED:
-                icon = <AlertCircle className="h-5 w-5 text-[var(--todoist-orange)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> requested a revision on "{details.taskTitle}".</p>;
-                break;
-            default:
-                icon = <PenSquare className="h-5 w-5 text-[var(--todoist-gray-400)]" />;
-                message = <p><span className="font-semibold text-[var(--todoist-gray-900)]">{userName}</span> made an update.</p>;
-                break;
-        }
-        return { icon, message };
-    };
-
-    return (
-        <div className="flow-root">
-            <ul role="list" className="-mb-8">
-                {sortedActivities.map((activity, index) => {
-                    const { icon, message } = getActivityDetails(activity);
-                    const isLast = index === sortedActivities.length - 1;
-                    return (
-                        <li key={activity.id}>
-                            <div className="relative pb-8">
-                                {!isLast && <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-[var(--todoist-gray-200)]" aria-hidden="true" />}
-                                <div className="relative flex items-start space-x-3">
-                                    <div>
-                                        <div className="relative px-1">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--todoist-gray-100)] border border-[var(--todoist-gray-200)]">
-                                                {icon}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="min-w-0 flex-1 py-1.5">
-                                        <div className="text-sm text-[var(--todoist-gray-600)]">
-                                            {message}
-                                            <span className="whitespace-nowrap text-xs text-[var(--todoist-gray-400)] ml-2">{timeAgo(activity.timestamp)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    );
-                })}
-            </ul>
-        </div>
-    );
+  return (
+    <div className="flow-root">
+      <ul role="list" className="-mb-8">
+        {sortedActivities.map((activity, index) => {
+          const { icon, message } = getActivityDetails(activity, currentUser?.id);
+          const isLast = index === sortedActivities.length - 1;
+          return (
+            <li key={activity.id}>
+              <div className="relative pb-8">
+                {!isLast && (
+                  <span
+                    className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-white/10"
+                    aria-hidden="true"
+                  />
+                )}
+                <div className="relative flex items-start space-x-3">
+                  <div>
+                    <div className="relative px-1">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 border border-white/10">
+                        {icon}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1 py-1.5">
+                    <div className="text-sm text-white/70">
+                      {message}
+                      <span className="whitespace-nowrap text-xs text-white/40 ml-2">
+                        {timeAgo(activity.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 };
 
 

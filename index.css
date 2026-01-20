@@ -40,7 +40,8 @@
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --font-inter: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-fraunces: Fraunces, Georgia, serif;
+  --font-fraunces: .font-ibm-plex-sans, var(--font-inter), sans-serif;
+  --font-ibm-plex-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius: 1.3rem;
   --shadow-x: 0px;
   --shadow-y: 2px;
@@ -225,6 +226,12 @@
     color: var(--foreground);
     letter-spacing: var(--tracking-normal);
   }
+
+  /* Accessibility: Global focus styles */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 body {
@@ -252,6 +259,7 @@ h6 {
 .portal-container {
   color: var(--todoist-gray-900);
   background: var(--todoist-white);
+  font-family: var(--font-ibm-plex-sans);
 }
 
 .portal-container h1,
@@ -260,7 +268,7 @@ h6 {
 .portal-container h4,
 .portal-container h5,
 .portal-container h6 {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ibm-plex-sans);
   color: var(--todoist-gray-900);
 }
 
@@ -282,7 +290,11 @@ h6 {
 
 /* Font utility classes */
 .font-inter {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ibm-plex-sans);
+}
+
+.font-ibm-plex-sans {
+  font-family: var(--font-ibm-plex-sans);
 }
 
 .font-fraunces {

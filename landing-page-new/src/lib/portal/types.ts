@@ -40,6 +40,7 @@ export interface Comment {
   userName: string;
   content: string;
   timestamp: number;
+  editedAt?: number; // Timestamp when the comment was last edited
 }
 
 export interface Task {
@@ -53,6 +54,7 @@ export interface Task {
   deadline?: string; // e.g., '2024-12-31'
   assigneeId?: string; // ID of the user assigned to this task
   comments: Comment[];
+  createdBy?: string;
 }
 
 export interface Client {
@@ -74,22 +76,51 @@ export interface ProjectFile {
 }
 
 export enum ActivityType {
+  // Task activities
   TASK_STATUS_CHANGED = 'TASK_STATUS_CHANGED',
-  COMMENT_ADDED = 'COMMENT_ADDED',
-  FILE_UPLOADED = 'FILE_UPLOADED',
-  TEAM_MEMBER_INVITED = 'TEAM_MEMBER_INVITED',
   TASK_CREATED = 'TASK_CREATED',
   TASK_UPDATED = 'TASK_UPDATED',
   REVISION_REQUESTED = 'REVISION_REQUESTED',
+  COMMENT_ADDED = 'COMMENT_ADDED',
+
+  // File activities
+  FILE_UPLOADED = 'FILE_UPLOADED',
+  FILE_RENAMED = 'FILE_RENAMED',
+  FILE_DOWNLOADED = 'FILE_DOWNLOADED',
+
+  // Team activities
+  TEAM_MEMBER_INVITED = 'TEAM_MEMBER_INVITED',
+  TEAM_MEMBER_REMOVED = 'TEAM_MEMBER_REMOVED',
   TEAM_UPDATED = 'TEAM_UPDATED',
+
+  // Proposal activities
+  PROPOSAL_SENT = 'PROPOSAL_SENT',
+  PROPOSAL_ACCEPTED = 'PROPOSAL_ACCEPTED',
+  PROPOSAL_REJECTED = 'PROPOSAL_REJECTED',
+  PROPOSAL_CHANGES_REQUESTED = 'PROPOSAL_CHANGES_REQUESTED',
+
+  // Deliverable activities
+  DELIVERABLE_APPROVED = 'DELIVERABLE_APPROVED',
+  DELIVERABLE_REJECTED = 'DELIVERABLE_REJECTED',
+  DELIVERABLE_UPLOADED = 'DELIVERABLE_UPLOADED',
+
+  // Payment activities
+  PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
+  PAYMENT_REMINDER_SENT = 'PAYMENT_REMINDER_SENT',
+
+  // Project activities
+  PROJECT_CREATED = 'PROJECT_CREATED',
+  TERMS_ACCEPTED = 'TERMS_ACCEPTED',
 }
 
 export interface Activity {
   id: string;
   type: ActivityType;
   timestamp: number;
-  userId: string;
-  userName: string;
+  userId: string;      // Who performed the action
+  userName: string;    // Display name of actor
+  targetUserId?: string;   // Recipient of the action (for role-aware phrasing)
+  targetUserName?: string; // Display name of recipient
   details: {
     [key: string]: string | number;
   };
@@ -127,9 +158,21 @@ export interface Project {
 export interface Notification {
   id: string;
   message: string;
-  userId: string; // The user who should receive the notification
+  userId: string;
   projectId: string;
-  timestamp: number;
+  timestamp?: number;
   read: boolean;
+  type?: string;
+  category?: string;
+  title?: string;
+  icon?: string;
+  createdAt?: Date;
+  readAt?: Date | null;
+  deletedAt?: Date | null;
+  actionUrl?: string;
+  actionLabel?: string;
+  metadata?: Record<string, string>;
+  actorId?: string;
+  actorName?: string;
 }
 

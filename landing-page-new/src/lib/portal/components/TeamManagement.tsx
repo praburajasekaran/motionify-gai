@@ -3,7 +3,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '@/lib/portal/AppContext';
 import { UserRole } from '@/lib/portal/types';
-import { Clock, Mail, XCircle, RefreshCw } from 'lucide-react';
+import { Clock, Mail, XCircle, RefreshCw, UserMinus } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import InviteModal from './InviteModal';
@@ -11,11 +11,12 @@ import ManageTeamModal from './ManageTeamModal';
 import { listInvitations, revokeInvitation, resendInvitation, type ProjectInvitation } from '../api/invitations.api';
 
 const TeamManagement = () => {
-  const { project, currentUser } = useContext(AppContext);
+  const { project, currentUser, removeClientTeamMember } = useContext(AppContext);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
 
   const isPrimaryContact = currentUser?.role === UserRole.PRIMARY_CONTACT;
   const isProjectManager = currentUser?.role === UserRole.PROJECT_MANAGER;
@@ -59,6 +60,13 @@ const TeamManagement = () => {
       alert('Invitation email resent successfully');
     } else {
       alert(result.error || 'Failed to resend invitation');
+    }
+  };
+
+  const handleRemoveTeamMember = () => {
+    if (memberToRemove) {
+      removeClientTeamMember(memberToRemove.id);
+      setMemberToRemove(null);
     }
   };
 
@@ -114,45 +122,61 @@ const TeamManagement = () => {
         )}
 
         <div className="flex justify-between items-center">
-            <h4 className="font-semibold text-white">Client Team</h4>
-            {isPrimaryContact && (
-                <Button variant="secondary" onClick={() => setIsInviteModalOpen(true)} className="text-xs px-2.5 py-1.5">
-                    Invite
-                </Button>
-            )}
+          <h4 className="font-semibold text-[var(--todoist-gray-900)]">Client Team</h4>
+          {isPrimaryContact && (
+            <Button variant="secondary" onClick={() => setIsInviteModalOpen(true)} className="text-xs px-2.5 py-1.5">
+              Invite
+            </Button>
+          )}
         </div>
         <div className="mt-3 space-y-3">
           {project.clientTeam.map(user => (
-            <div key={user.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+            <div key={user.id} className="flex items-center justify-between p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
               <div>
-                <p className="font-medium text-white">{user.name}</p>
-                <p className="text-sm text-white/60">{user.email}</p>
+                <p className="font-medium text-[var(--todoist-gray-900)]">{user.name}</p>
+                <p className="text-sm text-[var(--todoist-gray-500)]">{user.email}</p>
               </div>
-              <span className="text-sm font-semibold text-cyan-400">{user.role}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-[var(--todoist-blue)]">{user.role}</span>
+                {/* Remove button: Only show for Primary Contact */}
+                {isPrimaryContact && (
+                  <button
+                    onClick={() => user.id !== currentUser?.id && setMemberToRemove({ id: user.id, name: user.name })}
+                    disabled={user.id === currentUser?.id}
+                    className={`p-1.5 rounded transition-colors ${user.id === currentUser?.id
+                      ? 'text-[var(--todoist-gray-300)] cursor-not-allowed'
+                      : 'text-[var(--todoist-red)] hover:text-[var(--todoist-red-dark)] hover:bg-[var(--todoist-red-light)]'
+                      }`}
+                    title={user.id === currentUser?.id ? "Transfer primary contact role first" : "Remove team member"}
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 border-t pt-4 border-white/10">
-            <div className="flex justify-between items-center">
-                <h4 className="font-semibold text-white">Motionify Team</h4>
-                {isProjectManager && (
-                    <Button variant="secondary" onClick={() => setIsManageModalOpen(true)} className="text-xs px-2.5 py-1.5">
-                        Manage
-                    </Button>
-                )}
-            </div>
-            <div className="mt-3 space-y-3">
+        <div className="mt-6 border-t pt-4 border-[var(--todoist-gray-200)]">
+          <div className="flex justify-between items-center">
+            <h4 className="font-semibold text-[var(--todoist-gray-900)]">Motionify Team</h4>
+            {isProjectManager && (
+              <Button variant="secondary" onClick={() => setIsManageModalOpen(true)} className="text-xs px-2.5 py-1.5">
+                Manage
+              </Button>
+            )}
+          </div>
+          <div className="mt-3 space-y-3">
             {project.motionifyTeam.map(user => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+              <div key={user.id} className="flex items-center justify-between p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
                 <div>
-                    <p className="font-medium text-white">{user.name}</p>
-                    <p className="text-sm text-white/60">{user.email}</p>
+                  <p className="font-medium text-[var(--todoist-gray-900)]">{user.name}</p>
+                  <p className="text-sm text-[var(--todoist-gray-500)]">{user.email}</p>
                 </div>
-                <span className="text-sm font-semibold text-cyan-400">{user.role}</span>
-                </div>
+                <span className="text-sm font-semibold text-[var(--todoist-blue)]">{user.role}</span>
+              </div>
             ))}
-            </div>
+          </div>
         </div>
       </Card>
       <InviteModal
@@ -160,11 +184,38 @@ const TeamManagement = () => {
         onClose={() => setIsInviteModalOpen(false)}
         projectId={project.id}
         onInviteSent={loadInvitations}
+        currentUserRole={currentUser?.role}
       />
       <ManageTeamModal
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
       />
+
+      {/* Remove Team Member Confirmation Dialog */}
+      {memberToRemove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 border border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-2">Remove Team Member</h3>
+            <p className="text-gray-300 mb-4">
+              Are you sure you want to remove <span className="font-semibold text-white">{memberToRemove.name}</span> from this project?
+            </p>
+            <p className="text-sm text-gray-400 mb-6">
+              Their access will be revoked immediately. Historical data (comments, activities) will be preserved.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setMemberToRemove(null)}>
+                Cancel
+              </Button>
+              <button
+                onClick={handleRemoveTeamMember}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

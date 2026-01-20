@@ -21,7 +21,7 @@ const getDbClient = () => {
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL not configured');
   }
-  
+
   return new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -30,14 +30,14 @@ const getDbClient = () => {
 
 const generateProjectNumber = async (client: pg.Client): Promise<string> => {
   const year = new Date().getFullYear();
-  
+
   const result = await client.query(
     `SELECT project_number FROM projects 
      WHERE project_number LIKE $1 
      ORDER BY project_number DESC LIMIT 1`,
     [`PROJ-${year}-%`]
   );
-  
+
   let maxNumber = 0;
   if (result.rows.length > 0) {
     const match = result.rows[0].project_number.match(/PROJ-\d{4}-(\d+)/);
@@ -45,7 +45,7 @@ const generateProjectNumber = async (client: pg.Client): Promise<string> => {
       maxNumber = parseInt(match[1], 10);
     }
   }
-  
+
   const nextNumber = maxNumber + 1;
   return `PROJ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
@@ -88,14 +88,63 @@ export const handler = async (
         };
       }
 
-      const { clientUserId } = event.queryStringParameters || {};
+      const { userId, clientUserId } = event.queryStringParameters || {};
 
-      let query = 'SELECT * FROM vertical_slice_projects ORDER BY created_at DESC';
+      // Legacy support for clientUserId param (treat as client role check)
+      // Ideally, we should move to a single 'userId' param that identifies the requester
+      const effectiveUserId = userId || clientUserId;
+
+      if (!effectiveUserId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'User ID is required' }),
+        };
+      }
+
+      // Fetch user role
+      const userResult = await client.query(
+        'SELECT role FROM users WHERE id = $1',
+        [effectiveUserId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'User not found' }),
+        };
+      }
+
+      const userRole = userResult.rows[0].role;
+      let query = '';
       const params: any[] = [];
 
-      if (clientUserId) {
+      if (userRole === 'project_manager') {
+        // Project Manager: Only see projects linked to inquiries assigned to them
+        query = `
+          SELECT p.* 
+          FROM vertical_slice_projects p
+          JOIN inquiries i ON p.inquiry_id = i.id
+          WHERE i.assigned_to_admin_id = $1
+          ORDER BY p.created_at DESC
+        `;
+        params.push(effectiveUserId);
+      } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
+        // Client: Only see their own projects
+        // Note: checking multiple client role variations to be safe, though DB check is 'client'
         query = 'SELECT * FROM vertical_slice_projects WHERE client_user_id = $1 ORDER BY created_at DESC';
-        params.push(clientUserId);
+        params.push(effectiveUserId);
+      } else if (userRole === 'super_admin' || userRole === 'admin') {
+        // Super Admin: See all projects
+        query = 'SELECT * FROM vertical_slice_projects ORDER BY created_at DESC';
+      } else {
+        // Unknown or unauthorized role
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Unauthorized role' }),
+        };
       }
 
       const result = await client.query(query, params);
@@ -108,7 +157,7 @@ export const handler = async (
     }
 
     if (event.httpMethod === 'POST') {
-      const { inquiryId, proposalId, clientUserId } = JSON.parse(event.body || '{}');
+      const { inquiryId, proposalId } = JSON.parse(event.body || '{}');
 
       if (!inquiryId || !proposalId) {
         return {
@@ -141,6 +190,41 @@ export const handler = async (
         };
       }
 
+      const inquiryResult = await client.query(
+        'SELECT contact_email, contact_name FROM inquiries WHERE id = $1',
+        [inquiryId]
+      );
+
+      if (inquiryResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Inquiry not found' }),
+        };
+      }
+
+      const inquiry = inquiryResult.rows[0];
+      const { contact_email, contact_name } = inquiry;
+
+      let assignedClientUserId: string | null = null;
+
+      const existingUserResult = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [contact_email]
+      );
+
+      if (existingUserResult.rows.length > 0) {
+        assignedClientUserId = existingUserResult.rows[0].id;
+      } else {
+        const newUserResult = await client.query(
+          `INSERT INTO users (email, full_name, role) 
+           VALUES ($1, $2, 'client') 
+           RETURNING id`,
+          [contact_email, contact_name]
+        );
+        assignedClientUserId = newUserResult.rows[0].id;
+      }
+
       const projectNumber = await generateProjectNumber(client);
 
       const result = await client.query(
@@ -148,7 +232,7 @@ export const handler = async (
           project_number, inquiry_id, proposal_id, client_user_id, status
         ) VALUES ($1, $2, $3, $4, 'active')
         RETURNING *`,
-        [projectNumber, inquiryId, proposalId, clientUserId || null]
+        [projectNumber, inquiryId, proposalId, assignedClientUserId]
       );
 
       const project = result.rows[0];

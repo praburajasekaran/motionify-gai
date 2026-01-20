@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Mail, User, Building2, Phone, FileText } from 'lucide-react';
 import { isValidEmail, isValidPhone, type ContactInfo } from '../../lib/inquiries';
 
@@ -154,11 +154,10 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
               onBlur={() => handleBlur('contactName')}
               disabled={isSubmitting}
               placeholder="John Doe"
-              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                touched.contactName && errors.contactName
+              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${touched.contactName && errors.contactName
                   ? 'border-red-400/50 focus:ring-red-400/50'
                   : 'border-white/10 focus:ring-violet-400/50'
-              }`}
+                }`}
             />
           </div>
           {touched.contactName && errors.contactName && (
@@ -183,11 +182,10 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
               onBlur={() => handleBlur('contactEmail')}
               disabled={isSubmitting}
               placeholder="john@example.com"
-              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                touched.contactEmail && errors.contactEmail
+              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${touched.contactEmail && errors.contactEmail
                   ? 'border-red-400/50 focus:ring-red-400/50'
                   : 'border-white/10 focus:ring-violet-400/50'
-              }`}
+                }`}
             />
           </div>
           {touched.contactEmail && errors.contactEmail && (
@@ -233,11 +231,10 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
               onBlur={() => handleBlur('contactPhone')}
               disabled={isSubmitting}
               placeholder="+1 (555) 123-4567"
-              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                touched.contactPhone && errors.contactPhone
+              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${touched.contactPhone && errors.contactPhone
                   ? 'border-red-400/50 focus:ring-red-400/50'
                   : 'border-white/10 focus:ring-violet-400/50'
-              }`}
+                }`}
             />
           </div>
           {touched.contactPhone && errors.contactPhone && (

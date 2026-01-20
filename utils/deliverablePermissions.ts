@@ -155,6 +155,11 @@ export function canApproveDeliverable(
     return false;
   }
 
+  // Terms must be accepted
+  if (!project.termsAcceptedAt) {
+    return false;
+  }
+
   return true;
 }
 
@@ -179,6 +184,11 @@ export function canRequestRevisions(
 
   // Project must not be on hold or archived
   if (project.status === 'On Hold' || project.status === 'Archived') {
+    return false;
+  }
+
+  // Terms must be accepted
+  if (!project.termsAcceptedAt) {
     return false;
   }
 
@@ -334,10 +344,37 @@ export function canCommentOnDeliverable(
 }
 
 /**
+ * Check if user can edit a task
+ * Super Admin and Project Manager can edit any task
+ * Team Member can only edit tasks assigned to them
+ * Client cannot edit tasks
+ */
+export function canEditTask(user: User, task?: Task): boolean {
+  // Admin and PM can always edit
+  if (user.role === 'super_admin' || user.role === 'project_manager') {
+    return true;
+  }
+
+  // Team member can only edit if assigned
+  if (user.role === 'team_member') {
+    if (!task) return false;
+    // Check single assignee
+    if (task.assignee?.id === user.id) return true;
+    // Check multiple assignees
+    if (task.assignees?.some(assignee => assignee.id === user.id)) return true;
+    return false;
+  }
+
+  // Clients cannot edit tasks
+  return false;
+}
+
+
+/**
  * Get user-friendly reason why action is not permitted
  */
 export function getPermissionDeniedReason(
-  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete',
+  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task',
   user: User,
   deliverable?: Deliverable,
   project?: Project
@@ -360,12 +397,14 @@ export function getPermissionDeniedReason(
       if (!isClientPrimaryContact(user, project.id)) return 'Only the Primary Contact can approve deliverables';
       if (deliverable?.status !== 'awaiting_approval') return 'Deliverable must be awaiting approval';
       if (project.status === 'Awaiting Payment') return 'Payment is required before approving new deliverables';
+      if (!project.termsAcceptedAt) return 'Project terms must be accepted before work can be approved';
       return 'Cannot approve deliverable';
 
     case 'reject':
       if (!isClient(user)) return 'Only clients can request revisions';
       if (!isClientPrimaryContact(user, project.id)) return 'Only the Primary Contact can request revisions';
       if (deliverable?.status !== 'awaiting_approval') return 'Deliverable must be awaiting approval';
+      if (!project.termsAcceptedAt) return 'Project terms must be accepted before requesting revisions';
       return 'Cannot request revisions';
 
     case 'upload_beta':
@@ -404,7 +443,55 @@ export function getPermissionDeniedReason(
       }
       return 'You do not have permission to view approval history';
 
+    case 'edit_task':
+      if (user.role === 'super_admin' || user.role === 'project_manager') {
+        return 'You have permission to edit this task';
+      }
+      if (user.role === 'team_member') {
+        return 'You can only edit tasks assigned to you';
+      }
+      return 'Clients cannot edit tasks';
+
     default:
       return 'Permission denied';
   }
+}
+
+/**
+ * Check if user can upload project files
+ * All roles can upload files to active projects
+ */
+export function canUploadProjectFile(
+  user: User,
+  project: Project
+): boolean {
+  // Project must not be archived
+  if (project.status === 'Archived') {
+    return user.role === 'super_admin';
+  }
+
+  // Everyone can upload to active projects
+  return true;
+}
+
+/**
+ * Check if user can delete project files
+ * Clients cannot delete files
+ */
+export function canDeleteProjectFile(
+  user: User,
+  project: Project
+): boolean {
+  // Project must not be archived
+  if (project.status === 'Archived') {
+    return user.role === 'super_admin';
+  }
+
+  // Clients cannot delete
+  if (isClient(user)) {
+    return false;
+  }
+
+  // Motionify team can delete
+  return true;
 }

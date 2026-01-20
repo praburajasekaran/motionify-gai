@@ -22,6 +22,7 @@ export const MOCK_PROJECTS: Project[] = [
         'Media buying and ad placement',
       ],
     },
+    milestones: [],
     totalRevisions: 3,
     usedRevisions: 1,
     clientTeam: [
@@ -194,6 +195,7 @@ export const MOCK_PROJECTS: Project[] = [
         'Live-action filming',
       ],
     },
+    milestones: [],
     totalRevisions: 2,
     usedRevisions: 0,
     clientTeam: [
@@ -233,8 +235,7 @@ export const MOCK_PROJECTS: Project[] = [
 ];
 
 
-// Mock Notifications - for testing notification UI components
-// Mock Notifications - for testing notification UI components
+// Mock Notifications - extended with extra properties for UI testing
 export const MOCK_NOTIFICATIONS: Notification[] = [
   // UNREAD notifications
   {

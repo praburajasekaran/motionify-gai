@@ -127,6 +127,7 @@ const DeliverablesTabContent: React.FC = () => {
         onApprove={handleApprove}
         onRequestRevision={handleRequestRevision}
         onConvertToTask={onConvertToTask}
+        quota={state.quota}
       />
 
       {/* Revision Request Form */}

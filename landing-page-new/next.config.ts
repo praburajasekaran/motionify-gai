@@ -1,13 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Removed 'output: export' to support dynamic routes like /payment/[proposalId]
+  distDir: '.next',
+
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
-  
-  // Run on port 5174
+
   async headers() {
     return [
       {
@@ -22,16 +25,21 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Proxy admin routes to Vite (running on 5173)
+  async redirects() {
+    return [
+      {
+        source: '/portal/:path*',
+        destination: 'http://localhost:5173',
+        permanent: false,
+      },
+    ];
+  },
+
   async rewrites() {
     return [
       {
-        source: '/admin/:path*',
-        destination: 'http://localhost:5173/admin/:path*',
-      },
-      {
-        source: '/assets/:path*',
-        destination: 'http://localhost:5173/assets/:path*',
+        source: '/api/:path*',
+        destination: 'http://localhost:9999/.netlify/functions/:path*',
       },
     ];
   },

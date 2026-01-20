@@ -48,11 +48,35 @@ export async function fetchProposals(): Promise<Proposal[]> {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    return await response.json();
+    const data = await response.json();
+    return data.map(mapProposal);
   } catch (error) {
     console.error('Error fetching proposals:', error);
     return [];
   }
+}
+
+
+function mapProposal(data: any): Proposal {
+  return {
+    id: data.id,
+    inquiryId: data.inquiry_id || data.inquiryId,
+    status: data.status,
+    version: data.version,
+    createdAt: data.created_at || data.createdAt,
+    updatedAt: data.updated_at || data.updatedAt,
+    description: data.description,
+    deliverables: data.deliverables || [],
+    currency: data.currency,
+    totalPrice: Number(data.total_price || data.totalPrice),
+    advancePercentage: data.advance_percentage || data.advancePercentage,
+    advanceAmount: Number(data.advance_amount || data.advanceAmount),
+    balanceAmount: Number(data.balance_amount || data.balanceAmount),
+    acceptedAt: data.accepted_at || data.acceptedAt,
+    rejectedAt: data.rejected_at || data.rejectedAt,
+    feedback: data.feedback,
+    editHistory: data.edit_history || data.editHistory,
+  };
 }
 
 export async function fetchProposalById(id: string): Promise<Proposal | null> {
@@ -62,7 +86,8 @@ export async function fetchProposalById(id: string): Promise<Proposal | null> {
       if (response.status === 404) return null;
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    return await response.json();
+    const data = await response.json();
+    return mapProposal(data);
   } catch (error) {
     console.error('Error fetching proposal:', error);
     return null;
@@ -83,6 +108,7 @@ export async function createProposal(data: {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  id?: string;
 }): Promise<Proposal> {
   if (!data.inquiryId || data.inquiryId.trim() === '') {
     throw new Error('Inquiry ID is required');
@@ -120,6 +146,7 @@ export async function createProposal(data: {
     advancePercentage: data.advancePercentage,
     advanceAmount: data.advanceAmount,
     balanceAmount: data.balanceAmount,
+    id: data.id,
   };
 
   const response = await fetch(API_BASE_URL, {
@@ -133,7 +160,8 @@ export async function createProposal(data: {
     throw new Error(error.message || 'Failed to create proposal');
   }
 
-  return await response.json();
+  const responseData = await response.json();
+  return mapProposal(responseData);
 }
 
 export async function updateProposal(id: string, updates: Partial<Proposal>): Promise<Proposal> {
@@ -148,7 +176,8 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
     throw new Error(error.message || 'Failed to update proposal');
   }
 
-  return await response.json();
+  const data = await response.json();
+  return mapProposal(data);
 }
 
 export async function updateProposalStatus(
@@ -157,17 +186,17 @@ export async function updateProposalStatus(
   feedback?: string
 ): Promise<Proposal> {
   const updates: Partial<Proposal> = { status };
-  
+
   if (status === 'accepted') {
     updates.acceptedAt = new Date().toISOString();
   } else if (status === 'rejected') {
     updates.rejectedAt = new Date().toISOString();
   }
-  
+
   if (feedback) {
     updates.feedback = feedback;
   }
-  
+
   return updateProposal(id, updates);
 }
 
@@ -182,7 +211,7 @@ export async function incrementProposalVersion(
 
   const newVersion = (currentProposal.version || 1) + 1;
   const editHistory = currentProposal.editHistory || [];
-  
+
   editHistory.push({
     version: currentProposal.version || 1,
     editedAt: new Date().toISOString(),
@@ -281,4 +310,14 @@ export function formatDateTime(dateString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+export async function ensureProposalExists(proposal: Proposal): Promise<void> {
+  const existing = await fetchProposalById(proposal.id);
+  if (!existing) {
+    console.log('Persisting proposal to backend:', proposal.id);
+    await createProposal({
+      ...proposal,
+      id: proposal.id,
+    });
+  }
 }

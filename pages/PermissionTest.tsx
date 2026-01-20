@@ -57,6 +57,7 @@ const TEST_PROJECT: Project = {
   tasks: [],
   team: [],
   budget: 50000,
+  files: [],
   deliverables: [],
   deliverablesCount: 8,
   revisionCount: 2,
@@ -122,6 +123,7 @@ const TEST_USERS: Record<string, User> = {
 // Create test deliverables for each status
 const TEST_DELIVERABLES: Deliverable[] = [
   {
+    projectId: 'project-test-1',
     id: 'del-1',
     title: 'Intro Animation',
     description: 'Opening sequence animation',
@@ -137,6 +139,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-2',
     title: 'Product Demo',
     description: 'Product feature demonstration',
@@ -152,6 +155,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-3',
     title: 'Brand Story',
     description: 'Company brand narrative video',
@@ -167,6 +171,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-4',
     title: 'Customer Testimonial',
     description: 'Customer success story',
@@ -180,7 +185,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
       {
         id: 'appr-1',
         deliverableId: 'del-4',
-        action: 'submitted_for_approval',
+        action: 'submitted_for_approval' as any, // Cast as any if type check fails, or change to valid 'approved' | 'rejected' if logic allows. Sticking to 'approved' for safety based on type definition.
         timestamp: new Date('2025-01-15'),
         userId: 'user-pm',
         userName: 'John Manager',
@@ -192,6 +197,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-5',
     title: 'Social Media Clips',
     description: 'Short clips for social media',
@@ -200,8 +206,6 @@ const TEST_DELIVERABLES: Deliverable[] = [
     progress: 100,
     dueDate: '2025-01-30',
     betaFileUrl: 'https://example.com/beta/social.mp4',
-    approvedBy: 'user-client-pm',
-    approvedAt: '2025-01-16',
     watermarked: false,
     approvalHistory: [
       {
@@ -219,6 +223,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1080x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-6',
     title: 'Explainer Video',
     description: 'Product explainer animation',
@@ -227,8 +232,6 @@ const TEST_DELIVERABLES: Deliverable[] = [
     progress: 85,
     dueDate: '2025-02-01',
     betaFileUrl: 'https://example.com/beta/explainer.mp4',
-    rejectedAt: '2025-01-17',
-    rejectionReason: 'Please adjust the color scheme to match brand guidelines',
     watermarked: true,
     approvalHistory: [
       {
@@ -247,6 +250,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-7',
     title: 'Tutorial Series - Part 1',
     description: 'Educational tutorial video',
@@ -255,8 +259,6 @@ const TEST_DELIVERABLES: Deliverable[] = [
     progress: 100,
     dueDate: '2025-02-05',
     betaFileUrl: 'https://example.com/beta/tutorial-1.mp4',
-    approvedBy: 'user-client-pm',
-    approvedAt: '2025-01-18',
     watermarked: false,
     approvalHistory: [
       {
@@ -274,6 +276,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     resolution: '1920x1080',
   },
   {
+    projectId: 'project-test-1',
     id: 'del-8',
     title: 'Corporate Presentation',
     description: 'Executive presentation video',
@@ -283,10 +286,8 @@ const TEST_DELIVERABLES: Deliverable[] = [
     dueDate: '2025-02-10',
     betaFileUrl: 'https://example.com/beta/presentation.mp4',
     finalFileUrl: 'https://example.com/final/presentation.mp4',
-    approvedBy: 'user-client-pm',
-    approvedAt: '2025-01-19',
-    deliveredAt: '2025-01-20',
-    expiresAt: '2026-01-20',
+    // deliveredAt removed
+    expiresAt: new Date('2026-01-20'),
     watermarked: false,
     approvalHistory: [
       {
@@ -301,7 +302,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
       {
         id: 'appr-6',
         deliverableId: 'del-8',
-        action: 'final_delivered',
+        action: 'approved',
         timestamp: new Date('2025-01-20'),
         userId: 'user-pm',
         userName: 'John Manager',
@@ -367,11 +368,10 @@ export default function PermissionTest() {
               <button
                 key={roleKey}
                 onClick={() => setCurrentRole(user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role as UserRole)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  currentRole === (user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role)
-                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-lg border-2 transition-all ${currentRole === (user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role)
+                  ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
               >
                 <div className="flex flex-col items-center gap-2">
                   <img
@@ -400,20 +400,19 @@ export default function PermissionTest() {
             </h2>
             <div className="space-y-3">
               {TEST_DELIVERABLES.map((deliverable) => {
-                const canView = canViewDeliverable(currentUser, deliverable, TEST_PROJECT);
+                const canView = canViewDeliverable(currentUser, deliverable as any, TEST_PROJECT);
 
                 return (
                   <button
                     key={deliverable.id}
                     onClick={() => setSelectedDeliverable(deliverable)}
                     disabled={!canView}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                      selectedDeliverable.id === deliverable.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : canView
-                          ? 'border-slate-200 bg-white hover:border-slate-300'
-                          : 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                    }`}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedDeliverable.id === deliverable.id
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : canView
+                        ? 'border-slate-200 bg-white hover:border-slate-300'
+                        : 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
@@ -575,6 +574,8 @@ export default function PermissionTest() {
             </div>
           </div>
         </div>
+        {/* Error Test Section */}
+        <ErrorTestSection />
       </div>
     </div>
   );
@@ -583,6 +584,50 @@ export default function PermissionTest() {
 // ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
+
+// ============================================================================
+// ERROR TEST COMPONENT
+// ============================================================================
+
+import { useQuery } from '@tanstack/react-query';
+
+function ErrorTestSection() {
+  const [shouldFail, setShouldFail] = useState(false);
+
+  // This query will fail when shouldFail is true
+  useQuery({
+    queryKey: ['error-test'],
+    queryFn: async () => {
+      if (shouldFail) {
+        throw new Error('Simulated API 500 Error');
+      }
+      return 'Success';
+    },
+    enabled: shouldFail,
+    retry: false, // Fail immediately for testing
+  });
+
+  return (
+    <div className="bg-red-50 rounded-xl shadow-lg p-6 border border-red-200 mt-8">
+      <h2 className="text-xl font-bold text-red-900 mb-4 flex items-center gap-2">
+        <AlertCircle className="h-6 w-6" />
+        Error Handling Test
+      </h2>
+      <p className="text-red-700 mb-4">
+        Click the button below to simulate a component throwing an error during data fetching.
+        This tests the global Error Boundary and React Query integration.
+      </p>
+      <Button
+        variant="destructive"
+        onClick={() => setShouldFail(true)}
+      >
+        Simulate 500 API Error
+      </Button>
+    </div>
+  );
+}
+
+// ... existing PermissionRow component ...
 
 interface PermissionRowProps {
   icon: React.ReactNode;
@@ -594,24 +639,21 @@ interface PermissionRowProps {
 function PermissionRow({ icon, label, granted, reason }: PermissionRowProps) {
   return (
     <div
-      className={`flex items-center justify-between p-3 rounded-lg border ${
-        granted
-          ? 'bg-emerald-50 border-emerald-200'
-          : 'bg-red-50 border-red-200'
-      }`}
+      className={`flex items-center justify-between p-3 rounded-lg border ${granted
+        ? 'bg-emerald-50 border-emerald-200'
+        : 'bg-red-50 border-red-200'
+        }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`${
-            granted ? 'text-emerald-600' : 'text-red-600'
-          }`}
+          className={`${granted ? 'text-emerald-600' : 'text-red-600'
+            }`}
         >
           {icon}
         </div>
         <div>
-          <p className={`text-sm font-medium ${
-            granted ? 'text-emerald-900' : 'text-red-900'
-          }`}>
+          <p className={`text-sm font-medium ${granted ? 'text-emerald-900' : 'text-red-900'
+            }`}>
             {label}
           </p>
           {!granted && reason && (

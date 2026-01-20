@@ -6,36 +6,36 @@
 /**
  * Get the API base URL
  * - In production: Uses `/.netlify/functions` (Netlify handles routing)
- * - In development: Uses `/api` (Next.js API routes proxy to Netlify functions)
- * - Can be overridden with NEXT_PUBLIC_API_BASE_URL environment variable
- * 
- * Note: For best development experience, run `netlify dev` which starts both
- * Next.js and Netlify functions. The `/api` routes will proxy to Netlify functions.
+ * - In development: Uses `http://localhost:9999/.netlify/functions` (Netlify Dev server)
+ * - Can be overridden with VITE_API_BASE_URL environment variable
  */
 export function getApiBase(): string {
     // Check if we have an explicit API URL set (client-side only)
     if (typeof window !== 'undefined') {
-        const explicitUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+        // Check for Vite env variable first
+        const viteApiUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+        if (viteApiUrl) {
+            return viteApiUrl;
+        }
+
+        // Check for Next.js env variable
+        const explicitUrl = (process as any).env?.NEXT_PUBLIC_API_BASE_URL;
         if (explicitUrl) {
             return explicitUrl;
         }
     }
 
-    // In production or when deployed, use Netlify functions path
-    // This works because Netlify's redirects handle /.netlify/functions/*
-    if (process.env.NODE_ENV === 'production') {
+    // In production or when deployed, use relative Netlify functions path
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
         return '/.netlify/functions';
     }
 
-    // In development, use Next.js API routes which proxy to Netlify functions
-    // The API routes will try to connect to Netlify Dev server (port 8888)
-    // If Netlify Dev isn't running, you'll get a helpful error message
-    return '/api';
+    // In development on localhost, use the Netlify Dev server
+    // Default Netlify Dev runs on port 9999
+    return 'http://localhost:9999/.netlify/functions';
 }
 
-// Export as a function call for client-side, but evaluate once for server-side
-// In Next.js App Router, this runs on both server and client
-export const API_BASE = typeof window !== 'undefined' 
-    ? getApiBase() 
-    : '/api'; // Default to /api on server-side (SSR)
-
+// Export as a function call for client-side
+export const API_BASE = typeof window !== 'undefined'
+    ? getApiBase()
+    : 'http://localhost:9999/.netlify/functions'; // Default to Netlify Dev on server-side

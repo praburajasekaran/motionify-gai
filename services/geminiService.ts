@@ -5,6 +5,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateProjectTasks = async (projectDescription: string, projectTitle: string): Promise<string[]> => {
+  if (!process.env.API_KEY) return [];
   try {
     const model = 'gemini-2.5-flash';
     const prompt = `
@@ -20,17 +21,17 @@ export const generateProjectTasks = async (projectDescription: string, projectTi
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.STRING
-            }
+          type: Type.ARRAY,
+          items: {
+            type: Type.STRING
+          }
         }
       }
     });
 
     const text = response.text;
     if (!text) return [];
-    
+
     // Parse the JSON array
     const tasks = JSON.parse(text);
     return Array.isArray(tasks) ? tasks : [];
@@ -47,22 +48,23 @@ export const generateProjectTasks = async (projectDescription: string, projectTi
 };
 
 export const analyzeProjectRisk = async (projectData: any): Promise<string> => {
-    try {
-        const model = 'gemini-2.5-flash';
-        const prompt = `
+  if (!process.env.API_KEY) return "Risk assessment unavailable (Missing API Key)";
+  try {
+    const model = 'gemini-2.5-flash';
+    const prompt = `
           Analyze the following project status and provide a 1-sentence risk assessment.
           Project: ${JSON.stringify(projectData)}
           Risk Assessment:
         `;
-    
-        const response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-        });
-    
-        return response.text || "No assessment available.";
-      } catch (error) {
-        console.error("Gemini Error:", error);
-        return "Unable to analyze risk at this moment.";
-      }
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+    });
+
+    return response.text || "No assessment available.";
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    return "Unable to analyze risk at this moment.";
+  }
 }

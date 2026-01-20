@@ -11,10 +11,11 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        
+
         // Try to proxy to Netlify Dev server
-        const netlifyFunctionUrl = process.env.NETLIFY_FUNCTIONS_URL || 'http://localhost:8888/.netlify/functions/auth-request-magic-link';
-        
+        const netlifyFunctionsBase = process.env.NETLIFY_FUNCTIONS_URL || 'http://localhost:8888/.netlify/functions';
+        const netlifyFunctionUrl = `${netlifyFunctionsBase}/auth-request-magic-link`;
+
         const response = await fetch(netlifyFunctionUrl, {
             method: 'POST',
             headers: {
@@ -28,8 +29,8 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
         console.error('Error proxying auth-request-magic-link:', error);
         return NextResponse.json(
-            { 
-                error: 'Failed to request magic link', 
+            {
+                error: 'Failed to request magic link',
                 message: error.message,
                 hint: 'Make sure Netlify Dev is running. Run: netlify dev (from project root)'
             },

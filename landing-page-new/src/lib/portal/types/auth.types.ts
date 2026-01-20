@@ -162,6 +162,9 @@ export interface MagicLinkVerifyResponse {
         user: AuthUser;
         token: string;
         expiresAt: string;
+        inquiryCreated?: boolean;
+        inquiryId?: string;
+        inquiryNumber?: string;
     };
     message: string;
 }

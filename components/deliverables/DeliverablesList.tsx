@@ -10,9 +10,11 @@
 
 import React from 'react';
 import { Filter, ArrowUpDown, FileBox } from 'lucide-react';
-import { Select, EmptyState } from '../ui/design-system';
+import { Select, EmptyState, Button } from '../ui/design-system';
 import { DeliverableCard } from './DeliverableCard';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
+import { BatchUploadModal } from './BatchUploadModal';
+import { Upload } from 'lucide-react';
 
 export interface DeliverablesListProps {
   deliverables: Deliverable[];
@@ -31,6 +33,8 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
   onSortChange,
   className,
 }) => {
+  const [isBatchModalOpen, setIsBatchModalOpen] = React.useState(false);
+
   // Filter deliverables
   const filteredDeliverables =
     filter === 'all'
@@ -110,28 +114,50 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         </div>
       </div>
 
+      {/* Batch Upload Button */}
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setIsBatchModalOpen(true)}
+        >
+          <Upload className="h-4 w-4" />
+          Batch Upload
+        </Button>
+      </div>
+
+      <BatchUploadModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        deliverables={deliverables}
+        onUploadComplete={() => window.location.reload()}
+      />
+
       {/* Deliverables Grid */}
-      {sortedDeliverables.length === 0 ? (
-        <EmptyState
-          title="No deliverables found"
-          description={
-            filter === 'all'
-              ? 'This project does not have any deliverables yet.'
-              : `No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`
-          }
-          icon={FileBox}
-          className="py-16"
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedDeliverables.map((deliverable) => (
-            <DeliverableCard
-              key={deliverable.id}
-              deliverable={deliverable}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      {
+        sortedDeliverables.length === 0 ? (
+          <EmptyState
+            title="No deliverables found"
+            description={
+              filter === 'all'
+                ? 'This project does not have any deliverables yet.'
+                : `No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`
+            }
+            icon={FileBox}
+            className="py-16"
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedDeliverables.map((deliverable) => (
+              <DeliverableCard
+                key={deliverable.id}
+                deliverable={deliverable}
+              />
+            ))}
+          </div>
+        )
+      }
+    </div >
   );
 };

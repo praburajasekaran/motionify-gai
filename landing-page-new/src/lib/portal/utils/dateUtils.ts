@@ -70,6 +70,45 @@ export function formatDeadline(deadline: string): string {
 }
 
 /**
+ * Format time portion of a timestamp (e.g., "3:45 PM")
+ */
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+/**
+ * Check if a timestamp is from today
+ */
+function isToday(timestamp: number): boolean {
+  const date = new Date(timestamp);
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+/**
+ * Check if a timestamp is from yesterday
+ */
+function isYesterday(timestamp: number): boolean {
+  const date = new Date(timestamp);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  );
+}
+
+/**
  * Convert a relative time to human-readable format
  * Consolidated from multiple duplicated implementations across the codebase
  */
@@ -84,21 +123,57 @@ export function timeAgo(timestamp: number): string {
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
 
+  const time = formatTime(timestamp);
+
+  // For very recent (within last minute)
   if (seconds < 60) {
-    return 'just now';
-  } else if (minutes < 60) {
-    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-  } else if (hours < 24) {
-    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-  } else if (days < 7) {
-    return `${days} day${days !== 1 ? 's' : ''} ago`;
-  } else if (weeks < 4) {
-    return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
-  } else if (months < 12) {
-    return `${months} month${months !== 1 ? 's' : ''} ago`;
-  } else {
-    return `${years} year${years !== 1 ? 's' : ''} ago`;
+    return `just now`;
   }
+
+  // For today: show relative time + actual time
+  if (isToday(timestamp)) {
+    if (minutes < 60) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago at ${time}`;
+    }
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago at ${time}`;
+  }
+
+  // For yesterday
+  if (isYesterday(timestamp)) {
+    return `Yesterday at ${time}`;
+  }
+
+  // For this week (2-6 days ago)
+  if (days < 7) {
+    const dayName = new Date(timestamp).toLocaleDateString(undefined, { weekday: 'long' });
+    return `${dayName} at ${time}`;
+  }
+
+  // For older dates: show date + time
+  if (weeks < 4) {
+    const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    });
+    return `${dateStr} at ${time}`;
+  }
+
+  // For much older dates
+  if (months < 12) {
+    const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    });
+    return `${dateStr} at ${time}`;
+  }
+
+  // For dates over a year old
+  const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+  return `${dateStr} at ${time}`;
 }
 
 /**

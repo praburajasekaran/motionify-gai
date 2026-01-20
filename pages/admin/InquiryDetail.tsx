@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
-import { getInquiryById, type InquiryStatus, type Inquiry } from '../../lib/inquiries';
+import { getInquiryById, updateInquiry, type InquiryStatus, type Inquiry } from '../../lib/inquiries';
 import { getProposalById, type Proposal } from '../../lib/proposals';
-import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, CheckCircle2, Clock, Send, Eye, Copy } from 'lucide-react';
+import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, CheckCircle2, Clock, Send, Eye, Copy, Edit2, X } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 
@@ -43,6 +43,15 @@ export function InquiryDetail() {
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    contactName: '',
+    contactEmail: '',
+    companyName: '',
+    contactPhone: '',
+    projectNotes: '',
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -53,7 +62,7 @@ export function InquiryDetail() {
       try {
         const inquiryData = await getInquiryById(id);
         setInquiry(inquiryData);
-        
+
         if (inquiryData?.proposalId) {
           const proposalData = await getProposalById(inquiryData.proposalId);
           setProposal(proposalData);
@@ -75,14 +84,16 @@ export function InquiryDetail() {
     );
   }
 
-  if (!Permissions.canManageInquiries(user)) {
+  const isAdmin = Permissions.canCreateProposals(user);
+  const isClient = user?.role === 'client';
+
+  if (!isAdmin && !isClient) {
     return <Navigate to="/" replace />;
   }
 
   const handleCopyProposalLink = () => {
     if (!inquiry?.proposalId || !proposal) return;
-    
-    // Create proposal data for URL
+
     const proposalData = {
       proposal: {
         id: proposal.id,
@@ -107,14 +118,48 @@ export function InquiryDetail() {
         companyName: inquiry.companyName,
       }
     };
-    
-    // Encode data for URL
+
     const encodedData = btoa(JSON.stringify(proposalData));
     const link = `http://localhost:5174/proposal/${inquiry.proposalId}?data=${encodedData}`;
-    
+
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenEditModal = () => {
+    if (!inquiry) return;
+    setEditFormData({
+      contactName: inquiry.contactName,
+      contactEmail: inquiry.contactEmail,
+      companyName: inquiry.companyName || '',
+      contactPhone: inquiry.contactPhone || '',
+      projectNotes: inquiry.projectNotes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!inquiry?.id) return;
+
+    setIsSaving(true);
+    try {
+      const updated = await updateInquiry(inquiry.id, {
+        contactName: editFormData.contactName,
+        contactEmail: editFormData.contactEmail,
+        companyName: editFormData.companyName || undefined,
+        contactPhone: editFormData.contactPhone || undefined,
+        projectNotes: editFormData.projectNotes || undefined,
+      });
+
+      setInquiry(updated);
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error updating inquiry:', error);
+      alert('Failed to update inquiry. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!inquiry) {
@@ -153,11 +198,11 @@ export function InquiryDetail() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/admin/inquiries')}
+          onClick={() => navigate(isClient ? '/' : '/admin/inquiries')}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Inquiries
+          {isClient ? 'Back to Dashboard' : 'Back to Inquiries'}
         </button>
 
         <div className="flex items-start justify-between">
@@ -176,23 +221,35 @@ export function InquiryDetail() {
             </div>
           </div>
 
-          {inquiry.status === 'new' ? (
-            <button
-              onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
-            >
-              <Plus className="w-4 h-4" />
-              Create Proposal
-            </button>
-          ) : inquiry.proposalId ? (
-            <button
-              onClick={() => navigate(`/admin/proposals/${inquiry.proposalId}`)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-              View Proposal
-            </button>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {isClient && inquiry.status === 'new' && (
+              <button
+                onClick={handleOpenEditModal}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit Inquiry
+              </button>
+            )}
+
+            {isAdmin && inquiry.status === 'new' ? (
+              <button
+                onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
+              >
+                <Plus className="w-4 h-4" />
+                Create Proposal
+              </button>
+            ) : inquiry.proposalId ? (
+              <button
+                onClick={() => navigate(`/admin/proposals/${inquiry.proposalId}`)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                View Proposal
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -368,9 +425,43 @@ export function InquiryDetail() {
 
           {/* Quick Actions */}
           <div className="bg-card rounded-xl p-6 ring-1 ring-border">
-            <h2 className="text-lg font-semibold text-card-foreground mb-4">Quick Actions</h2>
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">
+              {isClient ? 'Status & Actions' : 'Quick Actions'}
+            </h2>
             <div className="space-y-2">
-              {inquiry.status === 'new' ? (
+              {isClient && inquiry.status === 'new' && (
+                <>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-900 mb-1">
+                      Inquiry Received
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      We're reviewing your inquiry and will send you a proposal soon.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleOpenEditModal}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                  >
+                    <span>Edit Inquiry</span>
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
+              {isClient && inquiry.status === 'proposal_sent' && (
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <p className="text-sm font-medium text-purple-900 mb-1">
+                    Proposal Ready
+                  </p>
+                  <p className="text-xs text-purple-700">
+                    Your proposal is ready for review. Check your email for the link.
+                  </p>
+                </div>
+              )}
+
+              {isAdmin && inquiry.status === 'new' && (
                 <button
                   onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
@@ -378,9 +469,9 @@ export function InquiryDetail() {
                   <span>Create Proposal</span>
                   <Plus className="w-4 h-4" />
                 </button>
-              ) : null}
+              )}
 
-              {inquiry.proposalId && (
+              {isAdmin && inquiry.proposalId && (
                 <>
                   <button
                     onClick={handleCopyProposalLink}
@@ -399,7 +490,6 @@ export function InquiryDetail() {
                     )}
                   </button>
 
-                  {/* Show client feedback if changes requested */}
                   {inquiry.status === 'negotiating' && proposal?.feedback && (
                     <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
                       <p className="text-xs font-medium text-orange-800 mb-1">
@@ -413,27 +503,139 @@ export function InquiryDetail() {
                 </>
               )}
 
-              <a
-                href={`mailto:${inquiry.contactEmail}?subject=Re: Your inquiry ${inquiry.inquiryNumber}`}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
-              >
-                <span>Send Email</span>
-                <Mail className="w-4 h-4" />
-              </a>
-
-              {inquiry.contactPhone && (
-                <a
-                  href={`tel:${inquiry.contactPhone}`}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
+              {inquiry.proposalId && (
+                <button
+                  onClick={() => navigate(`/admin/proposals/${inquiry.proposalId}`)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
                 >
-                  <span>Call Contact</span>
-                  <Phone className="w-4 h-4" />
-                </a>
+                  <span>View Proposal</span>
+                  <Eye className="w-4 h-4" />
+                </button>
+              )}
+
+              {isAdmin && (
+                <>
+                  <a
+                    href={`mailto:${inquiry.contactEmail}?subject=Re: Your inquiry ${inquiry.inquiryNumber}`}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
+                  >
+                    <span>Send Email</span>
+                    <Mail className="w-4 h-4" />
+                  </a>
+
+                  {inquiry.contactPhone && (
+                    <a
+                      href={`tel:${inquiry.contactPhone}`}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors border border-border"
+                    >
+                      <span>Call Contact</span>
+                      <Phone className="w-4 h-4" />
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-card-foreground">Edit Inquiry</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.contactName}
+                  onChange={(e) => setEditFormData({ ...editFormData, contactName: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={editFormData.contactEmail}
+                  onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Company Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.companyName}
+                  onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  type="tel"
+                  value={editFormData.contactPhone}
+                  onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Additional Notes (Optional)
+                </label>
+                <textarea
+                  value={editFormData.projectNotes}
+                  onChange={(e) => setEditFormData({ ...editFormData, projectNotes: e.target.value })}
+                  rows={4}
+                  className="w-full px-4 py-2 rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  placeholder="Any additional information about your project..."
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSaving}
+                  className="px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSaving || !editFormData.contactName || !editFormData.contactEmail}
+                  className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

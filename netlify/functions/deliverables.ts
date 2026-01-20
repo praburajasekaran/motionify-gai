@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { sendDeliverableReadyEmail, sendFinalDeliverablesEmail } from './send-email';
 
 const { Client } = pg;
 
@@ -21,7 +22,7 @@ const getDbClient = () => {
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL not configured');
   }
-  
+
   return new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -64,10 +65,25 @@ export const handler = async (
           };
         }
 
+        const deliverable = result.rows[0];
+
+        // Check if files have expired (365+ days after final delivery)
+        if (deliverable.files_expired) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({
+              error: 'Files have expired',
+              message: 'Download links for this deliverable have expired after 365 days. Contact support to restore access.',
+              code: 'FILES_EXPIRED'
+            }),
+          };
+        }
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows[0]),
+          body: JSON.stringify(deliverable),
         };
       }
 
@@ -106,7 +122,10 @@ export const handler = async (
       const updates = JSON.parse(event.body || '{}');
 
       const allowedFields = [
-        'status', 'beta_file_url', 'final_file_url', 'approved_by'
+        'status',
+        'beta_file_url', 'beta_file_key',
+        'final_file_url', 'final_file_key',
+        'approved_by'
       ];
 
       const updateFields: string[] = [];
@@ -135,6 +154,11 @@ export const handler = async (
         updateFields.push(`approved_at = NOW()`);
       }
 
+      // Track when final delivery occurs for expiry calculation
+      if (updates.status === 'final_delivered') {
+        updateFields.push(`final_delivered_at = NOW()`);
+      }
+
       const query = `
         UPDATE deliverables 
         SET ${updateFields.join(', ')}
@@ -154,10 +178,97 @@ export const handler = async (
         };
       }
 
+      const updatedDeliverable = result.rows[0];
+
+      if (updates.status === 'awaiting_approval') {
+        try {
+          const projectQuery = `
+             SELECT p.project_number, u.email, u.full_name
+             FROM projects p
+             JOIN users u ON p.client_user_id = u.id
+             WHERE p.id = $1
+           `;
+          const projectResult = await client.query(projectQuery, [updatedDeliverable.project_id]);
+
+          if (projectResult.rows.length > 0) {
+            const { project_number, email, full_name } = projectResult.rows[0];
+            // Check preferences (using email_project_update)
+            const userIdResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+            let emailEnabled = true;
+            if (userIdResult.rows.length > 0) {
+              const prefResult = await client.query(
+                `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
+                [userIdResult.rows[0].id]
+              );
+              emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_project_update;
+            }
+
+            if (emailEnabled) {
+              await sendDeliverableReadyEmail({
+                to: email,
+                clientName: full_name,
+                projectNumber: project_number,
+                deliverableName: updatedDeliverable.name,
+                deliverableUrl: `${process.env.URL}/projects/${project_number}?tab=deliverables`,
+                deliveryNotes: updatedDeliverable.description
+              });
+              console.log('✅ Deliverable ready email sent to:', email);
+            } else {
+              console.log('Skipped deliverable ready email to:', email, '(disabled in preferences)');
+            }
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send deliverable ready email:', emailError);
+        }
+      }
+
+      if (updates.status === 'final_delivered') {
+        try {
+          const projectQuery = `
+             SELECT p.project_number, u.email, u.full_name
+             FROM projects p
+             JOIN users u ON p.client_user_id = u.id
+             WHERE p.id = $1
+           `;
+          const projectResult = await client.query(projectQuery, [updatedDeliverable.project_id]);
+
+          if (projectResult.rows.length > 0) {
+            const { project_number, email, full_name } = projectResult.rows[0];
+            // Check preferences (using email_project_update)
+            const userIdResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+            // If user not found (unlikely), default to send
+            let emailEnabled = true;
+            if (userIdResult.rows.length > 0) {
+              const prefResult = await client.query(
+                `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
+                [userIdResult.rows[0].id]
+              );
+              emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_project_update;
+            }
+
+            if (emailEnabled) {
+              await sendFinalDeliverablesEmail({
+                to: email,
+                clientName: full_name,
+                projectNumber: project_number,
+                deliverableName: updatedDeliverable.name,
+                downloadUrl: `${process.env.URL}/projects/${project_number}?tab=deliverables`,
+                expiryDays: 365
+              });
+              console.log('✅ Final deliverables email sent to:', email);
+            } else {
+              console.log('Skipped final deliverables email to:', email, '(disabled in preferences)');
+            }
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send final deliverables email:', emailError);
+        }
+      }
+
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(result.rows[0]),
+        body: JSON.stringify(updatedDeliverable),
       };
     }
 

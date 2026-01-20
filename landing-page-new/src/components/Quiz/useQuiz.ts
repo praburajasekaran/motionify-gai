@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { createInquiry, type ContactInfo, type Inquiry } from "../../lib/inquiries";
+import { requestInquiryVerification, type ContactInfo, type Inquiry } from "../../lib/inquiries";
 
 export type QuizSelections = {
   niche: string | null;
@@ -27,9 +27,11 @@ const INITIAL: QuizSelections = {
 };
 
 export function useQuiz() {
-  const [current, setCurrent] = useState<number>(-1); // -1 = welcome, 0-4 = quiz, 5 = contact, 6 = success
+  const [current, setCurrent] = useState<number>(-1); // -1 = welcome, 0-4 = quiz, 5 = contact, 6 = success/verify
   const [selections, setSelections] = useState<QuizSelections>(INITIAL);
   const [submittedInquiry, setSubmittedInquiry] = useState<Inquiry | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [contactEmail, setContactEmail] = useState<string | null>(null);
   const total = 5; // Number of quiz questions (doesn't include contact form or success)
 
   const startQuiz = useCallback(() => {
@@ -48,6 +50,8 @@ export function useQuiz() {
   const reset = useCallback(() => {
     setSelections(INITIAL);
     setSubmittedInquiry(null);
+    setVerificationSent(false);
+    setContactEmail(null);
     setCurrent(-1);
   }, []);
 
@@ -67,17 +71,17 @@ export function useQuiz() {
 
   const submitInquiry = useCallback(async (contactInfo: ContactInfo, recommendedVideoType: string) => {
     try {
-      const inquiry = await createInquiry({
+      await requestInquiryVerification({
         quizAnswers: selections,
         contactInfo,
         recommendedVideoType,
       });
 
-      setSubmittedInquiry(inquiry);
+      setContactEmail(contactInfo.contactEmail);
+      setVerificationSent(true);
       setCurrent(6);
-      return inquiry;
     } catch (error) {
-      console.error('Error creating inquiry:', error);
+      console.error('Error requesting inquiry verification:', error);
       throw error;
     }
   }, [selections]);
@@ -98,10 +102,7 @@ export function useQuiz() {
     showContactForm,
     submitInquiry,
     submittedInquiry,
+    verificationSent,
+    contactEmail,
   };
 }
-
-
-
-
-

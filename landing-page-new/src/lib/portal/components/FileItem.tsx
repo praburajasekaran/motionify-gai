@@ -20,17 +20,18 @@ const formatBytes = (bytes: number, decimals = 2) => {
 };
 
 const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return '🖼️';
-    if (fileType.startsWith('video/')) return '🎬';
-    if (fileType === 'application/pdf') return '📄';
-    if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
-    return '📁';
+  if (fileType.startsWith('image/')) return '🖼️';
+  if (fileType.startsWith('video/')) return '🎬';
+  if (fileType === 'application/pdf') return '📄';
+  if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
+  return '📁';
 };
 
 const FileItem: React.FC<FileItemProps> = ({ file }) => {
   const { renameFile, addFileComment } = useContext(AppContext);
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(file.name);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [isCommentsVisible, setIsCommentsVisible] = useState(false);
   const [newComment, setNewComment] = useState('');
 
@@ -49,14 +50,31 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  
+
   const handleRename = () => {
+    setRenameError(null);
     if (newName.trim() && newName.trim() !== file.name) {
-      renameFile(file.id, newName.trim());
+      const result = renameFile(file.id, newName.trim());
+      if (!result.success && result.error) {
+        setRenameError(result.error);
+        return; // Keep editing mode open to fix the error
+      }
     }
     setIsEditing(false);
   };
-  
+
+  const handleStartEditing = () => {
+    setNewName(file.name);
+    setRenameError(null);
+    setIsEditing(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+    setNewName(file.name);
+    setRenameError(null);
+  };
+
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -72,23 +90,31 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
           <span className="text-2xl mt-1">{getFileIcon(file.type)}</span>
           <div className="flex-grow">
             {isEditing ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="block w-full shadow-sm sm:text-sm bg-white/5 border border-white/10 rounded-lg text-white px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                  autoFocus
-                />
-                <Button onClick={handleRename} className="px-3 py-1.5 text-xs">Save</Button>
-                <Button onClick={() => { setIsEditing(false); setNewName(file.name); }} variant="secondary" className="px-3 py-1.5 text-xs">Cancel</Button>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => { setNewName(e.target.value); setRenameError(null); }}
+                    className={`block w-full shadow-sm sm:text-sm bg-white/5 border rounded-lg text-white px-3 py-2 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 ${renameError ? 'border-red-500' : 'border-white/10'}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRename();
+                      if (e.key === 'Escape') handleCancelEditing();
+                    }}
+                    autoFocus
+                  />
+                  <Button onClick={handleRename} className="px-3 py-1.5 text-xs">Save</Button>
+                  <Button onClick={handleCancelEditing} variant="secondary" className="px-3 py-1.5 text-xs">Cancel</Button>
+                </div>
+                {renameError && (
+                  <p className="text-xs text-red-400">{renameError}</p>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2 group">
                 <p className="font-semibold text-white">{file.name}</p>
-                <button onClick={() => setIsEditing(true)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/10 text-white/70">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                <button onClick={handleStartEditing} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/10 text-white/70">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                   <span className="sr-only">Rename file</span>
                 </button>
               </div>

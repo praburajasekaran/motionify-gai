@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    ChevronLeft, Trash2, Archive, Plus, X, 
+import { useAuthContext } from '../contexts/AuthContext';
+import { validateProjectStatusTransition } from '../utils/projectStateTransitions';
+import {
+    ChevronLeft, Trash2, Archive, Plus, X,
     Layout, Users, Clock, ShieldAlert, Layers, Check,
     Search, ArrowUpDown, Crown, History, PlusCircle, MinusCircle, FileBox, CheckCircle2,
     AlertCircle
 } from 'lucide-react';
-import { 
-    Button, Input, Label, Textarea, Select, 
+import {
+    Button, Input, Label, Textarea, Select,
     Card, CardContent, CardHeader, CardTitle, CardDescription,
     Separator, Avatar, Slider, cn, Badge,
     Dialog, DialogHeader, DialogFooter, useToast,
@@ -32,8 +34,8 @@ const SettingsNav = ({ active, onClick, icon: Icon, children, description, varia
         aria-selected={active}
         className={cn(
             "group w-full flex items-start gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-left border border-transparent",
-            active 
-                ? variant === 'destructive' 
+            active
+                ? variant === 'destructive'
                     ? "bg-red-50 text-red-700 border-red-100 shadow-sm"
                     : "bg-white text-primary border-zinc-200 shadow-sm"
                 : variant === 'destructive'
@@ -41,8 +43,8 @@ const SettingsNav = ({ active, onClick, icon: Icon, children, description, varia
                     : "text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground"
         )}
     >
-        <div className={cn("mt-0.5 p-1.5 rounded-lg transition-colors", 
-            active 
+        <div className={cn("mt-0.5 p-1.5 rounded-lg transition-colors",
+            active
                 ? variant === 'destructive' ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
                 : "bg-transparent text-muted-foreground group-hover:text-foreground group-hover:bg-zinc-200/50"
         )}>
@@ -62,31 +64,45 @@ export const ProjectSettings = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [isLoading, setIsLoading] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
-    
+
     // Deletion Confirmation State
     const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'deliverable' | 'team', id: string } | null>(null);
     const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
 
+    // Archive Confirmation State
+    const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+    const [archiveConfirmInput, setArchiveConfirmInput] = useState('');
+
+    // Delete Confirmation State
+    const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+
+    // Get current user for permission checks
+    const { user } = useAuthContext();
+    const isSuperAdmin = user?.role === 'super_admin';
+
     // Team Sorting & Filtering
     const [teamFilter, setTeamFilter] = useState('');
     const [teamSort, setTeamSort] = useState<{ key: keyof User | 'role', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
-    
+
     const [project, setProject] = useState<Project | null>(null);
+
+    // Check if project is archived (read-only mode)
+    const isArchived = project?.status === 'Archived';
 
     useEffect(() => {
         const found = MOCK_PROJECTS.find(p => p.id === id);
         if (found) {
             // Deep copy to ensure we don't mutate the mock data until save
-            setProject(JSON.parse(JSON.stringify(found))); 
+            setProject(JSON.parse(JSON.stringify(found)));
             setIsDirty(false);
         }
     }, [id]);
 
     if (!project) return (
-        <ErrorState 
-            title="Project not found" 
-            description="Unable to load project settings." 
-            fullPage 
+        <ErrorState
+            title="Project not found"
+            description="Unable to load project settings."
+            fullPage
             onRetry={() => navigate('/projects')}
             retryLabel="Return to Projects"
         />
@@ -115,25 +131,65 @@ export const ProjectSettings = () => {
     };
 
     const confirmDeleteProject = () => {
+        // Validate confirmation input
+        if (deleteConfirmInput !== project.title) return;
+
         const index = MOCK_PROJECTS.findIndex(p => p.id === project.id);
         if (index !== -1) {
             MOCK_PROJECTS.splice(index, 1);
         }
         setShowDeleteProjectDialog(false);
+        setDeleteConfirmInput('');
         navigate('/projects');
+
+        // Audit log notification (mocked)
+        addToast({
+            title: "Audit Log Created",
+            description: `Project deletion logged: '${project.title}' deleted by ${user?.name || 'Admin'}`,
+            variant: "default"
+        });
+
+        // Email notification to team (mocked)
+        addToast({
+            title: "Team Notified",
+            description: "Email notification sent to all team members about project deletion.",
+            variant: "default"
+        });
+
+        // Final deletion confirmation
         addToast({
             title: "Project Deleted",
-            description: "The project has been permanently removed.",
+            description: "The project and all associated data have been permanently removed.",
             variant: "destructive"
         });
     };
 
     const handleArchiveProject = () => {
-        navigate('/projects');
+        // Validate transition
+        const validation = validateProjectStatusTransition(project.status, 'Archived');
+        if (!validation.isValid) {
+            addToast({
+                title: "Invalid Transition",
+                description: validation.error || "Cannot archive project from current status.",
+                variant: "destructive"
+            });
+            setShowArchiveDialog(false);
+            setArchiveConfirmInput('');
+            return;
+        }
+
+        // Update status in MOCK_PROJECTS
+        const index = MOCK_PROJECTS.findIndex(p => p.id === project.id);
+        if (index !== -1) {
+            MOCK_PROJECTS[index] = { ...project, status: 'Archived' };
+        }
+        setProject({ ...project, status: 'Archived' });
+        setShowArchiveDialog(false);
+        setArchiveConfirmInput('');
         addToast({
             title: "Project Archived",
-            description: "Project moved to archive.",
-            variant: "default"
+            description: "Project has been archived. Notification email sent to team members.",
+            variant: "success"
         });
     };
 
@@ -141,7 +197,7 @@ export const ProjectSettings = () => {
         markDirty();
         setProject(prev => {
             if (!prev) return null;
-            const newDeliverables = prev.deliverables.map(d => 
+            const newDeliverables = prev.deliverables.map(d =>
                 d.id === id ? { ...d, [field]: value } : d
             );
             return { ...prev, deliverables: newDeliverables };
@@ -152,7 +208,7 @@ export const ProjectSettings = () => {
         markDirty();
         setProject(prev => {
             if (!prev) return null;
-            const newTeam = prev.team.map(u => 
+            const newTeam = prev.team.map(u =>
                 u.id === userId ? { ...u, role: newRole } : u
             );
             return { ...prev, team: newTeam };
@@ -169,26 +225,26 @@ export const ProjectSettings = () => {
     };
 
     const addTeamMember = () => {
-         // Mock adding a random member not already in team
-         const available = TEAM_MEMBERS.filter(m => !project.team.find(t => t.id === m.id));
-         if (available.length > 0) {
-             markDirty();
-             setProject(prev => {
-                 if (!prev) return null;
-                 return { ...prev, team: [...prev.team, available[0]] };
-             });
-         } else {
-             addToast({ title: "No Members Available", description: "All mock users are already in the team.", variant: "destructive" });
-         }
+        // Mock adding a random member not already in team
+        const available = TEAM_MEMBERS.filter(m => !project.team.find(t => t.id === m.id));
+        if (available.length > 0) {
+            markDirty();
+            setProject(prev => {
+                if (!prev) return null;
+                return { ...prev, team: [...prev.team, available[0]] };
+            });
+        } else {
+            addToast({ title: "No Members Available", description: "All mock users are already in the team.", variant: "destructive" });
+        }
     };
 
     const confirmRemoveDeliverable = (delId: string) => {
         markDirty();
         setProject(prev => {
             if (!prev) return null;
-            return { 
-                ...prev, 
-                deliverables: prev.deliverables.filter(d => d.id !== delId) 
+            return {
+                ...prev,
+                deliverables: prev.deliverables.filter(d => d.id !== delId)
             };
         });
         setDeleteConfirm(null);
@@ -196,13 +252,13 @@ export const ProjectSettings = () => {
 
     const addDeliverable = () => {
         markDirty();
-        const newDel: any = { 
-            id: 'd-' + Math.random().toString(36).substr(2, 9), 
-            title: 'New Deliverable', 
-            type: 'Video', 
-            status: 'Draft', 
-            progress: 0, 
-            dueDate: new Date().toISOString() 
+        const newDel: any = {
+            id: 'd-' + Math.random().toString(36).substr(2, 9),
+            title: 'New Deliverable',
+            type: 'Video',
+            status: 'Draft',
+            progress: 0,
+            dueDate: new Date().toISOString()
         };
         setProject(prev => {
             if (!prev) return null;
@@ -210,21 +266,43 @@ export const ProjectSettings = () => {
         });
     }
 
+    const handleStatusChange = (newStatus: ProjectStatus) => {
+        const validation = validateProjectStatusTransition(project.status, newStatus);
+
+        if (!validation.isValid) {
+            addToast({
+                title: "Invalid Transition",
+                description: validation.error,
+                variant: "destructive"
+            });
+            return;
+        }
+
+        updateGeneral('status', newStatus);
+
+        // Mock Notifications
+        addToast({
+            title: "Status Updated",
+            description: `Project status changed to ${newStatus}. Team notified.`,
+            variant: "default"
+        });
+    };
+
     const updateGeneral = (field: keyof Project, value: any) => {
         markDirty();
         setProject(prev => prev ? { ...prev, [field]: value } : null);
     };
 
     // Filter and Sort Team
-    const filteredTeam = project.team.filter(user => 
-        user.name.toLowerCase().includes(teamFilter.toLowerCase()) || 
+    const filteredTeam = project.team.filter(user =>
+        user.name.toLowerCase().includes(teamFilter.toLowerCase()) ||
         user.email?.toLowerCase().includes(teamFilter.toLowerCase())
     );
 
     const sortedTeam = [...filteredTeam].sort((a, b) => {
         const aValue = a[teamSort.key as keyof User] || '';
         const bValue = b[teamSort.key as keyof User] || '';
-        
+
         if (aValue < bValue) return teamSort.direction === 'asc' ? -1 : 1;
         if (aValue > bValue) return teamSort.direction === 'asc' ? 1 : -1;
         return 0;
@@ -240,53 +318,99 @@ export const ProjectSettings = () => {
     return (
         <div className="max-w-[1400px] mx-auto pb-20 space-y-8 animate-in fade-in duration-500">
             {/* Delete Project Dialog */}
-            <Dialog open={showDeleteProjectDialog} onOpenChange={setShowDeleteProjectDialog}>
+            <Dialog open={showDeleteProjectDialog} onOpenChange={(open) => { setShowDeleteProjectDialog(open); if (!open) setDeleteConfirmInput(''); }}>
                 <DialogHeader>
-                    <CardTitle className="text-destructive">Delete Project?</CardTitle>
+                    <CardTitle className="text-destructive">Delete Project Permanently?</CardTitle>
                     <CardDescription>
-                        This action cannot be undone. This will permanently delete <b>{project.title}</b> and remove all data associated with it.
+                        This action <b>cannot be undone</b>. This will permanently delete <b>{project.title}</b> and remove all associated data including tasks, files, and comments.
                     </CardDescription>
                 </DialogHeader>
-                <div className="py-4">
-                     <p className="text-sm text-muted-foreground">Please confirm you want to delete this project.</p>
+                <div className="py-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                        To confirm, type the project name: <b className="text-foreground">{project.title}</b>
+                    </p>
+                    <Input
+                        placeholder="Type project name to confirm..."
+                        value={deleteConfirmInput}
+                        onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                        className="font-medium"
+                    />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowDeleteProjectDialog(false)}>Cancel</Button>
-                    <Button variant="destructive" onClick={confirmDeleteProject}>Yes, Delete Project</Button>
+                    <Button variant="outline" onClick={() => { setShowDeleteProjectDialog(false); setDeleteConfirmInput(''); }}>Cancel</Button>
+                    <Button
+                        variant="destructive"
+                        onClick={confirmDeleteProject}
+                        disabled={deleteConfirmInput !== project.title}
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" /> Yes, Delete Permanently
+                    </Button>
+                </DialogFooter>
+            </Dialog>
+
+            {/* Archive Project Dialog */}
+            <Dialog open={showArchiveDialog} onOpenChange={(open) => { setShowArchiveDialog(open); if (!open) setArchiveConfirmInput(''); }}>
+                <DialogHeader>
+                    <CardTitle className="text-amber-700">Archive Project?</CardTitle>
+                    <CardDescription>
+                        This will hide <b>{project.title}</b> from the active project list. The project will be preserved in read-only mode and can be viewed via the "Archived" filter.
+                    </CardDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                        To confirm, type the project name: <b className="text-foreground">{project.title}</b>
+                    </p>
+                    <Input
+                        placeholder="Type project name to confirm..."
+                        value={archiveConfirmInput}
+                        onChange={(e) => setArchiveConfirmInput(e.target.value)}
+                        className="font-medium"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { setShowArchiveDialog(false); setArchiveConfirmInput(''); }}>Cancel</Button>
+                    <Button
+                        variant="default"
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                        onClick={handleArchiveProject}
+                        disabled={archiveConfirmInput !== project.title}
+                    >
+                        <Archive className="h-4 w-4 mr-2" /> Archive Project
+                    </Button>
                 </DialogFooter>
             </Dialog>
 
             {/* Improved Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/60 pb-6">
                 <div>
-                     <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3">
                         <Button variant="ghost" size="sm" className="h-6 px-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => navigate(`/projects/${id}`)}>
                             <ChevronLeft className="h-3 w-3 mr-1" /> Back to Project
                         </Button>
-                     </div>
+                    </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
                         <div className="h-6 w-px bg-border mx-2 hidden sm:block"></div>
                         <span className="text-lg text-muted-foreground font-medium hidden sm:block">{project.title}</span>
                     </div>
                 </div>
-                
+
                 {/* Actions Area */}
                 <div className="flex items-center gap-4 bg-card p-2 pr-2.5 rounded-2xl border border-border shadow-sm">
-                     <div className={cn(
-                         "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-                         isDirty ? "bg-amber-50 text-amber-700" : "bg-zinc-50 text-zinc-500"
-                     )}>
+                    <div className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                        isDirty ? "bg-amber-50 text-amber-700" : "bg-zinc-50 text-zinc-500"
+                    )}>
                         <div className={cn("h-1.5 w-1.5 rounded-full", isDirty ? "bg-amber-500 animate-pulse" : "bg-zinc-300")} />
                         {isDirty ? 'Unsaved Changes' : 'Up to date'}
-                     </div>
-                     <Button 
-                        onClick={handleSave} 
-                        disabled={isLoading || !isDirty} 
+                    </div>
+                    <Button
+                        onClick={handleSave}
+                        disabled={isLoading || !isDirty || isArchived}
                         className={cn("shadow-sm transition-all h-9 rounded-xl px-5 font-semibold", isDirty ? "shadow-primary/20" : "")}
-                     >
-                        {isLoading ? 'Saving...' : 'Save Changes'}
-                     </Button>
+                    >
+                        {isArchived ? 'Archived (Read-Only)' : isLoading ? 'Saving...' : 'Save Changes'}
+                    </Button>
                 </div>
             </div>
 
@@ -299,33 +423,33 @@ export const ProjectSettings = () => {
                                 Configuration
                             </div>
                             <nav className="space-y-1">
-                                <SettingsNav 
-                                    active={activeTab === 'general'} 
-                                    onClick={() => setActiveTab('general')} 
+                                <SettingsNav
+                                    active={activeTab === 'general'}
+                                    onClick={() => setActiveTab('general')}
                                     icon={Layout}
                                     description="Basics & Identity"
                                 >
                                     General
                                 </SettingsNav>
-                                <SettingsNav 
-                                    active={activeTab === 'deliverables'} 
-                                    onClick={() => setActiveTab('deliverables')} 
+                                <SettingsNav
+                                    active={activeTab === 'deliverables'}
+                                    onClick={() => setActiveTab('deliverables')}
                                     icon={Layers}
                                     description="Outputs & Assets"
                                 >
                                     Deliverables
                                 </SettingsNav>
-                                <SettingsNav 
-                                    active={activeTab === 'team'} 
-                                    onClick={() => setActiveTab('team')} 
+                                <SettingsNav
+                                    active={activeTab === 'team'}
+                                    onClick={() => setActiveTab('team')}
                                     icon={Users}
                                     description="Members & Roles"
                                 >
                                     Team
                                 </SettingsNav>
-                                <SettingsNav 
-                                    active={activeTab === 'revisions'} 
-                                    onClick={() => setActiveTab('revisions')} 
+                                <SettingsNav
+                                    active={activeTab === 'revisions'}
+                                    onClick={() => setActiveTab('revisions')}
                                     icon={Clock}
                                     description="Limits & History"
                                 >
@@ -339,10 +463,10 @@ export const ProjectSettings = () => {
                                 Advanced
                             </div>
                             <nav className="space-y-1">
-                                <SettingsNav 
-                                    active={activeTab === 'danger'} 
-                                    onClick={() => setActiveTab('danger')} 
-                                    icon={ShieldAlert} 
+                                <SettingsNav
+                                    active={activeTab === 'danger'}
+                                    onClick={() => setActiveTab('danger')}
+                                    icon={ShieldAlert}
                                     variant="destructive"
                                     description="Archive or Delete"
                                 >
@@ -367,10 +491,10 @@ export const ProjectSettings = () => {
                                     <div className="grid gap-6">
                                         <div className="space-y-2">
                                             <Label className="text-foreground/80" htmlFor="project-title">Project Title</Label>
-                                            <Input 
+                                            <Input
                                                 id="project-title"
-                                                value={project.title} 
-                                                onChange={e => updateGeneral('title', e.target.value)} 
+                                                value={project.title}
+                                                onChange={e => updateGeneral('title', e.target.value)}
                                                 className="font-medium text-lg h-11"
                                             />
                                         </div>
@@ -386,10 +510,10 @@ export const ProjectSettings = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-foreground/80" htmlFor="description">Description</Label>
-                                            <Textarea 
+                                            <Textarea
                                                 id="description"
-                                                value={project.description} 
-                                                onChange={e => updateGeneral('description', e.target.value)} 
+                                                value={project.description}
+                                                onChange={e => updateGeneral('description', e.target.value)}
                                                 rows={4}
                                                 className="resize-none"
                                             />
@@ -409,15 +533,15 @@ export const ProjectSettings = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="space-y-2">
                                             <Label className="text-foreground/80">Current Status</Label>
-                                            <Select 
-                                                value={project.status} 
+                                            <Select
+                                                value={project.status}
                                                 options={[
                                                     { label: 'Active', value: 'Active' },
                                                     { label: 'In Review', value: 'In Review' },
                                                     { label: 'Completed', value: 'Completed' },
                                                     { label: 'On Hold', value: 'On Hold' },
                                                 ]}
-                                                onValueChange={(v) => updateGeneral('status', v as ProjectStatus)}
+                                                onValueChange={(v) => handleStatusChange(v as ProjectStatus)}
                                                 className="w-full"
                                             />
                                         </div>
@@ -436,9 +560,9 @@ export const ProjectSettings = () => {
                     )}
 
                     {activeTab === 'deliverables' && (
-                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                             {/* Stats Bar */}
-                             <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                            {/* Stats Bar */}
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-white p-4 rounded-xl border border-border shadow-sm flex flex-col">
                                     <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Total Items</span>
                                     <span className="text-2xl font-bold">{project.deliverables.length}</span>
@@ -451,7 +575,7 @@ export const ProjectSettings = () => {
                                     <span className="text-blue-600/80 text-xs font-medium uppercase tracking-wider mb-1">Pending</span>
                                     <span className="text-2xl font-bold text-blue-700">{project.deliverables.filter(d => d.status !== 'Approved').length}</span>
                                 </div>
-                             </div>
+                            </div>
 
                             <Card className="border-border/60 shadow-sm overflow-hidden">
                                 <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 bg-muted/20 pb-4">
@@ -478,16 +602,16 @@ export const ProjectSettings = () => {
                                                 {project.deliverables.map((del) => (
                                                     <tr key={del.id} className="group hover:bg-zinc-50 transition-colors">
                                                         <td className="px-6 py-3 align-middle">
-                                                            <Input 
+                                                            <Input
                                                                 aria-label="Deliverable Title"
-                                                                value={del.title} 
+                                                                value={del.title}
                                                                 onChange={(e) => updateDeliverable(del.id, 'title', e.target.value)}
                                                                 className="border-transparent shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-white bg-transparent hover:bg-white/50 transition-all h-9 px-2 -ml-2 font-medium text-foreground rounded-md"
                                                                 placeholder="Deliverable Title"
                                                             />
                                                         </td>
                                                         <td className="px-6 py-3 align-middle">
-                                                            <Select 
+                                                            <Select
                                                                 value={del.type}
                                                                 onValueChange={(v) => updateDeliverable(del.id, 'type', v)}
                                                                 options={[
@@ -499,7 +623,7 @@ export const ProjectSettings = () => {
                                                             />
                                                         </td>
                                                         <td className="px-6 py-3 align-middle relative z-10">
-                                                            <Select 
+                                                            <Select
                                                                 value={del.status}
                                                                 onValueChange={(v) => updateDeliverable(del.id, 'status', v)}
                                                                 options={[
@@ -508,27 +632,27 @@ export const ProjectSettings = () => {
                                                                     { label: 'Approved', value: 'Approved' }
                                                                 ]}
                                                                 triggerClassName={cn(
-                                                                    "h-7 border-none shadow-none text-xs w-auto px-3 rounded-full font-medium transition-colors inline-flex", 
+                                                                    "h-7 border-none shadow-none text-xs w-auto px-3 rounded-full font-medium transition-colors inline-flex",
                                                                     del.status === 'Approved' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 ring-1 ring-emerald-500/20" :
-                                                                    del.status === 'In Review' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 ring-1 ring-amber-500/20" :
-                                                                    "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 ring-1 ring-zinc-500/20"
+                                                                        del.status === 'In Review' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 ring-1 ring-amber-500/20" :
+                                                                            "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 ring-1 ring-zinc-500/20"
                                                                 )}
                                                             />
                                                         </td>
                                                         <td className="px-6 py-3 text-right align-middle relative z-20">
                                                             {deleteConfirm?.type === 'deliverable' && deleteConfirm.id === del.id ? (
                                                                 <div className="flex items-center justify-end gap-1 animate-in slide-in-from-right-2 fade-in">
-                                                                    <Button 
-                                                                        variant="destructive" 
-                                                                        size="icon" 
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="icon"
                                                                         className="h-8 w-8 shadow-sm"
                                                                         onClick={() => confirmRemoveDeliverable(del.id)}
                                                                     >
                                                                         <Check className="h-4 w-4" />
                                                                     </Button>
-                                                                    <Button 
-                                                                        variant="outline" 
-                                                                        size="icon" 
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
                                                                         className="h-8 w-8 bg-white"
                                                                         onClick={() => setDeleteConfirm(null)}
                                                                     >
@@ -536,10 +660,10 @@ export const ProjectSettings = () => {
                                                                     </Button>
                                                                 </div>
                                                             ) : (
-                                                                <Button 
+                                                                <Button
                                                                     type="button"
-                                                                    variant="ghost" 
-                                                                    size="icon" 
+                                                                    variant="ghost"
+                                                                    size="icon"
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
@@ -558,8 +682,8 @@ export const ProjectSettings = () => {
                                                 {project.deliverables.length === 0 && (
                                                     <tr>
                                                         <td colSpan={4}>
-                                                            <EmptyState 
-                                                                title="No deliverables" 
+                                                            <EmptyState
+                                                                title="No deliverables"
                                                                 description="Manage the expected outputs for this project here."
                                                                 icon={Layers}
                                                                 action={<Button variant="link" onClick={addDeliverable}>Create one now</Button>}
@@ -578,8 +702,8 @@ export const ProjectSettings = () => {
 
                     {activeTab === 'team' && (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                             <Card className="border-border/60 shadow-sm overflow-hidden">
-                                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 bg-muted/20 pb-4">
+                            <Card className="border-border/60 shadow-sm overflow-hidden">
+                                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 bg-muted/20 pb-4">
                                     <div>
                                         <CardTitle>Team Management</CardTitle>
                                         <CardDescription>Control who has access to this project.</CardDescription>
@@ -587,9 +711,9 @@ export const ProjectSettings = () => {
                                     <div className="flex items-center gap-2 w-full sm:w-auto">
                                         <div className="relative flex-1 sm:w-64">
                                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input 
-                                                placeholder="Search team..." 
-                                                value={teamFilter} 
+                                            <Input
+                                                placeholder="Search team..."
+                                                value={teamFilter}
                                                 onChange={(e) => setTeamFilter(e.target.value)}
                                                 className="pl-9 h-9 bg-white"
                                             />
@@ -657,17 +781,17 @@ export const ProjectSettings = () => {
                                                         <td className="px-6 py-3 align-middle text-right">
                                                             {deleteConfirm?.type === 'team' && deleteConfirm.id === user.id ? (
                                                                 <div className="flex items-center justify-end gap-1 animate-in slide-in-from-right-2 fade-in">
-                                                                    <Button 
-                                                                        variant="destructive" 
-                                                                        size="icon" 
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="icon"
                                                                         className="h-8 w-8 shadow-sm"
                                                                         onClick={() => confirmRemoveTeamMember(user.id)}
                                                                     >
                                                                         <Check className="h-4 w-4" />
                                                                     </Button>
-                                                                    <Button 
-                                                                        variant="outline" 
-                                                                        size="icon" 
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
                                                                         className="h-8 w-8 bg-white"
                                                                         onClick={() => setDeleteConfirm(null)}
                                                                     >
@@ -675,10 +799,10 @@ export const ProjectSettings = () => {
                                                                     </Button>
                                                                 </div>
                                                             ) : (
-                                                                <Button 
+                                                                <Button
                                                                     type="button"
-                                                                    variant="ghost" 
-                                                                    size="icon" 
+                                                                    variant="ghost"
+                                                                    size="icon"
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
@@ -696,8 +820,8 @@ export const ProjectSettings = () => {
                                                 {sortedTeam.length === 0 && (
                                                     <tr>
                                                         <td colSpan={4}>
-                                                            <EmptyState 
-                                                                title="No team members" 
+                                                            <EmptyState
+                                                                title="No team members"
                                                                 description="Add team members to collaborate on this project."
                                                                 icon={Users}
                                                                 action={<Button variant="outline" size="sm" onClick={addTeamMember}>Add Member</Button>}
@@ -728,7 +852,7 @@ export const ProjectSettings = () => {
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-gradient-to-br from-white to-zinc-50 border-border/60 shadow-sm relative overflow-hidden">
-                                     <div className="absolute top-0 right-0 p-3 opacity-10">
+                                    <div className="absolute top-0 right-0 p-3 opacity-10">
                                         <Layers className="w-16 h-16" />
                                     </div>
                                     <CardContent className="p-6 flex flex-col items-center justify-center text-center relative z-10">
@@ -800,7 +924,7 @@ export const ProjectSettings = () => {
                             {/* History Mock */}
                             <Card className="border-border/60 shadow-sm">
                                 <CardHeader className="border-b border-border/40 pb-4">
-                                     <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2">
                                         <History className="h-5 w-5 text-muted-foreground" />
                                         <CardTitle>History Log</CardTitle>
                                     </div>
@@ -813,7 +937,7 @@ export const ProjectSettings = () => {
                                             { action: 'Revision Used (Deliverable #1)', user: 'Sarah Chen', date: '3 days ago', icon: CheckCircle2, color: 'text-blue-600 bg-blue-50' },
                                             { action: 'Initial Limit Set (3)', user: 'System', date: '1 week ago', icon: Layout, color: 'text-zinc-600 bg-zinc-50' },
                                         ].map((log, i) => (
-                                                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                                            <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
                                                 <div className="flex items-center gap-4">
                                                     <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", log.color)}>
                                                         <log.icon className="h-4 w-4" />
@@ -835,7 +959,7 @@ export const ProjectSettings = () => {
                     )}
 
                     {activeTab === 'danger' && (
-                         <Card className="border-red-200 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                        <Card className="border-red-200 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
                             <CardHeader className="bg-red-50/30 border-b border-red-100 pb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-red-100 text-red-600 rounded-lg">
@@ -851,25 +975,41 @@ export const ProjectSettings = () => {
                                 <div className="flex items-center justify-between p-6 hover:bg-red-50/10 transition-colors">
                                     <div className="space-y-1">
                                         <h4 className="font-medium text-foreground">Archive Project</h4>
-                                        <p className="text-sm text-muted-foreground max-w-md">Hide this project from the active list. It can be restored later from the archive.</p>
+                                        <p className="text-sm text-muted-foreground max-w-md">
+                                            {isArchived
+                                                ? "This project is already archived."
+                                                : "Hide this project from the active list. It can be restored later from the archive."}
+                                        </p>
                                     </div>
-                                    <Button 
-                                        variant="outline" 
-                                        onClick={handleArchiveProject}
-                                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300"
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowArchiveDialog(true)}
+                                        disabled={isArchived}
+                                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300 disabled:opacity-50"
                                     >
-                                        <Archive className="h-4 w-4 mr-2" /> Archive Project
+                                        <Archive className="h-4 w-4 mr-2" /> {isArchived ? 'Already Archived' : 'Archive Project'}
                                     </Button>
                                 </div>
-                                <div className="flex items-center justify-between p-6 bg-red-50/20">
-                                    <div className="space-y-1">
-                                        <h4 className="font-medium text-red-900">Delete Project</h4>
-                                        <p className="text-sm text-red-700/70 max-w-md">Permanently remove this project and all its data. This action cannot be undone.</p>
+                                {isSuperAdmin && (
+                                    <div className="flex items-center justify-between p-6 bg-red-50/20">
+                                        <div className="space-y-1">
+                                            <h4 className="font-medium text-red-900">Delete Project</h4>
+                                            <p className="text-sm text-red-700/70 max-w-md">
+                                                {isArchived
+                                                    ? "Permanently remove this archived project and all its data. This action cannot be undone."
+                                                    : "Only archived projects can be deleted. Archive this project first."}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="destructive"
+                                            className="bg-red-600 hover:bg-red-700 shadow-sm shadow-red-200"
+                                            onClick={() => setShowDeleteProjectDialog(true)}
+                                            disabled={!isArchived}
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" /> Delete Project
+                                        </Button>
                                     </div>
-                                    <Button variant="destructive" className="bg-red-600 hover:bg-red-700 shadow-sm shadow-red-200" onClick={() => setShowDeleteProjectDialog(true)}>
-                                        <Trash2 className="h-4 w-4 mr-2" /> Delete Project
-                                    </Button>
-                                </div>
+                                )}
                             </CardContent>
                         </Card>
                     )}

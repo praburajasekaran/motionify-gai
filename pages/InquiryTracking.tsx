@@ -51,11 +51,23 @@ export function InquiryTracking() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (inquiryNumber) {
-      const foundInquiry = getInquiryByNumber(inquiryNumber);
-      setInquiry(foundInquiry);
-      setLoading(false);
-    }
+    const fetchInquiry = async () => {
+      if (!inquiryNumber) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const foundInquiry = await getInquiryByNumber(inquiryNumber);
+        setInquiry(foundInquiry);
+      } catch (error) {
+        console.error('Error fetching inquiry:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInquiry();
   }, [inquiryNumber]);
 
   const formatDate = (dateString: string) => {
@@ -83,9 +95,9 @@ export function InquiryTracking() {
         {/* Header */}
         <header className="border-b border-white/10">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Link to="/landing" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
+            <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
               <ArrowLeft className="w-4 h-4" />
-              Back to Home
+              Back to Dashboard
             </Link>
           </div>
         </header>
@@ -121,9 +133,9 @@ export function InquiryTracking() {
       {/* Header */}
       <header className="border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link to="/landing" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
+          <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            Back to Dashboard
           </Link>
         </div>
       </header>

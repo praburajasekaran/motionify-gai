@@ -26,7 +26,7 @@ import { cn, Badge, Progress, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { generateThumbnail } from '../../utils/thumbnail';
-import { Upload, Loader2, Play } from 'lucide-react';
+import { Upload, Loader2, Play, CreditCard } from 'lucide-react';
 
 export interface DeliverableCardProps {
   deliverable: Deliverable;
@@ -292,6 +292,45 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     }
   };
 
+  const handlePayment = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const confirmPayment = window.confirm(
+      "Simulate payment for remaining 50% balance?\n\nThis will mark the deliverable as paid and release final files."
+    );
+
+    if (!confirmPayment) return;
+
+    setIsUploading(true); // Reuse loading state for payment processing
+
+    try {
+      // Updates status to final_delivered
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'final_delivered'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Payment processing failed');
+      }
+
+      alert('Payment successful! Final files are now available for download.');
+      // Ideally trigger a refresh, but strict React might require context update or key change
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   const getActionButton = () => {
     if (deliverable.status === 'final_delivered') {
@@ -318,6 +357,25 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         >
           <Eye className="h-4 w-4" />
           Review Beta
+        </Button>
+      );
+    }
+
+    if (deliverable.status === 'payment_pending') {
+      return (
+        <Button
+          variant="gradient"
+          size="sm"
+          className="gap-2"
+          onClick={handlePayment}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CreditCard className="h-4 w-4" />
+          )}
+          Pay Balance (50%)
         </Button>
       );
     }

@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
     Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox, Mail, Crown,
-    ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown
+    ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
+    Bell, BellOff, Settings, Share2, CreditCard
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
@@ -11,9 +12,22 @@ import {
     TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast, Switch
 } from '../components/ui/design-system';
 import { MOCK_PROJECTS, TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
-import { generateProjectTasks, analyzeProjectRisk } from '../services/geminiService';
+import { analyzeProjectRisk } from '../services/geminiService';
 import { ProjectStatus, Task } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
+import { TaskEditModal } from '../components/tasks/TaskEditModal';
+import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
+import { InviteModal } from '../components/team/InviteModal';
+import { useAuthContext } from '../contexts/AuthContext';
+import { FileUpload } from '../components/files/FileUpload';
+import { FileList } from '../components/files/FileList';
+import { ProjectFile } from '../types';
+import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
+import { MentionInput } from '../components/tasks/MentionInput';
+import { CommentItem } from '../components/tasks/CommentItem';
+import { PaymentHistory } from '../components/payments/PaymentHistory';
+import { TermsBanner } from '../components/project/TermsBanner';
 
 // --- Battery Component ---
 const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
@@ -79,6 +93,7 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
 export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
+    const { user } = useAuthContext();
     const project = MOCK_PROJECTS.find(p => p.id === id);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
@@ -103,25 +118,47 @@ export const ProjectDetail = () => {
 
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
-    const [aiTasks, setAiTasks] = useState<string[]>([]);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [riskAssessment, setRiskAssessment] = useState<string>('');
     const [newTaskInput, setNewTaskInput] = useState('');
     const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
+    const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
+    const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
+    const [editingTask, setEditingTask] = useState<Task | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    // Expandable comments state
+    const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+    const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
     const { addToast } = useToast();
 
-    // Sync tasks when project changes
+    // Check if current user is Primary Contact for this project
+    const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
+
+    // Load tasks from backend when project loads
     useEffect(() => {
-        if (project) {
-            setTasks(project.tasks);
-        }
+        if (!project?.id) return;
+
+        const loadTasks = async () => {
+            try {
+                const backendTasks = await fetchTasksForProject(project.id, true);
+                setTasks(backendTasks);
+            } catch (error) {
+                console.error('Failed to load tasks:', error);
+                // Fallback to mock data if API fails
+                setTasks(project.tasks || []);
+            }
+        };
+
+        loadTasks();
+        setProjectFiles(project.files || []);
     }, [project?.id]);
 
     // Auto-analysis on load
     useEffect(() => {
         if (project && !riskAssessment) {
             analyzeProjectRisk({ title: project.title, status: project.status, progress: project.progress, dueDate: project.dueDate })
-                .then(setRiskAssessment);
+                .then(setRiskAssessment)
+                .catch(err => console.warn('Gemini risk analysis failed:', err));
         }
     }, [project, riskAssessment]);
 
@@ -154,25 +191,219 @@ export const ProjectDetail = () => {
         );
     }
 
-    const handleGenerateTasks = async () => {
-        setIsGenerating(true);
-        const tasks = await generateProjectTasks(project.description, project.title);
-        setAiTasks(tasks);
-        setIsGenerating(false);
+
+
+    const handleAddTask = async () => {
+        if (!newTaskInput.trim() || !project) return;
+
+        try {
+            // Parse natural language input
+            const parsed = parseTaskInput(newTaskInput, project.team);
+
+            const newTask = await createTask({
+                project_id: project.id,
+                title: parsed.title,
+                description: parsed.title, // Use title as description for now
+                visible_to_client: true,
+                status: 'pending',
+                assignee_id: parsed.assigneeId,
+                deadline: parsed.deadline
+            });
+
+            setTasks([...tasks, newTask]);
+            setNewTaskInput('');
+
+            addToast({
+                title: 'Task Created',
+                description: 'Task has been created successfully',
+                variant: 'success'
+            });
+        } catch (error) {
+            console.error('Failed to create task:', error);
+            addToast({
+                title: 'Error',
+                description: 'Failed to create task. Please try again.',
+                variant: 'destructive'
+            });
+        }
     };
 
-    const handleAddTask = () => {
-        if (!newTaskInput.trim()) return;
+    const handleEditTask = (task: Task) => {
+        if (!user) {
+            addToast({
+                title: 'Error',
+                description: 'You must be logged in to edit tasks',
+                variant: 'destructive'
+            });
+            return;
+        }
 
-        const newTask: Task = {
-            id: `task-${Date.now()}`,
-            title: newTaskInput,
-            status: 'Todo',
-            assignee: TEAM_MEMBERS[0] // Default assign to current user
-        };
+        if (!canEditTask(user, task)) {
+            addToast({
+                title: 'Permission Denied',
+                description: 'You can only edit tasks assigned to you',
+                variant: 'destructive'
+            });
+            return;
+        }
 
-        setTasks([...tasks, newTask]);
-        setNewTaskInput('');
+        setEditingTask(task);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
+        try {
+            // Only send fields that exist in the backend API
+            const updatedTask = await updateTaskAPI(taskId, {
+                title: updates.title,
+                status: updates.status,
+                assigneeId: updates.assignee?.id,
+                visibleToClient: updates.visibleToClient
+            });
+
+            setTasks(prevTasks =>
+                prevTasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t)
+            );
+            setEditingTask(null);
+            setIsEditModalOpen(false);
+
+            addToast({
+                title: 'Task Updated',
+                description: 'Task has been updated successfully',
+                variant: 'success'
+            });
+        } catch (error) {
+            console.error('Failed to update task:', error);
+            addToast({
+                title: 'Error',
+                description: 'Failed to update task. Please try again.',
+                variant: 'destructive'
+            });
+        }
+    };
+
+    const handleFollowTask = async (task: Task) => {
+        if (!user) return;
+
+        const isFollowing = task.followers?.includes(user.id);
+        const originalTasks = [...tasks];
+
+        // Optimistic update
+        setTasks(prev => prev.map(t => {
+            if (t.id !== task.id) return t;
+
+            const newFollowers = isFollowing
+                ? (t.followers || []).filter(id => id !== user.id)
+                : [...(t.followers || []), user.id];
+
+            return { ...t, followers: newFollowers };
+        }));
+
+        try {
+            if (isFollowing) {
+                await unfollowTask(task.id, user.id);
+                addToast({
+                    title: "Unfollowed Task",
+                    description: "You will no longer receive notifications for this task.",
+                    variant: "default"
+                });
+            } else {
+                await followTask(task.id, user.id);
+                addToast({
+                    title: "Following Task",
+                    description: "You will now receive notifications for updates to this task.",
+                    variant: "success",
+                    icon: <Bell className="h-4 w-4 text-emerald-500" />
+                });
+            }
+        } catch (error) {
+            console.error('Failed to toggle follow state:', error);
+            // Revert on error
+            setTasks(originalTasks);
+            addToast({
+                title: "Error",
+                description: "Failed to update follow status",
+                variant: "destructive"
+            });
+        }
+    };
+
+    // Toggle comments expansion for a task
+    const toggleTaskComments = (taskId: string) => {
+        setExpandedComments(prev => {
+            const next = new Set(prev);
+            if (next.has(taskId)) {
+                next.delete(taskId);
+            } else {
+                next.add(taskId);
+            }
+            return next;
+        });
+    };
+
+    // Add a comment to a task
+    const handleAddComment = async (taskId: string) => {
+        const commentText = newCommentInput[taskId]?.trim();
+        if (!commentText || !user) return;
+
+        try {
+            // Call API
+            await addComment(taskId, {
+                user_id: user.id,
+                user_name: user.name,
+                content: commentText
+            });
+
+            // Optimistic update
+            const newComment = {
+                id: `comment-${Date.now()}`,
+                userId: user.id,
+                userName: user.name,
+                content: commentText,
+                timestamp: Date.now()
+            };
+
+            setTasks(prevTasks =>
+                prevTasks.map(t =>
+                    t.id === taskId
+                        ? { ...t, comments: [...(t.comments || []), newComment] }
+                        : t
+                )
+            );
+
+            // Clear input
+            setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
+
+            addToast({
+                title: 'Comment Added',
+                description: 'Your comment has been added.',
+                variant: 'success'
+            });
+        } catch (error) {
+            console.error('Failed to add comment:', error);
+            addToast({
+                title: 'Error',
+                description: 'Failed to add comment. Please try again.',
+                variant: 'destructive'
+            });
+        }
+    };
+
+    // Delete a comment
+    const handleDeleteComment = async (taskId: string, commentId: string) => {
+        setTasks(prevTasks =>
+            prevTasks.map(t =>
+                t.id === taskId
+                    ? { ...t, comments: (t.comments || []).filter(c => c.id !== commentId) }
+                    : t
+            )
+        );
+
+        addToast({
+            title: 'Comment Deleted',
+            description: 'The comment has been removed.',
+            variant: 'default'
+        });
     };
 
     const handleConvertToTask = (commentId: string, taskTitle: string, assigneeId: string) => {
@@ -197,6 +428,35 @@ export const ProjectDetail = () => {
         // navigate to tasks tab? No, let's just show toast.
     };
 
+    // File Upload Handler
+    const handleFileUploadComplete = (key: string, file: File) => {
+        const newFile: ProjectFile = {
+            id: `file-${Date.now()}`,
+            projectId: project.id,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            key: key,
+            uploadedBy: user || TEAM_MEMBERS[0],
+            uploadedAt: new Date().toISOString()
+        };
+
+        setProjectFiles(prev => [newFile, ...prev]);
+
+        addToast({
+            title: "File Uploaded",
+            description: `${file.name} has been uploaded successfully.`,
+            variant: "success"
+        });
+    };
+
+    // File Delete Handler (confirmation handled in FileList)
+    const handleFileDelete = (fileId: string) => {
+        // In a real app, calls storageService.deleteFile(key)
+        setProjectFiles(prev => prev.filter(f => f.id !== fileId));
+    };
+
+
     // Status Badge Helper
     const getStatusVariant = (status: ProjectStatus) => {
         switch (status) {
@@ -208,6 +468,8 @@ export const ProjectDetail = () => {
         }
     };
 
+
+
     // Tab configuration for project pages
     const tabConfig = [
         { name: 'Overview', icon: LayoutDashboard, index: 1 },
@@ -216,10 +478,21 @@ export const ProjectDetail = () => {
         { name: 'Files', icon: Folder, index: 4 },
         { name: 'Team', icon: Users, index: 5 },
         { name: 'Activity', icon: Activity, index: 6 },
+        { name: 'Payments', icon: CreditCard, index: 7 },
     ];
+
+    // Handle terms acceptance - update local state to hide banner
+    const handleTermsAccepted = () => {
+        // In a real app using SWR/React Query, we'd invalidate the query.
+        // For mock setup, we use local state to immediately hide the banner
+        setTermsAccepted(true);
+    };
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto pb-20">
+
+            {/* Terms Acceptance Banner - Shows if not accepted */}
+            {!termsAccepted && <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />}
 
             <Tabs
                 value={activeTab}
@@ -266,8 +539,8 @@ export const ProjectDetail = () => {
 
                             {/* Team Avatars */}
                             <div className="flex items-center -space-x-2 hidden md:flex">
-                                {project.team.slice(0, 4).map((member) => (
-                                    <Avatar key={member.id} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                {project.team.slice(0, 4).map((member, index) => (
+                                    <Avatar key={`${member.id}-${index}`} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
                                 ))}
                                 <button className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10">
                                     <Users className="h-4 w-4" />
@@ -275,18 +548,29 @@ export const ProjectDetail = () => {
                             </div>
                         </div>
 
-                        {/* Right Side: Toggle & Actions */}
+                        {/* Right Side: Actions */}
                         <div className="flex items-center gap-4 shrink-0">
-                            <div className="flex items-center gap-2 bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100">
-                                <span className="text-xs font-medium text-zinc-600">Auto-Milestones</span>
-                                <Switch />
-                            </div>
-
-                            <div className="h-4 w-px bg-zinc-200 hidden sm:block" />
-
-                            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-900">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu trigger={
+                                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-900">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            }>
+                                <DropdownMenuItem onClick={() => navigate(`/projects/${id}/settings`)}>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Settings
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                    navigator.clipboard.writeText(window.location.href);
+                                    addToast({
+                                        title: 'Link Copied',
+                                        description: 'Project link copied to clipboard',
+                                        variant: 'success'
+                                    });
+                                }}>
+                                    <Share2 className="h-4 w-4 mr-2" />
+                                    Share Project
+                                </DropdownMenuItem>
+                            </DropdownMenu>
                         </div>
                     </div>
 
@@ -449,9 +733,15 @@ export const ProjectDetail = () => {
                             <h3 className="text-lg font-bold text-zinc-900">Project Team</h3>
                             <p className="text-sm text-zinc-500">Manage members and permissions for this project.</p>
                         </div>
-                        <Button className="gap-2 shadow-sm" aria-label="Add Member">
-                            <Users className="h-4 w-4" /> Add Member
-                        </Button>
+                        {(isPrimaryContact || user?.role === 'project_manager' || user?.role === 'super_admin') && (
+                            <Button
+                                className="gap-2 shadow-sm"
+                                aria-label="Add Member"
+                                onClick={() => setIsInviteModalOpen(true)}
+                            >
+                                <Users className="h-4 w-4" /> Add Member
+                            </Button>
+                        )}
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -489,79 +779,195 @@ export const ProjectDetail = () => {
                             </Card>
                         ))}
                     </div>
+
+                    {/* Invite Modal */}
+                    <InviteModal
+                        isOpen={isInviteModalOpen}
+                        onClose={() => setIsInviteModalOpen(false)}
+                        projectId={project.id}
+                        currentUserRole={user?.role}
+                        onInviteSent={() => {
+                            addToast({
+                                title: 'Invitation Sent',
+                                description: 'Team member has been invited to the project.',
+                                variant: 'success'
+                            });
+                        }}
+                    />
                 </TabsContent>
 
                 {/* --- TASKS TAB --- */}
                 <TabsContent value="tasks" className="mt-6">
-                    <div className="space-y-6 max-w-4xl mx-auto">
+                    <div className="space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h3 className="text-xl font-bold tracking-tight text-zinc-900">Tasks</h3>
                                 <p className="text-sm text-zinc-500">Manage your project tasks and track progress.</p>
                             </div>
-                            <Button onClick={handleGenerateTasks} disabled={isGenerating} variant="outline" className="gap-2 bg-white hover:bg-zinc-50 text-zinc-700 border-zinc-200 shadow-sm">
-                                <Sparkles className="h-4 w-4 text-purple-500" />
-                                {isGenerating ? 'Analyzing...' : 'AI Suggestions'}
-                            </Button>
                         </div>
 
-                        {/* AI Generated Tasks */}
-                        {aiTasks.length > 0 && (
-                            <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Sparkles className="h-4 w-4 text-purple-600" />
-                                    <h4 className="font-semibold text-purple-900 text-sm">Suggested Tasks</h4>
-                                </div>
-                                <div className="grid gap-2">
-                                    {aiTasks.map((task, idx) => (
-                                        <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-md border border-purple-100 shadow-sm group hover:border-purple-200 transition-colors">
-                                            <span className="text-sm text-zinc-700">{task}</span>
-                                            <Button size="sm" variant="ghost" className="h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-2">
-                                                <PlusCircle className="h-3.5 w-3.5 mr-1.5" /> Add
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+
 
                         <div className="space-y-3">
-                            {tasks.map(task => (
-                                <div key={task.id} className="group flex items-center justify-between p-4 rounded-lg border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all duration-200">
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            className={cn(
-                                                "h-5 w-5 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
-                                                task.status === 'Done'
-                                                    ? "bg-primary border-primary text-white"
-                                                    : "border-zinc-300 hover:border-primary bg-white"
-                                            )}
-                                        >
-                                            {task.status === 'Done' && <CheckSquare className="h-3.5 w-3.5" />}
-                                        </button>
-                                        <span className={cn(
-                                            "text-sm font-medium transition-colors",
-                                            task.status === 'Done' ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
-                                        )}>
-                                            {task.title}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {task.assignee && (
-                                            <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
-                                                <Avatar src={task.assignee.avatar} fallback={task.assignee.name[0]} className="h-4 w-4" />
-                                                <span className="hidden sm:inline">{task.assignee.name}</span>
-                                            </div>
-                                        )}
-                                        <Badge variant="secondary" className="bg-zinc-100 text-zinc-500 font-normal border border-zinc-200">{task.status}</Badge>
-                                    </div>
-                                </div>
-                            ))}
+                            {tasks
+                                // Filter out internal-only tasks for client users
+                                .filter(task => user && isClient(user) ? task.visibleToClient !== false : true)
+                                .map(task => {
+                                    const creator = task.createdBy ? project.team.find(m => m.id === task.createdBy) : null;
+                                    const assignee = task.assignee || (task.assigneeId ? project.team.find(u => u.id === task.assigneeId) : null);
 
-                            {tasks.length === 0 && !aiTasks.length && (
+                                    return (
+                                        <div key={task.id} className="group flex flex-col p-4 rounded-lg border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            const newStatus = task.status === 'Done' || task.status === 'completed' ? 'pending' : 'completed';
+                                                            handleSaveTask(task.id, { status: newStatus as any });
+                                                        }}
+                                                        className={cn(
+                                                            "h-5 w-5 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
+                                                            task.status === 'Done' || task.status === 'completed'
+                                                                ? "bg-primary border-primary text-white"
+                                                                : "border-zinc-300 hover:border-primary bg-white"
+                                                        )}
+                                                    >
+                                                        {(task.status === 'Done' || task.status === 'completed') && <CheckSquare className="h-3.5 w-3.5" />}
+                                                    </button>
+                                                    <span className={cn(
+                                                        "text-sm font-medium transition-colors",
+                                                        (task.status === 'Done' || task.status === 'completed') ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
+                                                    )}>
+                                                        {task.title}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {assignee && (
+                                                        <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
+                                                            <Avatar src={assignee.avatar} fallback={assignee.name[0]} className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">{assignee.name}</span>
+                                                        </div>
+                                                    )}
+                                                    <Badge variant="secondary" className="bg-zinc-100 text-zinc-500 font-normal border border-zinc-200">{task.status}</Badge>
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => toggleTaskComments(task.id)}
+                                                        className={cn(
+                                                            "h-7 px-2 rounded-md transition-all gap-1.5",
+                                                            expandedComments.has(task.id)
+                                                                ? "text-blue-600 bg-blue-50"
+                                                                : "text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
+                                                        )}
+                                                        title="Comments"
+                                                    >
+                                                        <MessageSquare className="h-3.5 w-3.5" />
+                                                        {(task.comments?.length || 0) > 0 && (
+                                                            <span className="text-xs font-medium">{task.comments?.length}</span>
+                                                        )}
+                                                    </Button>
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => handleFollowTask(task)}
+                                                        className={cn(
+                                                            "h-7 w-7 p-0 rounded-full transition-all",
+                                                            task.followers?.includes(user?.id || '')
+                                                                ? "text-emerald-500 hover:text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                                                                : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                                                        )}
+                                                        title={task.followers?.includes(user?.id || '') ? "Unfollow updates" : "Follow updates"}
+                                                    >
+                                                        {task.followers?.includes(user?.id || '') ? <Bell className="h-3.5 w-3.5 fill-current" /> : <BellOff className="h-3.5 w-3.5" />}
+                                                    </Button>
+
+                                                    {user && canEditTask(user, task) && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleEditTask(task)}
+                                                            className="opacity-100 transition-opacity gap-1.5 h-7 px-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+                                                        >
+                                                            <Edit2 className="h-3.5 w-3.5" />
+                                                            <span className="hidden sm:inline text-xs font-medium">Edit</span>
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Task Metadata Row */}
+                                            <div className="flex items-center gap-4 mt-2 pl-9 text-xs text-zinc-400">
+                                                {task.createdAt && (
+                                                    <span className="flex items-center gap-1" title={new Date(task.createdAt).toLocaleString()}>
+                                                        <Clock className="h-3 w-3" />
+                                                        {formatTimeAgo(task.createdAt)}
+                                                    </span>
+                                                )}
+                                                {creator && (
+                                                    <span className="flex items-center gap-1" title={`Created by ${creator.name}`}>
+                                                        <Users className="h-3 w-3" />
+                                                        By {creator.name.split(' ')[0]}
+                                                    </span>
+                                                )}
+                                                {task.deadline && (
+                                                    <span className="flex items-center gap-1 text-amber-600" title={`Due: ${new Date(task.deadline).toLocaleDateString()}`}>
+                                                        <Calendar className="h-3 w-3" />
+                                                        Due {new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Expanded Comments Section */}
+                                            {expandedComments.has(task.id) && (
+                                                <div className="mt-4 pt-4 border-t border-zinc-100 pl-9">
+                                                    <div className="space-y-3">
+                                                        {/* Existing Comments */}
+                                                        <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                                            {(task.comments?.length || 0) > 0 ? (
+                                                                task.comments?.map((comment, index) => (
+                                                                    <CommentItem
+                                                                        key={comment.id}
+                                                                        content={comment.content}
+                                                                        details={{
+                                                                            id: comment.id,
+                                                                            userName: comment.userName,
+                                                                            timestamp: comment.timestamp,
+                                                                            userId: comment.userId
+                                                                        }}
+                                                                        currentUser={user}
+                                                                        onDelete={(id) => handleDeleteComment(task.id, id)}
+                                                                        formatTimeAgo={formatTimeAgo}
+                                                                        showDelete={index === (task.comments?.length || 0) - 1}
+                                                                        teamMembers={project.team}
+                                                                    />
+                                                                ))
+                                                            ) : (
+                                                                <p className="text-sm text-zinc-400 italic py-2">No comments yet.</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Add Comment Input */}
+                                                        <div className="pt-2">
+                                                            <MentionInput
+                                                                value={newCommentInput[task.id] || ''}
+                                                                onChange={(value) => setNewCommentInput(prev => ({ ...prev, [task.id]: value }))}
+                                                                onSubmit={() => handleAddComment(task.id)}
+                                                                users={project.team}
+                                                                placeholder="Write a comment... (Type @ to mention)"
+                                                                disabled={!user}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+
+                            {tasks.length === 0 && (
                                 <EmptyState
                                     title="No tasks yet"
-                                    description="Get started by adding a task or using AI suggestions."
+                                    description="Get started by adding a task."
                                     icon={ClipboardList}
                                     className="py-16 bg-zinc-50/50 border-dashed"
                                 />
@@ -569,20 +975,36 @@ export const ProjectDetail = () => {
                         </div>
 
                         {/* Add Task Input */}
-                        <div className="flex gap-3 items-center pt-2">
-                            <div className="relative flex-1">
-                                <Input
-                                    placeholder="Add a new task..."
-                                    value={newTaskInput}
-                                    onChange={(e) => setNewTaskInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                    className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
-                                />
+                        <div className="space-y-2 pt-2">
+                            <div className="flex gap-3 items-center">
+                                <div className="relative flex-1">
+                                    <Input
+                                        placeholder="Add a task... (e.g., 'Review design @john tomorrow')"
+                                        value={newTaskInput}
+                                        onChange={(e) => setNewTaskInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                                        className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
+                                    />
+                                </div>
+                                <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
+                                    <PlusCircle className="h-4 w-4 mr-2" /> Add Task
+                                </Button>
                             </div>
-                            <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
-                                <PlusCircle className="h-4 w-4 mr-2" /> Add Task
-                            </Button>
+                            <p className="text-xs text-zinc-400 pl-1">
+                                Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
+                            </p>
                         </div>
+
+                        <TaskEditModal
+                            isOpen={isEditModalOpen}
+                            onClose={() => {
+                                setIsEditModalOpen(false);
+                                setEditingTask(null);
+                            }}
+                            task={editingTask}
+                            onSave={handleSaveTask}
+                            teamMembers={TEAM_MEMBERS}
+                        />
                     </div>
                 </TabsContent>
 
@@ -593,34 +1015,34 @@ export const ProjectDetail = () => {
 
                 {/* --- FILES TAB --- */}
                 <TabsContent value="files">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {[1, 2, 3, 4, 5].map(i => (
-                            <Card key={i} hoverable className="group cursor-pointer overflow-hidden border-zinc-200/60">
-                                <div className="aspect-video bg-zinc-100 relative group-hover:bg-zinc-200/50 transition-colors flex items-center justify-center">
-                                    <div className="bg-white p-4 rounded-full shadow-lg shadow-black/5 group-hover:scale-110 transition-transform duration-300">
-                                        <FileVideo className="h-6 w-6 text-zinc-400 group-hover:text-primary transition-colors" />
-                                    </div>
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="p-1 bg-white rounded-lg shadow-md border border-zinc-200/80">
-                                            <MoreVertical className="h-4 w-4 text-zinc-500" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <CardContent className="p-4 bg-white">
-                                    <p className="font-semibold text-sm truncate text-zinc-900">Project_Asset_v{i}.mp4</p>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal bg-zinc-100 text-zinc-500">Video</Badge>
-                                        <p className="text-[10px] text-zinc-400 font-medium">2d ago</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                        <Card hoverable className="flex flex-col items-center justify-center border-dashed border-2 aspect-video bg-zinc-50/50 hover:bg-zinc-50 cursor-pointer transition-colors border-zinc-300 group">
-                            <div className="h-14 w-14 rounded-full bg-white shadow-sm border border-zinc-200 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 group-hover:border-primary/50">
-                                <PlusCircle className="h-7 w-7 text-zinc-400 group-hover:text-primary transition-colors" />
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Project Files</h3>
+                                <p className="text-sm text-zinc-500">Shared assets and documents for this project.</p>
                             </div>
-                            <p className="text-sm font-bold text-zinc-500 group-hover:text-primary transition-colors">Upload New Asset</p>
-                        </Card>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {/* Upload Button Card - Permission Checked */}
+                            {user && canUploadProjectFile(user, project) && (
+                                <FileUpload
+                                    projectId={project.id}
+                                    onUploadComplete={handleFileUploadComplete}
+                                    onError={(error) => addToast({
+                                        title: 'Upload Failed',
+                                        description: error.message,
+                                        variant: 'destructive'
+                                    })}
+                                />
+                            )}
+
+                            {/* File List - Delete Permission Checked via Prop */}
+                            <FileList
+                                files={projectFiles}
+                                onDelete={user && canDeleteProjectFile(user, project) ? handleFileDelete : undefined}
+                            />
+                        </div>
                     </div>
                 </TabsContent>
 
@@ -731,6 +1153,11 @@ export const ProjectDetail = () => {
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
+
+                {/* --- PAYMENTS TAB --- */}
+                <TabsContent value="payments">
+                    <PaymentHistory project={project} />
                 </TabsContent>
             </Tabs>
         </div>

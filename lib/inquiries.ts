@@ -1,4 +1,4 @@
-import { QuizSelections } from '../components/Quiz/useQuiz';
+import { QuizSelections } from '../components/quiz/useQuiz';
 
 const API_BASE_URL = '/.netlify/functions';
 
@@ -32,6 +32,7 @@ export interface Inquiry {
   convertedToProjectId?: string;
   convertedAt?: string;
   assignedToAdminId?: string;
+  clientUserId?: string;
 }
 
 export interface ContactInfo {
@@ -73,6 +74,7 @@ export async function getInquiries(): Promise<Inquiry[]> {
       convertedToProjectId: inquiry.converted_to_project_id,
       convertedAt: inquiry.converted_at,
       assignedToAdminId: inquiry.assigned_to_admin_id,
+      clientUserId: inquiry.client_user_id,
       createdAt: inquiry.created_at,
       updatedAt: inquiry.updated_at,
     }));
@@ -104,6 +106,7 @@ export async function getInquiryById(id: string): Promise<Inquiry | null> {
       convertedToProjectId: inquiry.converted_to_project_id,
       convertedAt: inquiry.converted_at,
       assignedToAdminId: inquiry.assigned_to_admin_id,
+      clientUserId: inquiry.client_user_id,
       createdAt: inquiry.created_at,
       updatedAt: inquiry.updated_at,
     };
@@ -121,6 +124,7 @@ export async function createInquiry(data: {
   quizAnswers: QuizSelections;
   contactInfo: ContactInfo;
   recommendedVideoType: string;
+  clientUserId?: string;
 }): Promise<Inquiry> {
   if (!data.contactInfo.contactName || data.contactInfo.contactName.trim() === '') {
     throw new Error('Contact name is required');
@@ -146,6 +150,7 @@ export async function createInquiry(data: {
     projectNotes: data.contactInfo.projectNotes?.trim(),
     quizAnswers: data.quizAnswers,
     recommendedVideoType: data.recommendedVideoType,
+    clientUserId: data.clientUserId,
   };
 
   const response = await fetch(`${API_BASE_URL}/inquiries`, {
@@ -181,7 +186,7 @@ export async function createInquiry(data: {
 
 export async function updateInquiry(id: string, updates: Partial<Inquiry>): Promise<Inquiry> {
   const snakeCaseUpdates: any = {};
-  
+
   if (updates.status) snakeCaseUpdates.status = updates.status;
   if (updates.contactName) snakeCaseUpdates.contact_name = updates.contactName;
   if (updates.contactEmail) snakeCaseUpdates.contact_email = updates.contactEmail;
@@ -253,9 +258,22 @@ export async function getInquiriesByStatus(status: InquiryStatus): Promise<Inqui
   return inquiries.filter(inq => inq.status === status);
 }
 
-export async function getInquiryStats() {
-  const inquiries = await getInquiries();
+export async function getInquiryStats(clientUserId?: string) {
+  const inquiries = clientUserId
+    ? await getInquiriesByClientUserId(clientUserId)
+    : await getInquiries();
 
+  if (clientUserId) {
+    // Client-relevant metrics
+    return {
+      total: inquiries.length,
+      pendingResponse: inquiries.filter(i => i.status === 'new' || i.status === 'reviewing').length,
+      proposalReceived: inquiries.filter(i => i.status === 'proposal_sent').length,
+      accepted: inquiries.filter(i => i.status === 'accepted').length,
+    };
+  }
+
+  // Admin metrics
   return {
     total: inquiries.length,
     new: inquiries.filter(i => i.status === 'new').length,
@@ -267,6 +285,7 @@ export async function getInquiryStats() {
   };
 }
 
+
 export function clearAllInquiries(): void {
   throw new Error('clearAllInquiries not supported with database backend');
 }
@@ -277,4 +296,34 @@ export function seedSampleInquiries(): void {
 
 export function generateInquiryNumber(): string {
   throw new Error('generateInquiryNumber handled by backend');
+}
+
+export async function getInquiriesByClientUserId(clientUserId: string): Promise<Inquiry[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/inquiries?clientUserId=${encodeURIComponent(clientUserId)}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.map((inquiry: any) => ({
+      ...inquiry,
+      inquiryNumber: inquiry.inquiry_number,
+      contactName: inquiry.contact_name,
+      contactEmail: inquiry.contact_email,
+      companyName: inquiry.company_name,
+      contactPhone: inquiry.contact_phone,
+      projectNotes: inquiry.project_notes,
+      quizAnswers: inquiry.quiz_answers,
+      recommendedVideoType: inquiry.recommended_video_type,
+      proposalId: inquiry.proposal_id,
+      convertedToProjectId: inquiry.converted_to_project_id,
+      convertedAt: inquiry.converted_at,
+      assignedToAdminId: inquiry.assigned_to_admin_id,
+      createdAt: inquiry.created_at,
+      updatedAt: inquiry.updated_at,
+    }));
+  } catch (error) {
+    console.error('Error fetching inquiries by client user ID:', error);
+    return [];
+  }
 }
