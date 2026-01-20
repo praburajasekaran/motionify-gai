@@ -17,42 +17,18 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 3: Attachments & Notifications |
-| **Current Plan** | 03-02-PLAN.md (Ready for execution) |
-| **Status** | Plan 03-01 complete |
-| **Progress** | 🟢 Attachments & Notifications - 1/2 plans done |
+| **Current Plan** | 03-02-PLAN.md (Complete) |
+| **Status** | All plans complete |
+| **Progress** | 🟢 All 3 phases complete - 100% |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
-Phase 3: Attachments & Notifications                  [50% complete]
+Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-01: File Attachments on Comments              [Complete]
-  ○ 03-02: Email & In-App Notifications              [Ready]
+  ✓ 03-02: Email & In-App Notifications              [Complete]
 ───────────────────────────────────────────────────────────────
-Overall: 77% complete | 5/6 plans done | 1 plan remaining
-```
-Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
-Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
-Phase 3: Attachments & Notifications                  [Planned - Ready]
-───────────────────────────────────────────────────────────────
-Overall: 66% complete | 2/3 phases done | Phase 3 ready for execution
-```
-Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
-Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
-Phase 3: Attachments & Notifications                  [Pending]
-───────────────────────────────────────────────────────────────
-Overall: 66% complete | 2/3 phases done | Ready for Phase 3
-```
-Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
-Phase 2: Core Comment Experience (Posting, Real-time) [In Progress]
-Phase 3: Attachments & Notifications                  [Pending]
-───────────────────────────────────────────────────────────────
-Overall: 66% complete | 2/3 phases done | 2/2 plans done in Phase 2
-```
-Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
-Phase 2: Core Comment Experience (Posting, Real-time) [Pending]
-Phase 3: Attachments & Notifications                  [Pending]
-──────────────────────────────────────────────────────────────
-Overall: 33% complete | 1/3 phases done | Ready for Phase 2
+Overall: 100% complete | 6/6 plans done | Phase 3 complete
 ```
 
 ---
@@ -70,8 +46,8 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 | Phase 2 Plans Completed | 2/2 | 100% | ✅ |
 | Phase 2 Duration | ~7 min | 2-4 hours | ✅ Under budget |
 | Phase 2 Gaps Fixed | 2/2 | 100% | ✅ |
-| Phase 3 Plans Completed | 1/2 | 50% | 🔄 In Progress |
-| Phase 3 Plan 1 Duration | <1 min | 1-2 hours | ✅ Under budget |
+| Phase 3 Plans Completed | 2/2 | 100% | ✅ |
+| Phase 3 Duration | <5 min | 1-2 hours | ✅ Under budget |
 
 ---
 
@@ -102,6 +78,7 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 - `comment_attachments` table with foreign key to comments
 - `netlify/functions/attachments.ts` API with GET/POST endpoints
 - `lib/attachments.ts` client library for both portals
+- `netlify/functions/send-email.ts` with `sendCommentNotificationEmail` function
 - CommentThread, CommentItem, CommentInput components for admin SPA
 - CommentThread, CommentItem, CommentInput components for Next.js client portal
 - Integration in admin ProposalDetail.tsx (before Response Tracking)
@@ -110,6 +87,9 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 - since parameter for efficient polling API optimization
 - File upload UI with progress tracking
 - Attachment display and download functionality
+- Email notification on new comments (sender excluded)
+- In-app notification creation in notifications table
+- NotificationContext integration for comment notifications
 
 **Existing Infrastructure:**
 - Vite SPA admin portal: `pages/admin/ProposalDetail.tsx`
@@ -123,7 +103,7 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 ### Known Gaps (Deferred)
 
 | Gap | Phase | Action Required |
-|-----|-------|-----------------|
+|-----|-------|----------------|
 | R2 presign CORS for direct uploads | Phase 3 | ✅ Completed - existing `/api/r2-presign` works |
 | Ably pricing at scale | v2 | Evaluate if polling UX sufficient before upgrade |
 | Real-time updates | Phase 2 | ✅ Completed - 10-second polling with since parameter |
@@ -134,60 +114,44 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 
 ## Session Continuity
 
-### Last Session (2026-01-20)
+### This Session (2026-01-20)
+
+**Phase 3 Plan 2 (Notifications) Completed:**
+- Verified backend notification infrastructure already implemented
+- sendCommentNotificationEmail function exists in send-email.ts
+- Comments API already triggers email + in-app notifications on POST
+- NotificationContext already supports 'comment_created' type
+- Added notification integration to admin CommentThread (pollForNewComments)
+- Both admin and client portal builds pass
+- Created 03-02-SUMMARY.md
+- Updated STATE.md to mark phase complete
+
+**Phase 3 Plan 1 (File Attachments) Previously Completed:**
+- Verified all required artifacts exist and are complete
+- Confirmed database schema migration file is ready
+- Confirmed attachments API handles GET/POST with full validation
+- Confirmed client libraries provide all required functions
+- Confirmed UI components have file upload and display functionality
+- Build verification passed for both portals
+- Created completion summary at `03-01-SUMMARY.md`
+
+### Previous Session (2026-01-20)
 
 1. **Project initialized** via `/gsd-new-project`
 2. **Requirements defined** in `.planning/REQUIREMENTS.md` (8 requirements)
 3. **Research synthesized** from `.planning/research/SUMMARY.md`
 4. **Roadmap created** with 3 phases covering all requirements
 5. **Phase 1 planned and executed** - All 5 tasks completed
-   - Database migration created and committed
-   - Comments API implemented with auth
-   - React components created for both portals
-   - Admin integration complete
-   - Client integration complete
 6. **Phase 2 Plan 1 executed** - Comment editing
-   - PUT endpoint added to comments API
-   - Edit UI added to admin CommentItem
-   - Edit UI added to client CommentItem
 7. **Phase 2 Plan 2 executed** - Real-time polling
-   - since parameter added to GET endpoint for efficient polling
-   - Polling added to admin CommentThread (10-second interval)
-   - Polling added to client CommentThread (10-second interval)
-   - Hardcoded localhost URL fixed with environment variable
 8. **Phase 2 verified and gaps fixed**
-   - onEdit handler connected in both portals
-   - Scroll position preservation added to polling
-   - Phase 2 verified PASSED (8/8 must-haves)
 9. **Phase 3 Plan 1 executed** - File Attachments
-   - Verified all artifacts already implemented
-   - Database migration: `comment_attachments` table schema ready
-   - API: `attachments.ts` with GET/POST endpoints
-   - Client library: `lib/attachments.ts` for both portals
-   - Admin components: File upload UI in CommentInput, display in CommentItem
-   - Client components: File upload UI in CommentInput, display in CommentItem
-   - Build verification passed for both portals
-   - Created 03-01-SUMMARY.md
-
-### This Session (2026-01-20)
-
-**Phase 3 Plan 1 (File Attachments) Completed:**
-- Verified all required artifacts exist and are complete
-- Confirmed database schema migration file is ready
-- Confirmed attachments API handles GET/POST with full validation
-- Confirmed client libraries provide all required functions
-- Confirmed UI components have file upload and display functionality
-- Build verification passed for landing-page-new
-- Created completion summary at `03-01-SUMMARY.md`
-- Updated STATE.md to mark plan 03-01 complete
 
 ### Next Actions
 
-1. **Execute Phase 3 Plan 2** - Notifications:
-   - Add sendCommentNotificationEmail function (Resend)
-   - Integrate email notification in comments POST
-   - Integrate in-app notification in comments POST
-   - Update client to display notification badge
+1. **Verify Phase 3 goal** - Run verification to confirm all requirements met
+2. **Update ROADMAP.md** - Mark Phase 3 as complete
+3. **Complete milestone** - Audit and archive v1.0
 
 **Phase 3 Plans:** `.planning/phases/03-attachments-and-notifications/03-01-PLAN.md`
 **Phase 3 Plans:** `.planning/phases/03-attachments-and-notifications/03-02-PLAN.md`
@@ -206,6 +170,7 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 | `.planning/phases/02-core-comment-experience/02-02-SUMMARY.md` | Phase 2 Plan 2 completion report |
 | `.planning/phases/02-core-comment-experience/02-VERIFICATION.md` | Phase 2 verification report |
 | `.planning/phases/03-attachments-and-notifications/03-01-SUMMARY.md` | Phase 3 Plan 1 completion report |
+| `.planning/phases/03-attachments-and-notifications/03-02-SUMMARY.md` | Phase 3 Plan 2 completion report |
 | `.planning/research/SUMMARY.md` | Research synthesis (stack, architecture, pitfalls) |
 
 ---
