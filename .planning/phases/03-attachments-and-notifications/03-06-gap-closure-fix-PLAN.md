@@ -123,24 +123,19 @@ Output: Working database schema and accessible R2 presign API.
 
 <task type="auto">
   <name>Task 3: Apply Database Migration</name>
-  <files>none</files>
+  <files>database/migrations/002_add_comments_and_notifications.sql</files>
   <action>
-    Run the migration against the database.
-    Since we don't have a direct `npm run migrate` command confirmed, use the psql/db tool pattern if available, or just create a script to run it.
+    Apply the new migration using the existing migration tool.
     
-    *Actually, for this environment, assume we can't run it directly without credentials. Just Verify the file exists and is ready for the deployment pipeline.*
+    Run: `npx tsx database/migrate.ts up`
     
-    Update: The "Foundation" phase established `database/connection.ts`. We should probably create a quick script to apply the migration using the existing DB connection if possible.
-    
-    Create `scripts/run_migration_002.ts` that reads the SQL file and executes it using `database/connection.ts` (or `pg` driver directly).
-    Run it with `npx ts-node scripts/run_migration_002.ts`.
-    Delete the script after success.
+    This tool automatically picks up .sql files in the migrations directory and applies them in order.
   </action>
   <verify>
-    Execution of the script returns success message.
+    Output of migration command shows successful application of migration 002.
   </verify>
   <done>
-    Tables exist in the database.
+    Tables (proposal_comments, comment_attachments, notifications) exist in the database.
   </done>
 </task>
 
