@@ -1,19 +1,13 @@
 
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Config } from "@netlify/functions";
+import { Handler } from "@netlify/functions";
+import { getCorsHeaders } from "./_shared/cors";
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
-
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Content-Type": "application/json"
-};
 
 // Be resilient: handle if R2_ACCOUNT_ID is the full endpoint URL
 const endpoint = R2_ACCOUNT_ID?.startsWith('http')
@@ -30,33 +24,37 @@ const R2 = new S3Client({
     forcePathStyle: true,
 });
 
-export default async (req: Request) => {
+export const handler: Handler = async (event, context) => {
+    const headers = getCorsHeaders(event.headers.origin || event.headers.Origin);
+
     // CORS Preflight
-    if (req.method === "OPTIONS") {
-        return new Response(null, {
-            headers: corsHeaders
-        });
+    if (event.httpMethod === "OPTIONS") {
+        return {
+            statusCode: 204,
+            headers,
+            body: '',
+        };
     }
 
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
         console.error("Missing R2 environment variables");
-        return new Response(JSON.stringify({ error: "Server misconfiguration" }), {
-            status: 500,
-            headers: corsHeaders
-        });
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: "Server misconfiguration" }),
+        };
     }
 
     try {
-        const url = new URL(req.url);
-
         // GET: Generate Download URL
-        if (req.method === "GET") {
-            const key = url.searchParams.get("key");
+        if (event.httpMethod === "GET") {
+            const key = event.queryStringParameters?.key;
             if (!key) {
-                return new Response(JSON.stringify({ error: "Missing 'key' parameter" }), {
-                    status: 400,
-                    headers: corsHeaders
-                });
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: "Missing 'key' parameter" }),
+                };
             }
 
             const command = new GetObjectCommand({
@@ -65,30 +63,30 @@ export default async (req: Request) => {
             });
 
             const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
-            return new Response(JSON.stringify({ url: signedUrl }), {
-                headers: corsHeaders
-            });
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ url: signedUrl }),
+            };
         }
 
         // POST: Generate Upload URL
-        if (req.method === "POST") {
-            const body = await req.json();
+        if (event.httpMethod === "POST") {
+            const body = JSON.parse(event.body || '{}');
             const { fileName, fileType, projectId, folder, customKey } = body;
 
             if (!fileName || !fileType || !projectId) {
-                return new Response(JSON.stringify({ error: "Missing required fields" }), {
-                    status: 400,
-                    headers: corsHeaders
-                });
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: "Missing required fields" }),
+                };
             }
 
             let key;
             if (customKey) {
-                // Use provided custom key (e.g. for thumbnails matching video keys)
-                // Security Note: In production, validate this key belongs to projectId
                 key = customKey;
             } else {
-                // Default folder to 'misc' if not provided
                 const targetFolder = folder || 'misc';
                 key = `projects/${projectId}/${targetFolder}/${Date.now()}-${fileName}`;
             }
@@ -101,28 +99,28 @@ export default async (req: Request) => {
 
             const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
 
-            return new Response(JSON.stringify({
-                uploadUrl: signedUrl,
-                key: key,
-            }), {
-                headers: corsHeaders
-            });
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    uploadUrl: signedUrl,
+                    key: key,
+                }),
+            };
         }
 
-        return new Response(JSON.stringify({ error: "Method not allowed" }), { 
-            status: 405,
-            headers: corsHeaders
-        });
+        return {
+            statusCode: 405,
+            headers,
+            body: JSON.stringify({ error: "Method not allowed" }),
+        };
 
     } catch (error: any) {
         console.error("R2 Error:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: corsHeaders
-        });
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: error.message }),
+        };
     }
-};
-
-export const config: Config = {
-    path: "/.netlify/functions/r2-presign",
 };
