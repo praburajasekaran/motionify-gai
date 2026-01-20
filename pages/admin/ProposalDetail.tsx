@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { getProposalById, updateProposal, type Proposal, type ProposalDeliverable } from '../../lib/proposals';
+import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
+import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
 import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
+import { CommentThread } from '../../components/proposals';
 
 interface DeliverableInput {
   id: string;
@@ -18,8 +21,12 @@ export function ProposalDetail() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuthContext();
 
+  const isAdmin = Permissions.canCreateProposals(user);
+  const isClient = user?.role === 'client';
+
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]); // New state for payments
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,21 +37,30 @@ export function ProposalDetail() {
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
 
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+
   useEffect(() => {
     async function fetchData() {
       if (!proposalId) {
         setIsDataLoading(false);
         return;
       }
-      
+
       setIsDataLoading(true);
       const fetchedProposal = await getProposalById(proposalId);
       setProposal(fetchedProposal);
-      
+
       if (fetchedProposal?.inquiryId) {
         const fetchedInquiry = await getInquiryById(fetchedProposal.inquiryId);
         setInquiry(fetchedInquiry);
       }
+
+      // Fetch payments
+      const fetchedPayments = await fetchPaymentsForProposal(proposalId);
+      setPayments(fetchedPayments);
+
       setIsDataLoading(false);
     }
     fetchData();
@@ -68,8 +84,18 @@ export function ProposalDetail() {
     );
   }
 
-  if (!Permissions.canCreateProposals(user)) {
+  // Check if user has permission to view this proposal
+  // Admins can view all, clients can only view their own (checked after data loads)
+  if (!isAdmin && !isClient) {
     return <Navigate to="/" replace />;
+  }
+
+  // For clients, verify they own the inquiry this proposal belongs to
+  if (isClient && inquiry) {
+    // Note: clientUserId might be undefined if it wasn't set during inquiry creation
+    if (inquiry.clientUserId && inquiry.clientUserId !== user?.id) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   if (!proposal) {
@@ -221,8 +247,127 @@ export function ProposalDetail() {
     }
   };
 
+
+
+  const handleAcceptProposal = async () => {
+    if (!proposal || !inquiry) return;
+    if (!confirm('Are you sure you want to accept this proposal? This will move the project to the setup phase.')) return;
+
+    setIsAccepting(true);
+    try {
+      // 1. Update Proposal Status
+      const updatedProposal = await updateProposal(proposal.id, {
+        status: 'accepted',
+        acceptedAt: new Date().toISOString(),
+      });
+      setProposal(updatedProposal);
+
+      // 2. Update Inquiry Status
+      // We need to import updateInquiryStatus or just use updateInquiry if status logic isn't complex there.
+      // Looking at imports, updateInquiry is imported.
+      // Let's use updateInquiry directly as we want to be explicit.
+      // Actually checking lib/inquiries.ts, updateInquiryStatus handles some side effects maybe?
+      // updateInquiryStatus(id, status, additionalData)
+      // But we haven't imported updateInquiryStatus at the top yet.
+      // Let's stick to updateProposal for now and maybe update inquiry manually.
+
+      // We need to update inquiry status to 'accepted'
+      await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+        updateInquiryStatus(inquiry.id, 'accepted')
+      );
+
+      // Refresh inquiry data
+      const updatedInquiry = await getInquiryById(inquiry.id);
+      setInquiry(updatedInquiry);
+
+      alert('Proposal accepted! You can now proceed to payment.');
+    } catch (error) {
+      console.error('Error accepting proposal:', error);
+      alert('Failed to accept proposal. Please try again.');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
+  const handleRejectProposal = async (feedback: string) => {
+    if (!proposal || !inquiry) return;
+
+    setIsRejecting(true);
+    try {
+      const updatedProposal = await updateProposal(proposal.id, {
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        feedback,
+      });
+      setProposal(updatedProposal);
+
+      await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+        updateInquiryStatus(inquiry.id, 'rejected')
+      );
+
+      const updatedInquiry = await getInquiryById(inquiry.id);
+      setInquiry(updatedInquiry);
+
+      alert('Proposal rejected. We will review your feedback and get back to you.');
+    } catch (error) {
+      console.error('Error rejecting proposal:', error);
+      alert('Failed to reject proposal. Please try again.');
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const handleRequestChanges = async (feedback: string) => {
+    if (!proposal || !inquiry) return;
+
+    setIsRequestingChanges(true);
+    try {
+      const updatedProposal = await updateProposal(proposal.id, {
+        status: 'changes_requested',
+        feedback,
+      });
+      setProposal(updatedProposal);
+
+      await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+        updateInquiryStatus(inquiry.id, 'negotiating')
+      );
+
+      const updatedInquiry = await getInquiryById(inquiry.id);
+      setInquiry(updatedInquiry);
+
+      alert('Revision requested. We will review your feedback and send an updated proposal.');
+    } catch (error) {
+      console.error('Error requesting changes:', error);
+      alert('Failed to request changes. Please try again.');
+    } finally {
+      setIsRequestingChanges(false);
+    }
+  };
+
   const handleCancelEdit = () => {
     setIsEditMode(false);
+  };
+
+  const handleMarkAsPaid = async (paymentId: string) => {
+    if (!confirm('Are you sure you want to mark this payment as paid? This will trigger project creation if applicable.')) return;
+
+    try {
+      await markPaymentAsPaid(paymentId);
+      alert('Payment marked as paid successfully!');
+
+      // Refresh payments and potentially proposal/inquiry status
+      if (proposalId) {
+        const updatedPayments = await fetchPaymentsForProposal(proposalId);
+        setPayments(updatedPayments);
+
+        // Also refresh proposal as status might have changed implicitly via backend logic if we were listening to it, 
+        // but explicit refresh is safer if backend modified related entities.
+        // Logic in backend: project creation, etc. 
+      }
+    } catch (error) {
+      console.error('Error marking payment as paid:', error);
+      alert('Failed to mark payment as paid.');
+    }
   };
 
   const STATUS_CONFIG = {
@@ -266,7 +411,7 @@ export function ProposalDetail() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate(inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries')}
+          onClick={() => navigate(isClient ? (inquiry ? `/admin/inquiries/${inquiry.id}` : '/') : (inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries'))}
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -293,7 +438,7 @@ export function ProposalDetail() {
             </p>
           </div>
 
-          {!isEditMode && proposal.status === 'sent' && (
+          {isAdmin && !isEditMode && proposal.status === 'sent' && (
             <button
               onClick={() => setIsEditMode(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors font-medium"
@@ -460,8 +605,8 @@ export function ProposalDetail() {
                       type="button"
                       onClick={() => setCurrency('INR')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'INR'
-                          ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-violet-500 text-white ring-2 ring-violet-400'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       INR (₹)
@@ -470,8 +615,8 @@ export function ProposalDetail() {
                       type="button"
                       onClick={() => setCurrency('USD')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'USD'
-                          ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-violet-500 text-white ring-2 ring-violet-400'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       USD ($)
@@ -543,6 +688,73 @@ export function ProposalDetail() {
           )}
         </div>
 
+        {/* Payments Section (Admin Only) */}
+        {isAdmin && (
+          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Payments</h2>
+            {payments.length === 0 ? (
+              <p className="text-gray-500 text-sm">No payments found for this proposal.</p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {payments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(payment.created_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                          {payment.payment_type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatCurrency(payment.amount, payment.currency as 'INR' | 'USD')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                            {payment.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {payment.status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(payment.id)}
+                              className="text-violet-600 hover:text-violet-900"
+                            >
+                              Mark as Paid
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Comments Section */}
+        {proposal && user && (
+          <CommentThread
+            proposalId={proposal.id}
+            currentUserId={user.id}
+            currentUserName={user.name}
+            isAuthenticated={!!user}
+          />
+        )}
+
         {/* Response Tracking */}
         {(proposal.acceptedAt || proposal.rejectedAt || proposal.feedback) && (
           <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
@@ -598,6 +810,69 @@ export function ProposalDetail() {
                   Save Changes
                 </>
               )}
+            </button>
+          </div>
+        )}
+
+        {/* Client Action Buttons */}
+        {isClient && proposal.status === 'sent' && (
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+            <button
+              onClick={() => {
+                const feedback = prompt('Please provide a reason for rejecting the proposal:');
+                if (feedback) handleRejectProposal(feedback);
+              }}
+              disabled={isRejecting || isAccepting || isRequestingChanges}
+              className="px-4 py-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium border border-red-200"
+            >
+              {isRejecting ? 'Rejecting...' : 'Reject Proposal'}
+            </button>
+
+            <button
+              onClick={() => {
+                const feedback = prompt('Please describe the changes you would like to request:');
+                if (feedback) handleRequestChanges(feedback);
+              }}
+              disabled={isRejecting || isAccepting || isRequestingChanges}
+              className="px-4 py-2.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors font-medium border border-orange-200"
+            >
+              {isRequestingChanges ? 'Requesting...' : 'Request Revision'}
+            </button>
+
+            <button
+              onClick={handleAcceptProposal}
+              disabled={isRejecting || isAccepting || isRequestingChanges}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAccepting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Accepting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Accept Proposal
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Payment Button for Accepted Proposals */}
+        {isClient && proposal.status === 'accepted' && (
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+            <div className="mr-auto text-sm text-gray-600">
+              <span className="font-medium text-emerald-600">Proposal Accepted!</span> Please proceed to payment to start the project.
+            </div>
+            <button
+              onClick={() => {
+                navigate(`/payment/${proposal.id}`);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors shadow-lg shadow-violet-500/20"
+            >
+              <DollarSign className="w-4 h-4" />
+              Proceed to Payment
             </button>
           </div>
         )}
