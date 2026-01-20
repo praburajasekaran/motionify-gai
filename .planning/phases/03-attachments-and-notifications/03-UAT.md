@@ -96,3 +96,31 @@ skipped: 6
   root_cause: ""
   artifacts: []
   missing: []
+
+- truth: "Database schema supports comments and notifications"
+  status: failed
+  reason: "User reported 500 error. Diagnosis confirmed: Missing tables 'proposal_comments' and 'notifications' in schema."
+  severity: blocker
+  test: 1
+  root_cause: "Missing SQL migration file for new tables. Code attempts to query tables that don't exist."
+  artifacts:
+    - path: "database/migrations/002_add_comments_and_notifications.sql"
+      issue: "File missing entirely"
+  missing:
+    - "Create migration 002 with table definitions for proposal_comments and notifications"
+    - "Run migration against database"
+  debug_session: ".planning/debug/comments-500.md"
+
+- truth: "R2 presign function executes correctly"
+  status: failed
+  reason: "User reported CORS error. Diagnosis confirmed: Function using V2 API syntax (export default) in V1 environment, causing load failure."
+  severity: blocker
+  test: 5
+  root_cause: "API Version Mismatch. r2-presign.ts uses Netlify Functions V2 syntax while project uses V1. Platform error (500) lacks CORS headers."
+  artifacts:
+    - path: "netlify/functions/r2-presign.ts"
+      issue: "Uses export default (V2) instead of export const handler (V1)"
+  missing:
+    - "Refactor r2-presign.ts to use V1 handler syntax"
+    - "Use _shared/cors.ts for headers"
+  debug_session: ".planning/debug/r2-presign-cors.md"
