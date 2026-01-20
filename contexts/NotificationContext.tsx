@@ -14,6 +14,7 @@ export type NotificationType =
     | 'task_assigned'
     | 'task_status_changed'
     | 'comment_mention'
+    | 'comment_created'
     | 'file_uploaded'
     | 'approval_request'
     | 'revision_requested'
@@ -25,6 +26,7 @@ export const NOTIFICATION_ICONS: Record<NotificationType, string> = {
     'task_assigned': '🎯',
     'task_status_changed': '✅',
     'comment_mention': '💬',
+    'comment_created': '💬',
     'file_uploaded': '📁',
     'approval_request': '👍',
     'revision_requested': '🔄',
