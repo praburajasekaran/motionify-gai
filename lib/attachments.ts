@@ -1,5 +1,13 @@
 import { api } from './api-config';
 
+export interface PendingAttachment {
+    tempId: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    r2Key: string;
+}
+
 export interface Attachment {
     id: string;
     commentId: string;

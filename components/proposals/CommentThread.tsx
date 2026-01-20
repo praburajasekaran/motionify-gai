@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { CommentItem } from './CommentItem';
 import { CommentInput } from './CommentInput';
 import { getComments, createComment, updateComment, type Comment } from '@/lib/comments';
+import { createAttachment, type PendingAttachment } from '@/lib/attachments';
 import { MessageSquare } from 'lucide-react';
 
 interface CommentThreadProps {
@@ -17,19 +18,16 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [error, setError] = useState<string | null>(null);
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
 
-    // Track scroll position before updates
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
 
-    // Load initial comments and set up polling
     useEffect(() => {
         loadComments();
 
-        // Polling for real-time updates
-        const POLL_INTERVAL = 10000; // 10 seconds
+        const POLL_INTERVAL = 10000;
         let intervalId: ReturnType<typeof setInterval>;
 
-        // Only poll when page is visible
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 if (!intervalId) {
@@ -45,7 +43,6 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
-        // Start polling
         intervalId = setInterval(pollForNewComments, POLL_INTERVAL);
 
         return () => {
@@ -62,7 +59,6 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const fetchedComments = await getComments(proposalId);
             setComments(fetchedComments);
-            // Track the latest comment timestamp for efficient polling
             if (fetchedComments.length > 0) {
                 const latest = fetchedComments[fetchedComments.length - 1];
                 setLastPolledAt(latest.createdAt);
@@ -81,10 +77,8 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const newComments = await getComments(proposalId, lastPolledAt || undefined);
             if (newComments.length > 0) {
-                // Track if user was actively reading (not at top of list)
                 const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
 
-                // Merge new comments without replacing existing state
                 setComments(prev => {
                     const existingIds = new Set(prev.map(c => c.id));
                     const trulyNew = newComments.filter(c => !existingIds.has(c.id));
@@ -94,7 +88,6 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                 const latest = newComments[newComments.length - 1];
                 setLastPolledAt(latest.createdAt);
 
-                // Restore scroll position if user was reading down the list
                 if (wasActive && scrollContainerRef.current) {
                     requestAnimationFrame(() => {
                         if (scrollContainerRef.current) {
@@ -113,6 +106,20 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
         const newComment = await createComment({ proposalId, content });
         if (newComment) {
+            // Create attachment records for pending attachments
+            for (const pending of pendingAttachmentsRef.current) {
+                await createAttachment(
+                    newComment.id,
+                    pending.fileName,
+                    pending.fileType,
+                    pending.fileSize,
+                    pending.r2Key
+                );
+            }
+            
+            // Clear pending attachments
+            pendingAttachmentsRef.current = [];
+            
             setComments(prev => [...prev, newComment]);
         }
     };
@@ -124,7 +131,6 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         }
     };
 
-    // Track scroll position when user scrolls manually
     const handleScroll = () => {
         if (scrollContainerRef.current) {
             scrollPosRef.current = {
@@ -200,6 +206,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             {isAuthenticated ? (
                 <div className="pt-2">
                     <CommentInput
+                        proposalId={proposalId}
                         onSubmit={handleSubmit}
                         placeholder="Write a comment..."
                     />
