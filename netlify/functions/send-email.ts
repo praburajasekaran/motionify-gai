@@ -444,3 +444,49 @@ export async function sendNewInquiryNotificationEmail(data: {
     html,
   });
 }
+
+export async function sendCommentNotificationEmail(data: {
+  to: string;
+  commenterName: string;
+  commenterRole: 'client' | 'admin';
+  commentPreview: string;
+  proposalId: string;
+  proposalNumber?: string;
+}) {
+  const roleLabel = data.commenterRole === 'client' ? 'Client' : 'Admin';
+  const proposalDisplay = data.proposalNumber ? `Proposal ${data.proposalNumber}` : 'your proposal';
+  const proposalUrl = `${process.env.URL || 'http://localhost:3000'}/proposal/${data.proposalId}`;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+      
+      <h2 style="color: #7c3aed; text-align: center;">New Comment on Your Proposal</h2>
+      <p>A ${roleLabel.toLowerCase()} has commented on ${proposalDisplay}.</p>
+      
+      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;"><strong>${data.commenterName}</strong> (${roleLabel}) wrote:</p>
+        <p style="margin: 0; color: #111827;">"${data.commentPreview}"</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${proposalUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reply on Portal</a>
+      </div>
+      
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Notifications<br>
+        <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `[${roleLabel}] New comment on your proposal`,
+    html,
+  });
+}
