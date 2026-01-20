@@ -27,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 export default function RootLayout({
   children,
@@ -37,7 +38,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${openSans.variable} ${fraunces.variable} ${ibmPlexSans.variable} antialiased`}>
         <AuthProvider>
-          {children}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>
