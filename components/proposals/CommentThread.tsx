@@ -4,6 +4,7 @@ import { CommentInput } from './CommentInput';
 import { getComments, createComment, updateComment, type Comment } from '@/lib/comments';
 import { createAttachment, type PendingAttachment } from '@/lib/attachments';
 import { MessageSquare } from 'lucide-react';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface CommentThreadProps {
     proposalId: string;
@@ -19,6 +20,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
+    const { addNotification } = useNotifications();
 
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
 
@@ -83,6 +85,20 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     const existingIds = new Set(prev.map(c => c.id));
                     const trulyNew = newComments.filter(c => !existingIds.has(c.id));
                     if (trulyNew.length === 0) return prev;
+                    
+                    // Show notification for new comments from other users
+                    trulyNew.forEach(comment => {
+                        if (comment.userId !== currentUserId) {
+                            addNotification({
+                                type: 'comment_created',
+                                title: 'New Comment',
+                                message: `${comment.userName} commented on the proposal`,
+                                actionUrl: `/proposal/${proposalId}`,
+                                projectId: proposalId,
+                            });
+                        }
+                    });
+                    
                     return [...prev, ...trulyNew];
                 });
                 const latest = newComments[newComments.length - 1];
