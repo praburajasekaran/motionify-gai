@@ -8,6 +8,13 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+};
+
 // Be resilient: handle if R2_ACCOUNT_ID is the full endpoint URL
 const endpoint = R2_ACCOUNT_ID?.startsWith('http')
     ? R2_ACCOUNT_ID
@@ -27,11 +34,7 @@ export default async (req: Request) => {
     // CORS Preflight
     if (req.method === "OPTIONS") {
         return new Response(null, {
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type",
-            },
+            headers: corsHeaders
         });
     }
 
@@ -39,7 +42,7 @@ export default async (req: Request) => {
         console.error("Missing R2 environment variables");
         return new Response(JSON.stringify({ error: "Server misconfiguration" }), {
             status: 500,
-            headers: { "Content-Type": "application/json" }
+            headers: corsHeaders
         });
     }
 
@@ -52,7 +55,7 @@ export default async (req: Request) => {
             if (!key) {
                 return new Response(JSON.stringify({ error: "Missing 'key' parameter" }), {
                     status: 400,
-                    headers: { "Access-Control-Allow-Origin": "*" }
+                    headers: corsHeaders
                 });
             }
 
@@ -63,10 +66,7 @@ export default async (req: Request) => {
 
             const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
             return new Response(JSON.stringify({ url: signedUrl }), {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                },
+                headers: corsHeaders
             });
         }
 
@@ -78,7 +78,7 @@ export default async (req: Request) => {
             if (!fileName || !fileType || !projectId) {
                 return new Response(JSON.stringify({ error: "Missing required fields" }), {
                     status: 400,
-                    headers: { "Access-Control-Allow-Origin": "*" }
+                    headers: corsHeaders
                 });
             }
 
@@ -105,23 +105,20 @@ export default async (req: Request) => {
                 uploadUrl: signedUrl,
                 key: key,
             }), {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                },
+                headers: corsHeaders
             });
         }
 
-        return new Response("Method not allowed", { status: 405 });
+        return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+            status: 405,
+            headers: corsHeaders
+        });
 
     } catch (error: any) {
         console.error("R2 Error:", error);
         return new Response(JSON.stringify({ error: error.message }), {
             status: 500,
-            headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
+            headers: corsHeaders
         });
     }
 };
