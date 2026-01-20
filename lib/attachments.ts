@@ -72,7 +72,7 @@ export async function getPresignedUploadUrl(
     fileType: string,
     projectId: string
 ): Promise<PresignedUrlResponse | null> {
-    const response = await api.post<PresignedUrlResponse>('/api/r2-presign', {
+    const response = await api.post<PresignedUrlResponse>('/r2-presign', {
         fileName,
         fileType,
         projectId,
@@ -88,7 +88,7 @@ export async function getPresignedUploadUrl(
 }
 
 export async function getPresignedDownloadUrl(key: string): Promise<string | null> {
-    const response = await api.get<{ url: string }>(`/api/r2-presign?key=${encodeURIComponent(key)}`);
+    const response = await api.get<{ url: string }>(`/r2-presign?key=${encodeURIComponent(key)}`);
 
     if (!response.success || !response.data) {
         console.error('Failed to get presigned download URL:', response.error?.message);

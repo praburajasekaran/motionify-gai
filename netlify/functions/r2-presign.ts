@@ -127,5 +127,5 @@ export default async (req: Request) => {
 };
 
 export const config: Config = {
-    path: "/api/r2-presign",
+    path: "/.netlify/functions/r2-presign",
 };
