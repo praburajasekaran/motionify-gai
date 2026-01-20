@@ -16,7 +16,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
-| **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | Pending |
+| **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | 📋 Planning |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | Pending |
 
 ---
@@ -72,6 +72,10 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 
 4. **Edit option unavailable after replies**  
    Once another user replies to a comment, the "Edit" button disappears from that comment. The user can no longer edit that comment.
+
+### Plans
+- [ ] `02-01-comment-editing-PLAN.md` — PUT endpoint + edit UI for both portals
+- [ ] `02-02-realtime-polling-PLAN.md` — Polling for real-time updates + API URL fix
 
 ---
 
