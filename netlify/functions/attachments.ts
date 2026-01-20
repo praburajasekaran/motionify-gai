@@ -1,6 +1,8 @@
 import pg from 'pg';
 import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const { Client } = pg;
 
@@ -52,6 +54,36 @@ const ALLOWED_FILE_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILE_NAME_LENGTH = 255;
 
+// R2 configuration for download URL generation
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
+
+const getR2Endpoint = () => {
+    if (!R2_ACCOUNT_ID) return null;
+    return R2_ACCOUNT_ID?.startsWith('http')
+        ? R2_ACCOUNT_ID
+        : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+};
+
+const getR2Client = () => {
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
+        return null;
+    }
+    
+    const endpoint = getR2Endpoint();
+    return new S3Client({
+        region: "auto",
+        endpoint: endpoint!,
+        credentials: {
+            accessKeyId: R2_ACCESS_KEY_ID || "",
+            secretAccessKey: R2_SECRET_ACCESS_KEY || "",
+        },
+        forcePathStyle: true,
+    });
+};
+
 export const handler = async (
     event: NetlifyEvent
 ): Promise<{
@@ -74,8 +106,83 @@ export const handler = async (
         // GET: Fetch attachments for a comment
         if (event.httpMethod === 'GET') {
             const params = event.queryStringParameters || {};
-            const { commentId } = params;
+            const { commentId, attachmentId } = params;
 
+            // Generate download URL for a specific attachment
+            if (attachmentId) {
+                if (!isValidUUID(attachmentId)) {
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({
+                            success: false,
+                            error: 'Valid attachmentId is required',
+                        }),
+                    };
+                }
+
+                // Fetch the attachment to get the r2_key
+                const attachmentResult = await client.query(
+                    'SELECT id, r2_key, file_name FROM comment_attachments WHERE id = $1',
+                    [attachmentId]
+                );
+
+                if (attachmentResult.rows.length === 0) {
+                    return {
+                        statusCode: 404,
+                        headers,
+                        body: JSON.stringify({
+                            success: false,
+                            error: 'Attachment not found',
+                        }),
+                    };
+                }
+
+                const attachment = attachmentResult.rows[0];
+                const r2Client = getR2Client();
+
+                if (!r2Client) {
+                    return {
+                        statusCode: 500,
+                        headers,
+                        body: JSON.stringify({
+                            success: false,
+                            error: 'R2 configuration missing',
+                        }),
+                    };
+                }
+
+                try {
+                    const command = new GetObjectCommand({
+                        Bucket: R2_BUCKET_NAME,
+                        Key: attachment.r2_key,
+                    });
+
+                    const signedUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
+
+                    return {
+                        statusCode: 200,
+                        headers,
+                        body: JSON.stringify({
+                            success: true,
+                            url: signedUrl,
+                            fileName: attachment.file_name,
+                        }),
+                    };
+                } catch (error) {
+                    console.error('Error generating download URL:', error);
+                    return {
+                        statusCode: 500,
+                        headers,
+                        body: JSON.stringify({
+                            success: false,
+                            error: 'Failed to generate download URL',
+                        }),
+                    };
+                }
+            }
+
+            // Fetch attachments for a comment
             if (!commentId || !isValidUUID(commentId)) {
                 return {
                     statusCode: 400,

@@ -98,6 +98,17 @@ export async function getPresignedDownloadUrl(key: string): Promise<string | nul
     return response.data.url;
 }
 
+export async function getAttachmentDownloadUrl(attachmentId: string): Promise<{ url: string; fileName: string } | null> {
+    const response = await api.get<{ url: string; fileName: string }>(`${ATTACHMENTS_ENDPOINT}?attachmentId=${encodeURIComponent(attachmentId)}`);
+
+    if (!response.success || !response.data) {
+        console.error('Failed to get attachment download URL:', response.error?.message);
+        return null;
+    }
+
+    return response.data;
+}
+
 export async function uploadFile(uploadUrl: string, file: File): Promise<boolean> {
     try {
         const response = await fetch(uploadUrl, {

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar';
-import { Edit2, X, Check } from 'lucide-react';
+import { Edit2, X, Check, File, FileText, FileImage, Download, Loader2 } from 'lucide-react';
+import { getAttachments, getAttachmentDownloadUrl, formatFileSize, type Attachment } from '@/lib/attachments';
 
 function formatDistanceToNow(date: Date): string {
     const now = new Date();
@@ -16,6 +17,16 @@ function formatDistanceToNow(date: Date): string {
     if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
 
     return date.toLocaleDateString();
+}
+
+function getFileIcon(fileType: string) {
+    if (fileType.startsWith('image/')) {
+        return FileImage;
+    } else if (fileType === 'application/pdf') {
+        return FileText;
+    } else {
+        return File;
+    }
 }
 
 interface CommentItemProps {
@@ -40,6 +51,46 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(comment.content);
     const [isSaving, setIsSaving] = useState(false);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadAttachments();
+    }, [comment.id]);
+
+    const loadAttachments = async () => {
+        setAttachmentsLoading(true);
+        try {
+            const fetchedAttachments = await getAttachments(comment.id);
+            setAttachments(fetchedAttachments);
+        } catch (error) {
+            console.error('Failed to load attachments:', error);
+        } finally {
+            setAttachmentsLoading(false);
+        }
+    };
+
+    const handleDownload = async (attachment: Attachment) => {
+        setDownloadingId(attachment.id);
+        try {
+            const downloadData = await getAttachmentDownloadUrl(attachment.id);
+            if (downloadData && downloadData.url) {
+                const link = document.createElement('a');
+                link.href = downloadData.url;
+                link.download = downloadData.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                console.error('Failed to get download URL');
+            }
+        } catch (error) {
+            console.error('Download failed:', error);
+        } finally {
+            setDownloadingId(null);
+        }
+    };
 
     const handleSave = async () => {
         const trimmedContent = editContent.trim();
@@ -120,7 +171,52 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
                         </div>
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                    <>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                        
+                        {/* Attachments section */}
+                        {attachmentsLoading && (
+                            <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Loading attachments...
+                            </div>
+                        )}
+                        
+                        {attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                                {attachments.map((attachment) => {
+                                    const IconComponent = getFileIcon(attachment.fileType);
+                                    const isDownloading = downloadingId === attachment.id;
+                                    
+                                    return (
+                                        <div
+                                            key={attachment.id}
+                                            className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                        >
+                                            <IconComponent className="w-5 h-5 text-gray-500 shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <button
+                                                    onClick={() => handleDownload(attachment)}
+                                                    disabled={isDownloading}
+                                                    className="text-sm text-gray-700 hover:text-gray-900 truncate text-left disabled:opacity-50"
+                                                >
+                                                    {attachment.fileName}
+                                                </button>
+                                                <p className="text-xs text-gray-500">
+                                                    {formatFileSize(attachment.fileSize)}
+                                                </p>
+                                            </div>
+                                            {isDownloading ? (
+                                                <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                            ) : (
+                                                <Download className="w-4 h-4 text-gray-400" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
