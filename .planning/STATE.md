@@ -16,11 +16,17 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 2: Core Comment Experience |
-| **Current Plan** | 02-02-realtime-polling-PLAN.md (Complete) |
-| **Status** | Phase complete |
-| **Progress** | 🟢 Core Comment Experience complete - 2/2 plans done |
+| **Current Phase** | Phase 3: Attachments & Notifications |
+| **Current Plan** | 03-01-PLAN.md and 03-02-PLAN.md (Ready for execution) |
+| **Status** | Phase planned |
+| **Progress** | 🟡 Attachments & Notifications - 2/2 plans ready |
 
+```
+Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
+Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
+Phase 3: Attachments & Notifications                  [Planned - Ready]
+───────────────────────────────────────────────────────────────
+Overall: 66% complete | 2/3 phases done | Phase 3 ready for execution
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
@@ -140,15 +146,19 @@ Overall: 33% complete | 1/3 phases done | Ready for Phase 2
 
 ### Next Actions
 
-1. **Phase 3** - Create detailed plan for attachments & notifications:
-   - File attachments (COMM-03)
-   - Email notifications (COMM-04)
-   - In-app notifications (COMM-05)
+1. **Execute Phase 3 Plan 1** - File attachments:
+   - Create comment_attachments table
+   - Implement attachments API
+   - Update CommentInput with file upload UI
+   - Update CommentItem with attachment display
 
-**Phase 1 Summary:** `.planning/phases/01-foundation/01-01-foundation-impl-SUMMARY.md`
-**Phase 2 Summary:** `.planning/phases/02-core-comment-experience/02-01-SUMMARY.md`
-**Phase 2 Plan 2 Summary:** `.planning/phases/02-core-comment-experience/02-02-SUMMARY.md`
-**Phase 2 Verification:** `.planning/phases/02-core-comment-experience/02-VERIFICATION.md`
+2. **Execute Phase 3 Plan 2** - Notifications:
+   - Add sendCommentNotificationEmail function
+   - Integrate email notification in comments POST
+   - Integrate in-app notification in comments POST and client
+
+**Phase 3 Plans:** `.planning/phases/03-attachments-and-notifications/03-01-PLAN.md`
+**Phase 3 Plans:** `.planning/phases/03-attachments-and-notifications/03-02-PLAN.md`
 
 ---
 

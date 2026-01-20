@@ -105,8 +105,12 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 3. **In-app notification badge updates on new comments**  
    Users see a notification badge increment when new comments are posted. The notification is visible in the existing notification dropdown/panel. Clicking the notification navigates to the proposal with the comment highlighted.
 
-4. **Attachment upload uses existing R2 infrastructure**  
-   Files upload via the existing R2 presigned URL system. No custom file storage implementation required. Upload respects existing file type and size policies.
+4. **Attachment upload uses existing R2 infrastructure**
+    Files upload via the existing R2 presigned URL system. No custom file storage implementation required. Upload respects existing file type and size policies.
+
+### Plans
+- [ ] `03-01-PLAN.md` — File attachments infrastructure (database, API, UI)
+- [ ] `03-02-PLAN.md` — Email + in-app notifications
 
 ---
 
@@ -128,15 +132,16 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3
 |-------------|-------|----------|--------|
 | COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
 | COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | ✅ Complete |
-| COMM-03: File Attachments on Comments | Phase 3 | Should Have | Pending |
-| COMM-04: Email Notifications on Comments | Phase 3 | Should Have | Pending |
-| COMM-05: In-App Notifications | Phase 3 | Should Have | Pending |
+| COMM-03: File Attachments on Comments | Phase 3 | Should Have | 🔨 In Progress |
+| COMM-04: Email Notifications on Comments | Phase 3 | Should Have | 🔨 In Progress |
+| COMM-05: In-App Notifications | Phase 3 | Should Have | 🔨 In Progress |
 | COMM-06: Comment Editing | Phase 2 | Could Have | ✅ Complete |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)  
 **Phases:** 3 (optimized for "quick" depth)
+**Phase 3:** 2/2 plans created
 
 ---
 
