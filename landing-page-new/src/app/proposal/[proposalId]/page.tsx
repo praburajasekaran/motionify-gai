@@ -1,44 +1,112 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { fetchProposalById, fetchProposals, formatDate } from '@/lib/proposals';
-import { fetchInquiryById } from '@/lib/inquiries';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
+import { fetchProposalById, fetchProposals, formatDate, ensureProposalExists } from '@/lib/proposals';
+import { fetchInquiryById, ensureInquiryExists, mapInquiryFromApi } from '@/lib/inquiries';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import ProposalReview from '@/components/proposal/ProposalReview';
 import ProposalActions from '@/components/proposal/ProposalActions';
+import { CommentThread } from '@/components/CommentThread';
+import { useAuth } from '@/context/AuthContext';
+
 
 export default function ProposalPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const proposalId = params.proposalId as string;
-  
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!proposalId) {
-      setLoading(false);
-      return;
-    }
+    const dataParam = searchParams.get('data');
 
-    const loadProposal = async () => {
+    const loadFromUrlData = async (encodedData: string) => {
       try {
+        const decodedData = JSON.parse(atob(encodedData));
+        if (decodedData.proposal && decodedData.inquiry) {
+          // Normalize numeric fields that might be strings in the encoded data
+          const proposalData = {
+            ...decodedData.proposal,
+            totalPrice: Number(decodedData.proposal.totalPrice),
+            advanceAmount: Number(decodedData.proposal.advanceAmount),
+            balanceAmount: Number(decodedData.proposal.balanceAmount),
+          };
+
+          let inquiryData = mapInquiryFromApi(decodedData.inquiry);
+
+          console.log('Decoded inquiry data:', decodedData.inquiry);
+          console.log('Mapped inquiry data (before persist):', inquiryData);
+
+          // Persist to backend and WAIT so subsequent actions work
+          try {
+            await Promise.all([
+              ensureInquiryExists(inquiryData),
+              ensureProposalExists(proposalData)
+            ]);
+            console.log('Shared data successfully persisted to backend');
+
+            // After persisting, fetch the inquiry from backend to get the proper ID
+            // Use inquiryNumber to look up if id is empty
+            if (!inquiryData.id && inquiryData.inquiryNumber) {
+              console.log('Fetching inquiry by number:', inquiryData.inquiryNumber);
+              const fetchedInquiry = await fetchInquiryById(inquiryData.inquiryNumber);
+              if (fetchedInquiry && fetchedInquiry.id) {
+                inquiryData = fetchedInquiry;
+                console.log('Fetched inquiry with proper ID:', fetchedInquiry.id);
+              }
+            } else if (inquiryData.id) {
+              // Verify the ID by fetching from backend
+              const fetchedInquiry = await fetchInquiryById(inquiryData.id);
+              if (fetchedInquiry && fetchedInquiry.id) {
+                inquiryData = fetchedInquiry;
+                console.log('Verified inquiry from backend:', fetchedInquiry.id);
+              }
+            }
+          } catch (err) {
+            console.error('Error persisting shared data:', err);
+          }
+
+          setProposal(proposalData);
+          setInquiry(inquiryData);
+          setLoading(false);
+          console.log('Proposal loaded from URL data, inquiry ID:', inquiryData.id);
+          return true;
+        }
+      } catch (error) {
+        console.error('Error decoding proposal data from URL:', error);
+      }
+      return false;
+    };
+
+    const loadFromId = async () => {
+      if (!proposalId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Loading proposal by ID:', proposalId);
         const fetchedProposal = await fetchProposalById(proposalId);
-        
+
         if (!fetchedProposal) {
-          const allProposals = await fetchProposals();
           console.log('Proposal not found:', proposalId);
-          console.log('Available proposals:', allProposals.map((p) => p.id));
           setLoading(false);
           return;
         }
 
+        console.log('Fetched proposal:', fetchedProposal);
+        console.log('Proposal inquiryId:', fetchedProposal.inquiryId);
+
         const fetchedInquiry = await fetchInquiryById(fetchedProposal.inquiryId);
-        
+        console.log('Fetched inquiry:', fetchedInquiry);
+
         setProposal(fetchedProposal);
         setInquiry(fetchedInquiry);
         setLoading(false);
@@ -48,6 +116,7 @@ export default function ProposalPage() {
           version: fetchedProposal.version || 1,
           status: fetchedProposal.status,
           inquiry: fetchedInquiry?.inquiryNumber || 'N/A',
+          inquiryId: fetchedInquiry?.id || 'MISSING',
         });
       } catch (error) {
         console.error('Error loading proposal:', error);
@@ -55,10 +124,18 @@ export default function ProposalPage() {
       }
     };
 
-    loadProposal();
-  }, [proposalId]);
+    const initialize = async () => {
+      if (dataParam) {
+        const success = await loadFromUrlData(dataParam);
+        if (success) return;
+      }
+      await loadFromId();
+    };
 
-  if (loading) {
+    initialize();
+  }, [proposalId, searchParams]);
+
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -94,7 +171,7 @@ export default function ProposalPage() {
     );
   }
 
-  if (!inquiry) {
+  if (!inquiry || !inquiry.id) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
@@ -128,18 +205,7 @@ export default function ProposalPage() {
       <header className="bg-black/20 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-white/80 transition-colors">
-            <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="8" fill="url(#gradient)" />
-              <path d="M12 20L20 12L28 20L20 28L12 20Z" fill="white" />
-              <defs>
-                <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
-                  <stop stopColor="#D946EF" />
-                  <stop offset="0.5" stopColor="#8B5CF6" />
-                  <stop offset="1" stopColor="#3B82F6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span className="text-xl font-bold">Motionify</span>
+            <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
           </Link>
         </div>
       </header>
@@ -169,13 +235,22 @@ export default function ProposalPage() {
           <ProposalReview proposal={proposal} inquiry={inquiry} />
 
           <div className="border-t border-gray-200 bg-gray-50 p-6">
-            <ProposalActions 
-              proposal={proposal} 
-              inquiry={inquiry} 
+            <ProposalActions
+              proposal={proposal}
+              inquiry={inquiry}
               onStatusChange={handleStatusChange}
             />
           </div>
         </div>
+
+        {proposal && (
+          <CommentThread
+            proposalId={proposal.id}
+            currentUserId={user?.id}
+            currentUserName={user?.fullName}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
 
         <div className="text-center mt-8">
           <p className="text-white/40 text-sm">
