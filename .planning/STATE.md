@@ -17,7 +17,7 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 3: Attachments & Notifications |
-| **Current Plan** | 03-04-PLAN.md (Complete - Backend Fixes) |
+| **Current Plan** | 03-05-PLAN.md (Complete - Frontend Fixes) |
 | **Status** | Phase 3 Complete |
 | **Progress** | 🟢 All 3 phases complete + gap closures - 100% |
 
@@ -29,8 +29,9 @@ Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-02: Email & In-App Notifications              [Complete]
   ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
   ✓ 03-04: Backend Infrastructure Fixes              [Complete - Gap Closure]
+  ✓ 03-05: Attachments Integration Fixes             [Complete - Gap Closure]
 ───────────────────────────────────────────────────────────────
-Overall: 100% complete | 8/8 plans done | All phases complete
+Overall: 100% complete | 9/9 plans done | All phases complete
 ```
 
 ---
@@ -124,6 +125,13 @@ Overall: 100% complete | 8/8 plans done | All phases complete
 ## Session Continuity
 
 ### This Session (2026-01-20)
+
+**Phase 3 Plan 5 (Gap Closure - Frontend Fixes) Completed:**
+- Fixed R2 presign API path in attachments lib
+- Enforced 10MB file limit in UploadFileModal
+- Added file type restrictions
+- Created 03-05-SUMMARY.md
+- Updated STATE.md
 
 **Phase 3 Plan 4 (Gap Closure - Backend Fixes) Completed:**
 - Fixed CORS headers in R2 presign (centralized definition)
