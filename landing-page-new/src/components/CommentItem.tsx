@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit2 } from 'lucide-react';
+import { Edit2, X, Check } from 'lucide-react';
 
 function formatDistanceToNow(date: Date): string {
     const now = new Date();
@@ -36,6 +37,32 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
     const isRecentlyCreated = Date.now() - new Date(comment.createdAt).getTime() < 60000;
     const showEditedBadge = comment.isEdited && !isRecentlyCreated;
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(comment.content);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSave = async () => {
+        const trimmedContent = editContent.trim();
+        if (!trimmedContent || trimmedContent === comment.content) {
+            setIsEditing(false);
+            setEditContent(comment.content);
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await onEdit?.(comment.id, trimmedContent);
+            setIsEditing(false);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setIsEditing(false);
+        setEditContent(comment.content);
+    };
+
     return (
         <div className="flex gap-3 p-4 hover:bg-gray-50 rounded-lg transition-colors">
             <Avatar className="h-8 w-8">
@@ -54,8 +81,47 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
                             edited
                         </span>
                     )}
+                    {isOwner && !isEditing && (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Edit comment"
+                        >
+                            <Edit2 className="w-3 h-3" />
+                        </button>
+                    )}
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                {isEditing ? (
+                    <div className="space-y-2">
+                        <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            rows={3}
+                            disabled={isSaving}
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving || !editContent.trim()}
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Check className="w-3 h-3" />
+                                Save
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                disabled={isSaving}
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                            >
+                                <X className="w-3 h-3" />
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                )}
             </div>
         </div>
     );
