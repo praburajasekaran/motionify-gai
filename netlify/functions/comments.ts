@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
+import { sendCommentNotificationEmail } from './send-email';
 
 const { Client } = pg;
 
@@ -198,6 +199,61 @@ export const handler = async (
                 createdAt: new Date(result.rows[0].createdAt).toISOString(),
                 updatedAt: new Date(result.rows[0].updatedAt).toISOString(),
             };
+
+            // ========================================================================
+            // Send comment notification email
+            // ========================================================================
+            try {
+                // Determine commenter role for email subject
+                const commenterRole = user.role === 'client' ? 'client' : 'admin';
+                
+                // Get the other party's info based on commenter role
+                let recipientEmail: string | null = null;
+                let proposalNumber: string | undefined;
+                
+                if (user.role === 'client') {
+                    // Client posted comment - notify superadmin(s)
+                    // Get superadmin email for this proposal (first admin user)
+                    const adminResult = await client.query(
+                        `SELECT email FROM users WHERE role IN ('super_admin', 'project_manager') ORDER BY created_at ASC LIMIT 1`
+                    );
+                    if (adminResult.rows.length > 0) {
+                        recipientEmail = adminResult.rows[0].email;
+                    }
+                } else {
+                    // Admin posted comment - notify client
+                    const proposalResult = await client.query(
+                        `SELECT p.id, i.contact_email, i.inquiry_number 
+                         FROM proposals p 
+                         JOIN inquiries i ON p.inquiry_id = i.id 
+                         WHERE p.id = $1`,
+                        [proposalId]
+                    );
+                    if (proposalResult.rows.length > 0) {
+                        recipientEmail = proposalResult.rows[0].contact_email;
+                        proposalNumber = proposalResult.rows[0].inquiry_number;
+                    }
+                }
+                
+                // Send email if recipient found (don't notify sender)
+                if (recipientEmail) {
+                    const commentPreview = trimmedContent.substring(0, 100);
+                    await sendCommentNotificationEmail({
+                        to: recipientEmail,
+                        commenterName: user.fullName,
+                        commenterRole,
+                        commentPreview,
+                        proposalId,
+                        proposalNumber,
+                    });
+                    console.log(`✅ Comment notification sent to ${recipientEmail}`);
+                } else {
+                    console.warn(`⚠️ Could not find recipient email for comment notification on proposal ${proposalId}`);
+                }
+            } catch (emailError) {
+                // Log but don't fail the comment creation
+                console.error('❌ Failed to send comment notification email:', emailError);
+            }
 
             return {
                 statusCode: 201,
