@@ -18,8 +18,12 @@ export interface CreateCommentData {
 
 const COMMENTS_ENDPOINT = '/comments';
 
-export async function getComments(proposalId: string): Promise<Comment[]> {
-    const response = await api.get<Comment[]>(`${COMMENTS_ENDPOINT}?proposalId=${proposalId}`);
+export async function getComments(proposalId: string, since?: string): Promise<Comment[]> {
+    let url = `${COMMENTS_ENDPOINT}?proposalId=${proposalId}`;
+    if (since) {
+        url += `&since=${encodeURIComponent(since)}`;
+    }
+    const response = await api.get<Comment[]>(url);
 
     if (!response.success || !response.data) {
         console.error('Failed to fetch comments:', response.error?.message);

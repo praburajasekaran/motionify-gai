@@ -15,9 +15,41 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
 
+    // Load initial comments and set up polling
     useEffect(() => {
         loadComments();
+
+        // Polling for real-time updates
+        const POLL_INTERVAL = 10000; // 10 seconds
+        let intervalId: ReturnType<typeof setInterval>;
+
+        // Only poll when page is visible
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                if (!intervalId) {
+                    intervalId = setInterval(pollForNewComments, POLL_INTERVAL);
+                }
+            } else {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = undefined;
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        // Start polling
+        intervalId = setInterval(pollForNewComments, POLL_INTERVAL);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
     }, [proposalId]);
 
     const loadComments = async () => {
@@ -26,11 +58,37 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const fetchedComments = await getComments(proposalId);
             setComments(fetchedComments);
+            // Track the latest comment timestamp for efficient polling
+            if (fetchedComments.length > 0) {
+                const latest = fetchedComments[fetchedComments.length - 1];
+                setLastPolledAt(latest.createdAt);
+            } else {
+                setLastPolledAt(new Date().toISOString());
+            }
         } catch (err) {
             setError('Failed to load comments');
             console.error('Error loading comments:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const pollForNewComments = async () => {
+        try {
+            const newComments = await getComments(proposalId, lastPolledAt || undefined);
+            if (newComments.length > 0) {
+                // Merge new comments without replacing existing state
+                setComments(prev => {
+                    const existingIds = new Set(prev.map(c => c.id));
+                    const trulyNew = newComments.filter(c => !existingIds.has(c.id));
+                    if (trulyNew.length === 0) return prev;
+                    return [...prev, ...trulyNew];
+                });
+                const latest = newComments[newComments.length - 1];
+                setLastPolledAt(latest.createdAt);
+            }
+        } catch (err) {
+            console.error('Error polling for new comments:', err);
         }
     };
 
