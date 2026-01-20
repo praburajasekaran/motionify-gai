@@ -11,8 +11,8 @@ interface UploadFileModalProps {
   onClose: () => void;
 }
 
-// File size limit: 500MB for standard file uploads
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+// File size limit: 10MB for standard file uploads
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) => {
   const { project, addFile } = useContext(AppContext);
@@ -30,10 +30,10 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
 
-      // Validate file size (500MB limit)
+      // Validate file size (10MB limit)
       if (file.size > MAX_FILE_SIZE) {
         const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        setFileSizeError(`File exceeds 500MB limit (${fileSizeMB}MB). Compress file or contact admin.`);
+        setFileSizeError(`File exceeds 10MB limit (${fileSizeMB}MB). Compress file or contact admin.`);
         setSelectedFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -132,7 +132,7 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
                   <div className="flex text-sm text-gray-600 dark:text-gray-400">
                     <label htmlFor="file-upload" className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
                       <span>Upload a file</span>
-                      <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} ref={fileInputRef} required />
+                      <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} ref={fileInputRef} required accept=".png,.jpg,.jpeg,.pdf,.docx,.txt" />
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
@@ -141,7 +141,7 @@ const UploadFileModal: React.FC<UploadFileModalProps> = ({ isOpen, onClose }) =>
                   ) : selectedFile ? (
                     <p className="text-sm text-gray-500">{selectedFile.name}</p>
                   ) : (
-                    <p className="text-xs text-gray-500">Any file type, up to 500MB</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, PDF, DOCX, TXT up to 10MB</p>
                   )}
                 </div>
               </div>
