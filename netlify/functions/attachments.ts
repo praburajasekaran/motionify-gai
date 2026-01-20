@@ -98,9 +98,10 @@ export const handler = async (
         return { statusCode: 204, headers, body: '' };
     }
 
-    const client = getDbClient();
+    let client;
 
     try {
+        client = getDbClient();
         await client.connect();
 
         // GET: Fetch attachments for a comment
@@ -401,6 +402,6 @@ export const handler = async (
             }),
         };
     } finally {
-        await client.end();
+        if (client) await client.end();
     }
 };
