@@ -46,3 +46,17 @@ export async function createComment(data: CreateCommentData): Promise<Comment | 
 
     return response.data;
 }
+
+export async function updateComment(id: string, content: string): Promise<Comment | null> {
+    const response = await api.put<Comment>(COMMENTS_ENDPOINT, {
+        id,
+        content,
+    });
+
+    if (!response.success || !response.data) {
+        console.error('Failed to update comment:', response.error?.message);
+        return null;
+    }
+
+    return response.data;
+}

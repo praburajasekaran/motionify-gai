@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { CommentItem } from './CommentItem';
 import { CommentInput } from './CommentInput';
-import { getComments, createComment, type Comment } from '@/lib/comments';
+import { getComments, createComment, updateComment, type Comment } from '@/lib/comments';
 import { MessageSquare } from 'lucide-react';
 
 interface CommentThreadProps {
@@ -16,6 +16,10 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Track scroll position before updates
+    const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
 
     // Load initial comments and set up polling
     useEffect(() => {
@@ -77,6 +81,9 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const newComments = await getComments(proposalId, lastPolledAt || undefined);
             if (newComments.length > 0) {
+                // Track if user was actively reading (not at top of list)
+                const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
+
                 // Merge new comments without replacing existing state
                 setComments(prev => {
                     const existingIds = new Set(prev.map(c => c.id));
@@ -86,6 +93,15 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                 });
                 const latest = newComments[newComments.length - 1];
                 setLastPolledAt(latest.createdAt);
+
+                // Restore scroll position if user was reading down the list
+                if (wasActive && scrollContainerRef.current) {
+                    requestAnimationFrame(() => {
+                        if (scrollContainerRef.current) {
+                            scrollContainerRef.current.scrollTop = scrollPosRef.current.container;
+                        }
+                    });
+                }
             }
         } catch (err) {
             console.error('Error polling for new comments:', err);
@@ -98,6 +114,23 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         const newComment = await createComment({ proposalId, content });
         if (newComment) {
             setComments(prev => [...prev, newComment]);
+        }
+    };
+
+    const handleEdit = async (id: string, newContent: string) => {
+        const updated = await updateComment(id, newContent);
+        if (updated) {
+            setComments(prev => prev.map(c => c.id === id ? updated : c));
+        }
+    };
+
+    // Track scroll position when user scrolls manually
+    const handleScroll = () => {
+        if (scrollContainerRef.current) {
+            scrollPosRef.current = {
+                container: scrollContainerRef.current.scrollTop,
+                active: true,
+            };
         }
     };
 
@@ -148,12 +181,17 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             {comments.length === 0 ? (
                 <p className="text-sm text-gray-500 py-4">No comments yet. Be the first to comment!</p>
             ) : (
-                <div className="space-y-1 mb-4 divide-y divide-gray-100">
+                <div
+                    ref={scrollContainerRef}
+                    onScroll={handleScroll}
+                    className="space-y-1 mb-4 divide-y divide-gray-100 max-h-[500px] overflow-y-auto"
+                >
                     {comments.map(comment => (
                         <CommentItem
                             key={comment.id}
                             comment={comment}
                             currentUserId={currentUserId}
+                            onEdit={handleEdit}
                         />
                     ))}
                 </div>
