@@ -190,6 +190,111 @@ export const handler = async (
             };
         }
 
+        if (event.httpMethod === 'PUT') {
+            const authResult = await requireAuth(event);
+
+            if (!('user' in authResult)) {
+                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
+            }
+
+            const user = authResult.user;
+            const body = event.body ? JSON.parse(event.body) : {};
+            const { id, content } = body;
+
+            if (!id || !isValidUUID(id)) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: 'Valid comment ID is required',
+                    }),
+                };
+            }
+
+            if (!content || typeof content !== 'string') {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: 'Content is required and must be a string',
+                    }),
+                };
+            }
+
+            const trimmedContent = content.trim();
+            if (trimmedContent.length < MIN_CONTENT_LENGTH || trimmedContent.length > MAX_CONTENT_LENGTH) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: `Content must be between ${MIN_CONTENT_LENGTH} and ${MAX_CONTENT_LENGTH} characters`,
+                    }),
+                };
+            }
+
+            const commentCheck = await client.query(
+                'SELECT user_id, content FROM proposal_comments WHERE id = $1',
+                [id]
+            );
+
+            if (commentCheck.rows.length === 0) {
+                return {
+                    statusCode: 404,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: 'Comment not found',
+                    }),
+                };
+            }
+
+            if (commentCheck.rows[0].user_id !== user.id) {
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: 'You can only edit your own comments',
+                    }),
+                };
+            }
+
+            const result = await client.query(
+                `UPDATE proposal_comments
+                SET content = $1, is_edited = true, updated_at = NOW()
+                WHERE id = $2
+                RETURNING 
+                    id,
+                    proposal_id as "proposalId",
+                    user_id as "userId",
+                    user_name as "userName",
+                    content,
+                    is_edited as "isEdited",
+                    created_at as "createdAt",
+                    updated_at as "updatedAt"`,
+                [trimmedContent, id]
+            );
+
+            const comment: Comment = {
+                ...result.rows[0],
+                isEdited: result.rows[0].isEdited,
+                createdAt: new Date(result.rows[0].createdAt).toISOString(),
+                updatedAt: new Date(result.rows[0].updatedAt).toISOString(),
+            };
+
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    success: true,
+                    comment,
+                }),
+            };
+        }
+
         return {
             statusCode: 405,
             headers,
