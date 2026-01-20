@@ -39,7 +39,7 @@ const getDbClient = () => {
 };
 
 const isValidUUID = (id: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     return uuidRegex.test(id);
 };
 
@@ -58,9 +58,10 @@ export const handler = async (
         return { statusCode: 204, headers, body: '' };
     }
 
-    const client = getDbClient();
+    let client;
 
     try {
+        client = getDbClient();
         await client.connect();
 
         // GET - Fetch notifications for a user
@@ -215,6 +216,6 @@ export const handler = async (
             }),
         };
     } finally {
-        await client.end();
+        if (client) await client.end();
     }
 };
