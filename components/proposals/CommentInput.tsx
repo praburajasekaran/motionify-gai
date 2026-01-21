@@ -8,6 +8,7 @@ interface CommentInputProps {
     placeholder?: string;
     disabled?: boolean;
     proposalId: string;
+    onAttachmentsChange?: (attachments: PendingAttachment[]) => void;
 }
 
 interface UploadingFile {
@@ -17,7 +18,7 @@ interface UploadingFile {
     error?: string;
 }
 
-interface PendingAttachment {
+export interface PendingAttachment {
     tempId: string;
     fileName: string;
     fileType: string;
@@ -25,7 +26,7 @@ interface PendingAttachment {
     r2Key: string;
 }
 
-export function CommentInput({ onSubmit, placeholder = 'Write a comment...', disabled, proposalId }: CommentInputProps) {
+export function CommentInput({ onSubmit, placeholder = 'Write a comment...', disabled, proposalId, onAttachmentsChange }: CommentInputProps) {
     const [content, setContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
@@ -116,16 +117,20 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                 prev.map(f => f.id === uploadingFile.id ? { ...f, progress: 100 } : f)
             );
 
-            setPendingAttachments(prev => [
-                ...prev,
-                {
-                    tempId: uploadingFile.id,
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    r2Key: presignedData.key,
-                },
-            ]);
+            setPendingAttachments(prev => {
+                const newAttachments = [
+                    ...prev,
+                    {
+                        tempId: uploadingFile.id,
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileSize: file.size,
+                        r2Key: presignedData.key,
+                    },
+                ];
+                onAttachmentsChange?.(newAttachments);
+                return newAttachments;
+            });
 
         } catch (error) {
             console.error('Upload error:', error);
@@ -140,7 +145,11 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
     };
 
     const removePendingAttachment = (index: number) => {
-        setPendingAttachments(prev => prev.filter((_, i) => i !== index));
+        setPendingAttachments(prev => {
+            const newAttachments = prev.filter((_, i) => i !== index);
+            onAttachmentsChange?.(newAttachments);
+            return newAttachments;
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {

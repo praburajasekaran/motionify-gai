@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { CommentItem } from './CommentItem';
-import { CommentInput } from './CommentInput';
+import { CommentInput, type PendingAttachment } from './CommentInput';
 import { getComments, createComment, updateComment, type Comment } from '@/lib/comments';
-import { createAttachment, type PendingAttachment } from '@/lib/attachments';
+import { createAttachment } from '@/lib/attachments';
 import { MessageSquare } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 
@@ -156,6 +156,10 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         }
     };
 
+    const handleAttachmentsChange = (attachments: PendingAttachment[]) => {
+        pendingAttachmentsRef.current = attachments;
+    };
+
     if (loading) {
         return (
             <div className="space-y-4">
@@ -225,6 +229,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                         proposalId={proposalId}
                         onSubmit={handleSubmit}
                         placeholder="Write a comment..."
+                        onAttachmentsChange={handleAttachmentsChange}
                     />
                 </div>
             ) : (
