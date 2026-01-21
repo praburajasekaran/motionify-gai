@@ -73,6 +73,23 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     // Track scroll position before updates
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
 
+    // Check if user is near bottom of comment thread (within 100px)
+    const isNearBottom = () => {
+        if (!scrollContainerRef.current) return false;
+        const { scrollHeight, scrollTop, clientHeight } = scrollContainerRef.current;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        return distanceFromBottom < 100;
+    };
+
+    // Scroll to bottom smoothly
+    const scrollToBottom = () => {
+        if (!scrollContainerRef.current) return;
+        scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
+    };
+
     // Load initial comments and set up polling
     useEffect(() => {
         loadComments();
@@ -96,7 +113,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        
+
         // Start polling
         intervalId = setInterval(pollForNewComments, POLL_INTERVAL);
 
@@ -133,40 +150,55 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const newComments = await getComments(proposalId, lastPolledAt || undefined);
             if (newComments.length > 0) {
-                // Track if user was actively reading (not at top of list)
-                const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
+                // Check if user was near bottom before new comments arrived
+                const wasNearBottom = isNearBottom();
 
                 // Merge new comments without replacing existing state
                 setComments(prev => {
                     const existingIds = new Set(prev.map(c => c.id));
-                    const trulyNew = newComments.filter(c => !existingIds.has(c.id));
+
+                    // Deduplicate newComments internally first
+                    const uniqueNewComments = newComments.filter((c, index, self) =>
+                        index === self.findIndex((t) => t.id === c.id)
+                    );
+
+                    const trulyNew = uniqueNewComments.filter(c => !existingIds.has(c.id));
                     if (trulyNew.length === 0) return prev;
 
                     // Show notification for new comments from other users
-                    trulyNew.forEach(comment => {
-                        if (comment.userId !== currentUserId) {
-                            addNotification({
-                                type: 'comment_created',
-                                title: 'New Comment',
-                                message: `${comment.userName} commented on the proposal`,
-                                actionUrl: `/proposal/${proposalId}`,
-                                projectId: proposalId,
-                            });
-                        }
-                    });
+                    // Wrap in setTimeout to avoid "Cannot update component while rendering" error
+                    setTimeout(() => {
+                        trulyNew.forEach(comment => {
+                            if (comment.userId !== currentUserId) {
+                                addNotification({
+                                    type: 'comment_created',
+                                    title: 'New Comment',
+                                    message: `${comment.userName} commented on the proposal`,
+                                    actionUrl: `/proposal/${proposalId}`,
+                                    projectId: proposalId,
+                                });
+                            }
+                        });
+                    }, 0);
 
                     return [...prev, ...trulyNew];
                 });
                 const latest = newComments[newComments.length - 1];
                 setLastPolledAt(latest.createdAt);
 
-                // Restore scroll position if user was reading down the list
-                if (wasActive && scrollContainerRef.current) {
-                    requestAnimationFrame(() => {
-                        if (scrollContainerRef.current) {
-                            scrollContainerRef.current.scrollTop = scrollPosRef.current.container;
-                        }
-                    });
+                // Auto-scroll to new comment if user was near bottom
+                if (wasNearBottom) {
+                    setTimeout(() => scrollToBottom(), 50);
+                } else {
+                    // Otherwise preserve scroll position if user was reading middle
+                    const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
+                    if (wasActive && scrollContainerRef.current) {
+                        requestAnimationFrame(() => {
+                            if (scrollContainerRef.current) {
+                                scrollContainerRef.current.scrollTop = scrollPosRef.current.container;
+                            }
+                        });
+                    }
                 }
             }
         } catch (err) {
@@ -188,9 +220,12 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     pending.r2Key
                 );
             }
-            
+
             pendingAttachmentsRef.current = [];
             setComments(prev => [...prev, newComment]);
+
+            // Always scroll to show own comment immediately
+            setTimeout(() => scrollToBottom(), 100);
         }
     };
 

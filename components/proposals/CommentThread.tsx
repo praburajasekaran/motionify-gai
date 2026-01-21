@@ -6,6 +6,23 @@ import { createAttachment } from '@/lib/attachments';
 import { MessageSquare } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 
+// Check if a comment has replies from other users posted after it
+const computeHasSubsequentReplies = (
+    comment: Comment,
+    allComments: Comment[],
+    currentUserId: string
+): boolean => {
+    // Find comments posted after this one
+    const subsequentComments = allComments.filter(
+        c => new Date(c.createdAt) > new Date(comment.createdAt)
+    );
+
+    // Check if any subsequent comment is from a different user
+    return subsequentComments.some(
+        c => c.userId !== currentUserId
+    );
+};
+
 interface CommentThreadProps {
     proposalId: string;
     currentUserId?: string;
@@ -23,6 +40,23 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const { addNotification } = useNotifications();
 
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
+
+    // Check if user is near bottom of comment thread (within 100px)
+    const isNearBottom = () => {
+        if (!scrollContainerRef.current) return false;
+        const { scrollHeight, scrollTop, clientHeight } = scrollContainerRef.current;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        return distanceFromBottom < 100;
+    };
+
+    // Scroll to bottom smoothly
+    const scrollToBottom = () => {
+        if (!scrollContainerRef.current) return;
+        scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
+    };
 
     useEffect(() => {
         loadComments();
@@ -44,7 +78,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        
+
         intervalId = setInterval(pollForNewComments, POLL_INTERVAL);
 
         return () => {
@@ -79,37 +113,54 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
         try {
             const newComments = await getComments(proposalId, lastPolledAt || undefined);
             if (newComments.length > 0) {
-                const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
+                // Check if user was near bottom before new comments arrived
+                const wasNearBottom = isNearBottom();
 
                 setComments(prev => {
                     const existingIds = new Set(prev.map(c => c.id));
-                    const trulyNew = newComments.filter(c => !existingIds.has(c.id));
+
+                    // Deduplicate newComments internally first
+                    const uniqueNewComments = newComments.filter((c, index, self) =>
+                        index === self.findIndex((t) => t.id === c.id)
+                    );
+
+                    const trulyNew = uniqueNewComments.filter(c => !existingIds.has(c.id));
                     if (trulyNew.length === 0) return prev;
-                    
+
                     // Show notification for new comments from other users
-                    trulyNew.forEach(comment => {
-                        if (comment.userId !== currentUserId) {
-                            addNotification({
-                                type: 'comment_created',
-                                title: 'New Comment',
-                                message: `${comment.userName} commented on the proposal`,
-                                actionUrl: `/proposal/${proposalId}`,
-                                projectId: proposalId,
-                            });
-                        }
-                    });
-                    
+                    // Wrap in setTimeout to avoid "Cannot update component while rendering" error
+                    setTimeout(() => {
+                        trulyNew.forEach(comment => {
+                            if (comment.userId !== currentUserId) {
+                                addNotification({
+                                    type: 'comment_created',
+                                    title: 'New Comment',
+                                    message: `${comment.userName} commented on the proposal`,
+                                    actionUrl: `/proposal/${proposalId}`,
+                                    projectId: proposalId,
+                                });
+                            }
+                        });
+                    }, 0);
+
                     return [...prev, ...trulyNew];
                 });
                 const latest = newComments[newComments.length - 1];
                 setLastPolledAt(latest.createdAt);
 
-                if (wasActive && scrollContainerRef.current) {
-                    requestAnimationFrame(() => {
-                        if (scrollContainerRef.current) {
-                            scrollContainerRef.current.scrollTop = scrollPosRef.current.container;
-                        }
-                    });
+                // Auto-scroll to new comment if user was near bottom
+                if (wasNearBottom) {
+                    setTimeout(() => scrollToBottom(), 50);
+                } else {
+                    // Otherwise preserve scroll position if user was reading middle
+                    const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
+                    if (wasActive && scrollContainerRef.current) {
+                        requestAnimationFrame(() => {
+                            if (scrollContainerRef.current) {
+                                scrollContainerRef.current.scrollTop = scrollPosRef.current.container;
+                            }
+                        });
+                    }
                 }
             }
         } catch (err) {
@@ -132,11 +183,14 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     pending.r2Key
                 );
             }
-            
+
             // Clear pending attachments
             pendingAttachmentsRef.current = [];
-            
+
             setComments(prev => [...prev, newComment]);
+
+            // Always scroll to show own comment immediately
+            setTimeout(() => scrollToBottom(), 100);
         }
     };
 
@@ -212,14 +266,23 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     onScroll={handleScroll}
                     className="space-y-1 mb-4 divide-y divide-gray-100 max-h-[500px] overflow-y-auto"
                 >
-                    {comments.map(comment => (
-                        <CommentItem
-                            key={comment.id}
-                            comment={comment}
-                            currentUserId={currentUserId}
-                            onEdit={handleEdit}
-                        />
-                    ))}
+                    {comments.map(comment => {
+                        const hasSubsequentReplies = computeHasSubsequentReplies(
+                            comment,
+                            comments,
+                            currentUserId || ''
+                        );
+
+                        return (
+                            <CommentItem
+                                key={comment.id}
+                                comment={comment}
+                                currentUserId={currentUserId}
+                                hasSubsequentReplies={hasSubsequentReplies}
+                                onEdit={handleEdit}
+                            />
+                        );
+                    })}
                 </div>
             )}
 
