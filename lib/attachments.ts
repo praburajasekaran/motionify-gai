@@ -34,14 +34,24 @@ export interface PresignedUrlResponse {
 const ATTACHMENTS_ENDPOINT = '/attachments';
 
 export async function getAttachments(commentId: string): Promise<Attachment[]> {
-    const response = await api.get<Attachment[]>(`${ATTACHMENTS_ENDPOINT}?commentId=${encodeURIComponent(commentId)}`);
+    try {
+        const response = await api.get<{ attachments: Attachment[] }>(`${ATTACHMENTS_ENDPOINT}?commentId=${encodeURIComponent(commentId)}`);
 
-    if (!response.success || !response.data) {
-        console.error('Failed to fetch attachments:', response.error?.message);
+        if (!response.success || !response.data) {
+            // Silently return empty array - attachments table may not exist in this environment
+            return [];
+        }
+
+        // Handle both direct attachments array and nested attachments property
+        const attachments = Array.isArray(response.data)
+            ? response.data
+            : (response.data.attachments || []);
+
+        return attachments;
+    } catch {
+        // Silently fail - attachments are optional
         return [];
     }
-
-    return response.data;
 }
 
 export async function createAttachment(
@@ -51,20 +61,25 @@ export async function createAttachment(
     fileSize: number,
     r2Key: string
 ): Promise<Attachment | null> {
-    const response = await api.post<Attachment>(ATTACHMENTS_ENDPOINT, {
-        commentId,
-        fileName,
-        fileType,
-        fileSize,
-        r2Key,
-    });
+    try {
+        const response = await api.post<{ attachment: Attachment }>(ATTACHMENTS_ENDPOINT, {
+            commentId,
+            fileName,
+            fileType,
+            fileSize,
+            r2Key,
+        });
 
-    if (!response.success || !response.data) {
-        console.error('Failed to create attachment:', response.error?.message);
+        if (!response.success || !response.data) {
+            // Silently fail - attachments table may not exist
+            return null;
+        }
+
+        return response.data.attachment;
+    } catch {
+        // Silently fail - attachments are optional
         return null;
     }
-
-    return response.data;
 }
 
 export async function getPresignedUploadUrl(

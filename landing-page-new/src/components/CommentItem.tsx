@@ -71,17 +71,23 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
         }
     };
 
-    const handleDownload = async (attachment: Attachment) => {
+    const handleDownload = async (attachment: Attachment, e: React.MouseEvent) => {
+        e.stopPropagation();
         setDownloadingId(attachment.id);
         try {
             const downloadData = await getAttachmentDownloadUrl(attachment.id);
             if (downloadData && downloadData.url) {
+                // Use fetch + blob to force download (bypasses CORS issues with download attribute)
+                const response = await fetch(downloadData.url);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = downloadData.url;
+                link.href = blobUrl;
                 link.download = downloadData.fileName;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
             } else {
                 console.error('Failed to get download URL');
             }
@@ -89,6 +95,19 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
             console.error('Download failed:', error);
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const handleOpenFile = async (attachment: Attachment) => {
+        try {
+            const downloadData = await getAttachmentDownloadUrl(attachment.id);
+            if (downloadData && downloadData.url) {
+                window.open(downloadData.url, '_blank');
+            } else {
+                console.error('Failed to get file URL');
+            }
+        } catch (error) {
+            console.error('Failed to open file:', error);
         }
     };
 
@@ -173,34 +192,31 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
                 ) : (
                     <>
                         <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
-                        
+
                         {attachmentsLoading && (
                             <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 Loading attachments...
                             </div>
                         )}
-                        
+
                         {attachments.length > 0 && (
                             <div className="mt-3 space-y-2">
                                 {attachments.map((attachment) => {
                                     const IconComponent = getFileIcon(attachment.fileType);
                                     const isDownloading = downloadingId === attachment.id;
-                                    
+
                                     return (
                                         <div
                                             key={attachment.id}
-                                            className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                            className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                            onClick={() => handleOpenFile(attachment)}
                                         >
                                             <IconComponent className="w-5 h-5 text-gray-500 shrink-0" />
                                             <div className="flex-1 min-w-0">
-                                                <button
-                                                    onClick={() => handleDownload(attachment)}
-                                                    disabled={isDownloading}
-                                                    className="text-sm text-gray-700 hover:text-gray-900 truncate text-left disabled:opacity-50"
-                                                >
+                                                <span className="text-sm text-gray-700 hover:text-gray-900 truncate block">
                                                     {attachment.fileName}
-                                                </button>
+                                                </span>
                                                 <p className="text-xs text-gray-500">
                                                     {formatFileSize(attachment.fileSize)}
                                                 </p>
@@ -208,7 +224,13 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
                                             {isDownloading ? (
                                                 <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                                             ) : (
-                                                <Download className="w-4 h-4 text-gray-400" />
+                                                <button
+                                                    onClick={(e) => handleDownload(attachment, e)}
+                                                    className="p-1 hover:bg-gray-300 rounded transition-colors"
+                                                    title="Download file"
+                                                >
+                                                    <Download className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+                                                </button>
                                             )}
                                         </div>
                                     );

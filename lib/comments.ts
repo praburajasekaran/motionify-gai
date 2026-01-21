@@ -23,18 +23,18 @@ export async function getComments(proposalId: string, since?: string): Promise<C
     if (since) {
         url += `&since=${encodeURIComponent(since)}`;
     }
-    const response = await api.get<Comment[]>(url);
+    const response = await api.get<{ comments: Comment[] }>(url);
 
     if (!response.success || !response.data) {
         console.error('Failed to fetch comments:', response.error?.message);
         return [];
     }
 
-    return response.data;
+    return response.data.comments || [];
 }
 
 export async function createComment(data: CreateCommentData): Promise<Comment | null> {
-    const response = await api.post<Comment>(COMMENTS_ENDPOINT, {
+    const response = await api.post<{ comment: Comment }>(COMMENTS_ENDPOINT, {
         proposalId: data.proposalId,
         content: data.content,
     });
@@ -44,11 +44,11 @@ export async function createComment(data: CreateCommentData): Promise<Comment | 
         return null;
     }
 
-    return response.data;
+    return response.data.comment;
 }
 
 export async function updateComment(id: string, content: string): Promise<Comment | null> {
-    const response = await api.put<Comment>(COMMENTS_ENDPOINT, {
+    const response = await api.put<{ comment: Comment }>(COMMENTS_ENDPOINT, {
         id,
         content,
     });
@@ -58,5 +58,5 @@ export async function updateComment(id: string, content: string): Promise<Commen
         return null;
     }
 
-    return response.data;
+    return response.data.comment;
 }

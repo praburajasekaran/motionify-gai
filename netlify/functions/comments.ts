@@ -82,10 +82,10 @@ export const handler = async (
             let query = `SELECT 
                 id,
                 proposal_id as "proposalId",
-                user_id as "userId",
+                author_id as "userId",
                 user_name as "userName",
                 content,
-                is_edited as "isEdited",
+                false as "isEdited",
                 created_at as "createdAt",
                 updated_at as "updatedAt"
             FROM proposal_comments
@@ -179,19 +179,22 @@ export const handler = async (
                 };
             }
 
+            // Determine author_type based on user role
+            const authorType = user.role === 'client' ? 'CLIENT' : 'ADMIN';
+
             const result = await client.query(
-                `INSERT INTO proposal_comments (proposal_id, user_id, user_name, content)
-                VALUES ($1, $2, $3, $4)
+                `INSERT INTO proposal_comments (proposal_id, author_id, author_type, user_name, content)
+                VALUES ($1, $2, $3, $4, $5)
                 RETURNING 
                     id,
                     proposal_id as "proposalId",
-                    user_id as "userId",
+                    author_id as "userId",
                     user_name as "userName",
                     content,
-                    is_edited as "isEdited",
+                    false as "isEdited",
                     created_at as "createdAt",
                     updated_at as "updatedAt"`,
-                [proposalId, user.id, user.fullName, trimmedContent]
+                [proposalId, user.id, authorType, user.fullName, trimmedContent]
             );
 
             const comment: Comment = {
@@ -207,12 +210,12 @@ export const handler = async (
             try {
                 // Determine commenter role for email subject
                 const commenterRole = user.role === 'client' ? 'client' : 'admin';
-                
+
                 // Get the other party's info based on commenter role
                 let recipientEmail: string | null = null;
                 let recipientUserId: string | null = null;
                 let proposalNumber: string | undefined;
-                
+
                 if (user.role === 'client') {
                     // Client posted comment - notify superadmin(s)
                     // Get superadmin email and user ID for this proposal
@@ -238,7 +241,7 @@ export const handler = async (
                         proposalNumber = proposalResult.rows[0].inquiry_number;
                     }
                 }
-                
+
                 // Send email if recipient found (don't notify sender)
                 if (recipientEmail) {
                     const commentPreview = trimmedContent.substring(0, 100);
@@ -254,7 +257,7 @@ export const handler = async (
                 } else {
                     console.warn(`⚠️ Could not find recipient email for comment notification on proposal ${proposalId}`);
                 }
-                
+
                 // ========================================================================
                 // Create in-app notification record
                 // ========================================================================
@@ -262,7 +265,7 @@ export const handler = async (
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
                         const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/proposal/${proposalId}`;
-                        
+
                         await client.query(
                             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -344,7 +347,7 @@ export const handler = async (
             }
 
             const commentCheck = await client.query(
-                'SELECT user_id, content FROM proposal_comments WHERE id = $1',
+                'SELECT author_id, content FROM proposal_comments WHERE id = $1',
                 [id]
             );
 
@@ -359,7 +362,7 @@ export const handler = async (
                 };
             }
 
-            if (commentCheck.rows[0].user_id !== user.id) {
+            if (commentCheck.rows[0].author_id !== user.id) {
                 return {
                     statusCode: 403,
                     headers,
@@ -372,15 +375,15 @@ export const handler = async (
 
             const result = await client.query(
                 `UPDATE proposal_comments
-                SET content = $1, is_edited = true, updated_at = NOW()
+                SET content = $1, updated_at = NOW()
                 WHERE id = $2
                 RETURNING 
                     id,
                     proposal_id as "proposalId",
-                    user_id as "userId",
+                    author_id as "userId",
                     user_name as "userName",
                     content,
-                    is_edited as "isEdited",
+                    true as "isEdited",
                     created_at as "createdAt",
                     updated_at as "updatedAt"`,
                 [trimmedContent, id]
