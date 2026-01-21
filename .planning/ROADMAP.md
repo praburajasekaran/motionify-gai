@@ -18,6 +18,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
 | **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
+| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | 🔄 Planning |
 
 ---
 
@@ -118,10 +119,51 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 
 ---
 
+## Phase 4: Integration & Polish
+
+**Goal:** Fix component wiring issues identified in milestone audit to restore editing and attachments functionality.
+
+### Requirements
+- **COMM-02:** Real-Time Comment Updates (scroll preservation)
+- **COMM-03:** File Attachments on Comments (wire metadata through submit flow)
+- **COMM-06:** Comment Editing (connect handler)
+
+### Gap Closure
+Addresses critical gaps from v1 milestone audit:
+- **Integration gap:** CommentInput → CommentThread data flow (attachment metadata)
+- **Flow gap:** "Post Comment with Attachment" (data loss at submit)
+- **Flow gap:** "Edit Comment" (handler disconnected)
+- **UX gap:** Scroll jumping during polling updates
+
+### Dependencies
+- Phase 3 complete (attachment upload and API endpoints exist)
+- Existing: CommentThread, CommentInput, CommentItem components in both portals
+
+### Success Criteria
+
+1. **Edit button works in both portals**
+   Clicking "Edit" on a user's own comment opens an inline editor. Submitting the edit updates the comment via PUT endpoint. Edit indicator appears on edited comments.
+
+2. **Attachments link to comments on submit**
+   When a user uploads a file and submits a comment, the attachment metadata flows from CommentInput to CommentThread. The comment_attachments table is populated with the correct comment_id.
+
+3. **Scroll position preserved during updates**
+   When polling fetches new comments, the user's scroll position in the thread is maintained. Reading older comments is not interrupted by new arrivals.
+
+4. **Both portals handle attachment flow**
+   Admin portal (Vite SPA) and client portal (Next.js) both correctly wire attachment data through onSubmit signature.
+
+### Plans
+- [ ] `04-01-PLAN.md` — Wire edit handlers and fix attachment data flow
+
+---
+
 ## Dependencies Between Phases
 
 ```
-Phase 1 ──┬──► Phase 2 ──┬──► Phase 3
+Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
+          │              │                  │
+          │              │                  └── Gap Closure: Fix component wiring
           │              │
           │              └── Requires: Phase 2, R2 presign API, NotificationContext
           │
@@ -135,17 +177,18 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
 | COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
-| COMM-02: Real-Time Comment Updates | Phase 2 | Must Have | ✅ Complete |
-| COMM-03: File Attachments on Comments | Phase 3 | Should Have | ✅ Complete |
+| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | ⚠️ Needs Polish |
+| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | ⚠️ Needs Wiring |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
 | COMM-05: In-App Notifications | Phase 3 | Should Have | ✅ Complete |
-| COMM-06: Comment Editing | Phase 2 | Could Have | ✅ Complete |
+| COMM-06: Comment Editing | Phase 2, 4 | Could Have | ⚠️ Needs Wiring |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)
-**Phases:** 3 (optimized for "quick" depth)
-**Phase 3:** 3/3 plans complete (including gap closure)
+**Phases:** 4 (3 complete + 1 gap closure)
+**Phase 3:** Complete (backend solid)
+**Phase 4:** Planning (frontend wiring fixes)
 
 ---
 
@@ -161,4 +204,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-20*
+*Last updated: 2026-01-21*
