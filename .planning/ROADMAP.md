@@ -18,7 +18,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
 | **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
-| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | 🔄 Planned |
+| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
 
 ---
 
