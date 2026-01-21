@@ -16,6 +16,23 @@ interface Comment {
     updatedAt: string;
 }
 
+// Check if a comment has replies from other users posted after it
+const computeHasSubsequentReplies = (
+    comment: Comment,
+    allComments: Comment[],
+    currentUserId: string
+): boolean => {
+    // Find comments posted after this one
+    const subsequentComments = allComments.filter(
+        c => new Date(c.createdAt) > new Date(comment.createdAt)
+    );
+
+    // Check if any subsequent comment is from a different user
+    return subsequentComments.some(
+        c => c.userId !== currentUserId
+    );
+};
+
 interface CommentThreadProps {
     proposalId: string;
     currentUserId?: string;
@@ -313,14 +330,23 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     onScroll={handleScroll}
                     className="space-y-1 divide-y divide-gray-100 px-6 max-h-[500px] overflow-y-auto"
                 >
-                    {comments.map(comment => (
-                        <CommentItem
-                            key={comment.id}
-                            comment={comment}
-                            currentUserId={currentUserId}
-                            onEdit={handleEdit}
-                        />
-                    ))}
+                    {comments.map(comment => {
+                        const hasSubsequentReplies = computeHasSubsequentReplies(
+                            comment,
+                            comments,
+                            currentUserId || ''
+                        );
+
+                        return (
+                            <CommentItem
+                                key={comment.id}
+                                comment={comment}
+                                currentUserId={currentUserId}
+                                hasSubsequentReplies={hasSubsequentReplies}
+                                onEdit={handleEdit}
+                            />
+                        );
+                    })}
                 </div>
             )}
 
