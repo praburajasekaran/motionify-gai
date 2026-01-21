@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 04-integration-and-polish
 source: [04-01-SUMMARY.md]
 started: 2026-01-21T12:00:00Z
-updated: 2026-01-21T12:11:00Z
+updated: 2026-01-21T19:38:00Z
 ---
 
 ## Current Test
 
-number: 5
-name: Scroll Position Preserved During Polling
-expected: |
-  Open a proposal with 10+ comments. Scroll to the middle of the comment thread and start reading. Wait for 10+ seconds (polling interval). If no new comments are posted, scroll position remains exactly where you were reading. Page does not jump to top or bottom.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -42,30 +38,40 @@ severity: blocker
 
 ### 5. Scroll Position Preserved During Polling
 expected: Open a proposal with 10+ comments. Scroll to the middle of the comment thread and start reading. Wait for 10+ seconds (polling interval). If no new comments are posted, scroll position remains exactly where you were reading. Page does not jump to top or bottom.
-result: [pending]
+result: issue
+reported: "There's a new comment from the Super admin but the client screen doesn't scroll to load the comment automatically... only after refreshing the URL the new comment is seen."
+severity: major
 
 ### 6. Scroll Updates When New Comment Posted
 expected: Open a proposal with comments. Scroll to the middle of the thread. Have another user (or another browser window) post a new comment. Wait 10 seconds for polling. New comment appears at bottom of thread. If you were at bottom, page scrolls to show new comment. If you were in middle reading, position is preserved.
-result: [pending]
+result: issue
+reported: "the page doesn't scroll to the new comment."
+severity: major
 
 ### 7. Edit Own Comment (Admin Portal)
 expected: Post a comment in admin portal. Immediately see an Edit button on your own comment. Click Edit. Inline editor appears with current comment text. Modify the text and save. Comment updates with edited text and shows edit indicator.
-result: [pending]
+result: issue
+reported: "I'm able to edit all comments that I posted. Instead I should be able to edit only my comment if there hasn't been any replies after it (either by myself or the other party)."
+severity: major
 
 ### 8. Edit Own Comment (Client Portal)
 expected: Post a comment in client portal. Immediately see an Edit button on your own comment. Click Edit. Inline editor appears with current comment text. Modify the text and save. Comment updates with edited text and shows edit indicator.
-result: [pending]
+result: issue
+reported: "Client can edit all comments that they've posted. Instead the client should be able to edit only their comment if there hasn't been any replies after it (either by themselves or the other party)."
+severity: major
 
 ### 9. Edit Button Hidden After Reply
 expected: Post a comment. Have another user reply to your comment. Edit button disappears from your original comment (cannot edit after replies exist).
-result: [pending]
+result: issue
+reported: "Doesn't happen. Edit button appears next to all their comments."
+severity: major
 
 ## Summary
 
 total: 9
 passed: 0
-issues: 4
-pending: 5
+issues: 9
+pending: 0
 skipped: 0
 
 ## Gaps
@@ -105,6 +111,56 @@ skipped: 0
   reason: "User reported: comment not getting Failed to load resource: the server responded with a status of 500 (Internal Server Error) comments.ts:29 Failed to fetch comments: undefined getComments @ comments.ts:29 api-config.ts:70 GET http://localhost:9999/.netlify/functions/comments?proposalId=09cafe3a-18e9-4657-9c0e-51b5fe73e2f2 500 (Internal Server Error) apiRequest @ api-config.ts:70 get @ api-config.ts:126 getComments @ comments.ts:26 pollForNewComments @ CommentThread.tsx:80 comments.ts:29 Failed to fetch comments: undefinedsubmitted."
   severity: blocker
   test: 4
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "New comments appear automatically on client screen via polling without manual refresh"
+  status: failed
+  reason: "User reported: There's a new comment from the Super admin but the client screen doesn't scroll to load the comment automatically... only after refreshing the URL the new comment is seen."
+  severity: major
+  test: 5
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Page scrolls to show new comment when posted by another user"
+  status: failed
+  reason: "User reported: the page doesn't scroll to the new comment."
+  severity: major
+  test: 6
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Edit button only appears on own comments without replies"
+  status: failed
+  reason: "User reported: I'm able to edit all comments that I posted. Instead I should be able to edit only my comment if there hasn't been any replies after it (either by myself or the other party)."
+  severity: major
+  test: 7
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Client portal edit button only appears on own comments without replies"
+  status: failed
+  reason: "User reported: Client can edit all comments that they've posted. Instead the client should be able to edit only their comment if there hasn't been any replies after it (either by themselves or the other party)."
+  severity: major
+  test: 8
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Edit button is hidden after another user replies to the comment"
+  status: failed
+  reason: "User reported: Doesn't happen. Edit button appears next to all their comments."
+  severity: major
+  test: 9
   root_cause: ""
   artifacts: []
   missing: []
