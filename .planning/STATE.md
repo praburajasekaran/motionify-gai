@@ -33,6 +33,7 @@ Phase 3: Attachments & Notifications                  [Complete]
 Phase 4: Integration & Polish (Gap Closure)           [Complete]
   ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
   ✓ 04-03: Fix duplicate file preview                [Complete - Gap Closure]
+  ✓ 04-04: Smart auto-scroll for new comments        [Complete - Gap Closure]
 ────────────────────────────────────────────────────────────────
 Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ```
@@ -55,9 +56,9 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 | Phase 3 Plans Completed | 5/5 | 100% | ✅ |
 | Phase 3 Duration | ~20 min | 1-2 hours | ✅ Under budget |
 | Phase 3 Gap Closure | 3 plans | Client notifications, Backend robustness, Frontend integration | ✅ |
-| Phase 4 Plans Completed | 1/1 | 100% | ✅ |
-| Phase 4 Duration | ~13 min | 30 min | ✅ Under budget |
-| Phase 4 Gap Closure | 3 gaps | Attachment flow, Scroll preservation, Edit handlers | ✅ |
+| Phase 4 Plans Completed | 2/2 | 100% | ✅ |
+| Phase 4 Duration | ~18 min | 30 min | ✅ Under budget |
+| Phase 4 Gap Closure | 4 gaps | Attachment flow, Scroll preservation, Edit handlers, Auto-scroll | ✅ |
 
 ---
 
@@ -114,6 +115,7 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 - **Attachment Data Flow:** CommentInput → onAttachmentsChange callback → CommentThread → pendingAttachmentsRef
 - **PendingAttachment Type:** Exported from CommentInput for parent component type safety
 - **Scroll Preservation:** scrollPosRef tracks position, restores on polling updates when user actively reading
+- **Smart Auto-Scroll:** isNearBottom() + scrollToBottom() auto-scroll when near bottom, preserve when reading middle
 - **Edit Handlers:** handleEdit passed to CommentItem, inline editing functional for comment owners
 
 **Existing Infrastructure:**
@@ -138,6 +140,20 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ## Session Continuity
 
 ### This Session (2026-01-21)
+
+**Phase 4 Plan 4 - Smart Auto-Scroll Executed:**
+- Executed `/gsd:execute-phase` on 04-04-PLAN.md
+- Implemented smart auto-scroll that shows new comments when user near bottom
+- Added isNearBottom() helper to detect if user within 100px of bottom
+- Added scrollToBottom() helper for smooth auto-scroll animation
+- Updated pollForNewComments to auto-scroll when user near bottom
+- Updated handleSubmit to always scroll after posting own comment
+- Preserves scroll position when user reading middle of thread
+- Applied to both admin and client portal CommentThread components
+- Both builds pass successfully
+- Created 04-04-SUMMARY.md
+- Updated STATE.md
+- **Gap 6 closed:** New comments now auto-scroll when user near bottom
 
 **Phase 4 Plan 3 - Fix Duplicate File Preview Executed:**
 - Executed `/gsd:execute-phase` on 04-03-PLAN.md
@@ -241,6 +257,8 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 | `.planning/phases/03-attachments-and-notifications/03-05-SUMMARY.md` | Phase 3 Plan 5 frontend fixes report |
 | `.planning/phases/03-attachments-and-notifications/03-VERIFICATION.md` | Phase 3 verification report |
 | `.planning/phases/04-integration-and-polish/04-01-SUMMARY.md` | Phase 4 Plan 1 gap closure report |
+| `.planning/phases/04-integration-and-polish/04-03-SUMMARY.md` | Phase 4 Plan 3 gap closure report |
+| `.planning/phases/04-integration-and-polish/04-04-SUMMARY.md` | Phase 4 Plan 4 gap closure report |
 | `.planning/research/SUMMARY.md` | Research synthesis (stack, architecture, pitfalls) |
 
 ---
