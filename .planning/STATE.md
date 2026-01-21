@@ -16,10 +16,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Milestone Complete |
-| **Current Plan** | None - All phases complete |
-| **Status** | All 4 phases executed and verified |
-| **Progress** | ✅ Milestone v1.0 complete - 100% |
+| **Current Phase** | Phase 4 - Integration & Polish |
+| **Current Plan** | 04-05: Edit Button Visibility Logic [Complete] |
+| **Status** | Phase 4 execution in progress |
+| **Progress** | Phase 4: 4/5 plans complete (80%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -30,12 +30,13 @@ Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
   ✓ 03-04: Backend Robustness (CORS, DB Safety)      [Complete - Gap Closure]
   ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
-Phase 4: Integration & Polish (Gap Closure)           [Complete]
+Phase 4: Integration & Polish (Gap Closure)           [In Progress]
   ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
   ✓ 04-03: Fix duplicate file preview                [Complete - Gap Closure]
   ✓ 04-04: Smart auto-scroll for new comments        [Complete - Gap Closure]
+  ✓ 04-05: Edit Button Visibility Logic              [Complete - Just Now]
 ────────────────────────────────────────────────────────────────
-Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
+Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone v1
 ```
 
 ---
@@ -141,6 +142,19 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 
 ### This Session (2026-01-21)
 
+**Phase 4 Plan 5 - Edit Button Visibility Logic Executed:**
+- Executed `/gsd:execute-phase` on 04-05-PLAN.md
+- Implemented edit button visibility logic that only shows edit option on user's own comments when no subsequent replies exist from other users
+- Added `computeHasSubsequentReplies` helper function to both admin and client CommentThread
+- Passes `hasSubsequentReplies` prop from CommentThread to CommentItem
+- Updated CommentItem interface to include `hasSubsequentReplies` prop with default value `false`
+- Updated edit button conditional: `{isOwner && !hasSubsequentReplies && !isEditing && ...}`
+- Edit button now only appears on most recent comment without replies from other users
+- Self-replies do NOT hide edit button (same user replying to self is allowed)
+- Applied identical logic to both admin and client portals
+- Created 04-05-SUMMARY.md
+- Updated STATE.md
+
 **Phase 4 Plan 4 - Smart Auto-Scroll Executed:**
 - Executed `/gsd:execute-phase` on 04-04-PLAN.md
 - Implemented smart auto-scroll that shows new comments when user near bottom
@@ -236,6 +250,7 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 
 **Phase 4 Plans:**
 - `.planning/phases/04-integration-and-polish/04-01-PLAN.md` (Gap Closure)
+- `.planning/phases/04-integration-and-polish/04-05-PLAN.md` (Gap Closure - Edit button logic)
 
 ---
 
