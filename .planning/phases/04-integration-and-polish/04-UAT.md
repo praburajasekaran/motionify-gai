@@ -70,9 +70,10 @@ severity: major
 
 total: 9
 passed: 0
-issues: 9
+issues: 5
 pending: 0
 skipped: 0
+resolved: 4
 
 ## Gaps
 
@@ -90,11 +91,12 @@ skipped: 0
   debug_session: ".planning/debug/file-preview-duplicate.md"
 
 - truth: "Submit button posts comment with file attachment to the database"
-  status: failed
+  status: resolved
   reason: "User reported: Comment submit button not submitting the comment with file attachment."
   severity: major
   test: 2
   root_cause: "CommentInput.handleSubmit only passes content to onSubmit callback, ignoring pendingAttachments state"
+  resolution: "Already fixed by user"
   artifacts:
     - path: "landing-page-new/src/components/CommentInput.tsx"
       issue: "Line 166 calls onSubmit without attachmentIds parameter declared in interface"
@@ -105,11 +107,12 @@ skipped: 0
   debug_session: ".planning/debug/comment-submit-with-attachment.md"
 
 - truth: "Multiple file attachments can be submitted with a single comment"
-  status: failed
+  status: resolved
   reason: "User reported: we have not got multiple files uploaded but they are not getting submitted."
   severity: major
   test: 3
   root_cause: "CommentInput.handleSubmit does not pass attachment metadata to onSubmit callback"
+  resolution: "Already fixed by user"
   artifacts:
     - path: "components/proposals/CommentInput.tsx"
       issue: "Line 166 calls onSubmit(content.trim()) without passing pendingAttachments r2Keys"
@@ -121,11 +124,12 @@ skipped: 0
   debug_session: ".planning/debug/multiple-file-upload-not-submitted.md"
 
 - truth: "Comments API returns successful response without 500 errors"
-  status: failed
+  status: resolved
   reason: "User reported: comment not getting Failed to load resource: the server responded with a status of 500 (Internal Server Error) comments.ts:29 Failed to fetch comments: undefined getComments @ comments.ts:29 api-config.ts:70 GET http://localhost:9999/.netlify/functions/comments?proposalId=09cafe3a-18e9-4657-9c0e-51b5fe73e2f2 500 (Internal Server Error) apiRequest @ api-config.ts:70 get @ api-config.ts:126 getComments @ comments.ts:26 pollForNewComments @ CommentThread.tsx:80 comments.ts:29 Failed to fetch comments: undefinedsubmitted."
   severity: blocker
   test: 4
   root_cause: "Database migration 002 was never executed - database has Phase 01 schema (user_id) while code expects Phase 03 schema (author_id, author_type)"
+  resolution: "Already fixed by user - migration has been run"
   artifacts:
     - path: "database/migrations/002_add_comments_and_notifications.sql"
       issue: "Migration file exists but was never run against the database"
@@ -137,11 +141,12 @@ skipped: 0
   debug_session: ".planning/debug/comments-api-500-error.md"
 
 - truth: "New comments appear automatically on client screen via polling without manual refresh"
-  status: failed
+  status: resolved
   reason: "User reported: There's a new comment from the Super admin but the client screen doesn't scroll to load the comment automatically... only after refreshing the URL the new comment is seen."
   severity: major
   test: 5
   root_cause: "pollForNewComments function has stale closure bug - captures lastPolledAt but useEffect dependency array is missing it, causing function to always use initial timestamp"
+  resolution: "Already fixed by user - polling now working"
   artifacts:
     - path: "components/proposals/CommentThread.tsx"
       issue: "Lines 27-127 pollForNewComments has stale closure over lastPolledAt state due to missing dependency in useEffect"
