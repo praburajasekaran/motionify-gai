@@ -18,7 +18,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
 | **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
-| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
+| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | 🔧 In Progress |
 
 ---
 
@@ -120,17 +120,20 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 
 ## Phase 4: Integration & Polish
 
-**Goal:** Fix component wiring to restore attachment metadata flow between CommentInput and CommentThread.
+**Goal:** Fix UAT failures - database migration, attachment flow, polling stale closure, auto-scroll, and edit button logic.
 
 ### Requirements
-- **COMM-02:** Real-Time Comment Updates (scroll preservation verification)
-- **COMM-03:** File Attachments on Comments (wire metadata through submit flow)
-- **COMM-06:** Comment Editing (verify handler connection)
+- **COMM-02:** Real-Time Comment Updates (polling fixes, auto-scroll)
+- **COMM-03:** File Attachments on Comments (complete attachment flow, fix duplicates)
+- **COMM-06:** Comment Editing (hasSubsequentReplies logic)
 
 ### Gap Closure
-Addresses critical gap from v1 milestone audit:
-- **Integration gap:** CommentInput → CommentThread attachment data flow (metadata dropped on submit)
-- **Verification gaps:** Edit handler wiring and scroll preservation (likely already correct, needs verification)
+Addresses 9 diagnosed gaps from UAT:
+- **Blocker:** Database migration not applied (500 errors)
+- **Major:** Attachment flow broken (duplicates, not submitting, multiple files)
+- **Major:** Polling stale closure (new comments invisible until refresh)
+- **Major:** Missing auto-scroll to new comments
+- **Major:** Edit button appears on all own comments (missing hasSubsequentReplies check)
 
 ### Dependencies
 - Phase 3 complete (attachment upload and API endpoints exist)
@@ -138,25 +141,29 @@ Addresses critical gap from v1 milestone audit:
 
 ### Success Criteria
 
-1. **Attachment metadata flows from child to parent**
-   When user uploads file in CommentInput, the attachment metadata is communicated to CommentThread via callback prop.
+1. **Database schema matches code expectations**
+   Migration 002 applied, proposal_comments table has author_id/author_type columns, API returns 200 responses.
 
-2. **Attachments link to comments on submit**
-   When user uploads file and submits comment, the attachment metadata flows from CommentInput to CommentThread, and comment_attachments table is populated with correct comment_id.
+2. **Attachments submit correctly with comments**
+   Single and multiple file attachments flow from CommentInput to CommentThread, comment_attachments table populated, files appear once in preview.
 
-3. **Both portals handle attachment flow**
-   Admin portal (Vite SPA) and client portal (Next.js) both correctly wire attachment data through onAttachmentsChange callback.
+3. **Polling shows new comments automatically**
+   Stale closure fixed with useRef, new comments appear within 10 seconds without manual refresh.
 
-4. **Scroll position preserved during updates** (verification)
-   Polling updates preserve scroll position when user was actively reading. Implementation confirmed correct.
+4. **Smart auto-scroll implemented**
+   Page scrolls to new comment when user near bottom, preserves position when reading middle, always scrolls after own comment.
 
-5. **Edit handler connected** (verification)
-   Edit button on user's own comments opens inline editor and submits edits. Implementation confirmed correct.
+5. **Edit button only on comments without subsequent replies**
+   Edit button hidden after another user replies, visible on most recent comment, works in both portals.
 
 ### Plans
-- [x] `04-01-PLAN.md` — Wire attachment data flow via callback, verify edit/scroll implementations (1 plan)
+- [x] `04-01-PLAN.md` — Wire attachment data flow via callback, verify edit/scroll implementations
+- [ ] `04-02-PLAN.md` — Apply database migration 002 (blocker)
+- [ ] `04-03-PLAN.md` — Fix attachment flow (duplicates, submission, multiple files)
+- [ ] `04-04-PLAN.md` — Fix polling stale closure and implement smart auto-scroll
+- [ ] `04-05-PLAN.md` — Implement hasSubsequentReplies edit button logic
 
-**Plan Count:** 1 plan in 1 wave
+**Plan Count:** 5 plans in 2 waves (02 in wave 1, 03-05 in wave 2)
 
 ---
 
@@ -165,7 +172,7 @@ Addresses critical gap from v1 milestone audit:
 ```
 Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
           │              │                  │
-          │              │                  └── Gap Closure: Fix component wiring
+          │              │                  └── Gap Closure: UAT fixes
           │              │
           │              └── Requires: Phase 2, R2 presign API, NotificationContext
           │
@@ -179,18 +186,18 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
 | COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
-| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | ⚠️ Needs Verification |
-| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | ⚠️ Needs Wiring |
+| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | 🔧 Fixing |
+| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | 🔧 Fixing |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
 | COMM-05: In-App Notifications | Phase 3 | Should Have | ✅ Complete |
-| COMM-06: Comment Editing | Phase 2, 4 | Could Have | ⚠️ Needs Verification |
+| COMM-06: Comment Editing | Phase 2, 4 | Could Have | 🔧 Fixing |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)
-**Phases:** 4 (3 complete + 1 gap closure)
-**Phase 3:** Complete (backend solid)
-**Phase 4:** Planned (attachment wiring fix)
+**Phases:** 4 (3 complete + 1 gap closure in progress)
+**Phase 4:** 5 plans (1 complete, 4 pending)
+**Status:** Fixing UAT failures
 
 ---
 
