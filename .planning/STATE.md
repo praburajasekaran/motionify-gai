@@ -32,7 +32,8 @@ Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
 Phase 4: Integration & Polish (Gap Closure)           [Complete]
   ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
-───────────────────────────────────────────────────────────────
+  ✓ 04-03: Fix duplicate file preview                [Complete - Gap Closure]
+────────────────────────────────────────────────────────────────
 Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ```
 
@@ -81,6 +82,7 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 | Centralized CORS headers | Ensure all API responses (even errors) have proper CORS | Applied |
 | Callback prop for attachment flow | Use onAttachmentsChange to sync child state to parent ref | Applied |
 | Export child types for parent use | Export PendingAttachment from CommentInput for CommentThread type safety | Applied |
+| Remove from uploadingFiles after completion | Prevent duplicate file preview by cleaning up uploadingFiles when upload completes | Applied |
 
 ### Technical Context
 
@@ -136,6 +138,14 @@ Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ## Session Continuity
 
 ### This Session (2026-01-21)
+
+**Phase 4 Plan 3 - Fix Duplicate File Preview Executed:**
+- Executed `/gsd:execute-phase` on 04-03-PLAN.md
+- Fixed duplicate file preview by removing completed uploads from uploadingFiles after adding to pendingAttachments
+- Applied fix to both admin portal and client portal CommentInput components
+- Uploaded files now appear once in preview (not duplicated)
+- Created 04-03-SUMMARY.md
+- Updated STATE.md
 
 **Phase 4 Complete - All Gaps Closed:**
 - Executed `/gsd:execute-phase` on 04-01-PLAN.md
