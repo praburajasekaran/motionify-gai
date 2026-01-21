@@ -16,10 +16,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 3: Attachments & Notifications |
-| **Current Plan** | None (Phase Complete) |
-| **Status** | All plans complete, all gaps closed |
-| **Progress** | 🟢 All 3 phases complete - 100% |
+| **Current Phase** | Phase 4: Integration & Polish |
+| **Current Plan** | None (Planning Required) |
+| **Status** | Gap closure phase added from milestone audit |
+| **Progress** | 🟡 Phase 4 created - 0% complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -30,8 +30,10 @@ Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
   ✓ 03-04: Backend Robustness (CORS, DB Safety)      [Complete - Gap Closure]
   ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
+Phase 4: Integration & Polish (Gap Closure)           [Planning]
+  ⏳ 04-01: Wire edit handlers & attachment flow     [Not Started]
 ───────────────────────────────────────────────────────────────
-Overall: 100% complete | 9/9 plans done | Phase 3 verified & gaps closed
+Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 4
 ```
 
 ---
@@ -124,7 +126,19 @@ Overall: 100% complete | 9/9 plans done | Phase 3 verified & gaps closed
 
 ## Session Continuity
 
-### This Session (2026-01-20)
+### This Session (2026-01-21)
+
+**Phase 4 Gap Closure Phase Created:**
+- Ran `/gsd:plan-milestone-gaps` to analyze v1 audit results
+- Created Phase 4: Integration & Polish to address 3 critical gaps:
+  - COMM-06: Edit handler not connected in UI
+  - COMM-03: Attachment metadata dropped on submit
+  - COMM-02: Scroll jumping during polling updates
+- Updated ROADMAP.md with Phase 4 details and success criteria
+- Updated STATE.md to reflect new current phase
+- Next: `/gsd:plan-phase 4` to create execution plan
+
+### Previous Session (2026-01-20)
 
 **Phase 3 Gap Closure Executed:**
 - **03-04 Backend Robustness:** Fixed CORS on errors, safe DB connections, relaxed UUID validation.
@@ -173,7 +187,10 @@ Overall: 100% complete | 9/9 plans done | Phase 3 verified & gaps closed
 
 ### Next Actions
 
-1. **Complete milestone** - Audit and archive v1.0 → `/gsd:audit-milestone`
+1. **Plan Phase 4** - Create execution plan for gap closure → `/gsd:plan-phase 4`
+2. **Execute Phase 4** - Fix component wiring issues → `/gsd:execute-phase 4`
+3. **Re-audit milestone** - Verify gaps closed → `/gsd:audit-milestone`
+4. **Complete milestone** - Archive v1.0 when audit passes → `/gsd:complete-milestone v1`
 
 **Phase 3 Plans:**
 - `.planning/phases/03-attachments-and-notifications/03-01-PLAN.md`
@@ -205,4 +222,4 @@ Overall: 100% complete | 9/9 plans done | Phase 3 verified & gaps closed
 
 ---
 
-*Last updated: 2026-01-20*
+*Last updated: 2026-01-21*
