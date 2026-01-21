@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 4: Integration & Polish |
-| **Current Plan** | None (Planning Required) |
-| **Status** | Gap closure phase added from milestone audit |
-| **Progress** | 🟡 Phase 4 created - 0% complete |
+| **Current Plan** | 1 of 1 (Component Wiring) |
+| **Status** | Phase 4 complete - All gaps closed |
+| **Progress** | ✅ Phase 4 complete - 100% |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -30,10 +30,10 @@ Phase 3: Attachments & Notifications                  [Complete]
   ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
   ✓ 03-04: Backend Robustness (CORS, DB Safety)      [Complete - Gap Closure]
   ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
-Phase 4: Integration & Polish (Gap Closure)           [Planning]
-  ⏳ 04-01: Wire edit handlers & attachment flow     [Not Started]
+Phase 4: Integration & Polish (Gap Closure)           [Complete]
+  ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
 ───────────────────────────────────────────────────────────────
-Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 4
+Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ```
 
 ---
@@ -54,6 +54,9 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 | Phase 3 Plans Completed | 5/5 | 100% | ✅ |
 | Phase 3 Duration | ~20 min | 1-2 hours | ✅ Under budget |
 | Phase 3 Gap Closure | 3 plans | Client notifications, Backend robustness, Frontend integration | ✅ |
+| Phase 4 Plans Completed | 1/1 | 100% | ✅ |
+| Phase 4 Duration | ~13 min | 30 min | ✅ Under budget |
+| Phase 4 Gap Closure | 3 gaps | Attachment flow, Scroll preservation, Edit handlers | ✅ |
 
 ---
 
@@ -76,6 +79,8 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 | R2 presigned URLs for file uploads | Leverage existing infrastructure, no custom storage needed | Applied |
 | Permissive UUID regex | Strict RFC regex rejected valid UUIDs; prioritize compatibility | Applied |
 | Centralized CORS headers | Ensure all API responses (even errors) have proper CORS | Applied |
+| Callback prop for attachment flow | Use onAttachmentsChange to sync child state to parent ref | Applied |
+| Export child types for parent use | Export PendingAttachment from CommentInput for CommentThread type safety | Applied |
 
 ### Technical Context
 
@@ -104,6 +109,10 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 - Client portal NotificationBell using NotificationContext
 - **Robust Error Handling:** CORS headers on all responses, safe DB connections
 - **Validation:** Permissive UUID regex, 10MB file limit, file type restrictions
+- **Attachment Data Flow:** CommentInput → onAttachmentsChange callback → CommentThread → pendingAttachmentsRef
+- **PendingAttachment Type:** Exported from CommentInput for parent component type safety
+- **Scroll Preservation:** scrollPosRef tracks position, restores on polling updates when user actively reading
+- **Edit Handlers:** handleEdit passed to CommentItem, inline editing functional for comment owners
 
 **Existing Infrastructure:**
 - Vite SPA admin portal: `pages/admin/ProposalDetail.tsx`
@@ -128,15 +137,17 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 
 ### This Session (2026-01-21)
 
-**Phase 4 Gap Closure Phase Created:**
-- Ran `/gsd:plan-milestone-gaps` to analyze v1 audit results
-- Created Phase 4: Integration & Polish to address 3 critical gaps:
-  - COMM-06: Edit handler not connected in UI
-  - COMM-03: Attachment metadata dropped on submit
-  - COMM-02: Scroll jumping during polling updates
-- Updated ROADMAP.md with Phase 4 details and success criteria
-- Updated STATE.md to reflect new current phase
-- Next: `/gsd:plan-phase 4` to create execution plan
+**Phase 4 Complete - All Gaps Closed:**
+- Executed `/gsd:execute-phase` on 04-01-PLAN.md
+- Fixed attachment data flow: Added onAttachmentsChange callback prop to wire CommentInput → CommentThread
+- Verified scroll preservation already correctly implemented (no changes needed)
+- Verified edit handler already correctly wired (no changes needed)
+- All 3 critical gaps from v1 milestone audit now closed:
+  - ✅ COMM-03: Attachments now link to comments on submit
+  - ✅ COMM-02: Scroll position preserved during polling
+  - ✅ COMM-06: Edit handlers functional and accessible
+- Phase 4 complete in 13 minutes
+- Next: `/gsd:audit-milestone v1` to verify all gaps resolved
 
 ### Previous Session (2026-01-20)
 
@@ -187,10 +198,8 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 
 ### Next Actions
 
-1. **Plan Phase 4** - Create execution plan for gap closure → `/gsd:plan-phase 4`
-2. **Execute Phase 4** - Fix component wiring issues → `/gsd:execute-phase 4`
-3. **Re-audit milestone** - Verify gaps closed → `/gsd:audit-milestone`
-4. **Complete milestone** - Archive v1.0 when audit passes → `/gsd:complete-milestone v1`
+1. **Re-audit milestone** - Verify all gaps closed → `/gsd:audit-milestone v1`
+2. **Complete milestone** - Archive v1.0 when audit passes → `/gsd:complete-milestone v1`
 
 **Phase 3 Plans:**
 - `.planning/phases/03-attachments-and-notifications/03-01-PLAN.md`
@@ -198,6 +207,9 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 - `.planning/phases/03-attachments-and-notifications/03-03-PLAN.md` (Gap Closure)
 - `.planning/phases/03-attachments-and-notifications/03-04-PLAN.md` (Gap Closure)
 - `.planning/phases/03-attachments-and-notifications/03-05-PLAN.md` (Gap Closure)
+
+**Phase 4 Plans:**
+- `.planning/phases/04-integration-and-polish/04-01-PLAN.md` (Gap Closure)
 
 ---
 
@@ -218,6 +230,7 @@ Overall: 75% complete | Phase 4 created from audit gaps | Next: /gsd:plan-phase 
 | `.planning/phases/03-attachments-and-notifications/03-04-SUMMARY.md` | Phase 3 Plan 4 backend fixes report |
 | `.planning/phases/03-attachments-and-notifications/03-05-SUMMARY.md` | Phase 3 Plan 5 frontend fixes report |
 | `.planning/phases/03-attachments-and-notifications/03-VERIFICATION.md` | Phase 3 verification report |
+| `.planning/phases/04-integration-and-polish/04-01-SUMMARY.md` | Phase 4 Plan 1 gap closure report |
 | `.planning/research/SUMMARY.md` | Research synthesis (stack, architecture, pitfalls) |
 
 ---
