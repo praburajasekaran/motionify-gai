@@ -32,6 +32,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
     const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
     const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const isSubmittingRef = useRef(false);
 
     const isEmpty = content.trim().length === 0 && pendingAttachments.length === 0;
 
@@ -156,13 +157,14 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isEmpty || isSubmitting) return;
+        if (isEmpty || isSubmitting || isSubmittingRef.current) return;
 
         const uploadingCount = uploadingFiles.filter(f => f.progress < 100).length;
         if (uploadingCount > 0) {
             return;
         }
 
+        isSubmittingRef.current = true;
         setIsSubmitting(true);
         try {
             await onSubmit(content.trim());
@@ -171,6 +173,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
             setUploadingFiles([]);
         } finally {
             setIsSubmitting(false);
+            isSubmittingRef.current = false;
         }
     };
 
