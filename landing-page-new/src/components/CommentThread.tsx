@@ -27,9 +27,9 @@ const computeHasSubsequentReplies = (
         c => new Date(c.createdAt) > new Date(comment.createdAt)
     );
 
-    // Check if any subsequent comment is from a different user
+    // Check if any subsequent comment is from a different user than this comment's author
     return subsequentComments.some(
-        c => c.userId !== currentUserId
+        c => c.userId !== comment.userId
     );
 };
 
