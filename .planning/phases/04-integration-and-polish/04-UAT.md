@@ -1,9 +1,9 @@
 ---
-status: re-testing
+status: fixes-applied
 phase: 04-integration-and-polish
 source: [04-01-SUMMARY.md]
 started: 2026-01-21T12:00:00Z
-updated: 2026-01-23T20:30:00Z
+updated: 2026-01-23T22:45:00Z
 ---
 
 ## Current Test
@@ -240,3 +240,27 @@ resolved: 5
     - "Check if polling is appending instead of replacing comments array"
     - "Verify no duplicate CommentThread component mounting"
   debug_session: ".planning/debug/client-comment-duplication.md"
+
+## Fixes Applied (2026-01-23)
+
+### Automated Debug & Fix Session
+
+**Agent 1: Edit Button Logic**
+- Root cause: `computeHasSubsequentReplies()` compared `currentUserId` instead of `comment.userId`
+- Fix: Changed comparison to check comment author vs subsequent comment authors
+- Commit: 9812ae1
+- Files: Both CommentThread.tsx files (admin & client)
+
+**Agent 2: Comment Duplication**
+- Root cause: Race condition - rapid clicks executed before button disabled (React state async)
+- Fix: Added `isSubmittingRef` synchronous guard
+- Commit: 0edee7b
+- File: landing-page-new/src/components/CommentInput.tsx
+
+**Agent 3: Auto-Scroll**
+- Root cause: `setTimeout` not synchronized with React render cycle
+- Fix: Replaced setTimeout with useEffect watching comments state
+- Commit: d5e6932
+- Files: Both CommentThread.tsx files (admin & client)
+
+**Status:** All 3 remaining issues fixed automatically. Ready for re-testing.
