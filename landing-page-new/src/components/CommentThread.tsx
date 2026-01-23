@@ -89,6 +89,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
     // Track scroll position before updates
     const scrollPosRef = useRef<{ container: number; active: boolean }>({ container: 0, active: false });
+    const shouldScrollToNewComment = useRef(false);
 
     // Check if user is near bottom of comment thread (within 100px)
     const isNearBottom = () => {
@@ -141,6 +142,14 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             }
         };
     }, [proposalId]);
+
+    // Auto-scroll effect - triggers after React finishes rendering new comments
+    useEffect(() => {
+        if (shouldScrollToNewComment.current) {
+            scrollToBottom();
+            shouldScrollToNewComment.current = false;
+        }
+    }, [comments]);
 
     const loadComments = async () => {
         setLoading(true);
@@ -205,7 +214,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
                 // Auto-scroll to new comment if user was near bottom
                 if (wasNearBottom) {
-                    setTimeout(() => scrollToBottom(), 50);
+                    shouldScrollToNewComment.current = true;
                 } else {
                     // Otherwise preserve scroll position if user was reading middle
                     const wasActive = scrollPosRef.current.active && scrollPosRef.current.container > 100;
