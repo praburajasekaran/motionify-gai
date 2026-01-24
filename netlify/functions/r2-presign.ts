@@ -1,7 +1,8 @@
-
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Handler } from "@netlify/functions";
+import { compose, withCORS, withAuth, withRateLimit, withValidation, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
 import { getCorsHeaders } from "./_shared/cors";
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -24,24 +25,25 @@ const R2 = new S3Client({
     forcePathStyle: true,
 });
 
-export const handler: Handler = async (event, context) => {
-    const headers = getCorsHeaders(event.headers.origin || event.headers.Origin);
-
-    // CORS Preflight
-    if (event.httpMethod === "OPTIONS") {
-        return {
-            statusCode: 204,
-            headers,
-            body: '',
-        };
-    }
+export const handler = compose(
+    withCORS(['GET', 'POST']),
+    withAuth(),
+    withRateLimit({ windowMs: 60 * 1000, maxRequests: 20 }, 'r2_presign') // Strict: 20 per minute
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+    const origin = event.headers.origin || event.headers.Origin;
+    const headers = getCorsHeaders(origin);
 
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
         console.error("Missing R2 environment variables");
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: "Server misconfiguration" }),
+            body: JSON.stringify({
+                error: {
+                    code: 'SERVER_MISCONFIGURED',
+                    message: 'File storage not configured',
+                },
+            }),
         };
     }
 
@@ -53,7 +55,26 @@ export const handler: Handler = async (event, context) => {
                 return {
                     statusCode: 400,
                     headers,
-                    body: JSON.stringify({ error: "Missing 'key' parameter" }),
+                    body: JSON.stringify({
+                        error: {
+                            code: 'MISSING_KEY',
+                            message: "Missing 'key' parameter",
+                        },
+                    }),
+                };
+            }
+
+            // Security: Validate key format to prevent path traversal
+            if (key.includes('..') || key.startsWith('/')) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({
+                        error: {
+                            code: 'INVALID_KEY',
+                            message: 'Invalid key format',
+                        },
+                    }),
                 };
             }
 
@@ -70,34 +91,38 @@ export const handler: Handler = async (event, context) => {
             };
         }
 
-        // POST: Generate Upload URL
+        // POST: Generate Upload URL with validation
         if (event.httpMethod === "POST") {
-            const body = JSON.parse(event.body || '{}');
-            const { fileName, fileType, projectId, folder, customKey } = body;
+            // Validate request body
+            const validation = (await import('./_shared/validation')).validateRequest(
+                event.body,
+                SCHEMAS.r2.presign,
+                origin
+            );
 
-            if (!fileName || !fileType || !projectId) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ error: "Missing required fields" }),
-                };
+            if (!validation.success) {
+                return validation.response;
             }
 
-            let key;
-            if (customKey) {
-                key = customKey;
-            } else {
-                const targetFolder = folder || 'misc';
-                key = `projects/${projectId}/${targetFolder}/${Date.now()}-${fileName}`;
-            }
+            const { fileName, fileType, fileSize, commentId } = validation.data;
+
+            // Generate secure key
+            const timestamp = Date.now();
+            const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const key = commentId
+                ? `comments/${commentId}/${timestamp}-${sanitizedFileName}`
+                : `uploads/${auth!.user!.userId}/${timestamp}-${sanitizedFileName}`;
 
             const command = new PutObjectCommand({
                 Bucket: R2_BUCKET_NAME,
                 Key: key,
                 ContentType: fileType,
+                ContentLength: fileSize,
             });
 
             const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
+
+            console.log(`[R2] Presign upload for ${auth!.user!.email}: ${key} (${fileSize} bytes)`);
 
             return {
                 statusCode: 200,
@@ -109,10 +134,16 @@ export const handler: Handler = async (event, context) => {
             };
         }
 
+        // Should never reach here due to withCORS middleware
         return {
             statusCode: 405,
             headers,
-            body: JSON.stringify({ error: "Method not allowed" }),
+            body: JSON.stringify({
+                error: {
+                    code: 'METHOD_NOT_ALLOWED',
+                    message: 'Method not allowed',
+                },
+            }),
         };
 
     } catch (error: any) {
@@ -120,7 +151,12 @@ export const handler: Handler = async (event, context) => {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: error.message }),
+            body: JSON.stringify({
+                error: {
+                    code: 'R2_ERROR',
+                    message: error.message || 'File storage error',
+                },
+            }),
         };
     }
-};
+});
