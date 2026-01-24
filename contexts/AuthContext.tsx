@@ -12,8 +12,6 @@ import {
     getAuthToken,
     clearAuthSession,
     storeAuthSession,
-    MOCK_USERS,
-    setMockUser as setMockUserAuth,
 } from '@/lib/auth';
 
 interface AuthContextType {
@@ -162,14 +160,3 @@ export function useAuthContext(): AuthContextType {
     }
     return context;
 }
-
-/**
- * Development helper: Set a mock user for testing
- * This should only be used in development/testing
- */
-export function setMockUser(user: User) {
-    setMockUserAuth(user);
-}
-
-// Re-export MOCK_USERS for backward compatibility
-export { MOCK_USERS };
