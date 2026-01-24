@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: PROD-01-authentication-security
 source: [PROD-01-01-SUMMARY.md, PROD-01-02-SUMMARY.md, PROD-01-03-SUMMARY.md, PROD-01-04-SUMMARY.md]
 started: 2026-01-24T10:00:00Z
@@ -73,27 +73,36 @@ skipped: 4
   reason: "User reported: No auth_token cookie visible in DevTools. Only analytics cookies shown (_ga, _fbp, _clck, etc.). Login succeeds but httpOnly cookie not set."
   severity: major
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "verifyMagicLink() in lib/auth.ts uses raw fetch() without credentials: 'include', causing browser to reject Set-Cookie header from cross-origin response"
+  artifacts:
+    - path: "lib/auth.ts"
+      issue: "Lines 207-214: fetch call missing credentials: 'include'"
+  missing:
+    - "Add credentials: 'include' to fetch options in verifyMagicLink()"
+  debug_session: ".planning/debug/cookie-auth-not-working.md"
 
 - truth: "Session persists across browser refresh via httpOnly cookie"
   status: failed
   reason: "User reported: Get logged out on browser refresh. Session does not persist."
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as Test 1 - cookie not set because credentials: 'include' missing"
+  artifacts:
+    - path: "lib/auth.ts"
+      issue: "Lines 229-234: Frontend still expects token in response body for localStorage, but backend removed it"
+  missing:
+    - "Refactor storeAuthSession() to only store user info, not token (token is in httpOnly cookie)"
+  debug_session: ".planning/debug/cookie-auth-not-working.md"
 
 - truth: "/auth-me endpoint returns current user info with 200 status"
   status: failed
   reason: "User reported: /auth-me returns 401 Unauthorized. Multiple calls visible in Network tab, all returning 401."
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "No cookie being sent because cookie was never set (see Test 1). Backend auth-me.ts is correct."
+  artifacts:
+    - path: "lib/auth.ts"
+      issue: "Cookie not set due to missing credentials: 'include' in verifyMagicLink()"
+  missing:
+    - "Fix Test 1 issue - once cookie is set, auth-me should work"
+  debug_session: ".planning/debug/cookie-auth-not-working.md"
