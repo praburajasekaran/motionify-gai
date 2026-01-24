@@ -1,7 +1,10 @@
 import pg from 'pg';
 import { sendDeliverableReadyEmail, sendFinalDeliverablesEmail } from './send-email';
-import { compose, withCORS, withAuth, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -19,7 +22,8 @@ const getDbClient = () => {
 
 export const handler = compose(
   withCORS(['GET', 'PATCH']),
-  withAuth()
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'deliverables')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);

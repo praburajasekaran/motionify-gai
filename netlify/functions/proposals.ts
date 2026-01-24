@@ -1,7 +1,10 @@
 import pg from 'pg';
 import { sendProposalNotificationEmail } from './send-email';
-import { compose, withCORS, withAuth, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -37,7 +40,8 @@ const getDbClient = () => {
 
 export const handler = compose(
   withCORS(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-  withAuth()
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'proposals')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
@@ -55,7 +59,9 @@ export const handler = compose(
 
     // Handle PUT request for updating a proposal
     if (event.httpMethod === 'PUT' && proposalId) {
-      const updates = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
@@ -256,23 +262,9 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      const payload: CreateProposalPayload = JSON.parse(event.body || '{}');
-
-      if (!payload.inquiryId || !payload.description || !payload.deliverables || payload.deliverables.length === 0) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'inquiryId, description, and deliverables are required' }),
-        };
-      }
-
-      if (![40, 50, 60].includes(payload.advancePercentage)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'advancePercentage must be 40, 50, or 60' }),
-        };
-      }
+      const validation = validateRequest(event.body, SCHEMAS.proposal.create, origin);
+      if (!validation.success) return validation.response;
+      const payload = validation.data;
 
       const inquiryResult = await client.query(
         'SELECT id, inquiry_number, contact_email, contact_name FROM inquiries WHERE id = $1',

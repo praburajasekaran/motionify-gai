@@ -1,6 +1,7 @@
 import pg from 'pg';
-import { compose, withCORS, withAuth, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
 
@@ -40,7 +41,8 @@ const generateProjectNumber = async (client: pg.Client): Promise<string> => {
 
 export const handler = compose(
   withCORS(['GET', 'POST']),
-  withAuth()
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'projects')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);

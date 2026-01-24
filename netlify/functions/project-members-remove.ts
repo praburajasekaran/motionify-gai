@@ -1,6 +1,7 @@
 import pg from 'pg';
-import { compose, withCORS, withProjectManager, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withProjectManager, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
 
@@ -18,7 +19,8 @@ const getDbClient = () => {
 
 export const handler = compose(
     withCORS(['POST', 'DELETE']),
-    withProjectManager()
+    withProjectManager(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'project_members_remove')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
