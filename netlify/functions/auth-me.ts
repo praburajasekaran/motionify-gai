@@ -1,36 +1,25 @@
-import { requireAuthFromCookie, createUnauthorizedResponseForCookie } from './_shared/auth';
-import { getCorsHeaders, validateCors } from './_shared';
+import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { getCorsHeaders } from './_shared/cors';
 
-export const handler = async (event: any) => {
+export const handler = compose(
+    withCORS(['GET']),
+    withAuth(),
+    withRateLimit(RATE_LIMITS.api, 'auth_me')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    const corsResult = validateCors(event);
-    if (corsResult) return corsResult;
-
-    if (event.httpMethod !== 'GET') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ error: 'Method not allowed' }),
-        };
-    }
-
-    const auth = await requireAuthFromCookie(event);
-    if (!auth.authorized) {
-        return createUnauthorizedResponseForCookie(auth, origin);
-    }
 
     return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
             user: {
-                id: auth.user!.userId,
-                email: auth.user!.email,
-                role: auth.user!.role,
-                name: auth.user!.fullName,
+                id: auth!.user!.userId,
+                email: auth!.user!.email,
+                role: auth!.user!.role,
+                name: auth!.user!.fullName,
             },
         }),
     };
-};
+});
