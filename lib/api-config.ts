@@ -70,6 +70,7 @@ export async function apiRequest<T = any>(
         const response = await fetch(url, {
             ...fetchOptions,
             headers,
+            credentials: 'include', // Send httpOnly cookies with requests
         });
 
         // Handle 401 Unauthorized
