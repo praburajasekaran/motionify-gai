@@ -23,6 +23,7 @@ import {
     getCorrelationId,
 } from './_shared';
 import type { PoolClient } from './_shared';
+import { generateJWT, createAuthCookie } from './_shared/jwt';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -294,13 +295,14 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             const sessionDurationSeconds = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
             const sessionExpiresAt = new Date(Date.now() + sessionDurationSeconds * 1000);
 
-            const jwtPayload = {
-                userId: userId,
+            // Generate JWT using new jwt.ts module
+            const user = {
+                id: userId,
                 email: userEmail,
-                role: userRole as any,
+                role: userRole,
                 fullName: userFullName,
             };
-            const jwtToken = createJWT(jwtPayload, sessionDurationSeconds);
+            const jwtToken = generateJWT(user, rememberMe);
             const jwtTokenHash = crypto.createHash('sha256').update(jwtToken).digest('hex');
 
             await client.query(
@@ -322,6 +324,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                     avatarUrl: userAvatar,
                 },
                 token: jwtToken,
+                rememberMe: rememberMe,
                 expiresAt: sessionExpiresAt.toISOString(),
                 inquiryCreated: isNewInquiry,
                 inquiryId: inquiryId,
@@ -329,12 +332,24 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             };
         });
 
+        // Set httpOnly cookie with JWT token
+        const authCookie = createAuthCookie(result.token, result.rememberMe);
+
+        // Remove token and rememberMe from response body (token is in cookie now)
+        const { token, rememberMe, ...dataWithoutToken } = result;
+
         return {
             statusCode: 200,
-            headers,
+            headers: {
+                ...headers,
+                'Set-Cookie': authCookie,
+            },
             body: JSON.stringify({
                 success: true,
-                data: result,
+                data: {
+                    ...dataWithoutToken,
+                    // Note: token NOT included in response (set in cookie only)
+                },
                 message: result.inquiryCreated ? 'Inquiry verified and created successfully' : 'Login successful',
             }),
         };
