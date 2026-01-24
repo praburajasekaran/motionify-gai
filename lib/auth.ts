@@ -33,7 +33,7 @@ export interface MagicLinkVerifyResponse {
     success: boolean;
     data?: {
         user: User;
-        token: string;
+        token?: string;  // Optional - only for backwards compatibility
         expiresAt: string;
         inquiryCreated?: boolean;
         inquiryId?: string;
@@ -45,7 +45,7 @@ export interface MagicLinkVerifyResponse {
 
 export interface AuthSession {
     user: User;
-    token: string;
+    token?: string;  // Optional - now using httpOnly cookies
     expiresAt: string;
 }
 
@@ -120,7 +120,9 @@ export function getStoredUser(): User | null {
  */
 export function storeAuthSession(session: AuthSession): void {
     try {
-        localStorage.setItem(TOKEN_KEY, session.token);
+        if (session.token) {
+            localStorage.setItem(TOKEN_KEY, session.token);
+        }
         localStorage.setItem(USER_KEY, JSON.stringify(session.user));
         localStorage.setItem(EXPIRES_KEY, session.expiresAt);
     } catch (error) {
@@ -209,6 +211,7 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',  // Required for browser to accept Set-Cookie
             body: JSON.stringify({ token, email }),
         });
 
@@ -226,18 +229,14 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
         const responseData = data.data || data;
         const user = transformUser(responseData.user);
 
-        // Store the session
-        storeAuthSession({
-            user,
-            token: responseData.token,
-            expiresAt: responseData.expiresAt,
-        });
+        // Store user info in localStorage (token is now in httpOnly cookie)
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        localStorage.setItem(EXPIRES_KEY, responseData.expiresAt);
 
         return {
             success: true,
             data: {
                 user,
-                token: responseData.token,
                 expiresAt: responseData.expiresAt,
                 inquiryCreated: responseData.inquiryCreated,
                 inquiryId: responseData.inquiryId,
