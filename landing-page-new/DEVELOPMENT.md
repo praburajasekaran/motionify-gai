@@ -66,6 +66,29 @@ The application uses Next.js API routes (`/api/*`) in development that proxy to 
 - `/api/auth-me` - Get current user
 - `/api/auth-logout` - Logout
 
+## Development Authentication
+
+**Important:** Mock authentication has been removed for security. All environments use the real magic link authentication flow.
+
+### How to Login in Development
+
+1. Start the dev server: `npm run dev` or `netlify dev`
+2. Navigate to the login page
+3. Enter your email (must exist in database)
+4. Click "Send Magic Link"
+5. Check terminal output for the magic link URL (logged in development)
+6. Click the link or copy to browser
+7. You will be logged in with a real JWT session
+
+### Example Terminal Output
+
+```
+Magic link generated for user@example.com:
+http://localhost:3000/auth/verify?token=abc123&email=user@example.com
+```
+
+**Note:** In production, the magic link is sent via email. In development, it's logged to the terminal for convenience.
+
 ## Troubleshooting
 
 ### "Received HTML instead of JSON" Error
