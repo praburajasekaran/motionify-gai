@@ -31,38 +31,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
+            // Try API first (cookie-based session) - this is the secure path
+            console.log('[AuthContext] Checking session via /auth-me API');
+            try {
+                const response = await authApi.getCurrentUser();
+                if (response.success && 'data' in response) {
+                    console.log('[AuthContext] Session valid, user loaded from API');
+                    setUser(response.data.user);
+                    // Cache user for faster subsequent loads (optional)
+                    localStorage.setItem('portal_user', JSON.stringify(response.data.user));
+                    setIsLoading(false);
+                    return;
+                }
+            } catch (error) {
+                console.log('[AuthContext] API session check failed, checking localStorage fallback');
+            }
+
+            // Fallback to localStorage only for edge cases (offline, API unavailable)
             const savedUser = localStorage.getItem('portal_user');
             if (savedUser) {
                 try {
                     const parsedUser = JSON.parse(savedUser);
-                    console.log('[AuthContext] Loading user from localStorage:', parsedUser);
+                    console.log('[AuthContext] Loading user from localStorage fallback:', parsedUser);
                     setUser(parsedUser);
                 } catch (error) {
                     console.error('[AuthContext] Failed to parse saved user:', error);
                     localStorage.removeItem('portal_user');
                 }
-                setIsLoading(false);
-                return;
             }
 
-            const hasCookie = typeof document !== 'undefined' && document.cookie.includes('sb-session=');
-            if (!hasCookie) {
-                console.log('[AuthContext] No session cookie found, skipping auth check');
-                setIsLoading(false);
-                return;
-            }
-
-            console.log('[AuthContext] Session cookie found, loading user from API');
-            try {
-                const response = await authApi.getCurrentUser();
-                if (response.success && 'data' in response) {
-                    setUser(response.data.user);
-                }
-            } catch (error) {
-                console.error('Failed to load user:', error);
-            } finally {
-                setIsLoading(false);
-            }
+            setIsLoading(false);
         };
 
         loadUser();

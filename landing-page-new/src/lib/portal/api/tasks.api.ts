@@ -13,7 +13,7 @@ export async function fetchTasksForProject(
   includeComments = false
 ): Promise<Task[]> {
   const url = `${API_BASE}/tasks?projectId=${projectId}&includeComments=${includeComments}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch tasks: ${response.statusText}`);
@@ -29,7 +29,7 @@ export async function fetchTasksForProject(
  */
 export async function fetchTask(taskId: string): Promise<Task> {
   const url = `${API_BASE}/tasks/${taskId}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch task: ${response.statusText}`);
@@ -57,6 +57,7 @@ export async function createTask(taskData: {
   const response = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(taskData),
   });
 
@@ -90,6 +91,7 @@ export async function updateTaskAPI(
   const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(updates),
   });
 
@@ -108,6 +110,7 @@ export async function updateTaskAPI(
 export async function deleteTaskAPI(taskId: string): Promise<void> {
   const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
     method: 'DELETE',
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -132,6 +135,7 @@ export async function addTaskComment(
   const response = await fetch(`${API_BASE}/tasks/${taskId}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(commentData),
   });
 
