@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-07: Rate Limiting Middleware [Complete] |
+| **Current Plan** | PROD-01-08: Input Validation Middleware [Complete] |
 | **Status** | Production security hardening in progress |
-| **Progress** | PROD-01: 7/9 plans complete (78%) |
+| **Progress** | PROD-01: 8/9 plans complete (89%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -97,6 +97,8 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Filename sanitization | Replace special chars with _ in uploaded filenames to prevent injection attacks | Applied |
 | Frontend credentials pattern | All fetch calls must include credentials: 'include' for cookie-based auth; centralized in api-config/api-transformers | Applied |
 | Cookie session restoration | AuthContext relies solely on /auth-me API for session restoration; no localStorage fallback to ensure cookies are single source of truth | Applied |
+| Schema-based input validation | All POST/PUT/PATCH endpoints use Zod schemas from _shared/schemas.ts for consistent validation and error handling | Applied |
+| Payment-specific schemas | Payment endpoints (create-order, verify, manual-complete) use dedicated schemas matching their workflow-specific payloads | Applied |
 
 ### Technical Context
 
@@ -153,6 +155,17 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**PROD-01-08 - Input Validation Middleware Completed:**
+- Applied Zod schemas to 14 mutation endpoints (POST/PUT/PATCH)
+- Added validation to comments (2), attachments (1), inquiries (1), payments (3)
+- Created 3 payment-specific schemas (createOrder, verify, manualComplete)
+- Removed 189 lines of manual validation code, added 42 lines of schemas
+- All invalid payloads now return 400 with consistent Zod error details
+- Both builds pass (admin Vite, client Next.js)
+- Created PROD-01-08-SUMMARY.md
+- Commits: 55776a9 (comments/attachments/inquiries), eb7c260 (payments)
+- Duration: 3 minutes
 
 **PROD-01-09 - Cookie Session Restoration Completed:**
 - Fixed cookie-based session restoration in client portal AuthContext
