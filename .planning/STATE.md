@@ -16,11 +16,29 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-11: Remaining Endpoint Validation [Complete] |
-| **Status** | Production security hardening complete |
-| **Progress** | PROD-01: 11/11 plans complete (100%) |
+| **Current Phase** | Phase 05 - Credential Wiring Fix |
+| **Current Plan** | 05-01: Add Credentials to Missed Fetch Calls [Complete] |
+| **Status** | Credential wiring fix complete |
+| **Progress** | Phase 05: 1/1 plans complete (100%) |
 
+```
+Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
+Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
+Phase 3: Attachments & Notifications                  [Complete]
+  ✓ 03-01: File Attachments on Comments              [Complete]
+  ✓ 03-02: Email & In-App Notifications              [Complete]
+  ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
+  ✓ 03-04: Backend Robustness (CORS, DB Safety)      [Complete - Gap Closure]
+  ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
+Phase 4: Integration & Polish (Gap Closure)           [Complete]
+  ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
+  ✓ 04-03: Fix duplicate file preview                [Complete - Gap Closure]
+  ✓ 04-04: Smart auto-scroll for new comments        [Complete - Gap Closure]
+  ✓ 04-05: Edit Button Visibility Logic              [Complete]
+Phase 5: Credential Wiring Fix                       [Complete]
+  ✓ 05-01: Add Credentials to Missed Fetch Calls     [Complete]
+──────────────────────────────────────────────────────────────
+Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
@@ -157,6 +175,19 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**Phase 05 - Plan 01: Credential Wiring Fix Completed:**
+- Added credentials: 'include' to 4 missed fetch calls across both portals
+- Fixed client portal comment editing authentication (CommentThread.tsx handleEdit PUT)
+- Fixed admin portal notification API authentication (NotificationContext.tsx 3 calls)
+- All 401 Unauthorized errors resolved for comment editing and notification operations
+- Both builds pass successfully
+- Created 05-01-SUMMARY.md
+- Commit: 2f8f102 (added credentials to all 4 fetch calls)
+- Duration: 5 minutes
+- **Status:** Phase 05 complete - all credential gaps closed
+
+**PROD-01-11 - Remaining Endpoint Validation Completed:**
 
 **PROD-01-11 - Remaining Endpoint Validation Completed:**
 - Added 4 new Zod schemas (projectFromProposal, markNotificationRead, markAllNotificationsRead, activityCreate)
