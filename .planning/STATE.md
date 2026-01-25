@@ -16,11 +16,31 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 05 - Credential Wiring Fix |
-| **Current Plan** | 05-01: Add Credentials to Missed Fetch Calls [Complete] |
-| **Status** | Credential wiring fix complete |
-| **Progress** | Phase 05: 1/1 plans complete (100%) |
+| **Current Phase** | Phase 06 - Schema Alignment |
+| **Current Plan** | 06-01: Schema Alignment [Complete] |
+| **Status** | Database schema aligned with backend expectations |
+| **Progress** | Phase 06: 1/1 plans complete (100%) |
 
+```
+Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
+Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
+Phase 3: Attachments & Notifications                  [Complete]
+  ✓ 03-01: File Attachments on Comments              [Complete]
+  ✓ 03-02: Email & In-App Notifications              [Complete]
+  ✓ 03-03: Client Portal Notification Infrastructure [Complete - Gap Closure]
+  ✓ 03-04: Backend Robustness (CORS, DB Safety)      [Complete - Gap Closure]
+  ✓ 03-05: Client Frontend Integration               [Complete - Gap Closure]
+Phase 4: Integration & Polish (Gap Closure)           [Complete]
+  ✓ 04-01: Wire edit handlers & attachment flow      [Complete]
+  ✓ 04-03: Fix duplicate file preview                [Complete - Gap Closure]
+  ✓ 04-04: Smart auto-scroll for new comments        [Complete - Gap Closure]
+  ✓ 04-05: Edit Button Visibility Logic              [Complete]
+Phase 5: Credential Wiring Fix                       [Complete]
+  ✓ 05-01: Add Credentials to Missed Fetch Calls     [Complete]
+Phase 6: Schema Alignment                             [Complete]
+  ✓ 06-01: Schema Alignment                      [Complete - Gap Closure]
+─────────────────────────────────────────────────────────────
+Overall: 100% complete | All phases complete | Next: /gsd:audit-milestone v1
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
 Phase 2: Core Comment Experience (Posting, Real-time) [Complete]
