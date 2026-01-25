@@ -4,6 +4,8 @@ import { getCorsHeaders } from './_shared/cors';
 import { sendCommentNotificationEmail } from './send-email';
 import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -130,42 +132,12 @@ export const handler = compose(
             }
 
             const user = authResult.user;
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { proposalId, content } = body;
 
-            if (!proposalId || !isValidUUID(proposalId)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Valid proposalId is required',
-                    }),
-                };
-            }
-
-            if (!content || typeof content !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Content is required and must be a string',
-                    }),
-                };
-            }
+            const validation = validateRequest(event.body, SCHEMAS.comment.create, origin);
+            if (!validation.success) return validation.response;
+            const { proposalId, content } = validation.data;
 
             const trimmedContent = content.trim();
-            if (trimmedContent.length < MIN_CONTENT_LENGTH || trimmedContent.length > MAX_CONTENT_LENGTH) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `Content must be between ${MIN_CONTENT_LENGTH} and ${MAX_CONTENT_LENGTH} characters`,
-                    }),
-                };
-            }
 
             // Determine author_type based on user role
             const authorType = user.role === 'client' ? 'CLIENT' : 'ADMIN';
@@ -297,42 +269,12 @@ export const handler = compose(
             }
 
             const user = authResult.user;
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { id, content } = body;
 
-            if (!id || !isValidUUID(id)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Valid comment ID is required',
-                    }),
-                };
-            }
-
-            if (!content || typeof content !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Content is required and must be a string',
-                    }),
-                };
-            }
+            const validation = validateRequest(event.body, SCHEMAS.comment.update, origin);
+            if (!validation.success) return validation.response;
+            const { id, content } = validation.data;
 
             const trimmedContent = content.trim();
-            if (trimmedContent.length < MIN_CONTENT_LENGTH || trimmedContent.length > MAX_CONTENT_LENGTH) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `Content must be between ${MIN_CONTENT_LENGTH} and ${MAX_CONTENT_LENGTH} characters`,
-                    }),
-                };
-            }
 
             const commentCheck = await client.query(
                 'SELECT author_id, content FROM proposal_comments WHERE id = $1',

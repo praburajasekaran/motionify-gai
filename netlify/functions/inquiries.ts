@@ -2,6 +2,8 @@ import pg from 'pg';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -126,34 +128,25 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      const payload: CreateInquiryPayload = JSON.parse(event.body || '{}');
-
-      if (!payload.contactName || !payload.contactEmail) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'contactName and contactEmail are required' }),
-        };
-      }
+      const validation = validateRequest(event.body, SCHEMAS.inquiry.create, origin);
+      if (!validation.success) return validation.response;
+      const payload = validation.data;
 
       const inquiryNumber = await generateInquiryNumber(client);
 
       const result = await client.query(
         `INSERT INTO inquiries (
           inquiry_number, contact_name, contact_email, company_name,
-          contact_phone, project_notes, quiz_answers, recommended_video_type, client_user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          contact_phone, project_notes
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
         [
           inquiryNumber,
-          payload.contactName,
-          payload.contactEmail.toLowerCase(),
-          payload.companyName || null,
-          payload.contactPhone || null,
-          payload.projectNotes || null,
-          JSON.stringify(payload.quizAnswers),
-          payload.recommendedVideoType,
-          payload.clientUserId || null,
+          payload.name,
+          payload.email,
+          payload.company || null,
+          null, // contact_phone - schema doesn't include phone
+          payload.message || null,
         ]
       );
 

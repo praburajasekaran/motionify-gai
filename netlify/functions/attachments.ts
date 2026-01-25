@@ -5,6 +5,8 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -227,101 +229,10 @@ export const handler = compose(
             }
 
             const user = authResult.user;
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { commentId, fileName, fileType, fileSize, r2Key } = body;
 
-            // Validate commentId
-            if (!commentId || !isValidUUID(commentId)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Valid commentId is required',
-                    }),
-                };
-            }
-
-            // Validate fileName
-            if (!fileName || typeof fileName !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'fileName is required and must be a string',
-                    }),
-                };
-            }
-
-            if (fileName.length > MAX_FILE_NAME_LENGTH) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `fileName must be ${MAX_FILE_NAME_LENGTH} characters or less`,
-                    }),
-                };
-            }
-
-            // Validate fileType
-            if (!fileType || typeof fileType !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'fileType is required and must be a string',
-                    }),
-                };
-            }
-
-            if (!ALLOWED_FILE_TYPES.includes(fileType)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `Invalid file type. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`,
-                    }),
-                };
-            }
-
-            // Validate fileSize
-            if (typeof fileSize !== 'number' || fileSize < 0) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'fileSize is required and must be a positive number',
-                    }),
-                };
-            }
-
-            if (fileSize > MAX_FILE_SIZE) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `File size must be ${MAX_FILE_SIZE / (1024 * 1024)}MB or less`,
-                    }),
-                };
-            }
-
-            // Validate r2Key
-            if (!r2Key || typeof r2Key !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'r2Key is required and must be a string',
-                    }),
-                };
-            }
+            const validation = validateRequest(event.body, SCHEMAS.attachment.create, origin);
+            if (!validation.success) return validation.response;
+            const { commentId, fileName, fileType, fileSize, r2Key } = validation.data;
 
             // Verify comment exists
             const commentCheck = await client.query(
