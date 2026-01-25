@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-04 - Deliverables System [In Progress] |
-| **Current Plan** | PROD-04-01 |
-| **Status** | Plan complete - key ownership validation verified |
-| **Progress** | PROD-04: 1/5 plans complete (20%) |
-| **Last activity** | 2026-01-25 - Completed PROD-04-01-PLAN.md (verification) |
+| **Current Plan** | PROD-04-04 |
+| **Status** | Plan complete - permission validation and dynamic expiry |
+| **Progress** | PROD-04: 2/5 plans complete (40%) |
+| **Last activity** | 2026-01-25 - Completed PROD-04-04-PLAN.md |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -148,6 +148,10 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Backward compatibility for legacy files | Allow keys without structured paths for old files while maintaining path traversal prevention | Applied |
 | Team member file access via tasks | Team members access project files only via task assignment (not direct project membership) for scope limitation | Applied |
 | Status-based deliverable visibility | Clients can view files only in beta_ready, awaiting_approval, approved, payment_pending, final_delivered statuses | Applied |
+| Dynamic deliverable expiry | Compute expiry from final_delivered_at instead of relying on DB column for accuracy without scheduled jobs | Applied |
+| JOIN-based deliverable permissions | Fetch client_user_id via JOIN with projects table to validate ownership on each GET request | Applied |
+| Admin access to expired files | Super admins can access expired deliverable files for support and recovery scenarios | Applied |
+| expires_at in API response | Include computed expiry timestamp in deliverables response for UI countdown displays | Applied |
 
 ### Technical Context
 
@@ -204,6 +208,23 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**Phase PROD-04 - Plan 04: Permission Validation and Dynamic Expiry Completed:**
+- Added permission checks to deliverables GET endpoints
+- GET by ID validates client owns project via JOIN with projects table
+- GET by projectId validates project ownership before fetching deliverables
+- Admin and PM can access any deliverable
+- Team members validated via task assignment (assignee_id or assignee_ids)
+- Clients restricted to own projects only
+- Clients only see deliverables in viewable statuses (beta_ready onwards)
+- Dynamic expiry computed from final_delivered_at (365 days)
+- expires_at field added to response for UI display
+- files_expired computed dynamically instead of relying on DB column
+- Admins can access expired files
+- Created PROD-04-04-SUMMARY.md
+- Commit: 1cbb815 (feat: add permission validation and dynamic expiry)
+- Duration: 2 minutes
+- **Status:** Wave 2 Plan 1 complete - authorization gap closed
 
 **Phase PROD-04 - Plan 01: Key Ownership Validation Completed:**
 - Verified key ownership validation in r2-presign.ts GET handler (pre-completed in PROD-04-02 commit)
