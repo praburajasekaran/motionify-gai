@@ -31,35 +31,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // Try API first (cookie-based session) - this is the secure path
+            // Check for valid cookie session via /auth-me API
             console.log('[AuthContext] Checking session via /auth-me API');
             try {
                 const response = await authApi.getCurrentUser();
                 if (response.success && 'data' in response) {
                     console.log('[AuthContext] Session valid, user loaded from API');
                     setUser(response.data.user);
-                    // Cache user for faster subsequent loads (optional)
-                    localStorage.setItem('portal_user', JSON.stringify(response.data.user));
                     setIsLoading(false);
                     return;
                 }
             } catch (error) {
-                console.log('[AuthContext] API session check failed, checking localStorage fallback');
+                console.log('[AuthContext] API session check failed:', error);
             }
 
-            // Fallback to localStorage only for edge cases (offline, API unavailable)
-            const savedUser = localStorage.getItem('portal_user');
-            if (savedUser) {
-                try {
-                    const parsedUser = JSON.parse(savedUser);
-                    console.log('[AuthContext] Loading user from localStorage fallback:', parsedUser);
-                    setUser(parsedUser);
-                } catch (error) {
-                    console.error('[AuthContext] Failed to parse saved user:', error);
-                    localStorage.removeItem('portal_user');
-                }
-            }
-
+            // No valid session
+            console.log('[AuthContext] No valid session found');
+            setUser(null);
             setIsLoading(false);
         };
 
@@ -117,8 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = useCallback(async () => {
         setIsLoading(true);
         try {
-            localStorage.removeItem('portal_user');
-            document.cookie = 'sb-session=; path=/; max-age=0';
+            // Call /auth-logout to clear the httpOnly cookie
             await authApi.logout();
         } catch (error) {
             console.error('[AuthContext] Logout error:', error);
