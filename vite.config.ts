@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => {
         '/.netlify/functions': {
           target: 'http://localhost:8888',
           changeOrigin: true,
+        },
+        // Mirror Netlify's /api/* redirect for local development
+        '/api': {
+          target: 'http://localhost:8888',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, '/.netlify/functions'),
         }
       }
     },
