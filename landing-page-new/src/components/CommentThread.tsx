@@ -264,6 +264,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify({ id, content: newContent }),
         });
         if (response.ok) {
