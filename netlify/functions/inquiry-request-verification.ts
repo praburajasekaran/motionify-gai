@@ -1,20 +1,11 @@
 import pg from 'pg';
 import crypto from 'crypto';
 import { sendInquiryVerificationEmail } from './send-email';
+import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-}
-
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
 
 interface QuizSelections {
     niche?: string | null;
@@ -46,18 +37,12 @@ const getDbClient = () => {
     });
 };
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json',
-    };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
+export const handler = compose(
+    withCORS(['POST', 'OPTIONS']),
+    withRateLimit(RATE_LIMITS.authAction, 'inquiry_verification')
+)(async (event: NetlifyEvent) => {
+    const origin = event.headers.origin || event.headers.Origin;
+    const headers = getCorsHeaders(origin);
     }
 
     if (event.httpMethod !== 'POST') {
@@ -146,4 +131,4 @@ export const handler = async (
     } finally {
         await client.end();
     }
-};
+});

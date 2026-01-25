@@ -1,20 +1,9 @@
 import pg from 'pg';
+import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 interface QuizSelections {
   niche?: string | null;
@@ -69,19 +58,12 @@ const generateInquiryNumber = async (client: pg.Client): Promise<string> => {
   return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+  withRateLimit(RATE_LIMITS.api, 'inquiries')
+)(async (event: NetlifyEvent) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -273,4 +255,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

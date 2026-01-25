@@ -12,7 +12,6 @@
 import crypto from 'crypto';
 import {
     query,
-    validateCors,
     getCorsHeaders,
     requireAuthAndRole,
     validateRequest,
@@ -20,6 +19,8 @@ import {
     createLogger,
     getCorrelationId,
 } from './_shared';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -33,33 +34,15 @@ interface NetlifyResponse {
     body: string;
 }
 
-export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
+export const handler = compose(
+    withCORS(['POST']),
+    withSuperAdmin(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'users_create')
+)(async (event: NetlifyEvent) => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-create', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    // Handle CORS
-    const corsResult = validateCors(event);
-    if (corsResult) {
-        return corsResult;
-    }
-
-    // Only allow POST
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-        };
-    }
-
-    // Require Super Admin role
-    const authResult = await requireAuthAndRole(event, ['super_admin']);
-    if (!authResult.success) {
-        logger.warn('Unauthorized user creation attempt');
-        return authResult.response;
-    }
 
     // Validate request body
     const validation = validateRequest(event.body, createUserSchema, origin);
@@ -110,7 +93,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             userId: newUser.id,
             email: email.slice(0, 3) + '***',
             role,
-            createdBy: authResult.user.email,
         });
 
         // In development, log the magic link
@@ -138,4 +120,4 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }),
         };
     }
-};
+});

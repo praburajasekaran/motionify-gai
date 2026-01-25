@@ -11,7 +11,6 @@
 
 import {
     query,
-    validateCors,
     getCorsHeaders,
     requireAuthAndRole,
     createLogger,
@@ -19,6 +18,8 @@ import {
     z,
     validateQueryParams,
 } from './_shared';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -39,33 +40,15 @@ const querySchema = z.object({
     search: z.string().max(100).optional(),
 });
 
-export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
+export const handler = compose(
+    withCORS(['GET']),
+    withSuperAdmin(),
+    withRateLimit(RATE_LIMITS.api, 'users_list')
+)(async (event: NetlifyEvent) => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-list', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    // Handle CORS
-    const corsResult = validateCors(event);
-    if (corsResult) {
-        return corsResult;
-    }
-
-    // Only allow GET
-    if (event.httpMethod !== 'GET') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-        };
-    }
-
-    // Require Super Admin role
-    const authResult = await requireAuthAndRole(event, ['super_admin']);
-    if (!authResult.success) {
-        logger.warn('Unauthorized access attempt to users list');
-        return authResult.response;
-    }
 
     // Validate query params
     const paramsValidation = validateQueryParams(event.queryStringParameters, querySchema, origin);
@@ -111,7 +94,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
         const result = await query(queryText, values);
 
-        logger.info('Users list fetched', { count: result.rows.length, by: authResult.user.email });
+        logger.info('Users list fetched', { count: result.rows.length });
 
         return {
             statusCode: 200,
@@ -133,4 +116,4 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }),
         };
     }
-};
+});

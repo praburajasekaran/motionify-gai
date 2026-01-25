@@ -3,15 +3,10 @@ import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-    queryStringParameters: Record<string, string> | null;
-}
 
 interface Attachment {
     id: string;
@@ -84,19 +79,12 @@ const getR2Client = () => {
     });
 };
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<{
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}> => {
+export const handler = compose(
+    withCORS(['GET', 'POST', 'OPTIONS']),
+    withRateLimit(RATE_LIMITS.apiStrict, 'attachments')
+)(async (event: NetlifyEvent) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
 
     let client;
 
@@ -404,4 +392,4 @@ export const handler = async (
     } finally {
         if (client) await client.end();
     }
-};
+});
