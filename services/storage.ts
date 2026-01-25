@@ -31,7 +31,7 @@ export const storageService = {
     ): Promise<string> {
         try {
             // 1. Get presigned URL
-            const presignRes = await fetch('/api/r2-presign', {
+            const presignRes = await fetch('/.netlify/functions/r2-presign', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ export const storageService = {
             if (!key) return '';
 
             const queryString = new URLSearchParams({ key }).toString();
-            const response = await fetch(`/api/r2-presign?${queryString}`, {
+            const response = await fetch(`/.netlify/functions/r2-presign?${queryString}`, {
                 credentials: 'include', // Required for cookie-based auth
             });
 

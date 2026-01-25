@@ -3,6 +3,8 @@ import { sendMentionNotification, sendTaskAssignmentEmail, sendRevisionRequestEm
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -44,7 +46,7 @@ function mapTaskFromDB(row: any): any {
     description: row.description,
     status: row.stage, // Map stage to status for frontend
     visibleToClient: row.is_client_visible,
-    assigneeId: row.assigned_to,
+    assignedTo: row.assigned_to,
     deadline: row.due_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -437,11 +439,14 @@ export const handler = compose(
       }
 
       // POST /tasks - Create new task
-      const taskData = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.task.create, origin);
+      if (!validation.success) return validation.response;
+      const taskData = validation.data;
 
       // Permission check: Only Motionify team can create tasks (not clients)
       // Check the user_role from the request body or header
-      const userRole = taskData.user_role || event.headers['x-user-role'];
+      const rawBody = JSON.parse(event.body || '{}');
+      const userRole = rawBody.user_role || event.headers['x-user-role'];
       const clientRoles = ['Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'];
 
       if (userRole && clientRoles.includes(userRole)) {
@@ -455,29 +460,8 @@ export const handler = compose(
         };
       }
 
-      if (!taskData.project_id || !taskData.title || !taskData.description) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'project_id, title, and description are required'
-          }),
-        };
-      }
-
-      // Validate Project ID format
-      if (!isValidUUID(taskData.project_id)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'Invalid project_id format: Must be a UUID'
-          }),
-        };
-      }
-
       // Get a user ID for created_by (use first user or create a default)
-      let createdBy = taskData.created_by;
+      let createdBy = rawBody.created_by;
       if (createdBy && !isValidUUID(createdBy)) {
         createdBy = null;
       }
@@ -487,9 +471,6 @@ export const handler = compose(
         createdBy = userResult.rows[0]?.id;
       }
 
-      // Sanitize assignee_id (must be valid UUID or null)
-      const assigneeId = (taskData.assignee_id && isValidUUID(taskData.assignee_id)) ? taskData.assignee_id : null;
-
       const result = await client.query(
         `INSERT INTO tasks (
           project_id, title, description, stage,
@@ -498,13 +479,13 @@ export const handler = compose(
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
         [
-          taskData.project_id,
+          taskData.projectId,
           taskData.title,
           taskData.description,
           taskData.status || 'pending',
-          taskData.visible_to_client !== undefined ? taskData.visible_to_client : true,
-          assigneeId,
-          taskData.deadline || null,
+          rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : true,
+          taskData.assignedTo || null,
+          taskData.dueDate || null,
           0, // position - default to 0
           createdBy
         ]
@@ -514,10 +495,10 @@ export const handler = compose(
       newTask.comments = [];
 
       // Send email notification if assigned
-      if (assigneeId) {
+      if (taskData.assignedTo) {
         try {
-          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [taskData.project_id]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assigneeId]);
+          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [taskData.projectId]);
+          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [taskData.assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -527,7 +508,7 @@ export const handler = compose(
             // Check user preferences
             const prefResult = await client.query(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [assigneeId]
+              [taskData.assignedTo]
             );
             const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
 
@@ -573,14 +554,16 @@ export const handler = compose(
         };
       }
 
-      const updates = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.task.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'title',
         'description',
         'status', // maps to 'stage' in DB
         'visibleToClient', // maps to 'is_client_visible' in DB
-        'assigneeId', // maps to 'assigned_to' in DB
+        'assignedTo', // maps to 'assigned_to' in DB
         'deadline', // maps to 'due_date' in DB
       ];
 
@@ -694,7 +677,7 @@ export const handler = compose(
         if (allowedFields.includes(key)) {
           // Convert camelCase to snake_case for DB
           const dbKey = key === 'visibleToClient' ? 'is_client_visible' :
-            key === 'assigneeId' ? 'assigned_to' :
+            key === 'assignedTo' ? 'assigned_to' :
               key === 'deadline' ? 'due_date' :
                 key === 'status' ? 'stage' :
                   key;
@@ -737,18 +720,18 @@ export const handler = compose(
       const updatedTask = mapTaskFromDB(result.rows[0]);
 
       // Check for assignment change and send email
-      if (updates.assigneeId) {
+      if (updates.assignedTo) {
         try {
-          // Get current user ID from checking the assigneeId update vs old one? 
+          // Get current user ID from checking the assignedTo update vs old one?
           // Actually, we just check if it's set.
           // Note: Ideally we should check if it CHANGED, but standard update logic usually implies intention.
           // Plus we already did the update.
 
-          const assigneeId = updates.assigneeId;
+          const assignedTo = updates.assignedTo;
           const projectId = updatedTask.projectId;
 
           const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [projectId]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assigneeId]);
+          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -758,7 +741,7 @@ export const handler = compose(
             // Check user preferences
             const prefResult = await client.query(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [assigneeId]
+              [assignedTo]
             );
             const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
 
