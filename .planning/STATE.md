@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-04 - Deliverables System [In Progress] |
-| **Current Plan** | PROD-04-04 |
-| **Status** | Plan complete - permission validation and dynamic expiry |
-| **Progress** | PROD-04: 2/5 plans complete (40%) |
-| **Last activity** | 2026-01-25 - Completed PROD-04-04-PLAN.md |
+| **Current Plan** | PROD-04-03 |
+| **Status** | Plan complete - storage authentication and error handling |
+| **Progress** | PROD-04: 3/5 plans complete (60%) |
+| **Last activity** | 2026-01-25 - Completed PROD-04-03-PLAN.md |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -152,6 +152,11 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | JOIN-based deliverable permissions | Fetch client_user_id via JOIN with projects table to validate ownership on each GET request | Applied |
 | Admin access to expired files | Super admins can access expired deliverable files for support and recovery scenarios | Applied |
 | expires_at in API response | Include computed expiry timestamp in deliverables response for UI countdown displays | Applied |
+| Storage credentials for auth | All storage service fetch calls include credentials: 'include' for cookie-based authentication | Applied |
+| Backend error surfacing | Parse error.message from backend JSON responses and surface to users instead of generic error messages | Applied |
+| R2 XML error parsing | Parse R2 XML error responses using DOMParser to extract Code and Message elements for better debugging | Applied |
+| Dynamic upload timeouts | Calculate XHR timeout based on file size: max(2min, fileSize/10MB * 1min + 2min) to prevent premature failures | Applied |
+| Specific error code handling | Handle ACCESS_DENIED and FILES_EXPIRED error codes with user-friendly messages in getDownloadUrl | Applied |
 
 ### Technical Context
 
@@ -208,6 +213,19 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**Phase PROD-04 - Plan 03: Storage Authentication & Error Handling Completed:**
+- Added credentials: 'include' to all storage service fetch calls (uploadFile, getDownloadUrl)
+- Added fileSize to presign request body for backend validation
+- Enhanced error handling to surface backend error messages to users
+- Implemented R2 XML error parsing using DOMParser for detailed error information
+- Added dynamic upload timeout calculation based on file size
+- Added specific error code handling (ACCESS_DENIED, FILES_EXPIRED) with user-friendly messages
+- Re-throw errors in getDownloadUrl for proper caller handling
+- Created PROD-04-03-SUMMARY.md
+- Commits: e6d76fa (Task 1), 1cbb815 (Task 2 - committed as PROD-04-04)
+- Duration: 2 minutes
+- **Status:** Wave 2 Plan 2 complete - storage service properly authenticated with improved error UX
 
 **Phase PROD-04 - Plan 04: Permission Validation and Dynamic Expiry Completed:**
 - Added permission checks to deliverables GET endpoints
