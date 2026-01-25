@@ -254,7 +254,7 @@ export const r2PresignDeliverableSchema = z.object({
     fileSize: z.number()
         .positive()
         .max(100 * 1024 * 1024, 'File size cannot exceed 100MB'), // 100MB max
-    projectId: uuidSchema.optional(),
+    projectId: z.string().min(1).max(100).optional(), // Accept any string (UUID or numeric ID)
     folder: z.enum(['beta', 'final', 'misc']).optional(),
     customKey: z.string().max(500).optional(), // For thumbnail uploads
 });
