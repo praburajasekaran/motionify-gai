@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-06: Business Endpoint Authentication [Complete] |
+| **Current Plan** | PROD-01-05: Frontend Cookie Migration [Complete] |
 | **Status** | Production security hardening in progress |
-| **Progress** | PROD-01: 4/9 plans complete (44%) |
+| **Progress** | PROD-01: 5/9 plans complete (56%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -95,6 +95,7 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Strict rate limiting for mutations | 10 req/min for sensitive operations, 100 req/min for reads to balance security with UX | Applied |
 | Path traversal prevention | Reject file keys containing .. or starting with / to prevent directory traversal attacks | Applied |
 | Filename sanitization | Replace special chars with _ in uploaded filenames to prevent injection attacks | Applied |
+| Frontend credentials pattern | All fetch calls must include credentials: 'include' for cookie-based auth; centralized in api-config/api-transformers | Applied |
 
 ### Technical Context
 
@@ -150,7 +151,18 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ## Session Continuity
 
-### This Session (2026-01-24)
+### This Session (2026-01-25)
+
+**PROD-01-05 - Frontend Cookie Migration Completed:**
+- Completed migration to cookie-based authentication for all frontend API calls
+- Added credentials: 'include' to 9 remaining fetch calls in client portal
+- Modified: NotificationContext.tsx (3 calls), lib/attachments.ts (4 calls), components/CommentThread.tsx (2 calls)
+- Verified admin portal already using /auth-me and /auth-logout endpoints (from PROD-01-02)
+- Verified client portal already prioritizing cookie sessions over localStorage (from PROD-01-02)
+- Both portals now fully cookie-aware - httpOnly cookies sent with all API requests
+- Created PROD-01-05-SUMMARY.md
+- Commit: d49138f (feat: add credentials: 'include' to all client portal fetch calls)
+- Duration: 4 minutes
 
 **PROD-01-06 - Business Endpoint Authentication Completed:**
 - Verified authentication middleware applied to 8 critical business endpoints
