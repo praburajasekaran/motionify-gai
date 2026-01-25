@@ -20,6 +20,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
 | **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
 | **5** | Credential Wiring Fix (Gap Closure) | COMM-05, COMM-06 | ✅ Complete |
+| **6** | Database Schema Alignment (Gap Closure) | COMM-06 | ⏳ Pending |
 
 ---
 
@@ -201,11 +202,51 @@ Addresses 2 integration gaps from v1 milestone audit:
 
 ---
 
+## Phase 6: Database Schema Alignment
+
+**Goal:** Fix database schema mismatch so comment creation and editing work correctly.
+
+### Requirements
+- **COMM-06:** Comment Editing (blocked by schema mismatch)
+
+### Gap Closure
+Addresses critical schema mismatch from v1 milestone audit:
+- **Blocker:** Backend expects `author_id`/`author_type` columns but Phase 1 schema file used `user_id`
+- **Root Cause:** Migration 002 has correct schema but unclear if applied
+- **Impact:** Comment creation and editing may fail with column-not-found errors
+
+### Dependencies
+- Phase 5 complete (credential wiring fixed)
+- Existing: Migration 002 exists with correct schema
+- Existing: Backend code expects `author_id`/`author_type`
+
+### Success Criteria
+
+1. **Database has correct column names**
+   The `proposal_comments` table has `author_id` and `author_type` columns matching backend expectations.
+
+2. **Comment creation works end-to-end**
+   POST /comments successfully inserts a row with author_id and author_type values.
+
+3. **Comment editing works end-to-end**
+   PUT /comments/{id} successfully updates content for the comment owner.
+
+4. **Schema files aligned**
+   Phase 1 schema file updated to match migration 002 for documentation consistency.
+
+### Plans
+- [ ] `06-01-PLAN.md` — Apply migration 002 and align schema files
+
+**Plan Count:** 1 plan
+
+---
+
 ## Dependencies Between Phases
 
 ```
-Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4 ──► Phase 5
-          │              │                  │            │
+Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4 ──► Phase 5 ──► Phase 6
+          │              │                  │            │            │
+          │              │                  │            │            └── Gap Closure: Schema alignment
           │              │                  │            └── Gap Closure: Post-PROD-01 credential wiring
           │              │                  └── Gap Closure: UAT fixes
           │              │
@@ -224,15 +265,15 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4 
 | COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | ✅ Complete |
 | COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | ✅ Complete |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
-| COMM-05: In-App Notifications | Phase 3, 5 | Should Have | 🔧 Fixing |
-| COMM-06: Comment Editing | Phase 2, 4, 5 | Could Have | 🔧 Fixing |
+| COMM-05: In-App Notifications | Phase 3, 5 | Should Have | ✅ Complete |
+| COMM-06: Comment Editing | Phase 2, 4, 5, 6 | Could Have | 🔧 Fixing |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)
-**Phases:** 5 (4 complete + 1 gap closure pending)
-**Phase 5:** 1 plan (credential wiring)
-**Status:** Closing post-PROD-01 gaps
+**Phases:** 6 (5 complete + 1 gap closure pending)
+**Phase 6:** 1 plan (schema alignment)
+**Status:** Closing schema mismatch gap
 
 ---
 
@@ -248,4 +289,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-01-25 (added Phase 6 for schema alignment)*
