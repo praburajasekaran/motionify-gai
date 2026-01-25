@@ -37,8 +37,12 @@ export const handler = compose(
       const { projectId, id } = event.queryStringParameters || {};
 
       if (id) {
+        // Fetch deliverable with project info for permission check
         const result = await client.query(
-          `SELECT * FROM deliverables WHERE id = $1`,
+          `SELECT d.*, p.client_user_id
+           FROM deliverables d
+           JOIN projects p ON d.project_id = p.id
+           WHERE d.id = $1`,
           [id]
         );
 
@@ -51,19 +55,74 @@ export const handler = compose(
         }
 
         const deliverable = result.rows[0];
+        const { client_user_id } = deliverable;
 
-        // Check if files have expired (365+ days after final delivery)
-        if (deliverable.files_expired) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({
-              error: 'Files have expired',
-              message: 'Download links for this deliverable have expired after 365 days. Contact support to restore access.',
-              code: 'FILES_EXPIRED'
-            }),
-          };
+        // Permission check
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        // Admin and PM can view all
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          // Client can only view their own project's deliverables
+          if (userRole === 'client' && client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view this deliverable'
+              }),
+            };
+          }
+
+          // Team member: check task assignment on project
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [deliverable.project_id, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
         }
+
+        // Dynamic expiry check (more accurate than relying on files_expired column)
+        if (deliverable.status === 'final_delivered' && deliverable.final_delivered_at) {
+          const deliveryDate = new Date(deliverable.final_delivered_at);
+          const expiryDate = new Date(deliveryDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+          const isExpired = new Date() > expiryDate;
+
+          if (isExpired && userRole !== 'super_admin') {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Files have expired',
+                message: 'Download links for this deliverable have expired after 365 days. Contact support to restore access.',
+                code: 'FILES_EXPIRED'
+              }),
+            };
+          }
+
+          // Add computed expiry info to response
+          deliverable.expires_at = expiryDate.toISOString();
+          deliverable.files_expired = isExpired;
+        }
+
+        // Remove internal fields before sending
+        delete deliverable.client_user_id;
 
         return {
           statusCode: 200,
@@ -73,15 +132,86 @@ export const handler = compose(
       }
 
       if (projectId) {
+        // First validate user can access this project
+        const projectResult = await client.query(
+          `SELECT client_user_id FROM projects WHERE id = $1`,
+          [projectId]
+        );
+
+        if (projectResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Project not found' }),
+          };
+        }
+
+        const { client_user_id } = projectResult.rows[0];
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        // Permission check
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          if (userRole === 'client' && client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view deliverables for this project'
+              }),
+            };
+          }
+
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [projectId, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
+        }
+
+        // Fetch deliverables
         const result = await client.query(
           `SELECT * FROM deliverables WHERE project_id = $1 ORDER BY estimated_completion_week`,
           [projectId]
         );
 
+        // Add computed expiry to each deliverable
+        const deliverables = result.rows.map(d => {
+          if (d.status === 'final_delivered' && d.final_delivered_at) {
+            const deliveryDate = new Date(d.final_delivered_at);
+            const expiryDate = new Date(deliveryDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+            d.expires_at = expiryDate.toISOString();
+            d.files_expired = new Date() > expiryDate;
+          }
+          return d;
+        });
+
+        // For clients, filter out deliverables not yet ready for viewing
+        const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'payment_pending', 'final_delivered'];
+        const filteredDeliverables = userRole === 'client'
+          ? deliverables.filter(d => viewableStatuses.includes(d.status))
+          : deliverables;
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows),
+          body: JSON.stringify(filteredDeliverables),
         };
       }
 
@@ -104,7 +234,9 @@ export const handler = compose(
         };
       }
 
-      const updates = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.deliverable.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'status',

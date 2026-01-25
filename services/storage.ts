@@ -48,7 +48,9 @@ export const storageService = {
             });
 
             if (!presignRes.ok) {
-                throw new Error('Failed to generate upload URL');
+                const errorData = await presignRes.json().catch(() => ({}));
+                const errorMessage = errorData?.error?.message || errorData?.message || 'Failed to generate upload URL';
+                throw new Error(errorMessage);
             }
 
             const { uploadUrl, key }: UploadResponse = await presignRes.json();
@@ -71,13 +73,34 @@ export const storageService = {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         resolve(key);
                     } else {
-                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                        // Try to parse R2 error response
+                        let errorMsg = `Upload failed with status ${xhr.status}`;
+                        try {
+                            // R2 returns XML errors
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(xhr.responseText, 'application/xml');
+                            const code = doc.querySelector('Code')?.textContent;
+                            const message = doc.querySelector('Message')?.textContent;
+                            if (code && message) {
+                                errorMsg = `R2 Error: ${code} - ${message}`;
+                            }
+                        } catch (e) {
+                            // Ignore parse errors
+                        }
+                        reject(new Error(errorMsg));
                     }
                 };
 
                 xhr.onerror = () => {
-                    reject(new Error('Network error during upload'));
+                    reject(new Error('Network error during upload. Please check your connection and try again.'));
                 };
+
+                xhr.ontimeout = () => {
+                    reject(new Error('Upload timed out. The file may be too large for your connection speed.'));
+                };
+
+                // Set timeout based on file size (1 minute per 10MB + 2 minute base)
+                xhr.timeout = Math.max(120000, Math.ceil(file.size / (10 * 1024 * 1024)) * 60000 + 120000);
 
                 xhr.send(file);
             });
@@ -103,14 +126,26 @@ export const storageService = {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get download URL');
+                const errorData = await response.json().catch(() => ({}));
+                const errorCode = errorData?.error?.code;
+                const errorMessage = errorData?.error?.message || 'Failed to get download URL';
+
+                // Handle specific error codes
+                if (response.status === 403 && errorCode === 'ACCESS_DENIED') {
+                    throw new Error('You do not have permission to access this file');
+                }
+                if (response.status === 403 && errorCode === 'FILES_EXPIRED') {
+                    throw new Error('This file has expired. Contact support to restore access.');
+                }
+
+                throw new Error(errorMessage);
             }
 
             const { url }: DownloadResponse = await response.json();
             return url;
         } catch (error) {
             console.error('Storage Download Error:', error);
-            return '';
+            throw error; // Re-throw for caller to show user message
         }
     },
 
