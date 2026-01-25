@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-08: Input Validation Middleware [Complete] |
+| **Current Plan** | PROD-01-10: Supporting Endpoint Authentication [Complete] |
 | **Status** | Production security hardening in progress |
-| **Progress** | PROD-01: 8/9 plans complete (89%) |
+| **Progress** | PROD-01: 10/11 plans complete (91%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -155,6 +155,19 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**PROD-01-10 - Supporting Endpoint Authentication Completed:**
+- Added withAuth() middleware to 5 supporting endpoints
+- Comments.ts: GET, POST, PUT now require authentication
+- Attachments.ts: GET, POST now require authentication
+- Activities.ts: GET, POST now require authentication
+- Notifications.ts: GET, PATCH now require authentication
+- Inquiry-detail.ts: GET, PUT now require authentication
+- Removed redundant requireAuth() calls from comments.ts and attachments.ts
+- Protected endpoint count increased from 19 to 24 (67% coverage)
+- Created PROD-01-10-SUMMARY.md
+- Commits: 552cc37 (comments), b025563 (attachments), 2e36ac8 (3 remaining endpoints)
+- Duration: 4 minutes
 
 **PROD-01-08 - Input Validation Middleware Completed:**
 - Applied Zod schemas to 14 mutation endpoints (POST/PUT/PATCH)
