@@ -18,7 +18,8 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
 | **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
-| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | 🔧 In Progress |
+| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
+| **5** | Credential Wiring Fix (Gap Closure) | COMM-05, COMM-06 | 🔧 Pending |
 
 ---
 
@@ -167,11 +168,45 @@ Addresses 9 diagnosed gaps from UAT:
 
 ---
 
+## Phase 5: Credential Wiring Fix
+
+**Goal:** Fix missing `credentials: 'include'` on fetch calls exposed by PROD-01 security hardening.
+
+### Requirements
+- **COMM-05:** In-App Notifications (admin portal fetch calls)
+- **COMM-06:** Comment Editing (client portal handleEdit)
+
+### Gap Closure
+Addresses 2 integration gaps from v1 milestone audit:
+- **Gap 1:** Client portal handleEdit missing credentials → 401 on comment edit
+- **Gap 2:** Admin portal NotificationContext missing credentials → 401 on notification fetch/update
+
+### Dependencies
+- PROD-01 complete (cookie-based auth now required on all endpoints)
+- Existing: CommentThread.tsx in client portal
+- Existing: NotificationContext.tsx in admin portal
+
+### Success Criteria
+
+1. **Client portal comment editing works**
+   User can edit their comment in client portal, PUT /comments returns 200, comment updates in UI.
+
+2. **Admin portal notifications work**
+   NotificationContext fetches notifications on mount, badge shows correct count, mark-as-read functions.
+
+### Plans
+- [ ] `05-01-PLAN.md` — Add credentials: 'include' to 4 fetch calls (2 files)
+
+**Plan Count:** 1 plan
+
+---
+
 ## Dependencies Between Phases
 
 ```
-Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
-          │              │                  │
+Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4 ──► Phase 5
+          │              │                  │            │
+          │              │                  │            └── Gap Closure: Post-PROD-01 credential wiring
           │              │                  └── Gap Closure: UAT fixes
           │              │
           │              └── Requires: Phase 2, R2 presign API, NotificationContext
@@ -186,18 +221,18 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
 | COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
-| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | 🔧 Fixing |
-| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | 🔧 Fixing |
+| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | ✅ Complete |
+| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | ✅ Complete |
 | COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
-| COMM-05: In-App Notifications | Phase 3 | Should Have | ✅ Complete |
-| COMM-06: Comment Editing | Phase 2, 4 | Could Have | 🔧 Fixing |
+| COMM-05: In-App Notifications | Phase 3, 5 | Should Have | 🔧 Fixing |
+| COMM-06: Comment Editing | Phase 2, 4, 5 | Could Have | 🔧 Fixing |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
 
 **Coverage:** 8/8 requirements mapped (100%)
-**Phases:** 4 (3 complete + 1 gap closure in progress)
-**Phase 4:** 5 plans (1 complete, 4 pending)
-**Status:** Fixing UAT failures
+**Phases:** 5 (4 complete + 1 gap closure pending)
+**Phase 5:** 1 plan (credential wiring)
+**Status:** Closing post-PROD-01 gaps
 
 ---
 
@@ -213,4 +248,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-25*
