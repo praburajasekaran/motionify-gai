@@ -2,6 +2,8 @@ import pg from 'pg';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -140,15 +142,10 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      const { inquiryId, proposalId } = JSON.parse(event.body || '{}');
-
-      if (!inquiryId || !proposalId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'inquiryId and proposalId are required' }),
-        };
-      }
+      // Validate request body using Zod schema
+      const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
+      if (!validation.success) return validation.response;
+      const { inquiryId, proposalId } = validation.data;
 
       const proposalResult = await client.query(
         'SELECT * FROM proposals WHERE id = $1',
