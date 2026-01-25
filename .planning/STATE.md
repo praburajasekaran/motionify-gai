@@ -139,6 +139,10 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Payment-specific schemas | Payment endpoints (create-order, verify, manual-complete) use dedicated schemas matching their workflow-specific payloads | Applied |
 | Separate schemas for notification ops | markNotificationReadSchema requires notificationId, markAllNotificationsReadSchema does not | Applied |
 | Activity schema refinement | Use .refine() to enforce business rule that at least one context (inquiryId/proposalId/projectId) required | Applied |
+| Dual schema pattern for R2 uploads | Separate schemas for comment attachments (10MB) vs deliverables (100MB) instead of single configurable schema | Applied |
+| 100MB deliverable limit | Balance between video file practicality and v1 simplicity (no multipart upload complexity) | Applied |
+| Schema-based file type validation | Enforce allowed types (video, image, PDF) at Zod schema level for deliverables | Applied |
+| Context-aware schema selection | Choose validation schema based on request structure (commentId presence) rather than explicit type parameter | Applied |
 
 ### Technical Context
 
@@ -195,6 +199,18 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**Phase PROD-04 - Plan 02: File Size Alignment Completed:**
+- Created r2PresignDeliverableSchema with 100MB limit for deliverable uploads
+- Kept r2PresignSchema at 10MB for comment attachments (backward compatible)
+- Added file type validation for deliverables (video, image, PDF only)
+- Updated r2-presign.ts to select schema based on commentId presence
+- Aligned frontend MAX_FILE_SIZE to 100MB in DeliverableCard.tsx
+- Improved error messaging and added debug logging
+- Created PROD-04-02-SUMMARY.md
+- Commits: 27aacc6 (schema), 290441f (r2-presign), e91b11f (frontend)
+- Duration: 3 minutes
+- **Status:** Wave 1 Plan 2 complete - file size validation aligned across all layers
 
 **Phase 05 - Plan 01: Credential Wiring Fix Completed:**
 - Added credentials: 'include' to 4 missed fetch calls across both portals
