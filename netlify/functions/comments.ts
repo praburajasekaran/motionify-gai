@@ -1,8 +1,7 @@
 import pg from 'pg';
-import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { sendCommentNotificationEmail } from './send-email';
-import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
@@ -42,8 +41,9 @@ const MIN_CONTENT_LENGTH = 1;
 
 export const handler = compose(
     withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+    withAuth(),
     withRateLimit(RATE_LIMITS.api, 'comments')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
@@ -125,13 +125,8 @@ export const handler = compose(
         }
 
         if (event.httpMethod === 'POST') {
-            const authResult = await requireAuth(event);
-
-            if (!('user' in authResult)) {
-                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
-            }
-
-            const user = authResult.user;
+            // After withAuth() middleware, auth is guaranteed
+            const user = auth!.user;
 
             const validation = validateRequest(event.body, SCHEMAS.comment.create, origin);
             if (!validation.success) return validation.response;
@@ -262,13 +257,8 @@ export const handler = compose(
         }
 
         if (event.httpMethod === 'PUT') {
-            const authResult = await requireAuth(event);
-
-            if (!('user' in authResult)) {
-                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
-            }
-
-            const user = authResult.user;
+            // After withAuth() middleware, auth is guaranteed
+            const user = auth!.user;
 
             const validation = validateRequest(event.body, SCHEMAS.comment.update, origin);
             if (!validation.success) return validation.response;
