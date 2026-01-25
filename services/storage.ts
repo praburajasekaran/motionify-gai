@@ -36,9 +36,11 @@ export const storageService = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include', // Required for cookie-based auth
                 body: JSON.stringify({
                     fileName: file.name,
                     fileType: file.type,
+                    fileSize: file.size,
                     projectId,
                     folder,
                     customKey,
@@ -96,7 +98,9 @@ export const storageService = {
             if (!key) return '';
 
             const queryString = new URLSearchParams({ key }).toString();
-            const response = await fetch(`/api/r2-presign?${queryString}`);
+            const response = await fetch(`/api/r2-presign?${queryString}`, {
+                credentials: 'include', // Required for cookie-based auth
+            });
 
             if (!response.ok) {
                 throw new Error('Failed to get download URL');
