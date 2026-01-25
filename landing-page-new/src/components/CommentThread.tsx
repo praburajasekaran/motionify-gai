@@ -48,7 +48,9 @@ async function getComments(proposalId: string, since?: string): Promise<Comment[
         if (since) {
             url += `&since=${encodeURIComponent(since)}`;
         }
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            credentials: 'include',
+        });
         if (!response.ok) return [];
         const data = await response.json();
         return data.comments || [];
@@ -67,6 +69,7 @@ async function createComment(data: { proposalId: string; content: string }): Pro
                 'Content-Type': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
+            credentials: 'include',
             body: JSON.stringify(data),
         });
         if (!response.ok) return null;
