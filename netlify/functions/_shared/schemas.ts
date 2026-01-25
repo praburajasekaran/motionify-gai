@@ -230,11 +230,26 @@ export const requestInquiryVerificationSchema = z.object({
 // R2 Presign Schemas
 // ==========================================
 
+// For comment attachments (keep existing 10MB limit)
 export const r2PresignSchema = z.object({
     fileName: z.string().min(1).max(255),
     fileType: z.string().min(1).max(100),
-    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max
+    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max for comments
     commentId: uuidSchema.optional(),
+});
+
+// For deliverable uploads (100MB limit)
+export const r2PresignDeliverableSchema = z.object({
+    fileName: z.string().min(1).max(255),
+    fileType: z.string().min(1).max(100).refine(
+        (type) => ['video/', 'image/', 'application/pdf'].some(allowed => type.startsWith(allowed)),
+        { message: 'File type must be video, image, or PDF' }
+    ),
+    fileSize: z.number()
+        .positive()
+        .max(100 * 1024 * 1024, 'File size cannot exceed 100MB'), // 100MB max
+    projectId: uuidSchema.optional(),
+    folder: z.enum(['beta', 'final', 'misc']).optional(),
 });
 
 // ==========================================
@@ -320,6 +335,7 @@ export const SCHEMAS = {
     },
     r2: {
         presign: r2PresignSchema,
+        presignDeliverable: r2PresignDeliverableSchema,
     },
     notification: {
         markRead: markNotificationReadSchema,
