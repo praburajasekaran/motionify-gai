@@ -30,17 +30,40 @@ const proposalStatusColors: Record<string, string> = {
   changes_requested: 'bg-orange-100 text-orange-800',
 };
 
+// Client-friendly status labels (instead of admin terminology)
+const clientFriendlyStatusLabels: Record<string, string> = {
+  // Inquiry statuses
+  new: 'Submitted',
+  reviewing: 'Under Review',
+  proposal_sent: 'Proposal Received',
+  negotiating: 'In Discussion',
+  accepted: 'Accepted',
+  project_setup: 'Project Starting',
+  payment_pending: 'Payment Due',
+  paid: 'Paid',
+  converted: 'Active Project',
+  rejected: 'Declined',
+  archived: 'Archived',
+  // Proposal statuses
+  sent: 'Awaiting Response',
+  changes_requested: 'Changes Requested',
+};
+
 interface InquiryWithProposal extends Inquiry {
   proposalStatus?: ProposalStatus;
   proposalId?: string;
   proposalFeedback?: string;
 }
 
-function StatusBadge({ status, colors }: { status: string; colors: Record<string, string> }) {
+function StatusBadge({ status, colors, useClientLabels = false }: { status: string; colors: Record<string, string>; useClientLabels?: boolean }) {
   const colorClass = colors[status] || 'bg-gray-100 text-gray-800';
+  // Use client-friendly label if available and requested, otherwise format the raw status
+  const displayLabel = useClientLabels && clientFriendlyStatusLabels[status]
+    ? clientFriendlyStatusLabels[status]
+    : status.replace(/_/g, ' ');
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-      {status.replace(/_/g, ' ')}
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${colorClass}`}>
+      {displayLabel}
     </span>
   );
 }
@@ -226,11 +249,11 @@ export default function InquiriesPage() {
                         {inquiry.companyName || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={inquiry.status} colors={statusColors} />
+                        <StatusBadge status={inquiry.status} colors={statusColors} useClientLabels={!isAdmin} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {inquiry.proposalStatus ? (
-                          <StatusBadge status={inquiry.proposalStatus} colors={proposalStatusColors} />
+                          <StatusBadge status={inquiry.proposalStatus} colors={proposalStatusColors} useClientLabels={!isAdmin} />
                         ) : (
                           <span className="text-sm text-gray-400">No proposal</span>
                         )}

@@ -10,7 +10,9 @@
 import { getAuthToken, clearAuthSession } from './auth';
 
 // API Base URL
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:9999/.netlify/functions';
+// Use relative path in development so requests go through Vite proxy (for cookie handling)
+// In production, VITE_API_URL should be set to the actual API endpoint
+export const API_BASE = import.meta.env.VITE_API_URL || '/.netlify/functions';
 
 // Request options type
 interface RequestOptions extends RequestInit {
