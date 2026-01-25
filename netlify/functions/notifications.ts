@@ -14,7 +14,7 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
-import { validateRequest } from './_shared/validation';
+import { validateRequest, uuidSchema } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -49,7 +49,9 @@ export const handler = compose(
             const params = event.queryStringParameters || {};
             const { userId, limit = '20' } = params;
 
-            if (!userId || !isValidUUID(userId)) {
+            // Validate userId using Zod schema
+            const userIdResult = uuidSchema.safeParse(userId);
+            if (!userIdResult.success) {
                 return {
                     statusCode: 400,
                     headers,
