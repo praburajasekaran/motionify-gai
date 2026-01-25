@@ -152,6 +152,8 @@ if (event.httpMethod === "POST") {
 ```
 
 This keeps backward compatibility: requests with commentId use 10MB schema, requests without use 100MB schema.
+
+Note: SCHEMAS is already imported at the top of r2-presign.ts (`import { SCHEMAS } from './_shared/schemas';`), so the new `SCHEMAS.r2.presignDeliverable` will be available once Task 1 adds it to schemas.ts.
   </action>
   <verify>
 Manual test:

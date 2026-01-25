@@ -4,7 +4,6 @@ plan: 03
 type: execute
 wave: 2
 depends_on:
-  - PROD-04-01
   - PROD-04-02
 files_modified:
   - services/storage.ts
