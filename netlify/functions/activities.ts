@@ -1,21 +1,11 @@
 import pg from 'pg';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
-
-interface CreateActivityPayload {
-  type: string;
-  userId: string;
-  userName: string;
-  targetUserId?: string;
-  targetUserName?: string;
-  inquiryId?: string;
-  proposalId?: string;
-  projectId?: string;
-  details: Record<string, string | number>;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -31,8 +21,9 @@ const getDbClient = () => {
 
 export const handler = compose(
   withCORS(['GET', 'POST', 'OPTIONS']),
+  withAuth(),
   withRateLimit(RATE_LIMITS.api, 'activities')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -114,24 +105,10 @@ export const handler = compose(
 
     // POST - Create a new activity
     if (event.httpMethod === 'POST') {
-      const payload: CreateActivityPayload = JSON.parse(event.body || '{}');
-
-      if (!payload.type || !payload.userId || !payload.userName) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'type, userId, and userName are required' }),
-        };
-      }
-
-      // At least one context must be provided
-      if (!payload.inquiryId && !payload.proposalId && !payload.projectId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'At least one of inquiryId, proposalId, or projectId is required' }),
-        };
-      }
+      // Validate request body using Zod schema (includes refine for context requirement)
+      const validation = validateRequest(event.body, SCHEMAS.activity.create, origin);
+      if (!validation.success) return validation.response;
+      const payload = validation.data;
 
       const result = await client.query(
         `INSERT INTO activities (

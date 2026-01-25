@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
@@ -19,8 +19,9 @@ const getDbClient = () => {
 
 export const handler = compose(
   withCORS(['GET', 'PUT', 'OPTIONS']),
+  withAuth(),
   withRateLimit(RATE_LIMITS.api, 'inquiry_detail')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
