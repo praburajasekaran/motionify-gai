@@ -174,6 +174,22 @@ export const updatePaymentSchema = z.object({
     paidAt: dateSchema.optional().nullable(),
 });
 
+export const createPaymentOrderSchema = z.object({
+    proposalId: uuidSchema,
+    paymentType: z.enum(['advance', 'balance']),
+});
+
+export const verifyPaymentSchema = z.object({
+    paymentId: uuidSchema,
+    razorpayPaymentId: z.string().min(1).max(255),
+    razorpayOrderId: z.string().min(1).max(255).optional(),
+    razorpaySignature: z.string().min(1).max(500).optional(),
+});
+
+export const manualCompletePaymentSchema = z.object({
+    paymentId: uuidSchema,
+});
+
 // ==========================================
 // User Settings Schemas
 // ==========================================
@@ -253,6 +269,9 @@ export const SCHEMAS = {
     payment: {
         create: createPaymentSchema,
         update: updatePaymentSchema,
+        createOrder: createPaymentOrderSchema,
+        verify: verifyPaymentSchema,
+        manualComplete: manualCompletePaymentSchema,
     },
     userSettings: {
         update: updateUserSettingsSchema,

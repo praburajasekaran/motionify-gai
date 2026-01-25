@@ -3,6 +3,8 @@ import Razorpay from 'razorpay';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
@@ -64,23 +66,9 @@ export const handler = compose(
       const action = pathParts[pathParts.length - 1];
 
       if (action === 'create-order') {
-        const { proposalId, paymentType } = JSON.parse(event.body || '{}');
-
-        if (!proposalId || !paymentType) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'proposalId and paymentType are required' }),
-          };
-        }
-
-        if (!['advance', 'balance'].includes(paymentType)) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentType must be advance or balance' }),
-          };
-        }
+        const validation = validateRequest(event.body, SCHEMAS.payment.createOrder, origin);
+        if (!validation.success) return validation.response;
+        const { proposalId, paymentType } = validation.data;
 
         const proposalResult = await client.query(
           'SELECT * FROM proposals WHERE id = $1',
@@ -140,15 +128,9 @@ export const handler = compose(
       }
 
       if (action === 'verify') {
-        const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = JSON.parse(event.body || '{}');
-
-        if (!paymentId || !razorpayPaymentId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentId and razorpayPaymentId are required' }),
-          };
-        }
+        const validation = validateRequest(event.body, SCHEMAS.payment.verify, origin);
+        if (!validation.success) return validation.response;
+        const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = validation.data;
 
         const result = await client.query(
           `UPDATE payments 
@@ -285,15 +267,9 @@ export const handler = compose(
       }
 
       if (action === 'manual-complete') {
-        const { paymentId } = JSON.parse(event.body || '{}');
-
-        if (!paymentId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentId is required' }),
-          };
-        }
+        const validation = validateRequest(event.body, SCHEMAS.payment.manualComplete, origin);
+        if (!validation.success) return validation.response;
+        const { paymentId } = validation.data;
 
         const result = await client.query(
           `UPDATE payments 
