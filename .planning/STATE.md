@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-05: Frontend Cookie Migration [Complete] |
+| **Current Plan** | PROD-01-09: Cookie Session Restoration [Complete] |
 | **Status** | Production security hardening in progress |
-| **Progress** | PROD-01: 5/9 plans complete (56%) |
+| **Progress** | PROD-01: 6/9 plans complete (67%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -96,6 +96,7 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Path traversal prevention | Reject file keys containing .. or starting with / to prevent directory traversal attacks | Applied |
 | Filename sanitization | Replace special chars with _ in uploaded filenames to prevent injection attacks | Applied |
 | Frontend credentials pattern | All fetch calls must include credentials: 'include' for cookie-based auth; centralized in api-config/api-transformers | Applied |
+| Cookie session restoration | AuthContext relies solely on /auth-me API for session restoration; no localStorage fallback to ensure cookies are single source of truth | Applied |
 
 ### Technical Context
 
@@ -152,6 +153,17 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**PROD-01-09 - Cookie Session Restoration Completed:**
+- Fixed cookie-based session restoration in client portal AuthContext
+- Removed localStorage session caching and fallback logic
+- Client portal now relies solely on /auth-me API with credentials: 'include'
+- Verified admin portal already correctly implemented (no changes needed)
+- Session now persists across page refreshes using httpOnly cookies
+- Work split across two commits: d90362f (verifyMagicLink fix), 9918be2 (AuthContext fix)
+- Created PROD-01-09-SUMMARY.md
+- Duration: 2 minutes
+- **Status:** Cookie authentication flow now fully functional end-to-end
 
 **PROD-01-05 - Frontend Cookie Migration Completed:**
 - Completed migration to cookie-based authentication for all frontend API calls
