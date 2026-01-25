@@ -132,6 +132,11 @@ export const acceptProjectTermsSchema = z.object({
     accepted: z.boolean(),
 });
 
+export const createProjectFromProposalSchema = z.object({
+    inquiryId: uuidSchema,
+    proposalId: uuidSchema,
+});
+
 // ==========================================
 // Task Schemas
 // ==========================================
@@ -233,6 +238,38 @@ export const r2PresignSchema = z.object({
 });
 
 // ==========================================
+// Notification Schemas
+// ==========================================
+
+export const markNotificationReadSchema = z.object({
+    userId: uuidSchema,
+    notificationId: uuidSchema.optional(),
+});
+
+export const markAllNotificationsReadSchema = z.object({
+    userId: uuidSchema,
+});
+
+// ==========================================
+// Activity Schemas
+// ==========================================
+
+export const createActivitySchema = z.object({
+    type: z.string().min(1).max(100),
+    userId: uuidSchema,
+    userName: nameSchema,
+    targetUserId: uuidSchema.optional(),
+    targetUserName: nameSchema.optional(),
+    inquiryId: uuidSchema.optional(),
+    proposalId: uuidSchema.optional(),
+    projectId: uuidSchema.optional(),
+    details: z.record(z.union([z.string(), z.number()])).optional(),
+}).refine(
+    data => data.inquiryId || data.proposalId || data.projectId,
+    { message: "At least one of inquiryId, proposalId, or projectId is required" }
+);
+
+// ==========================================
 // Export all schemas
 // ==========================================
 
@@ -261,6 +298,7 @@ export const SCHEMAS = {
         create: createProjectSchema,
         update: updateProjectSchema,
         acceptTerms: acceptProjectTermsSchema,
+        fromProposal: createProjectFromProposalSchema,
     },
     task: {
         create: createTaskSchema,
@@ -282,5 +320,12 @@ export const SCHEMAS = {
     },
     r2: {
         presign: r2PresignSchema,
+    },
+    notification: {
+        markRead: markNotificationReadSchema,
+        markAllRead: markAllNotificationsReadSchema,
+    },
+    activity: {
+        create: createActivitySchema,
     },
 };
