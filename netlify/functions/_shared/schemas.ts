@@ -239,17 +239,24 @@ export const r2PresignSchema = z.object({
 });
 
 // For deliverable uploads (100MB limit)
+// File type validation is relaxed - security is enforced on download (r2-presign GET)
+// This allows video/audio/image files and common deliverable formats
 export const r2PresignDeliverableSchema = z.object({
     fileName: z.string().min(1).max(255),
     fileType: z.string().min(1).max(100).refine(
-        (type) => ['video/', 'image/', 'application/pdf'].some(allowed => type.startsWith(allowed)),
-        { message: 'File type must be video, image, or PDF' }
+        (type) => {
+            // Allow video, audio, image, and common document/archive types
+            const allowedPrefixes = ['video/', 'audio/', 'image/', 'application/pdf', 'application/octet-stream'];
+            return allowedPrefixes.some(prefix => type.startsWith(prefix)) || type === '';
+        },
+        { message: 'File type must be video, audio, image, or PDF' }
     ),
     fileSize: z.number()
         .positive()
         .max(100 * 1024 * 1024, 'File size cannot exceed 100MB'), // 100MB max
     projectId: uuidSchema.optional(),
     folder: z.enum(['beta', 'final', 'misc']).optional(),
+    customKey: z.string().max(500).optional(), // For thumbnail uploads
 });
 
 // ==========================================
