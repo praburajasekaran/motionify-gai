@@ -17,9 +17,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | PROD-01 - Authentication & Security |
-| **Current Plan** | PROD-01-10: Supporting Endpoint Authentication [Complete] |
-| **Status** | Production security hardening in progress |
-| **Progress** | PROD-01: 10/11 plans complete (91%) |
+| **Current Plan** | PROD-01-11: Remaining Endpoint Validation [Complete] |
+| **Status** | Production security hardening complete |
+| **Progress** | PROD-01: 11/11 plans complete (100%) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -99,6 +99,8 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Cookie session restoration | AuthContext relies solely on /auth-me API for session restoration; no localStorage fallback to ensure cookies are single source of truth | Applied |
 | Schema-based input validation | All POST/PUT/PATCH endpoints use Zod schemas from _shared/schemas.ts for consistent validation and error handling | Applied |
 | Payment-specific schemas | Payment endpoints (create-order, verify, manual-complete) use dedicated schemas matching their workflow-specific payloads | Applied |
+| Separate schemas for notification ops | markNotificationReadSchema requires notificationId, markAllNotificationsReadSchema does not | Applied |
+| Activity schema refinement | Use .refine() to enforce business rule that at least one context (inquiryId/proposalId/projectId) required | Applied |
 
 ### Technical Context
 
@@ -155,6 +157,17 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**PROD-01-11 - Remaining Endpoint Validation Completed:**
+- Added 4 new Zod schemas (projectFromProposal, markNotificationRead, markAllNotificationsRead, activityCreate)
+- Applied validateRequest to projects.ts POST, notifications.ts PATCH, activities.ts POST
+- Removed 23 lines of manual validation code
+- Validated endpoint count increased from 14 to 18
+- Fixed isValidUUID bug in notifications.ts GET handler
+- Created PROD-01-11-SUMMARY.md
+- Commits: 13574b8 (schemas), 1cc92ff (projects), 2e36ac8 (notifications/activities), d7b79f0 (bugfix)
+- Duration: 5 minutes
+- **Status:** Gap 2 (inconsistent validation) now closed - all mutation endpoints use Zod schemas
 
 **PROD-01-10 - Supporting Endpoint Authentication Completed:**
 - Added withAuth() middleware to 5 supporting endpoints
@@ -401,4 +414,4 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ---
 
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-25*
