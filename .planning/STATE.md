@@ -16,10 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 06 - Schema Alignment [Complete] |
-| **Current Plan** | None |
-| **Status** | Phase 6 complete - all phases finished |
-| **Progress** | Phase 06: 1/1 plans complete (100%) |
+| **Current Phase** | Phase PROD-04 - Deliverables System [In Progress] |
+| **Current Plan** | PROD-04-01 |
+| **Status** | Plan complete - key ownership validation verified |
+| **Progress** | PROD-04: 1/5 plans complete (20%) |
+| **Last activity** | 2026-01-25 - Completed PROD-04-01-PLAN.md (verification) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -143,6 +144,10 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | 100MB deliverable limit | Balance between video file practicality and v1 simplicity (no multipart upload complexity) | Applied |
 | Schema-based file type validation | Enforce allowed types (video, image, PDF) at Zod schema level for deliverables | Applied |
 | Context-aware schema selection | Choose validation schema based on request structure (commentId presence) rather than explicit type parameter | Applied |
+| Comment attachment simplified permissions | Trust comment visibility without duplicating proposal ownership checks in r2-presign (keys server-generated, comments participant-only) | Applied |
+| Backward compatibility for legacy files | Allow keys without structured paths for old files while maintaining path traversal prevention | Applied |
+| Team member file access via tasks | Team members access project files only via task assignment (not direct project membership) for scope limitation | Applied |
+| Status-based deliverable visibility | Clients can view files only in beta_ready, awaiting_approval, approved, payment_pending, final_delivered statuses | Applied |
 
 ### Technical Context
 
@@ -199,6 +204,19 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-25)
+
+**Phase PROD-04 - Plan 01: Key Ownership Validation Completed:**
+- Verified key ownership validation in r2-presign.ts GET handler (pre-completed in PROD-04-02 commit)
+- Implemented role-based file access control (client, team_member, admin, PM)
+- Database lookups validate access across deliverables, comment_attachments, and tasks tables
+- Clients restricted to own projects with status-based visibility (beta_ready onward)
+- Team members access files only for projects with task assignments
+- Admin/PM have unrestricted access to all file keys
+- Path traversal prevention maintained alongside ownership validation
+- Created PROD-04-01-SUMMARY.md
+- Implementation in commit: 290441f (labeled PROD-04-02, includes both 01 and 02 work)
+- Duration: <1 minute (verification only)
+- **Status:** Wave 1 Plan 1 complete - critical security vulnerability closed
 
 **Phase PROD-04 - Plan 02: File Size Alignment Completed:**
 - Created r2PresignDeliverableSchema with 100MB limit for deliverable uploads
