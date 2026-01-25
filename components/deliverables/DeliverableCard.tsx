@@ -40,7 +40,7 @@ const TYPE_ICONS = {
   Document: FileText,
 };
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB for admin deliverables
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB for deliverables (aligned with backend)
 const ALLOWED_FILE_TYPES = [
   'video/',
   'image/',
@@ -166,8 +166,10 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     if (!file) return;
 
     // 1. Validate File Size
+    console.log(`[DeliverableCard] File selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+
     if (file.size > MAX_FILE_SIZE) {
-      alert(`File is too large (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB). Max size is 5GB.`);
+      alert(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max size is 100MB. For larger files, contact support.`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
