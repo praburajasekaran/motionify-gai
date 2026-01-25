@@ -20,7 +20,7 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 | **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
 | **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
 | **5** | Credential Wiring Fix (Gap Closure) | COMM-05, COMM-06 | ✅ Complete |
-| **6** | Database Schema Alignment (Gap Closure) | COMM-06 | ⏳ Pending |
+| **6** | Database Schema Alignment (Gap Closure) | COMM-06 | ✅ Complete |
 
 ---
 
