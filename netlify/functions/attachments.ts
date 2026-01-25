@@ -1,9 +1,8 @@
 import pg from 'pg';
-import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
@@ -83,8 +82,9 @@ const getR2Client = () => {
 
 export const handler = compose(
     withCORS(['GET', 'POST', 'OPTIONS']),
+    withAuth(),
     withRateLimit(RATE_LIMITS.apiStrict, 'attachments')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
@@ -222,13 +222,8 @@ export const handler = compose(
 
         // POST: Create attachment record
         if (event.httpMethod === 'POST') {
-            const authResult = await requireAuth(event);
-
-            if (!('user' in authResult)) {
-                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
-            }
-
-            const user = authResult.user;
+            // After withAuth() middleware, auth is guaranteed
+            const user = auth!.user;
 
             const validation = validateRequest(event.body, SCHEMAS.attachment.create, origin);
             if (!validation.success) return validation.response;
