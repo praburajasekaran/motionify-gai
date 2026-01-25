@@ -196,7 +196,7 @@ Addresses 2 integration gaps from v1 milestone audit:
    NotificationContext fetches notifications on mount, badge shows correct count, mark-as-read functions.
 
 ### Plans
-- [ ] `05-01-PLAN.md` — Add credentials: 'include' to 4 fetch calls (2 files)
+- [x] `05-01-PLAN.md` — Add credentials: 'include' to 4 fetch calls (2 files)
 
 **Plan Count:** 1 plan
 
@@ -235,7 +235,7 @@ Addresses critical schema mismatch from v1 milestone audit:
    Phase 1 schema file updated to match migration 002 for documentation consistency.
 
 ### Plans
-- [ ] `06-01-PLAN.md` — Apply migration 002 and align schema files
+- [ ] `06-01-PLAN.md` — Create migration 003 to align schema with backend expectations
 
 **Plan Count:** 1 plan
 
@@ -289,4 +289,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-25 (added Phase 6 for schema alignment)*
+*Last updated: 2026-01-25 (Phase 6 planned)*
