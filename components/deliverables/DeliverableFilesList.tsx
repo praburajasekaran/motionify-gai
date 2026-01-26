@@ -51,6 +51,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [failedThumbnails, setFailedThumbnails] = useState<Set<string>>(new Set());
+
+    // Handle thumbnail load error - fallback to icon
+    const handleThumbnailError = (fileId: string) => {
+        setFailedThumbnails(prev => new Set(prev).add(fileId));
+    };
 
     // Helper to open file
     const handleDownload = async (key: string | undefined, isFinal: boolean) => {
@@ -253,17 +259,27 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 <div className="flex items-center gap-4">
                                     {/* Thumbnail */}
                                     <div className="h-16 w-24 bg-zinc-100 rounded-lg overflow-hidden flex items-center justify-center border border-zinc-200 shrink-0 relative">
-                                        {file.thumbnailUrl ? (
+                                        {file.thumbnailUrl && !failedThumbnails.has(file.id) ? (
                                             <>
-                                                <img src={file.thumbnailUrl} alt={file.name} className="h-full w-full object-cover" />
+                                                <img
+                                                    src={file.thumbnailUrl}
+                                                    alt={file.name}
+                                                    className="h-full w-full object-cover"
+                                                    onError={() => handleThumbnailError(file.id)}
+                                                />
                                                 {file.mediaType === 'video' && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                                         <Play className="h-6 w-6 text-white drop-shadow-md" fill="currentColor" />
                                                     </div>
                                                 )}
                                             </>
                                         ) : (
-                                            <Icon className="h-6 w-6 text-zinc-400" />
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Icon className="h-6 w-6 text-zinc-400" />
+                                                {file.mediaType === 'video' && (
+                                                    <span className="text-[10px] text-zinc-400 mt-1">Video</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
 
