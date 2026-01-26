@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { FileVideo, FileImage, FileText, Download, Upload, Trash2, Play } from 'lucide-react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2 } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
@@ -9,7 +9,7 @@ export interface DeliverableFilesListProps {
     canUploadBeta: boolean;
     canUploadFinal?: boolean;
     onUpload: (file: File) => void;
-    onFilesChange?: () => void; // Callback when files list changes
+    onFilesChange?: () => void;
 }
 
 // Database file record from deliverable_files table
@@ -36,9 +36,17 @@ interface FileItem {
     isFinal: boolean;
     date: string;
     size: string;
-    thumbnailUrl?: string;
-    mediaType: 'video' | 'image' | 'document';
 }
+
+// Icon and color config for each file type
+const FILE_TYPE_CONFIG: Record<string, { icon: typeof FileVideo; bgColor: string; iconColor: string }> = {
+    video: { icon: FileVideo, bgColor: 'bg-purple-50', iconColor: 'text-purple-500' },
+    image: { icon: FileImage, bgColor: 'bg-blue-50', iconColor: 'text-blue-500' },
+    document: { icon: FileText, bgColor: 'bg-amber-50', iconColor: 'text-amber-600' },
+    script: { icon: FileText, bgColor: 'bg-green-50', iconColor: 'text-green-600' },
+    audio: { icon: FileAudio, bgColor: 'bg-pink-50', iconColor: 'text-pink-500' },
+    asset: { icon: File, bgColor: 'bg-zinc-100', iconColor: 'text-zinc-500' },
+};
 
 export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     deliverable,
@@ -51,12 +59,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [failedThumbnails, setFailedThumbnails] = useState<Set<string>>(new Set());
-
-    // Handle thumbnail load error - fallback to icon
-    const handleThumbnailError = (fileId: string) => {
-        setFailedThumbnails(prev => new Set(prev).add(fileId));
-    };
 
     // Helper to open file
     const handleDownload = async (key: string | undefined, isFinal: boolean) => {
@@ -84,7 +86,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         if (file && onUpload) {
             onUpload(file);
         }
-        // Reset input
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -102,7 +103,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 throw new Error('Failed to delete file');
             }
 
-            // Remove from local state
             setFileItems(prev => prev.filter(f => f.id !== fileId));
             onFilesChange?.();
         } catch (e) {
@@ -127,7 +127,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 
             const files: DeliverableFile[] = await response.json();
 
-            // Transform to FileItem format
+            // Transform to FileItem format (no thumbnails needed)
             const items: FileItem[] = files.map(f => ({
                 id: f.id,
                 key: f.file_key,
@@ -136,35 +136,9 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 isFinal: f.is_final,
                 date: new Date(f.uploaded_at).toLocaleDateString(),
                 size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
-                mediaType: getMediaType(f.file_key),
             }));
 
-            // Load thumbnails for images and videos
-            const itemsWithThumbnails = await Promise.all(items.map(async (item) => {
-                try {
-                    if (item.mediaType === 'image') {
-                        if (item.isFinal) {
-                            return { ...item, thumbnailUrl: storageService.getPublicUrl(item.key) };
-                        } else {
-                            const url = await storageService.getDownloadUrl(item.key);
-                            return { ...item, thumbnailUrl: url || undefined };
-                        }
-                    } else if (item.mediaType === 'video') {
-                        const thumbKey = item.key.replace(/\.[^/.]+$/, '-thumb.jpg');
-                        if (item.isFinal) {
-                            return { ...item, thumbnailUrl: storageService.getPublicUrl(thumbKey) };
-                        } else {
-                            const url = await storageService.getDownloadUrl(thumbKey);
-                            return { ...item, thumbnailUrl: url || undefined };
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Failed to load thumbnail for", item.key, e);
-                }
-                return item;
-            }));
-
-            setFileItems(itemsWithThumbnails);
+            setFileItems(items);
         } catch (e) {
             console.error("Failed to fetch deliverable files", e);
         } finally {
@@ -184,20 +158,9 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
     };
 
-
-    // Helper to determine media type
-    const getMediaType = (key: string): 'video' | 'image' | 'document' => {
-        const ext = key.split('.').pop()?.toLowerCase();
-        if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext || '')) return 'video';
-        if (['jpg', 'png', 'jpeg', 'gif', 'webp'].includes(ext || '')) return 'image';
-        return 'document';
-    };
-
-    // Define icons fallback
-    const getIcon = (mediaType: string) => {
-        if (mediaType === 'video') return FileVideo;
-        if (mediaType === 'image') return FileImage;
-        return FileText;
+    // Get icon config for file category
+    const getFileTypeConfig = (category: string) => {
+        return FILE_TYPE_CONFIG[category] || FILE_TYPE_CONFIG.asset;
     };
 
     // Expose refresh method for parent
@@ -205,7 +168,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         fetchFiles();
     };
 
-    // Attach to window for parent component access (temporary solution)
     useEffect(() => {
         (window as any).__refreshDeliverableFiles = refreshFiles;
         return () => {
@@ -253,40 +215,20 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             ) : (
                 <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden divide-y divide-zinc-100">
                     {fileItems.map((file) => {
-                        const Icon = getIcon(file.mediaType);
+                        const config = getFileTypeConfig(file.category);
+                        const Icon = config.icon;
                         return (
                             <div key={file.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    {/* Thumbnail */}
-                                    <div className="h-16 w-24 bg-zinc-100 rounded-lg overflow-hidden flex items-center justify-center border border-zinc-200 shrink-0 relative">
-                                        {file.thumbnailUrl && !failedThumbnails.has(file.id) ? (
-                                            <>
-                                                <img
-                                                    src={file.thumbnailUrl}
-                                                    alt={file.name}
-                                                    className="h-full w-full object-cover"
-                                                    onError={() => handleThumbnailError(file.id)}
-                                                />
-                                                {file.mediaType === 'video' && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                        <Play className="h-6 w-6 text-white drop-shadow-md" fill="currentColor" />
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center">
-                                                <Icon className="h-6 w-6 text-zinc-400" />
-                                                {file.mediaType === 'video' && (
-                                                    <span className="text-[10px] text-zinc-400 mt-1">Video</span>
-                                                )}
-                                            </div>
-                                        )}
+                                    {/* File Type Icon */}
+                                    <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${config.bgColor}`}>
+                                        <Icon className={`h-7 w-7 ${config.iconColor}`} />
                                     </div>
 
                                     <div>
                                         <h4 className="text-sm font-medium text-zinc-900">{file.name}</h4>
                                         <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
-                                            <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                                            <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
                                                 {file.isFinal ? 'Final' : file.category}
                                             </Badge>
                                             <span>• {file.size}</span>
