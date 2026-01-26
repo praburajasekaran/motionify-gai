@@ -21,7 +21,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
-import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
+import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
 import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm';
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
@@ -29,6 +29,8 @@ import { DeliverableApproval } from '@/types/deliverable.types';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { MOCK_PROJECTS } from '@/constants';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
+import { storageService } from '@/services/storage';
+import { generateThumbnail } from '@/utils/thumbnail';
 
 const DeliverableReviewContent: React.FC = () => {
   const { id: projectId, deliverableId } = useParams<{
@@ -36,7 +38,7 @@ const DeliverableReviewContent: React.FC = () => {
     deliverableId: string;
   }>();
   const navigate = useNavigate();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, currentProject, currentUser } =
+  const { state, dispatch, approveDeliverable, rejectDeliverable, currentProject, currentUser, refreshDeliverables } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -45,12 +47,12 @@ const DeliverableReviewContent: React.FC = () => {
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Load deliverable from URL
+  // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
     if (deliverableId) {
       dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
     }
-  }, [deliverableId, dispatch]);
+  }, [deliverableId, dispatch, state.deliverables.length]); // Depend on list length changes
 
   const deliverable = state.selectedDeliverable;
   const permissions = useDeliverablePermissions({
@@ -147,6 +149,112 @@ const DeliverableReviewContent: React.FC = () => {
     });
   };
 
+  const handleUpload = async (file: File) => {
+    if (!deliverable) return;
+
+    try {
+      setShowSuccessMessage(false); // Reset
+      setSuccessMessage('Uploading file...');
+      setShowSuccessMessage(true);
+
+      const folder = 'beta'; // Default for empty state upload
+
+      // Upload file to R2
+      const key = await storageService.uploadFile(
+        file,
+        deliverable.projectId,
+        folder
+      );
+
+      // Generate thumbnail if video
+      if (file.type.startsWith('video/')) {
+        try {
+          const thumbnailFile = await generateThumbnail(file);
+          if (thumbnailFile) {
+            const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
+            await storageService.uploadFile(thumbnailFile, deliverable.projectId, folder, undefined, thumbKey);
+          }
+        } catch (err) {
+          console.warn("Thumbnail failed", err);
+        }
+      }
+
+      // Determine file category from mime type
+      const getFileCategory = (mimeType: string): string => {
+        if (mimeType.startsWith('video/')) return 'video';
+        if (mimeType.startsWith('image/')) return 'image';
+        if (mimeType.startsWith('audio/')) return 'audio';
+        if (mimeType === 'application/pdf' || mimeType.includes('document')) return 'document';
+        if (mimeType.includes('text')) return 'script';
+        return 'asset';
+      };
+
+      // Add file to deliverable_files table
+      const fileResponse = await fetch('/api/deliverable-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          deliverable_id: deliverable.id,
+          file_key: key,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          file_category: getFileCategory(file.type),
+          is_final: false,
+        }),
+      });
+
+      if (!fileResponse.ok) {
+        throw new Error('Failed to save file record');
+      }
+
+      // If status is 'pending', update to 'beta_ready'
+      if (deliverable.status === 'pending') {
+        await fetch(`/api/deliverables/${deliverable.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'beta_ready' }),
+        });
+      }
+
+      setSuccessMessage('File uploaded successfully!');
+
+      // Refresh file list
+      if ((window as any).__refreshDeliverableFiles) {
+        (window as any).__refreshDeliverableFiles();
+      }
+
+      // Also refresh deliverables for status update
+      await refreshDeliverables();
+      if (deliverableId) {
+        dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
+      }
+
+      // Allow success message to show for a bit
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setShowSuccessMessage(false);
+      setErrorMessage('Failed to upload file');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 5000);
+    }
+  };
+
+  if (state.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="text-zinc-500">Loading deliverable...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!deliverable) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -219,15 +327,11 @@ const DeliverableReviewContent: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Video & Feedback Form (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Video Section */}
-          <DeliverableVideoSection
+          {/* File List Section */}
+          <DeliverableFilesList
             deliverable={deliverable}
-            canRequestRevision={permissions.canReject}
-            canComment={permissions.canComment}
-            comments={state.revisionFeedback.timestampedComments}
-            onAddComment={handleAddComment}
-            onRemoveComment={handleRemoveComment}
-            onUpdateComment={handleUpdateComment}
+            canUploadBeta={permissions.canUploadBeta}
+            onUpload={handleUpload}
           />
 
           {/* Inline Feedback Form (shown when "Request Revision" clicked) */}
