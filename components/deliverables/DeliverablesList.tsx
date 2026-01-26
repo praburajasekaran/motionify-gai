@@ -1,21 +1,21 @@
 /**
  * DeliverablesList Component
  *
- * Grid view of all deliverables with:
+ * List view of all deliverables with:
  * - Filter by status
  * - Sort by due date, status, or updated
- * - Responsive grid layout (1/2/3 columns)
+ * - Compact list layout
+ * - Inline "Add New" card at bottom
  * - Empty state
  */
 
 import React from 'react';
 import { Filter, ArrowUpDown, FileBox, Plus } from 'lucide-react';
-import { Select, EmptyState, Button } from '../ui/design-system';
-import { DeliverableCard } from './DeliverableCard';
+import { Select, EmptyState } from '../ui/design-system';
+import { DeliverableListItem } from './DeliverableListItem';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { BatchUploadModal } from './BatchUploadModal';
 import { AddDeliverableModal } from './AddDeliverableModal';
-import { Upload } from 'lucide-react';
 import { useDeliverables } from './DeliverableContext';
 import { canCreateDeliverable } from '../../utils/deliverablePermissions';
 
@@ -122,30 +122,6 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-3 mb-4">
-        {canCreate && (
-          <Button
-            variant="primary"
-            size="sm"
-            className="gap-2"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Add Deliverable
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setIsBatchModalOpen(true)}
-        >
-          <Upload className="h-4 w-4" />
-          Batch Upload
-        </Button>
-      </div>
-
       <AddDeliverableModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -162,30 +138,45 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         onUploadComplete={() => window.location.reload()}
       />
 
-      {/* Deliverables Grid */}
-      {
-        sortedDeliverables.length === 0 ? (
-          <EmptyState
-            title="No deliverables found"
-            description={
-              filter === 'all'
-                ? 'This project does not have any deliverables yet.'
-                : `No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`
-            }
-            icon={FileBox}
-            className="py-16"
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedDeliverables.map((deliverable) => (
-              <DeliverableCard
-                key={deliverable.id}
-                deliverable={deliverable}
-              />
-            ))}
-          </div>
-        )
-      }
-    </div >
+      {/* Deliverables List */}
+      {sortedDeliverables.length === 0 && filter !== 'all' ? (
+        <EmptyState
+          title="No deliverables found"
+          description={`No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`}
+          icon={FileBox}
+          className="py-16"
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {sortedDeliverables.map((deliverable) => (
+            <DeliverableListItem
+              key={deliverable.id}
+              deliverable={deliverable}
+            />
+          ))}
+
+          {/* Inline Add New Card */}
+          {canCreate && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-zinc-300 rounded-lg text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="font-medium">Add New Deliverable</span>
+            </button>
+          )}
+
+          {/* Empty state when no deliverables and filter is 'all' */}
+          {sortedDeliverables.length === 0 && filter === 'all' && !canCreate && (
+            <EmptyState
+              title="No deliverables yet"
+              description="This project does not have any deliverables yet."
+              icon={FileBox}
+              className="py-16"
+            />
+          )}
+        </div>
+      )}
+    </div>
   );
 };
