@@ -8,8 +8,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileVideo,
-  FileImage,
   FileText,
   Calendar,
   Download,
@@ -24,30 +22,6 @@ export interface DeliverableListItemProps {
   deliverable: Deliverable;
   className?: string;
 }
-
-/**
- * Detect the actual media type from a file key (storage path)
- * Returns 'video', 'image', or 'document' based on file extension
- */
-function detectMediaTypeFromKey(key: string | undefined): 'video' | 'image' | 'document' {
-  if (!key) return 'video'; // Default fallback
-
-  const extension = key.split('.').pop()?.toLowerCase();
-
-  const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v'];
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'heic'];
-
-  if (videoExtensions.includes(extension || '')) return 'video';
-  if (imageExtensions.includes(extension || '')) return 'image';
-  return 'document';
-}
-
-// Icon mapping for detected media types
-const TYPE_ICONS = {
-  video: FileVideo,
-  image: FileImage,
-  document: FileText,
-};
 
 // Status badge variants and labels
 const STATUS_CONFIG: Record<
@@ -69,49 +43,13 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   className,
 }) => {
   const navigate = useNavigate();
-  const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
-
-  // Detect actual media type from file key (not the static deliverable.type)
-  const fileKey = deliverable.finalFileKey || deliverable.betaFileKey;
-  const detectedMediaType = detectMediaTypeFromKey(fileKey);
-  const Icon = TYPE_ICONS[detectedMediaType];
 
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
-  const isFinal = deliverable.status === 'final_delivered';
 
-  // Load thumbnail for videos and images
-  React.useEffect(() => {
-    const loadThumbnail = async () => {
-      if (!fileKey) return;
-
-      try {
-        if (detectedMediaType === 'video') {
-          // For videos: load the generated thumbnail (-thumb.jpg)
-          const thumbKey = fileKey.replace(/\.[^/.]+$/, '-thumb.jpg');
-          if (isFinal) {
-            setThumbnailUrl(storageService.getPublicUrl(thumbKey));
-          } else {
-            const url = await storageService.getDownloadUrl(thumbKey);
-            if (url) setThumbnailUrl(url);
-          }
-        } else if (detectedMediaType === 'image') {
-          // For images: load the actual image
-          if (isFinal) {
-            setThumbnailUrl(storageService.getPublicUrl(fileKey));
-          } else {
-            const url = await storageService.getDownloadUrl(fileKey);
-            if (url) setThumbnailUrl(url);
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load thumbnail', e);
-      }
-    };
-
-    loadThumbnail();
-  }, [fileKey, detectedMediaType, isFinal]);
+  // Count uploaded files (beta and/or final)
+  const fileCount = [deliverable.betaFileKey, deliverable.finalFileKey].filter(Boolean).length;
 
   const handleClick = () => {
     navigate(`/projects/${deliverable.projectId}/deliverables/${deliverable.id}`);
@@ -147,18 +85,12 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
       )}
       onClick={handleClick}
     >
-      {/* Thumbnail or Icon */}
-      <div className="shrink-0 w-12 h-12 rounded-lg bg-zinc-100 flex items-center justify-center overflow-hidden">
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={deliverable.title}
-            className="w-full h-full object-cover"
-            onError={() => setThumbnailUrl(null)}
-          />
-        ) : (
-          <Icon className="h-5 w-5 text-zinc-500" />
-        )}
+      {/* File Count Indicator */}
+      <div className="shrink-0 w-12 h-12 rounded-lg bg-zinc-100 flex flex-col items-center justify-center">
+        <FileText className="h-5 w-5 text-zinc-400" />
+        <span className="text-xs font-medium text-zinc-600 mt-0.5">
+          {fileCount > 0 ? fileCount : '—'}
+        </span>
       </div>
 
       {/* Title & Description */}
