@@ -10,7 +10,7 @@
  * - Permission violations throw errors with user-friendly messages
  */
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import {
   Deliverable,
   DeliverableApproval,
@@ -20,7 +20,7 @@ import {
   IssueCategory,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
-import { MOCK_DELIVERABLES, MOCK_REVISION_QUOTA } from './mockDeliverables';
+import { MOCK_REVISION_QUOTA } from './mockDeliverables';
 import { Project, User } from '@/types';
 import {
   canApproveDeliverable,
@@ -55,6 +55,7 @@ interface DeliverableState {
 // ============================================================================
 
 type DeliverableAction =
+  | { type: 'SET_DELIVERABLES'; deliverables: Deliverable[] }
   | { type: 'APPROVE_DELIVERABLE'; id: string; userId: string; userName: string; userEmail: string }
   | { type: 'REJECT_DELIVERABLE'; id: string; approval: DeliverableApproval }
   | { type: 'OPEN_REVIEW_MODAL'; deliverable: Deliverable }
@@ -79,7 +80,7 @@ type DeliverableAction =
 // ============================================================================
 
 const initialState: DeliverableState = {
-  deliverables: MOCK_DELIVERABLES,
+  deliverables: [], // Will be loaded from API
   quota: MOCK_REVISION_QUOTA,
   selectedDeliverable: null,
   isReviewModalOpen: false,
@@ -100,6 +101,12 @@ const initialState: DeliverableState = {
 
 function deliverableReducer(state: DeliverableState, action: DeliverableAction): DeliverableState {
   switch (action.type) {
+    case 'SET_DELIVERABLES':
+      return {
+        ...state,
+        deliverables: action.deliverables,
+      };
+
     case 'APPROVE_DELIVERABLE': {
       const approval: DeliverableApproval = {
         id: `appr-${Date.now()}`,
@@ -339,6 +346,11 @@ interface DeliverableContextType {
   approveDeliverable: (deliverableId: string) => void;
   rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => void;
 
+  // Loading state
+  isLoading: boolean;
+  error: string | null;
+  refreshDeliverables: () => Promise<void>;
+
   // Context data
   currentProject: Project;
   currentUser: User | null;
@@ -364,6 +376,65 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   onConvertToTask,
 }) => {
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch deliverables from API when project changes
+  useEffect(() => {
+    const fetchDeliverables = async () => {
+      if (!currentProject?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/deliverables?projectId=${currentProject.id}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || 'Failed to load deliverables');
+        }
+
+        const deliverables = await response.json();
+
+        // Transform API response to match Deliverable type
+        const transformedDeliverables = (deliverables || []).map((d: any) => ({
+          id: d.id,
+          projectId: d.project_id,
+          title: d.name || d.title || 'Untitled',
+          description: d.description || '',
+          type: d.type || 'Video', // Default to Video if missing
+          status: d.status || 'pending',
+          dueDate: d.estimated_completion_week
+            ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+            : new Date().toISOString(),
+          betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+          betaFileKey: d.beta_file_key,
+          finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+          finalFileKey: d.final_file_key,
+          revisionCount: d.revision_count || 0,
+          approvalHistory: d.approval_history || [],
+          thumbnailUrl: undefined,
+          deliveryNotes: d.delivery_notes,
+          version: d.version || 1,
+        }));
+
+        dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
+      } catch (err) {
+        console.error('[DeliverableContext] Failed to fetch deliverables:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load deliverables');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDeliverables();
+  }, [currentProject?.id]);
 
   /**
    * Permission-aware approve action
@@ -428,6 +499,47 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
     });
   };
 
+  // Refresh function to reload deliverables
+  const refreshDeliverables = async (): Promise<void> => {
+    if (!currentProject?.id) return;
+
+    dispatch({ type: 'SET_DELIVERABLES', deliverables: [] });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/deliverables?projectId=${currentProject.id}`, {
+        credentials: 'include',
+      });
+      const deliverables = await res.json();
+      const transformedDeliverables = (deliverables || []).map((d: any) => ({
+        id: d.id,
+        projectId: d.project_id,
+        title: d.name || d.title || 'Untitled',
+        description: d.description || '',
+        type: d.type || 'Video', // Default to Video if missing
+        status: d.status || 'pending',
+        dueDate: d.estimated_completion_week
+          ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+          : new Date().toISOString(),
+        betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+        betaFileKey: d.beta_file_key,
+        finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+        finalFileKey: d.final_file_key,
+        revisionCount: d.revision_count || 0,
+        approvalHistory: d.approval_history || [],
+        thumbnailUrl: undefined,
+        deliveryNotes: d.delivery_notes,
+        version: d.version || 1,
+      }));
+      dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <DeliverableContext.Provider
       value={{
@@ -436,6 +548,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         onConvertToTask,
         approveDeliverable,
         rejectDeliverable,
+        isLoading,
+        error,
+        refreshDeliverables,
         currentProject,
         currentUser,
       }}
