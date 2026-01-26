@@ -95,18 +95,32 @@ export const createAttachmentSchema = z.object({
 // ==========================================
 
 export const createDeliverableSchema = z.object({
-    proposalId: uuidSchema,
+    proposalId: uuidSchema.optional(),
+    project_id: uuidSchema.optional(),
     name: nameSchema,
     description: z.string().max(2000).optional(),
-    estimatedCompletionWeek: z.number().int().min(1).max(52).optional(),
+    estimated_completion_week: z.number().int().min(1).max(52).optional(),
+    estimatedCompletionWeek: z.number().int().min(1).max(52).optional(), // Support camelCase too
     status: z.enum(['pending', 'in_progress', 'delivered', 'approved', 'rejected']).optional(),
-});
+}).refine(
+    data => data.proposalId || data.project_id,
+    { message: "Either proposalId or project_id is required" }
+);
 
 export const updateDeliverableSchema = z.object({
     name: nameSchema.optional(),
     description: z.string().max(2000).optional(),
     estimatedCompletionWeek: z.number().int().min(1).max(52).optional(),
-    status: z.enum(['pending', 'in_progress', 'delivered', 'approved', 'rejected']).optional(),
+    status: z.enum([
+        'pending', 'in_progress', 'beta_ready', 'awaiting_approval',
+        'approved', 'rejected', 'payment_pending', 'final_delivered'
+    ]).optional(),
+    // File upload fields
+    beta_file_url: z.string().url().max(2000).optional(),
+    beta_file_key: z.string().max(500).optional(),
+    final_file_url: z.string().url().max(2000).optional(),
+    final_file_key: z.string().max(500).optional(),
+    approved_by: uuidSchema.optional(),
 });
 
 // ==========================================

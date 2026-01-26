@@ -21,7 +21,7 @@ const getDbClient = () => {
 };
 
 export const handler = compose(
-  withCORS(['GET', 'PATCH']),
+  withCORS(['GET', 'POST', 'PATCH']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'deliverables')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
@@ -219,6 +219,53 @@ export const handler = compose(
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'projectId or id parameter is required' }),
+      };
+    }
+
+    if (event.httpMethod === 'POST') {
+      // Permission check: Only super_admin and project_manager can create deliverables
+      const userRole = auth?.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Access denied',
+            message: 'Only Motionify Support and Admins can create deliverables'
+          }),
+        };
+      }
+
+      const validation = validateRequest(event.body, SCHEMAS.deliverable.create, origin);
+      if (!validation.success) return validation.response;
+      const { project_id, name, description, estimated_completion_week } = validation.data;
+
+      // Verify project exists
+      const projectResult = await client.query(
+        `SELECT id FROM projects WHERE id = $1`,
+        [project_id]
+      );
+
+      if (projectResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Project not found' }),
+        };
+      }
+
+      // Create deliverable
+      const result = await client.query(
+        `INSERT INTO deliverables (project_id, name, description, status, estimated_completion_week, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING *`,
+        [project_id, name, description || '', 'pending', estimated_completion_week || 1]
+      );
+
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify(result.rows[0]),
       };
     }
 

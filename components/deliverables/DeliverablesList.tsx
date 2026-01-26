@@ -9,12 +9,15 @@
  */
 
 import React from 'react';
-import { Filter, ArrowUpDown, FileBox } from 'lucide-react';
+import { Filter, ArrowUpDown, FileBox, Plus } from 'lucide-react';
 import { Select, EmptyState, Button } from '../ui/design-system';
 import { DeliverableCard } from './DeliverableCard';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { BatchUploadModal } from './BatchUploadModal';
+import { AddDeliverableModal } from './AddDeliverableModal';
 import { Upload } from 'lucide-react';
+import { useDeliverables } from './DeliverableContext';
+import { canCreateDeliverable } from '../../utils/deliverablePermissions';
 
 export interface DeliverablesListProps {
   deliverables: Deliverable[];
@@ -34,6 +37,11 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
   className,
 }) => {
   const [isBatchModalOpen, setIsBatchModalOpen] = React.useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const { currentProject, currentUser, refreshDeliverables } = useDeliverables();
+
+  // Check if user can create deliverables
+  const canCreate = currentUser && currentProject && canCreateDeliverable(currentUser, currentProject);
 
   // Filter deliverables
   const filteredDeliverables =
@@ -114,8 +122,19 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         </div>
       </div>
 
-      {/* Batch Upload Button */}
-      <div className="flex justify-end mb-4">
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3 mb-4">
+        {canCreate && (
+          <Button
+            variant="primary"
+            size="sm"
+            className="gap-2"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add Deliverable
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -126,6 +145,15 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
           Batch Upload
         </Button>
       </div>
+
+      <AddDeliverableModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        projectId={currentProject?.id || ''}
+        onSuccess={() => {
+          refreshDeliverables();
+        }}
+      />
 
       <BatchUploadModal
         isOpen={isBatchModalOpen}
