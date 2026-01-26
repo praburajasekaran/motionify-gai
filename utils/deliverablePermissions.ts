@@ -23,10 +23,21 @@ export function isClient(user: User): boolean {
 
 /**
  * Helper: Check if user is Client Primary Contact for a specific project
+ *
+ * For MVP: If projectTeamMemberships is not populated (e.g., auth-me doesn't
+ * return it), default all clients to primary contact status. This matches
+ * the client portal behavior where all clients are treated as PRIMARY_CONTACT.
  */
 export function isClientPrimaryContact(user: User, projectId: string): boolean {
   if (user.role !== 'client') return false;
-  const membership = user.projectTeamMemberships?.[projectId];
+
+  // If projectTeamMemberships is not populated, default to true for all clients
+  // This allows MVP approval flow to work before team membership API is built
+  if (!user.projectTeamMemberships || Object.keys(user.projectTeamMemberships).length === 0) {
+    return true;
+  }
+
+  const membership = user.projectTeamMemberships[projectId];
   return membership?.isPrimaryContact === true;
 }
 
