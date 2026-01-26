@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Project, User, UserRole, TaskStatus, Task, Comment, ProjectFile, ProjectStatus, Client, Deliverable, Notification, Milestone } from './types';
-import { MOCK_PROJECTS, MOCK_NOTIFICATIONS } from './data';
+import { MOCK_NOTIFICATIONS } from './data';
 import {
   generateNotificationId,
   generateUserId,
@@ -29,6 +29,7 @@ import {
   updateTaskAPI,
   addTaskComment
 } from './api/tasks.api';
+import { fetchProjects } from './api/projects.api';
 
 type AddTaskData = {
   title: string;
@@ -106,7 +107,7 @@ export const AppContext = React.createContext<{
 });
 
 export function AppProvider({ children, selectedProjectId }: { children: React.ReactNode; selectedProjectId?: string | null }) {
-  const [projectsData, setProjectsData] = useState<Project[]>(MOCK_PROJECTS);
+  const [projectsData, setProjectsData] = useState<Project[]>([]);
   const { user: authUser, isLoading: isAuthLoading, logout: authLogout } = useAuth();
 
   // Map AuthUser to legacy User type
@@ -165,6 +166,24 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
 
     loadProjectTasks();
   }, [projectId]);
+
+  // Fetch projects from API when user is authenticated
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const loadProjects = async () => {
+      console.log('[AppContext] Fetching projects for user:', currentUser.id);
+      const result = await fetchProjects(currentUser.id);
+      if (result.success && result.projects) {
+        console.log('[AppContext] Loaded projects from API:', result.projects.length);
+        setProjectsData(result.projects);
+      } else {
+        console.warn('[AppContext] Failed to load projects:', result.error);
+      }
+    };
+
+    loadProjects();
+  }, [currentUser]);
 
   // Update projectId when selectedProjectId prop changes or when localStorage changes
   useEffect(() => {
