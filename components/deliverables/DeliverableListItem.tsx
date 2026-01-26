@@ -25,11 +25,28 @@ export interface DeliverableListItemProps {
   className?: string;
 }
 
-// Icon mapping for deliverable types
+/**
+ * Detect the actual media type from a file key (storage path)
+ * Returns 'video', 'image', or 'document' based on file extension
+ */
+function detectMediaTypeFromKey(key: string | undefined): 'video' | 'image' | 'document' {
+  if (!key) return 'video'; // Default fallback
+
+  const extension = key.split('.').pop()?.toLowerCase();
+
+  const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v'];
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'heic'];
+
+  if (videoExtensions.includes(extension || '')) return 'video';
+  if (imageExtensions.includes(extension || '')) return 'image';
+  return 'document';
+}
+
+// Icon mapping for detected media types
 const TYPE_ICONS = {
-  Video: FileVideo,
-  Image: FileImage,
-  Document: FileText,
+  video: FileVideo,
+  image: FileImage,
+  document: FileText,
 };
 
 // Status badge variants and labels
@@ -53,7 +70,11 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const Icon = TYPE_ICONS[deliverable.type] || FileVideo;
+  // Detect actual media type from file key (not the static deliverable.type)
+  const fileKey = deliverable.finalFileKey || deliverable.betaFileKey;
+  const detectedMediaType = detectMediaTypeFromKey(fileKey);
+  const Icon = TYPE_ICONS[detectedMediaType];
+
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
