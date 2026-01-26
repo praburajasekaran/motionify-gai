@@ -686,7 +686,11 @@ export const ProjectDetail = () => {
                                         {deliverablesLoading ? (
                                             <div className="p-8 text-center text-zinc-400 text-sm">Loading deliverables...</div>
                                         ) : deliverables.slice(0, 3).map(del => (
-                                            <div key={del.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                                            <div
+                                                key={del.id}
+                                                className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`/projects/${id}/deliverables/${del.id}`)}
+                                            >
                                                 <div className="flex items-center gap-4">
                                                     <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 shadow-inner">
                                                         {del.type === 'Video' ? <FileVideo className="h-5 w-5" /> : <FileBox className="h-5 w-5" />}
