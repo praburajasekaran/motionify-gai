@@ -108,7 +108,7 @@ export const handler = compose(
       if (userRole === 'project_manager') {
         // Project Manager: Only see projects linked to inquiries assigned to them
         query = `
-          SELECT p.* 
+          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
           FROM vertical_slice_projects p
           JOIN inquiries i ON p.inquiry_id = i.id
           WHERE i.assigned_to_admin_id = $1
@@ -118,11 +118,22 @@ export const handler = compose(
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
         // Note: checking multiple client role variations to be safe, though DB check is 'client'
-        query = 'SELECT * FROM vertical_slice_projects WHERE client_user_id = $1 ORDER BY created_at DESC';
+        query = `
+          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
+          FROM vertical_slice_projects p
+          JOIN inquiries i ON p.inquiry_id = i.id
+          WHERE p.client_user_id = $1
+          ORDER BY p.created_at DESC
+        `;
         params.push(effectiveUserId);
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
-        query = 'SELECT * FROM vertical_slice_projects ORDER BY created_at DESC';
+        query = `
+          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
+          FROM vertical_slice_projects p
+          JOIN inquiries i ON p.inquiry_id = i.id
+          ORDER BY p.created_at DESC
+        `;
       } else {
         // Unknown or unauthorized role
         return {

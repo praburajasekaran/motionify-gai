@@ -10,6 +10,7 @@ export const handler = compose(
         statusCode: 200,
         headers: {},
         body: JSON.stringify({
+            success: true,
             user: {
                 id: auth!.user!.userId,
                 email: auth!.user!.email,

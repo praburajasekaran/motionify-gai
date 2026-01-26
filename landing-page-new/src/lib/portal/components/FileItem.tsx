@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useContext } from 'react';
-import { ProjectFile } from '@/lib/portal/types';
+import { ProjectFile, UserRole } from '@/lib/portal/types';
 import Button from './ui/Button';
 import { AppContext } from '@/lib/portal/AppContext';
 import { timeAgo, formatDate } from '@/lib/portal/utils/dateUtils';
@@ -28,7 +28,7 @@ const getFileIcon = (fileType: string) => {
 };
 
 const FileItem: React.FC<FileItemProps> = ({ file }) => {
-  const { renameFile, addFileComment } = useContext(AppContext);
+  const { renameFile, addFileComment, deleteFile, currentUser } = useContext(AppContext);
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(file.name);
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -83,6 +83,14 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
     }
   }
 
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${file.name}"?`)) {
+      deleteFile(file.id);
+    }
+  };
+
+  const isAdmin = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
+
   return (
     <div className="p-4 bg-white/10 backdrop-blur border border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
@@ -136,6 +144,18 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
         >
           Download
         </Button>
+        {isAdmin && (
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            className="mt-3 sm:mt-0 sm:ml-2 flex-shrink-0 self-end sm:self-center"
+            title="Delete File"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Button>
+        )}
       </div>
 
       <div className="mt-3 pt-3 border-t border-white/10">

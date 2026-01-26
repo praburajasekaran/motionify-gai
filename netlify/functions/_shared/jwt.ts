@@ -117,7 +117,8 @@ export function createAuthCookie(token: string, rememberMe: boolean): string {
         'HttpOnly',
         'Path=/',
         `Max-Age=${maxAge}`,
-        'SameSite=Strict',
+        `Max-Age=${maxAge}`,
+        `SameSite=${isProduction ? 'Strict' : 'Lax'}`,
     ];
 
     // Only set Secure flag in production (requires HTTPS)
@@ -132,5 +133,6 @@ export function createAuthCookie(token: string, rememberMe: boolean): string {
  * Create Set-Cookie header to clear auth token (logout)
  */
 export function createClearAuthCookie(): string {
-    return 'auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict';
+    const isProduction = process.env.NODE_ENV === 'production';
+    return `auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=${isProduction ? 'Strict' : 'Lax'}`;
 }

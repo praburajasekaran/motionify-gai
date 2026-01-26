@@ -151,24 +151,9 @@ export const handler = compose(
 
     // Handle PATCH request for updating proposal status
     if (event.httpMethod === 'PATCH' && proposalId) {
-      const { status, feedback } = JSON.parse(event.body || '{}');
-
-      if (!status) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'status is required' }),
-        };
-      }
-
-      const validStatuses = ['sent', 'accepted', 'rejected', 'changes_requested'];
-      if (!validStatuses.includes(status)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: `status must be one of: ${validStatuses.join(', ')}` }),
-        };
-      }
+      const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
+      if (!validation.success) return validation.response;
+      const { status, feedback } = validation.data;
 
       const updateFields = ['status = $1', 'updated_at = NOW()'];
       const params: any[] = [status];
@@ -375,4 +360,4 @@ export const handler = compose(
   } finally {
     await client.end();
   }
-};
+});

@@ -72,6 +72,8 @@ export const AppContext = React.createContext<{
   addFileComment: (fileId: string, content: string) => void;
   updateProjectStatus: (projectId: string, status: ProjectStatus) => void;
   addProject: (data: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number }) => void;
+  deleteFile: (fileId: string) => void;
+  addFiles: (filesData: AddFileData[]) => void;
   isLoading: boolean;
   logout: () => void;
 }>({
@@ -97,6 +99,8 @@ export const AppContext = React.createContext<{
   addFileComment: () => { },
   updateProjectStatus: () => { },
   addProject: () => { },
+  deleteFile: () => { },
+  addFiles: () => { },
   isLoading: true,
   logout: () => { },
 });
@@ -568,6 +572,39 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     }));
   }, [projectId, currentUser]);
 
+  const addFiles = useCallback((filesData: AddFileData[]) => {
+    if (!projectId || !currentUser) return;
+
+    const newFiles: ProjectFile[] = filesData.map(fileData => ({
+      id: generateFileId(),
+      url: '#',
+      uploadedAt: Date.now(),
+      uploadedById: currentUser.id,
+      comments: [],
+      ...fileData,
+    }));
+
+    setProjectsData(prevData => prevData.map(p => {
+      if (p.id !== projectId) return p;
+      return { ...p, files: [...newFiles, ...p.files] };
+    }));
+  }, [projectId, currentUser]);
+
+  const deleteFile = useCallback((fileId: string) => {
+    if (!projectId || !currentUser) return;
+    // Check if user has permission (Motionify Member or Project Manager)
+    if (currentUser.role !== UserRole.MOTIONIFY_MEMBER && currentUser.role !== UserRole.PROJECT_MANAGER) {
+      console.error('Unauthorized: Only admins can delete files.');
+      return;
+    }
+
+    setProjectsData(prevData => prevData.map(p => {
+      if (p.id !== projectId) return p;
+      const newFiles = p.files.filter(f => f.id !== fileId);
+      return { ...p, files: newFiles };
+    }));
+  }, [projectId, currentUser]);
+
   const renameFile = useCallback((fileId: string, newName: string): { success: boolean; error?: string } => {
     if (!projectId || !currentUser) return { success: false, error: 'Not authenticated' };
 
@@ -731,9 +768,11 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     addFileComment,
     updateProjectStatus,
     addProject,
+    deleteFile,
+    addFiles,
     isLoading: isAuthLoading,
     logout: authLogout,
-  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
+  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, deleteFile, addFiles, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
 
 
   return (

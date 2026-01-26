@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { randomUUID } from 'crypto';
 import { sendDeliverableReadyEmail, sendFinalDeliverablesEmail } from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
@@ -254,12 +255,13 @@ export const handler = compose(
         };
       }
 
-      // Create deliverable
+      // Create deliverable with generated UUID
+      const deliverableId = randomUUID();
       const result = await client.query(
-        `INSERT INTO deliverables (project_id, name, description, status, estimated_completion_week, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        `INSERT INTO deliverables (id, project_id, name, description, status, estimated_completion_week, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
          RETURNING *`,
-        [project_id, name, description || '', 'pending', estimated_completion_week || 1]
+        [deliverableId, project_id, name, description || '', 'pending', estimated_completion_week || 1]
       );
 
       return {

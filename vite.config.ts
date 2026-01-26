@@ -11,14 +11,26 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/.netlify/functions': {
-          target: 'http://localhost:8888',
+          target: 'http://127.0.0.1:8888',
           changeOrigin: true,
+          secure: false,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('proxy error', err);
+            });
+          }
         },
         // Mirror Netlify's /api/* redirect for local development
         '/api': {
-          target: 'http://localhost:8888',
+          target: 'http://127.0.0.1:8888',
           changeOrigin: true,
+          secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/.netlify/functions'),
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('proxy error', err);
+            });
+          }
         }
       }
     },

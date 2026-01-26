@@ -123,6 +123,16 @@ export const ProjectDetail = () => {
     const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
     const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
     const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
+    // Real deliverables from API (not mock data)
+    const [deliverables, setDeliverables] = useState<Array<{
+        id: string;
+        title: string;
+        type: string;
+        status: string;
+        progress: number;
+        dueDate: string;
+    }>>([]);
+    const [deliverablesLoading, setDeliverablesLoading] = useState(true);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -151,6 +161,48 @@ export const ProjectDetail = () => {
 
         loadTasks();
         setProjectFiles(project.files || []);
+    }, [project?.id]);
+
+    // Load deliverables from API (for Overview tab consistency with Deliverables tab)
+    useEffect(() => {
+        if (!project?.id) return;
+
+        const loadDeliverables = async () => {
+            setDeliverablesLoading(true);
+            try {
+                const response = await fetch(`/api/deliverables?projectId=${project.id}`, {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load deliverables');
+                }
+
+                const data = await response.json();
+
+                // Transform API response to match the display format
+                const transformed = (data || []).map((d: any) => ({
+                    id: d.id,
+                    title: d.name || d.title || 'Untitled',
+                    type: d.type || 'Video',
+                    status: d.status || 'pending',
+                    progress: d.progress || 0,
+                    dueDate: d.estimated_completion_week
+                        ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+                        : new Date().toISOString(),
+                }));
+
+                setDeliverables(transformed);
+            } catch (error) {
+                console.error('Failed to load deliverables:', error);
+                // Fallback to empty array - don't show mock data
+                setDeliverables([]);
+            } finally {
+                setDeliverablesLoading(false);
+            }
+        };
+
+        loadDeliverables();
     }, [project?.id]);
 
     // Auto-analysis on load
@@ -623,15 +675,17 @@ export const ProjectDetail = () => {
                                 </CardContent>
                             </Card>
 
-                            {/* Recent Deliverables Table */}
+                            {/* Recent Deliverables Table - Now uses real API data */}
                             <Card className="border-zinc-200/60 shadow-sm">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
                                     <CardTitle className="text-lg">Active Deliverables</CardTitle>
-                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary">View All</Button>
+                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-zinc-100">
-                                        {project.deliverables.slice(0, 3).map(del => (
+                                        {deliverablesLoading ? (
+                                            <div className="p-8 text-center text-zinc-400 text-sm">Loading deliverables...</div>
+                                        ) : deliverables.slice(0, 3).map(del => (
                                             <div key={del.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
                                                 <div className="flex items-center gap-4">
                                                     <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 shadow-inner">
@@ -651,12 +705,12 @@ export const ProjectDetail = () => {
                                                         <Progress value={del.progress} className="h-1.5" />
                                                     </div>
                                                     <Badge variant={del.status === 'approved' ? 'success' : del.status === 'awaiting_approval' ? 'warning' : 'secondary'}>
-                                                        {del.status.replace('_', ' ')}
+                                                        {del.status.replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
                                             </div>
                                         ))}
-                                        {project.deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <EmptyState
                                                 title="No deliverables"
                                                 description="This project doesn't have any active deliverables yet."
@@ -702,7 +756,7 @@ export const ProjectDetail = () => {
                                 </CardContent>
                             </Card>
 
-                            {/* Deadlines */}
+                            {/* Deadlines - Now uses real API data */}
                             <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white shadow-lg shadow-black/10 border-zinc-700">
                                 <CardContent className="p-6">
                                     <div className="flex items-center gap-2 mb-5">
@@ -710,13 +764,15 @@ export const ProjectDetail = () => {
                                         <h3 className="font-bold tracking-tight">Upcoming Deadlines</h3>
                                     </div>
                                     <div className="space-y-4">
-                                        {project.deliverables.slice(0, 2).map(d => (
+                                        {deliverablesLoading ? (
+                                            <p className="text-sm text-zinc-500 italic">Loading...</p>
+                                        ) : deliverables.slice(0, 2).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-4 py-1">
                                                 <span className="text-zinc-200 truncate w-32 font-medium">{d.title}</span>
                                                 <span className="font-mono text-zinc-400 text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
-                                        {project.deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <p className="text-sm text-zinc-500 italic">No upcoming deadlines.</p>
                                         )}
                                     </div>

@@ -38,11 +38,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
      * Load user from cookie-based session via /auth-me endpoint
      */
     const loadUser = useCallback(async () => {
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
         try {
             const response = await fetch(`${API_BASE}/auth-me`, {
                 method: 'GET',
                 credentials: 'include',
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (response.ok) {
                 const data = await response.json();
@@ -56,8 +63,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // No valid session
             setToken(null);
             setUserState(null);
-        } catch (error) {
-            console.error('Failed to load user session:', error);
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Auth check timed out - API server may not be running');
+            } else {
+                console.error('Failed to load user session:', error);
+            }
             setToken(null);
             setUserState(null);
         } finally {

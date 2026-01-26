@@ -107,16 +107,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
 
-  const Icon = TYPE_ICONS[deliverable.type];
+  const Icon = TYPE_ICONS[deliverable.type] || FileVideo;
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
 
   // Determine if card is actionable (can be reviewed or downloaded)
-  const isActionable =
-    deliverable.status === 'beta_ready' ||
-    deliverable.status === 'awaiting_approval' ||
-    deliverable.status === 'final_delivered';
+  // All cards are now actionable to show details/empty state
+  const isActionable = true;
 
   // Navigate to deliverable detail page
   const handleNavigate = (e?: React.MouseEvent) => {
@@ -237,6 +235,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(updateData),
       });
 
@@ -312,6 +311,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           status: 'final_delivered'
         }),

@@ -8,6 +8,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo, useEffect } from 'react';
 import { useAuthContext } from './AuthContext';
+import { API_BASE } from '@/lib/api-config';
 
 // Notification types matching the existing pattern from landing-page-new
 export type NotificationType =
@@ -63,7 +64,7 @@ interface NotificationProviderProps {
     children: ReactNode;
 }
 
-const API_BASE = '/.netlify/functions';
+
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
     const { user } = useAuthContext();

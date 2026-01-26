@@ -31,25 +31,34 @@ export const storageService = {
     ): Promise<string> {
         try {
             // 1. Get presigned URL
+            const requestBody = {
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                projectId,
+                folder,
+                customKey,
+            };
+            console.log('[Storage] Presign request:', requestBody);
+
             const presignRes = await fetch('/.netlify/functions/r2-presign', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include', // Required for cookie-based auth
-                body: JSON.stringify({
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    projectId,
-                    folder,
-                    customKey,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!presignRes.ok) {
                 const errorData = await presignRes.json().catch(() => ({}));
-                const errorMessage = errorData?.error?.message || errorData?.message || 'Failed to generate upload URL';
+                console.error('[Storage] Presign error response:', errorData);
+                // Include validation details if available
+                const details = errorData?.error?.details;
+                let errorMessage = errorData?.error?.message || errorData?.message || 'Failed to generate upload URL';
+                if (details && Array.isArray(details) && details.length > 0) {
+                    errorMessage = details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(', ');
+                }
                 throw new Error(errorMessage);
             }
 

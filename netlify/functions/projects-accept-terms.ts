@@ -1,7 +1,8 @@
 import pg from 'pg';
-import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, withValidation, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
 
 const { Client } = pg;
 
@@ -20,7 +21,8 @@ const getDbClient = () => {
 export const handler = compose(
     withCORS(['POST']),
     withAuth(),
-    withRateLimit(RATE_LIMITS.apiStrict, 'project_accept_terms')
+    withRateLimit(RATE_LIMITS.apiStrict, 'project_accept_terms'),
+    withValidation(SCHEMAS.project.acceptTerms)
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
@@ -30,13 +32,20 @@ export const handler = compose(
     try {
         await client.connect();
 
-        const { projectId, userId } = JSON.parse(event.body || '{}');
+        // Get validated data from middleware
+        const data = (event as any).validatedData;
+        const { projectId, accepted } = data;
 
-        if (!projectId || !userId) {
+        // Note: The schema expects { projectId, accepted } but the endpoint also uses userId
+        // Extract userId from the body manually for now
+        const rawBody = JSON.parse(event.body || '{}');
+        const userId = rawBody.userId;
+
+        if (!userId) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ error: 'projectId and userId are required' }),
+                body: JSON.stringify({ error: 'userId is required' }),
             };
         }
 

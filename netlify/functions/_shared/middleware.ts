@@ -117,17 +117,22 @@ export function withProjectManager(): Middleware {
  * Apply rate limiting
  */
 export function withRateLimit(config: RateLimitConfig, action?: string): Middleware {
-    return (handler: Handler) => async (event: NetlifyEvent) => {
+    return (handler: Handler) => async (event: NetlifyEvent, auth?: AuthResult) => {
         const origin = event.headers.origin || event.headers.Origin;
         const headers = getCorsHeaders(origin);
 
         // Get identifier (authenticated user or IP)
+        // Use the auth passed from previous middleware if available, otherwise check cookie
         let identifier: string;
-        try {
-            const auth = await requireAuthFromCookie(event);
-            identifier = auth.user?.userId || getClientIP(event.headers);
-        } catch {
-            identifier = getClientIP(event.headers);
+        if (auth?.user?.userId) {
+            identifier = auth.user.userId;
+        } else {
+            try {
+                const freshAuth = await requireAuthFromCookie(event);
+                identifier = freshAuth.user?.userId || getClientIP(event.headers);
+            } catch {
+                identifier = getClientIP(event.headers);
+            }
         }
 
         const actionName = action || event.path || 'api';
@@ -137,7 +142,8 @@ export function withRateLimit(config: RateLimitConfig, action?: string): Middlew
             return createRateLimitResponse(result, headers);
         }
 
-        return handler(event);
+        // Pass auth through to the next handler
+        return handler(event, auth);
     };
 }
 
@@ -212,6 +218,29 @@ export function withCORS(allowedMethods: string[]): Middleware {
             };
         }
 
-        return handler(event);
+        // Call handler and merge CORS headers into response
+        try {
+            const response = await handler(event);
+            return {
+                ...response,
+                headers: {
+                    ...headers,
+                    ...response.headers,
+                },
+            };
+        } catch (error: any) {
+            console.error('Unhandled error in handler:', error);
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({
+                    error: {
+                        code: 'INTERNAL_SERVER_ERROR',
+                        message: 'An unexpected error occurred',
+                        details: error.message,
+                    },
+                }),
+            };
+        }
     };
 }

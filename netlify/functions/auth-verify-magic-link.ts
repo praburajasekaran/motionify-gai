@@ -336,7 +336,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         const authCookie = createAuthCookie(result.token, result.rememberMe);
 
         // Remove token and rememberMe from response body (token is in cookie now)
-        const { token, rememberMe, ...dataWithoutToken } = result;
+        const { token: unusedToken, rememberMe, ...dataWithoutToken } = result;
 
         return {
             statusCode: 200,

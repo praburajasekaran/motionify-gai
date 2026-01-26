@@ -31,7 +31,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
 
     // Filter for pending deliverables only
     const pendingDeliverables = deliverables.filter(d =>
-        ['in_progress', 'rejected', 'approved', 'payment_pending'].includes(d.status)
+        ['pending', 'in_progress', 'rejected', 'approved', 'payment_pending'].includes(d.status)
     );
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -123,7 +123,6 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                 // Helper to generate thumbnail if video
                 if (match.file.type.startsWith('video/')) {
                     try {
-                        // Dynamic import to avoid circular dependency issues if any, though likely fine
                         const { generateThumbnail } = await import('../../utils/thumbnail');
                         const thumbnailFile = await generateThumbnail(match.file);
                         if (thumbnailFile) {
@@ -137,14 +136,21 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
 
                 // Update DB
                 const updateData = folder === 'beta'
-                    ? { beta_file_key: key }
+                    ? { beta_file_key: key, status: 'beta_ready' }
                     : { final_file_key: key };
 
-                await fetch(`/api/deliverables/${deliverable.id}`, {
+                const updateResponse = await fetch(`/api/deliverables/${deliverable.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify(updateData),
                 });
+
+                if (!updateResponse.ok) {
+                    const errorData = await updateResponse.json().catch(() => ({}));
+                    console.error('[BatchUpload] Failed to update deliverable:', errorData);
+                    throw new Error(errorData.error?.message || 'Failed to save file to deliverable');
+                }
 
                 // Mark success
                 setMatches(prev => prev.map((m, idx) => idx === i ? { ...m, status: 'success', progress: 100 } : m));
