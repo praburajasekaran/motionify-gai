@@ -26,6 +26,7 @@ import { DeliverableMetadataSidebar } from '@/components/deliverables/Deliverabl
 import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm';
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
+import { Project } from '@/types';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { MOCK_PROJECTS } from '@/constants';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
@@ -376,14 +377,75 @@ const DeliverableReviewContent: React.FC = () => {
 export const DeliverableReview: React.FC = () => {
   const { user } = useAuthContext();
   const { id: projectId } = useParams<{ id: string }>();
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Find current project
-  const currentProject = MOCK_PROJECTS.find((p) => p.id === projectId);
+  useEffect(() => {
+    const loadProject = async () => {
+      // First try MOCK_PROJECTS for backwards compatibility
+      const mockProject = MOCK_PROJECTS.find((p) => p.id === projectId);
+      if (mockProject) {
+        setCurrentProject(mockProject);
+        setIsLoading(false);
+        return;
+      }
+
+      // If not found in mocks, fetch from API
+      try {
+        const response = await fetch(`/api/projects/${projectId}`, {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Transform API response to Project type
+          const project: Project = {
+            id: data.id,
+            title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+            client: data.client_name || 'Client',
+            thumbnail: '',
+            status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
+            dueDate: data.due_date || new Date().toISOString(),
+            startDate: data.created_at || new Date().toISOString(),
+            progress: 0,
+            description: '',
+            tasks: [],
+            team: [],
+            budget: 0,
+            deliverables: [],
+            files: [],
+            deliverablesCount: 0,
+            revisionCount: data.revisions_used || 0,
+            maxRevisions: data.total_revisions_allowed || 2,
+            activityLog: [],
+            termsAcceptedAt: data.terms_accepted_at,
+            termsAcceptedBy: data.terms_accepted_by,
+          };
+          setCurrentProject(project);
+        }
+      } catch (error) {
+        console.error('Failed to fetch project:', error);
+      }
+      setIsLoading(false);
+    };
+
+    if (projectId) {
+      loadProject();
+    }
+  }, [projectId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-zinc-500">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (!user || !currentProject) {
     return (
       <div className="flex items-center justify-center py-12 text-zinc-500">
-        <p>Loading...</p>
+        <p>Project not found</p>
       </div>
     );
   }

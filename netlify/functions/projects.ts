@@ -55,6 +55,77 @@ export const handler = compose(
     await client.connect();
 
     if (event.httpMethod === 'GET') {
+      // Check if requesting a single project by ID from path: /api/projects/{id}
+      const pathParts = event.path.split('/');
+      const lastSegment = pathParts[pathParts.length - 1];
+      const isIdRequest = lastSegment && lastSegment !== 'projects' && !lastSegment.includes('?');
+
+      if (isIdRequest) {
+        // Fetch single project by ID
+        const projectId = lastSegment;
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        const result = await client.query(
+          `SELECT p.*, u.full_name as client_name, u.email as client_email
+           FROM projects p
+           LEFT JOIN users u ON p.client_user_id = u.id
+           WHERE p.id = $1`,
+          [projectId]
+        );
+
+        if (result.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Project not found' }),
+          };
+        }
+
+        const project = result.rows[0];
+
+        // Permission check
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          if (userRole === 'client' && project.client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view this project'
+              }),
+            };
+          }
+
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [projectId, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
+        }
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(project),
+        };
+      }
+
       // First check if this is a schema check request
       if (event.queryStringParameters?.checkSchema === 'true') {
         const schemaResult = await client.query(`
