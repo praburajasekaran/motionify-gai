@@ -66,6 +66,7 @@ export const handler = compose(
         const userRole = auth?.user?.role;
         const userId = auth?.user?.userId;
 
+        // Fetch project from main projects table
         const result = await client.query(
           `SELECT p.*, u.full_name as client_name, u.email as client_email
            FROM projects p
@@ -179,20 +180,20 @@ export const handler = compose(
       if (userRole === 'project_manager') {
         // Project Manager: Only see projects linked to inquiries assigned to them
         query = `
-          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
-          FROM vertical_slice_projects p
-          JOIN inquiries i ON p.inquiry_id = i.id
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
+          LEFT JOIN inquiries i ON p.inquiry_id = i.id
           WHERE i.assigned_to_admin_id = $1
           ORDER BY p.created_at DESC
         `;
         params.push(effectiveUserId);
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
-        // Note: checking multiple client role variations to be safe, though DB check is 'client'
         query = `
-          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
-          FROM vertical_slice_projects p
-          JOIN inquiries i ON p.inquiry_id = i.id
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
           WHERE p.client_user_id = $1
           ORDER BY p.created_at DESC
         `;
@@ -200,9 +201,9 @@ export const handler = compose(
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
         query = `
-          SELECT p.*, i.contact_name as client_name, i.company_name as client_company
-          FROM vertical_slice_projects p
-          JOIN inquiries i ON p.inquiry_id = i.id
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
           ORDER BY p.created_at DESC
         `;
       } else {

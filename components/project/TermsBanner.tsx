@@ -4,7 +4,6 @@ import { Card, CardContent, Button, Separator } from '../ui/design-system';
 import { Project } from '../../types';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { isClientPrimaryContact } from '../../utils/deliverablePermissions';
-import { MOCK_PROJECTS } from '../../constants';
 import { useToast } from '../ui/design-system';
 
 interface TermsBannerProps {
@@ -38,31 +37,17 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     projectId: project.id,
                     userId: user?.id,
+                    accepted: true,
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to accept terms');
-            }
-
-            // Also update MOCK object for local state consistency
-            const mockProject = MOCK_PROJECTS.find(p => p.id === project.id);
-            if (mockProject) {
-                mockProject.termsAcceptedAt = new Date().toISOString();
-                mockProject.termsAcceptedBy = user?.id;
-
-                // Add activity log
-                mockProject.activityLog.unshift({
-                    id: `act-${Date.now()}`,
-                    userId: user?.id || 'unknown',
-                    action: 'accepted',
-                    target: 'Project Terms',
-                    timestamp: new Date().toISOString()
-                });
             }
 
             // Trigger callback to update parent state

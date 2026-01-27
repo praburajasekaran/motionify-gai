@@ -59,7 +59,7 @@ export const handler = compose(
         // 1. Check if the user is the assigned Project Manager (via Inquiry)
         const projectResult = await client.query(
             `SELECT p.id, i.assigned_to_admin_id, i.id as inquiry_id
-       FROM vertical_slice_projects p
+       FROM projects p
        JOIN inquiries i ON p.inquiry_id = i.id
        WHERE p.id = $1`,
             [projectId]
@@ -132,7 +132,7 @@ export const handler = compose(
 
         // Also check if they are the Client Primary Contact (sanity check, covered by TC-TC-007 but good to enforce)
         const projectClientResult = await client.query(
-            `SELECT client_user_id FROM vertical_slice_projects WHERE id = $1`,
+            `SELECT client_user_id FROM projects WHERE id = $1`,
             [projectId]
         );
 
