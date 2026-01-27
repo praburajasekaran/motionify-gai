@@ -72,12 +72,18 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     };
   }, [focusedDeliverableId, setFocusedDeliverableId]);
 
+  // Helper to check if a role is a client role
+  const isClientRole = (role: string) => {
+    const clientRoleValues = [UserRole.PRIMARY_CONTACT, UserRole.TEAM_MEMBER, 'client', 'client_primary', 'client_team'];
+    return clientRoleValues.includes(role as UserRole);
+  };
+
   const visibleTasks = useMemo(() => {
     if (!project || !currentUser) return [];
 
-    const isInternalUser = currentUser.role === UserRole.MOTIONIFY_MEMBER || currentUser.role === UserRole.PROJECT_MANAGER;
+    const isInternal = currentUser.role && !isClientRole(currentUser.role);
 
-    let tasks = isInternalUser
+    let tasks = isInternal
       ? project.tasks
       : project.tasks.filter(task => task.visibleToClient);
 
@@ -144,7 +150,8 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     setQuickAddInput('');
   };
 
-  const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
+  // Check if user can create tasks (Motionify team only, not clients)
+  const isInternalUser = currentUser?.role && !isClientRole(currentUser.role);
 
   if (!project) {
     return (

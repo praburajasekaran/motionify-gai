@@ -11,9 +11,9 @@ import {
     Avatar, Input, ClientLogo, Progress, Tabs, TabsList, TabsTrigger,
     TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast, Switch
 } from '../components/ui/design-system';
-import { MOCK_PROJECTS, TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
+import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
-import { ProjectStatus, Task } from '../types';
+import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskEditModal } from '../components/tasks/TaskEditModal';
 import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
@@ -94,7 +94,8 @@ export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthContext();
-    const project = MOCK_PROJECTS.find(p => p.id === id);
+    const [project, setProject] = useState<Project | null>(null);
+    const [projectLoading, setProjectLoading] = useState(true);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -143,6 +144,55 @@ export const ProjectDetail = () => {
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
+
+    // Fetch project from API
+    useEffect(() => {
+        if (!id) return;
+
+        const fetchProject = async () => {
+            try {
+                const response = await fetch(`/api/projects/${id}`, {
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Transform API response to match Project type
+                    const apiProject: Project = {
+                        id: data.id,
+                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+                        client: data.client_name || data.client_company || 'Client',
+                        thumbnail: '',
+                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
+                        startDate: data.created_at || new Date().toISOString(),
+                        dueDate: data.created_at || new Date().toISOString(),
+                        progress: 0,
+                        description: data.description || '',
+                        budget: 0,
+                        team: [],
+                        tasks: [],
+                        deliverables: [],
+                        files: [],
+                        deliverablesCount: 0,
+                        revisionCount: data.revisions_used ?? 0,
+                        maxRevisions: data.total_revisions_allowed ?? 2,
+                        activityLog: [],
+                        termsAcceptedAt: data.terms_accepted_at,
+                        termsAcceptedBy: data.terms_accepted_by,
+                    };
+                    setProject(apiProject);
+                } else {
+                    console.error(`API returned ${response.status} for project ${id}`);
+                }
+            } catch (error) {
+                console.error('Failed to fetch project:', error);
+            } finally {
+                setProjectLoading(false);
+            }
+        };
+
+        fetchProject();
+    }, [id]);
 
     // Load tasks from backend when project loads
     useEffect(() => {
@@ -230,6 +280,14 @@ export const ProjectDetail = () => {
             }
         }
     }, [tab, id, navigate]);
+
+    if (projectLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     if (!project) {
         return (
@@ -520,7 +578,41 @@ export const ProjectDetail = () => {
         }
     };
 
+    // Task Status Helpers
+    const getTaskStatusLabel = (status: string) => {
+        const labels: Record<string, string> = {
+            'pending': 'To Do',
+            'in_progress': 'In Progress',
+            'awaiting_approval': 'Awaiting Approval',
+            'completed': 'Completed',
+            'revision_requested': 'Revision Requested',
+            // Legacy values
+            'Todo': 'To Do',
+            'In Progress': 'In Progress',
+            'Done': 'Completed',
+        };
+        return labels[status] || status;
+    };
 
+    const getTaskStatusStyle = (status: string) => {
+        switch (status) {
+            case 'pending':
+            case 'Todo':
+                return 'bg-slate-100 text-slate-600 border-slate-200';
+            case 'in_progress':
+            case 'In Progress':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'awaiting_approval':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'completed':
+            case 'Done':
+                return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'revision_requested':
+                return 'bg-rose-100 text-rose-700 border-rose-200';
+            default:
+                return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+        }
+    };
 
     // Tab configuration for project pages
     const tabConfig = [
@@ -908,7 +1000,7 @@ export const ProjectDetail = () => {
                                                             <span className="hidden sm:inline">{assignee.name}</span>
                                                         </div>
                                                     )}
-                                                    <Badge variant="secondary" className="bg-zinc-100 text-zinc-500 font-normal border border-zinc-200">{task.status}</Badge>
+                                                    <Badge variant="secondary" className={cn("font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
 
                                                     <Button
                                                         size="sm"
@@ -1034,26 +1126,28 @@ export const ProjectDetail = () => {
                             )}
                         </div>
 
-                        {/* Add Task Input */}
-                        <div className="space-y-2 pt-2">
-                            <div className="flex gap-3 items-center">
-                                <div className="relative flex-1">
-                                    <Input
-                                        placeholder="Add a task... (e.g., 'Review design @john tomorrow')"
-                                        value={newTaskInput}
-                                        onChange={(e) => setNewTaskInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                        className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
-                                    />
+                        {/* Add Task Input - Only visible to Motionify team (not clients) */}
+                        {user && !isClient(user) && (
+                            <div className="space-y-2 pt-2">
+                                <div className="flex gap-3 items-center">
+                                    <div className="relative flex-1">
+                                        <Input
+                                            placeholder="Add a task... (e.g., 'Review design @john tomorrow')"
+                                            value={newTaskInput}
+                                            onChange={(e) => setNewTaskInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                                            className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
+                                        />
+                                    </div>
+                                    <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
+                                        <PlusCircle className="h-4 w-4 mr-2" /> Add Task
+                                    </Button>
                                 </div>
-                                <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
-                                    <PlusCircle className="h-4 w-4 mr-2" /> Add Task
-                                </Button>
+                                <p className="text-xs text-zinc-400 pl-1">
+                                    Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
+                                </p>
                             </div>
-                            <p className="text-xs text-zinc-400 pl-1">
-                                Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
-                            </p>
-                        </div>
+                        )}
 
                         <TaskEditModal
                             isOpen={isEditModalOpen}

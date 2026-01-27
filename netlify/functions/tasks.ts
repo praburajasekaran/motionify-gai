@@ -444,10 +444,9 @@ export const handler = compose(
       const taskData = validation.data;
 
       // Permission check: Only Motionify team can create tasks (not clients)
-      // Check the user_role from the request body or header
-      const rawBody = JSON.parse(event.body || '{}');
-      const userRole = rawBody.user_role || event.headers['x-user-role'];
-      const clientRoles = ['Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'];
+      // Get role from authenticated JWT token (not from request body which can be spoofed)
+      const userRole = auth?.user?.role;
+      const clientRoles = ['client', 'client_primary', 'client_team'];
 
       if (userRole && clientRoles.includes(userRole)) {
         return {
@@ -459,6 +458,8 @@ export const handler = compose(
           }),
         };
       }
+
+      const rawBody = JSON.parse(event.body || '{}');
 
       // Get a user ID for created_by (use first user or create a default)
       let createdBy = rawBody.created_by;
