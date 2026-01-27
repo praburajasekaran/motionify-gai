@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { MOCK_PROJECTS } from '../../landing-page-new/src/lib/portal/data';
+// TODO: Implement real activity fetching from API
+// import { fetchActivities } from '../../lib/activities';
 import { ActivityType, Activity, Project } from '../../landing-page-new/src/lib/portal/types';
 
 interface AggregatedActivity extends Activity {
@@ -82,32 +83,15 @@ export function ActivityLogs() {
     const isProjectManager = currentUser?.role === 'project_manager';
 
     // Aggregate activities based on role
+    // TODO: Fetch real activities from API instead of mock data
     const allActivities = useMemo((): AggregatedActivity[] => {
-        const activities: AggregatedActivity[] = [];
-        const userEmail = currentUser?.email?.toLowerCase();
+        // Return empty array - activities will be fetched from API when implemented
+        // The API endpoint /activities requires projectId, so we need to:
+        // 1. First fetch all projects the user has access to
+        // 2. Then fetch activities for each project
+        // 3. Aggregate and sort them
+        return [];
 
-        MOCK_PROJECTS.forEach((project: Project) => {
-            // Filter logic:
-            // 1. Super Admin sees all projects
-            // 2. Project Manager sees only assigned projects
-            // 3. Others see none (though page access is blocked below)
-
-            const isAssigned = project.motionifyTeam.some(
-                (member) => member.email.toLowerCase() === userEmail
-            );
-
-            if (isSuperAdmin || (isProjectManager && isAssigned)) {
-                project.activities.forEach((activity) => {
-                    activities.push({
-                        ...activity,
-                        projectId: project.id,
-                        projectName: project.name,
-                    });
-                });
-            }
-        });
-        // Sort by timestamp descending (newest first)
-        return activities.sort((a, b) => b.timestamp - a.timestamp);
     }, [currentUser, isSuperAdmin, isProjectManager]);
 
     // Get unique users from activities

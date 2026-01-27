@@ -29,7 +29,6 @@ import {
     EmptyState,
     cn
 } from '../components/ui/design-system';
-import { MOCK_PROJECTS } from '../constants';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { useAuthContext } from '../contexts/AuthContext';
@@ -93,10 +92,8 @@ export const ProjectList = () => {
         fetchProjects();
     }, [user?.id]);
 
-    // Combine API projects with mock projects (API projects take priority)
-    const allProjects = [...apiProjects, ...MOCK_PROJECTS.filter(
-        mock => !apiProjects.some(api => api.id === mock.id)
-    )];
+    // Use API projects only (no more mock data)
+    const allProjects = apiProjects;
 
     const getStatusVariant = (status: ProjectStatus) => {
         switch (status) {

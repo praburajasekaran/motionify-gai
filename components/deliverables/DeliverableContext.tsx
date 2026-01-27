@@ -20,7 +20,13 @@ import {
   IssueCategory,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
-import { MOCK_REVISION_QUOTA } from './mockDeliverables';
+
+// Default revision quota - will be overwritten by project data from API
+const DEFAULT_REVISION_QUOTA: RevisionQuota = {
+  total: 3,
+  used: 0,
+  remaining: 3,
+};
 import { Project, User } from '@/types';
 import {
   canApproveDeliverable,
@@ -82,7 +88,7 @@ type DeliverableAction =
 
 const initialState: DeliverableState = {
   deliverables: [], // Will be loaded from API
-  quota: MOCK_REVISION_QUOTA,
+  quota: DEFAULT_REVISION_QUOTA, // Will be loaded from project data
   selectedDeliverable: null,
   isReviewModalOpen: false,
   isRevisionFormOpen: false,
@@ -493,6 +499,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   /**
    * Permission-aware reject action
    * Validates user permissions before calling API and dispatching REJECT_DELIVERABLE
+   * Uploads attachments to R2 and creates revision request with full feedback
    */
   const rejectDeliverable = async (deliverableId: string, approval: DeliverableApproval) => {
     if (!currentUser) {
@@ -515,13 +522,78 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error('No revision quota remaining. Please contact support to request additional revisions.');
     }
 
-    // Call backend API to persist the status change
-    const response = await fetch(`/api/deliverables/${deliverableId}`, {
-      method: 'PATCH',
+    // Step 1: Upload attachments to R2
+    const uploadedAttachments: Array<{
+      fileName: string;
+      fileSize: number;
+      fileType: string;
+      r2Key: string;
+    }> = [];
+
+    for (const attachment of approval.attachments || []) {
+      if (!attachment.file) continue;
+
+      try {
+        // Get presigned URL
+        const presignRes = await fetch('/api/r2-presign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            fileName: attachment.fileName,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+          }),
+        });
+
+        if (!presignRes.ok) {
+          const error = await presignRes.json().catch(() => ({}));
+          throw new Error(error.error?.message || 'Failed to get upload URL');
+        }
+
+        const { uploadUrl, key } = await presignRes.json();
+
+        // Upload to R2
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: attachment.file,
+          headers: { 'Content-Type': attachment.fileType },
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Failed to upload ${attachment.fileName}`);
+        }
+
+        uploadedAttachments.push({
+          fileName: attachment.fileName,
+          fileSize: attachment.fileSize,
+          fileType: attachment.fileType,
+          r2Key: key,
+        });
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${attachment.fileName}:`, uploadError);
+        // Continue with other attachments even if one fails
+      }
+    }
+
+    // Step 2: Create revision request via API
+    const response = await fetch('/api/revision-requests', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        status: 'revision_requested',
+        deliverableId,
+        feedbackText: approval.feedback || '',
+        timestampedComments: approval.timestampedComments?.map(c => ({
+          id: c.id,
+          timestamp: c.timestamp,
+          comment: c.comment,
+          resolved: c.resolved,
+          userId: c.userId,
+          userName: c.userName,
+        })),
+        issueCategories: approval.issueCategories,
+        attachments: uploadedAttachments,
       }),
     });
 

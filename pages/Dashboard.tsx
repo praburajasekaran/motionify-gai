@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, Badge, cn } from '../components/ui/design-system';
-import { MOCK_PROJECTS } from '../constants';
 import { Clock, CheckCircle2, AlertCircle, PlayCircle, ArrowUpRight, TrendingUp, Users } from 'lucide-react';
+import { useAuthContext } from '../contexts/AuthContext';
 
 const StatCard = ({ title, value, change, icon: Icon, trend, delay }: { title: string, value: string, change: string, icon: any, trend: 'up' | 'down' | 'neutral', delay: string }) => (
   <Card hoverable className={cn("bg-white border-zinc-200 animate-fade-in-up", delay)}>
@@ -37,8 +37,32 @@ const data = [
 ];
 
 export const Dashboard = () => {
-  const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
-  const completedProjects = MOCK_PROJECTS.filter(p => p.status === 'Completed').length;
+  const { user } = useAuthContext();
+  const [activeProjects, setActiveProjects] = useState(0);
+  const [completedProjects, setCompletedProjects] = useState(0);
+
+  // Fetch project stats from API
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) return;
+
+      try {
+        const response = await fetch(`/api/projects?userId=${user.id}`, {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const projects = await response.json();
+          setActiveProjects(projects.filter((p: any) => p.status === 'active').length);
+          setCompletedProjects(projects.filter((p: any) => p.status === 'completed').length);
+        }
+      } catch (error) {
+        console.error('Failed to fetch project stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, [user?.id]);
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">

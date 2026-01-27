@@ -76,6 +76,8 @@ export interface FeedbackAttachment {
   fileType: string; // MIME type (e.g., 'image/png')
   url: string;
   thumbnailUrl?: string; // For image previews
+  file?: File;    // Raw file for upload (before persisted)
+  r2Key?: string; // Storage key after upload
 }
 
 // ============================================================================

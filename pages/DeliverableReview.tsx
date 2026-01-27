@@ -28,7 +28,6 @@ import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
 import { Project } from '@/types';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { MOCK_PROJECTS } from '@/constants';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
@@ -394,15 +393,7 @@ export const DeliverableReview: React.FC = () => {
 
   useEffect(() => {
     const loadProject = async () => {
-      // First try MOCK_PROJECTS for backwards compatibility
-      const mockProject = MOCK_PROJECTS.find((p) => p.id === projectId);
-      if (mockProject) {
-        setCurrentProject(mockProject);
-        setIsLoading(false);
-        return;
-      }
-
-      // If not found in mocks, fetch from API
+      // Fetch project from API
       try {
         const response = await fetch(`/api/projects/${projectId}`, {
           credentials: 'include',

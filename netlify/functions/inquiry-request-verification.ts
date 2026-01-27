@@ -43,7 +43,6 @@ export const handler = compose(
 )(async (event: NetlifyEvent) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-    }
 
     if (event.httpMethod !== 'POST') {
         return {

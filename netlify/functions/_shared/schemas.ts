@@ -155,6 +155,15 @@ export const createProjectFromProposalSchema = z.object({
 // Task Schemas
 // ==========================================
 
+// Task status enum matching database task_stage enum
+const taskStatusEnum = z.enum([
+    'pending',
+    'in_progress',
+    'awaiting_approval',
+    'completed',
+    'revision_requested'
+]);
+
 export const createTaskSchema = z.object({
     projectId: uuidSchema,
     title: nameSchema,
@@ -162,7 +171,7 @@ export const createTaskSchema = z.object({
     assignedTo: uuidSchema.optional().nullable(),
     dueDate: dateSchema.optional().nullable(),
     priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-    status: z.enum(['todo', 'in_progress', 'review', 'done']).optional(),
+    status: taskStatusEnum.optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -171,7 +180,7 @@ export const updateTaskSchema = z.object({
     assignedTo: uuidSchema.optional().nullable(),
     dueDate: dateSchema.optional().nullable(),
     priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-    status: z.enum(['todo', 'in_progress', 'review', 'done']).optional(),
+    status: taskStatusEnum.optional(),
 });
 
 // ==========================================
@@ -271,6 +280,7 @@ export const r2PresignDeliverableSchema = z.object({
     projectId: z.string().min(1).max(100).optional(), // Accept any string (UUID or numeric ID)
     folder: z.enum(['beta', 'final', 'misc']).optional(),
     customKey: z.string().max(500).optional(), // For thumbnail uploads
+    revisionRequestId: uuidSchema.optional(), // For revision request attachments
 });
 
 // ==========================================
@@ -284,6 +294,34 @@ export const markNotificationReadSchema = z.object({
 
 export const markAllNotificationsReadSchema = z.object({
     userId: uuidSchema,
+});
+
+// ==========================================
+// Revision Request Schemas
+// ==========================================
+
+export const timestampedCommentSchema = z.object({
+    id: z.string().min(1),
+    timestamp: z.number().min(0),
+    comment: z.string().min(1).max(2000),
+    resolved: z.boolean().default(false),
+    userId: uuidSchema,
+    userName: z.string().min(1).max(255),
+});
+
+export const revisionAttachmentSchema = z.object({
+    fileName: z.string().min(1).max(255),
+    fileSize: z.number().positive().max(10 * 1024 * 1024),
+    fileType: z.string().min(1).max(100),
+    r2Key: z.string().min(1).max(500),
+});
+
+export const createRevisionRequestSchema = z.object({
+    deliverableId: uuidSchema,
+    feedbackText: z.string().min(20).max(10000),
+    timestampedComments: z.array(timestampedCommentSchema).optional(),
+    issueCategories: z.array(z.enum(['color', 'audio', 'timing', 'editing', 'content', 'other'])).optional(),
+    attachments: z.array(revisionAttachmentSchema).optional(),
 });
 
 // ==========================================
@@ -364,5 +402,8 @@ export const SCHEMAS = {
     },
     activity: {
         create: createActivitySchema,
+    },
+    revisionRequest: {
+        create: createRevisionRequestSchema,
     },
 };

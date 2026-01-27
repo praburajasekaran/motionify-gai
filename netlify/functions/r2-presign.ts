@@ -236,7 +236,7 @@ export const handler = compose(
                 return validation.response;
             }
 
-            const { fileName, fileType, fileSize, commentId, projectId, folder } = validation.data;
+            const { fileName, fileType, fileSize, commentId, projectId, folder, revisionRequestId } = validation.data;
 
             // Generate secure key
             const timestamp = Date.now();
@@ -245,6 +245,8 @@ export const handler = compose(
             let key: string;
             if (commentId) {
                 key = `comments/${commentId}/${timestamp}-${sanitizedFileName}`;
+            } else if (revisionRequestId) {
+                key = `revisions/${revisionRequestId}/${timestamp}-${sanitizedFileName}`;
             } else if (projectId && folder) {
                 key = `projects/${projectId}/${folder}/${timestamp}-${sanitizedFileName}`;
             } else {

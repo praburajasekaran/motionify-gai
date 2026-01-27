@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Project, User, UserRole, TaskStatus, Task, Comment, ProjectFile, ProjectStatus, Client, Deliverable, Notification, Milestone } from './types';
-import { MOCK_NOTIFICATIONS } from './data';
+// Mock data removed - using API data only
 import {
   generateNotificationId,
   generateUserId,
@@ -132,7 +132,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
   }, [authUser]);
 
   const [projectId, setProjectId] = useState<string | null>(selectedProjectId || null);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]); // Loaded from API via NotificationContext
 
 
   const selectedProject = useMemo(() =>
