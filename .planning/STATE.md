@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-04 - Deliverables System [In Progress] |
-| **Current Plan** | PROD-04-03 |
-| **Status** | Plan complete - storage authentication and error handling |
-| **Progress** | PROD-04: 3/5 plans complete (60%) |
-| **Last activity** | 2026-01-25 - Completed PROD-04-03-PLAN.md |
+| **Current Phase** | Phase PROD-04 - Deliverables System [Complete] |
+| **Current Plan** | PROD-04-05 (Manual Testing) |
+| **Status** | Manual testing complete - all DEL tests passed |
+| **Progress** | PROD-04: 5/5 plans complete (100%) |
+| **Last activity** | 2026-01-27 - PROD-04 manual testing complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -212,7 +212,27 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ## Session Continuity
 
-### This Session (2026-01-25)
+### This Session (2026-01-27)
+
+**Phase PROD-04 - Plan 05: Manual Testing Complete:**
+- DEL-01: Deliverable creation verified (files stored in deliverable_files table)
+- DEL-02: Approval workflow fixed and verified
+  - Added backend API calls to persist approve/reject status
+  - Fixed 'rejected' → 'revision_requested' across codebase
+  - Added revision_requested to viewable statuses for clients
+- DEL-03: R2 file storage verified (upload from admin, download from client)
+- DEL-04: Permissions verified (client isolation working - alex@acmecorp.com cannot see ekalaivan+c's projects)
+- Fixed ProjectList.tsx to fetch real projects from API
+- Commit: 8ad3f4f
+- **Gap identified:** Revision feedback (comments + attachments) not persisted to database
+
+**Next actions:**
+- Update ROADMAP.md to mark PROD-04 complete
+- Consider next phase or /gsd:audit-milestone
+
+---
+
+### Previous Session (2026-01-25)
 
 **Phase PROD-04 - Plan 03: Storage Authentication & Error Handling Completed:**
 - Added credentials: 'include' to all storage service fetch calls (uploadFile, getDownloadUrl)
