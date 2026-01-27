@@ -6,6 +6,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { deleteMultipleFromR2 } from './_shared/r2';
 
 const { Client } = pg;
 
@@ -22,7 +23,7 @@ const getDbClient = () => {
 };
 
 export const handler = compose(
-  withCORS(['GET', 'POST', 'PATCH']),
+  withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'deliverables')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
@@ -204,7 +205,7 @@ export const handler = compose(
         });
 
         // For clients, filter out deliverables not yet ready for viewing
-        const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'payment_pending', 'final_delivered'];
+        const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'revision_requested', 'payment_pending', 'final_delivered'];
         const filteredDeliverables = userRole === 'client'
           ? deliverables.filter(d => viewableStatuses.includes(d.status))
           : deliverables;
@@ -435,6 +436,88 @@ export const handler = compose(
         statusCode: 200,
         headers,
         body: JSON.stringify(updatedDeliverable),
+      };
+    }
+
+    if (event.httpMethod === 'DELETE') {
+      // Extract ID from path: /api/deliverables/{id}
+      const pathParts = event.path.split('/');
+      const id = pathParts[pathParts.length - 1];
+
+      if (!id || id === 'deliverables') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable ID is required' }),
+        };
+      }
+
+      // Permission check: Only super_admin and project_manager can delete deliverables
+      const userRole = auth?.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Access denied',
+            message: 'Only administrators and project managers can delete deliverables',
+          }),
+        };
+      }
+
+      // Verify deliverable exists
+      const deliverableResult = await client.query(
+        'SELECT * FROM deliverables WHERE id = $1',
+        [id]
+      );
+
+      if (deliverableResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable not found' }),
+        };
+      }
+
+      const deliverable = deliverableResult.rows[0];
+
+      // Collect all file keys for R2 cleanup
+      const fileKeysToDelete: string[] = [];
+
+      // Add beta and final file keys from deliverable
+      if (deliverable.beta_file_key) fileKeysToDelete.push(deliverable.beta_file_key);
+      if (deliverable.final_file_key) fileKeysToDelete.push(deliverable.final_file_key);
+
+      // Fetch all associated files from deliverable_files table
+      const filesResult = await client.query(
+        'SELECT file_key FROM deliverable_files WHERE deliverable_id = $1',
+        [id]
+      );
+
+      for (const file of filesResult.rows) {
+        if (file.file_key) fileKeysToDelete.push(file.file_key);
+      }
+
+      // Delete files from R2 storage
+      if (fileKeysToDelete.length > 0) {
+        try {
+          await deleteMultipleFromR2(fileKeysToDelete);
+          console.log(`[Deliverables] Deleted ${fileKeysToDelete.length} files from R2 for deliverable ${id}`);
+        } catch (r2Error) {
+          console.error('[Deliverables] R2 cleanup error:', r2Error);
+          // Continue with database deletion even if R2 cleanup fails
+        }
+      }
+
+      // Delete deliverable (CASCADE handles deliverable_files and revision_requests)
+      await client.query('DELETE FROM deliverables WHERE id = $1', [id]);
+
+      console.log(`[Deliverables] Deleted deliverable ${id} by user ${auth?.user?.email}`);
+
+      return {
+        statusCode: 204,
+        headers,
+        body: '',
       };
     }
 

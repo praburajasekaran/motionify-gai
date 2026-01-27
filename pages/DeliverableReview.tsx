@@ -67,7 +67,7 @@ const DeliverableReviewContent: React.FC = () => {
   };
 
   // Handle approve
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!deliverable) return;
 
     const confirmed = window.confirm(
@@ -76,12 +76,18 @@ const DeliverableReviewContent: React.FC = () => {
 
     if (confirmed) {
       try {
-        approveDeliverable(deliverable.id);
+        await approveDeliverable(deliverable.id);
         setSuccessMessage(
           'Deliverable approved successfully! Payment link will be sent to your email.'
         );
         setShowSuccessMessage(true);
         setTimeout(() => setShowSuccessMessage(false), 5000);
+
+        // Reload deliverable to restore selectedDeliverable after reducer clears it
+        await refreshDeliverables();
+        if (deliverableId) {
+          dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
+        }
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : 'Failed to approve deliverable'
@@ -98,9 +104,9 @@ const DeliverableReviewContent: React.FC = () => {
   };
 
   // Handle revision submission
-  const handleSubmitRevision = (approval: DeliverableApproval) => {
+  const handleSubmitRevision = async (approval: DeliverableApproval) => {
     try {
-      rejectDeliverable(approval.deliverableId, approval);
+      await rejectDeliverable(approval.deliverableId, approval);
       setSuccessMessage(
         'Revision request submitted successfully! The team will review within 2-3 business days.'
       );
@@ -108,6 +114,12 @@ const DeliverableReviewContent: React.FC = () => {
       setTimeout(() => setShowSuccessMessage(false), 5000);
       setShowRevisionForm(false);
       dispatch({ type: 'RESET_REVISION_FORM' });
+
+      // Reload deliverable to restore selectedDeliverable after reducer clears it
+      await refreshDeliverables();
+      if (deliverableId) {
+        dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Failed to submit revision request'
@@ -274,7 +286,7 @@ const DeliverableReviewContent: React.FC = () => {
     beta_ready: 'warning',
     awaiting_approval: 'info',
     approved: 'success',
-    rejected: 'destructive',
+    revision_requested: 'destructive',
     final_delivered: 'success',
   };
 

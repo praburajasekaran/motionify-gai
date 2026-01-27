@@ -32,14 +32,71 @@ import {
 import { MOCK_PROJECTS } from '../constants';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
+import { useAuthContext } from '../contexts/AuthContext';
 
 export const ProjectList = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [filter, setFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+    const [apiProjects, setApiProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
     const selectedRef = useRef<HTMLDivElement>(null);
+    const { user } = useAuthContext();
+
+    // Fetch real projects from API
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (!user?.id) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/projects?userId=${user.id}`, {
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Transform API response to match Project type
+                    const transformed = data.map((p: any) => ({
+                        id: p.id,
+                        title: p.project_number || `Project ${p.id.slice(0, 8)}`,
+                        client: p.client_name || p.client_company || 'Client',
+                        thumbnail: '',
+                        status: p.status === 'active' ? 'Active' : (p.status || 'Active'),
+                        dueDate: p.created_at || new Date().toISOString(),
+                        startDate: p.created_at || new Date().toISOString(),
+                        progress: 0,
+                        description: '',
+                        tasks: [],
+                        team: [],
+                        budget: 0,
+                        deliverables: [],
+                        files: [],
+                        deliverablesCount: 0,
+                        revisionCount: p.revisions_used || 0,
+                        maxRevisions: p.total_revisions_allowed || 2,
+                        activityLog: [],
+                    }));
+                    setApiProjects(transformed);
+                }
+            } catch (error) {
+                console.error('Failed to fetch projects:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProjects();
+    }, [user?.id]);
+
+    // Combine API projects with mock projects (API projects take priority)
+    const allProjects = [...apiProjects, ...MOCK_PROJECTS.filter(
+        mock => !apiProjects.some(api => api.id === mock.id)
+    )];
 
     const getStatusVariant = (status: ProjectStatus) => {
         switch (status) {
@@ -52,7 +109,7 @@ export const ProjectList = () => {
         }
     };
 
-    const filteredProjects = MOCK_PROJECTS.filter(p => {
+    const filteredProjects = allProjects.filter(p => {
         const matchesSearch = p.title.toLowerCase().includes(filter.toLowerCase()) ||
             p.client.toLowerCase().includes(filter.toLowerCase());
         // Hide archived from "all" filter, only show when explicitly selected
@@ -194,7 +251,11 @@ export const ProjectList = () => {
             </div>
 
             {/* Content */}
-            {MOCK_PROJECTS.length === 0 ? (
+            {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+            ) : allProjects.length === 0 ? (
                 <EmptyState
                     title="Your canvas is blank"
                     description="Ready to create something amazing? Start your first production."

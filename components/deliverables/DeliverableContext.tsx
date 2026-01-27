@@ -56,6 +56,7 @@ interface DeliverableState {
 
 type DeliverableAction =
   | { type: 'SET_DELIVERABLES'; deliverables: Deliverable[] }
+  | { type: 'DELETE_DELIVERABLE'; payload: string }
   | { type: 'APPROVE_DELIVERABLE'; id: string; userId: string; userName: string; userEmail: string }
   | { type: 'REJECT_DELIVERABLE'; id: string; approval: DeliverableApproval }
   | { type: 'OPEN_REVIEW_MODAL'; deliverable: Deliverable }
@@ -107,6 +108,12 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
         deliverables: action.deliverables,
       };
 
+    case 'DELETE_DELIVERABLE':
+      return {
+        ...state,
+        deliverables: state.deliverables.filter((d) => d.id !== action.payload),
+      };
+
     case 'APPROVE_DELIVERABLE': {
       const approval: DeliverableApproval = {
         id: `appr-${Date.now()}`,
@@ -148,7 +155,7 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
           d.id === action.approval.deliverableId
             ? {
               ...d,
-              status: 'rejected' as DeliverableStatus,
+              status: 'revision_requested' as DeliverableStatus,
               approvalHistory: [...d.approvalHistory, action.approval],
             }
             : d
@@ -343,8 +350,9 @@ interface DeliverableContextType {
   onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
 
   // Permission-aware action helpers
-  approveDeliverable: (deliverableId: string) => void;
-  rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => void;
+  approveDeliverable: (deliverableId: string) => Promise<void>;
+  rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => Promise<void>;
+  deleteDeliverable: (deliverableId: string) => Promise<void>;
 
   // Loading state
   isLoading: boolean;
@@ -438,9 +446,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
   /**
    * Permission-aware approve action
-   * Validates user permissions before dispatching APPROVE_DELIVERABLE
+   * Validates user permissions before calling API and dispatching APPROVE_DELIVERABLE
    */
-  const approveDeliverable = (deliverableId: string) => {
+  const approveDeliverable = async (deliverableId: string) => {
     if (!currentUser) {
       throw new Error('You must be logged in to approve deliverables');
     }
@@ -456,7 +464,23 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error(reason);
     }
 
-    // Permission granted - dispatch action
+    // Call backend API to persist the status change
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        status: 'approved',
+        approved_by: currentUser.id,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to approve deliverable');
+    }
+
+    // API success - dispatch local state update
     dispatch({
       type: 'APPROVE_DELIVERABLE',
       id: deliverableId,
@@ -468,9 +492,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
   /**
    * Permission-aware reject action
-   * Validates user permissions before dispatching REJECT_DELIVERABLE
+   * Validates user permissions before calling API and dispatching REJECT_DELIVERABLE
    */
-  const rejectDeliverable = (deliverableId: string, approval: DeliverableApproval) => {
+  const rejectDeliverable = async (deliverableId: string, approval: DeliverableApproval) => {
     if (!currentUser) {
       throw new Error('You must be logged in to request revisions');
     }
@@ -491,12 +515,54 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error('No revision quota remaining. Please contact support to request additional revisions.');
     }
 
-    // Permission granted - dispatch action
+    // Call backend API to persist the status change
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        status: 'revision_requested',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to request revision');
+    }
+
+    // API success - dispatch local state update
     dispatch({
       type: 'REJECT_DELIVERABLE',
       id: deliverableId,
       approval,
     });
+  };
+
+  /**
+   * Delete a deliverable (admin/PM only)
+   * Calls backend API to delete deliverable and all associated files
+   */
+  const deleteDeliverable = async (deliverableId: string): Promise<void> => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to delete deliverables');
+    }
+
+    // Permission check: only super_admin and project_manager can delete
+    if (currentUser.role !== 'super_admin' && currentUser.role !== 'project_manager') {
+      throw new Error('Only administrators and project managers can delete deliverables');
+    }
+
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error || 'Failed to delete deliverable');
+    }
+
+    dispatch({ type: 'DELETE_DELIVERABLE', payload: deliverableId });
   };
 
   // Refresh function to reload deliverables
@@ -548,6 +614,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         onConvertToTask,
         approveDeliverable,
         rejectDeliverable,
+        deleteDeliverable,
         isLoading,
         error,
         refreshDeliverables,

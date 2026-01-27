@@ -31,7 +31,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
 
     // Filter for pending deliverables only
     const pendingDeliverables = deliverables.filter(d =>
-        ['pending', 'in_progress', 'rejected', 'approved', 'payment_pending'].includes(d.status)
+        ['pending', 'in_progress', 'revision_requested', 'approved', 'payment_pending'].includes(d.status)
     );
 
     const handleDragOver = (e: React.DragEvent) => {

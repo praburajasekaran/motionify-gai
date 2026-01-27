@@ -13,10 +13,12 @@ import {
   Download,
   Eye,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { cn, Badge, Progress, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
+import { useDeliverables } from './DeliverableContext';
 
 export interface DeliverableListItemProps {
   deliverable: Deliverable;
@@ -33,7 +35,7 @@ const STATUS_CONFIG: Record<
   beta_ready: { variant: 'warning', label: 'Beta Ready' },
   awaiting_approval: { variant: 'warning', label: 'Awaiting Approval' },
   approved: { variant: 'success', label: 'Approved' },
-  rejected: { variant: 'destructive', label: 'Revision Requested' },
+  revision_requested: { variant: 'destructive', label: 'Revision Requested' },
   payment_pending: { variant: 'warning', label: 'Payment Pending' },
   final_delivered: { variant: 'success', label: 'Final Delivered' },
 };
@@ -43,10 +45,26 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   className,
 }) => {
   const navigate = useNavigate();
+  const { currentUser, deleteDeliverable } = useDeliverables();
 
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
+
+  // Permission check: only super_admin and project_manager can delete
+  const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'project_manager';
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(`Delete "${deliverable.title}"? This will permanently remove all files.`)) {
+      try {
+        await deleteDeliverable(deliverable.id);
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert(err instanceof Error ? err.message : 'Failed to delete deliverable');
+      }
+    }
+  };
 
   // Count uploaded files (beta and/or final)
   const fileCount = [deliverable.betaFileKey, deliverable.finalFileKey].filter(Boolean).length;
@@ -155,6 +173,16 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
             }}
           >
             <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-zinc-400 hover:text-red-500"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
         <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-600 transition-colors" />

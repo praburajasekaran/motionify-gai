@@ -113,7 +113,7 @@ export const updateDeliverableSchema = z.object({
     estimatedCompletionWeek: z.number().int().min(1).max(52).optional(),
     status: z.enum([
         'pending', 'in_progress', 'beta_ready', 'awaiting_approval',
-        'approved', 'rejected', 'payment_pending', 'final_delivered'
+        'approved', 'revision_requested', 'payment_pending', 'final_delivered'
     ]).optional(),
     // File upload fields
     beta_file_url: z.string().url().max(2000).optional(),

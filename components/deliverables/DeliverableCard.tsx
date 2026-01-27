@@ -387,8 +387,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
 
   // Admin Actions (Uploads) - Simplified for Demo
   const getAdminActions = () => {
-    // Upload Beta when in progress or rejected
-    if (deliverable.status === 'in_progress' || deliverable.status === 'rejected') {
+    // Upload Beta when in progress or revision requested
+    if (deliverable.status === 'in_progress' || deliverable.status === 'revision_requested') {
       return (
         <Button
           variant="outline"

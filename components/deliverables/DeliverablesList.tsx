@@ -71,7 +71,7 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
     { label: 'Awaiting Approval', value: 'awaiting_approval' },
     { label: 'In Progress', value: 'in_progress' },
     { label: 'Approved', value: 'approved' },
-    { label: 'Rejected', value: 'rejected' },
+    { label: 'Revision Requested', value: 'revision_requested' },
     { label: 'Final Delivered', value: 'final_delivered' },
     { label: 'Pending', value: 'pending' },
   ];

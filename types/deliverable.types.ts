@@ -26,7 +26,7 @@ export type DeliverableStatus =
   | 'beta_ready'
   | 'awaiting_approval'
   | 'approved'
-  | 'rejected'
+  | 'revision_requested'
   | 'payment_pending'
   | 'final_delivered';
 
