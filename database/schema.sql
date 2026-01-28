@@ -12,7 +12,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'client')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'project_manager', 'team_member', 'client')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -339,8 +339,38 @@ CREATE INDEX idx_invitations_status ON project_invitations(status);
 CREATE INDEX idx_invitations_expires ON project_invitations(expires_at);
 
 -- Trigger for updated_at
-CREATE TRIGGER update_project_invitations_updated_at 
+CREATE TRIGGER update_project_invitations_updated_at
   BEFORE UPDATE ON project_invitations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- 10. USER_INVITATIONS TABLE (for admin-level user creation)
+-- ============================================================================
+CREATE TABLE user_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'project_manager', 'team_member', 'client')),
+  full_name VARCHAR(255),
+  token VARCHAR(500) UNIQUE NOT NULL,
+  invited_by UUID REFERENCES users(id),
+  status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked', 'expired')),
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  revoked_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for user_invitations
+CREATE INDEX idx_user_invitations_email ON user_invitations(email);
+CREATE INDEX idx_user_invitations_token ON user_invitations(token);
+CREATE INDEX idx_user_invitations_status ON user_invitations(status);
+CREATE INDEX idx_user_invitations_expires ON user_invitations(expires_at);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_user_invitations_updated_at
+  BEFORE UPDATE ON user_invitations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
@@ -358,7 +388,7 @@ CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 -- ============================================================================
 
 INSERT INTO users (email, full_name, role) VALUES
-  ('admin@motionify.com', 'Motionify Admin', 'admin')
+  ('admin@motionify.com', 'Motionify Admin', 'super_admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================================
