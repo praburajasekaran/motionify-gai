@@ -490,3 +490,81 @@ export async function sendCommentNotificationEmail(data: {
     html,
   });
 }
+
+export async function sendPaymentFailureNotificationEmail(data: {
+  to: string;
+  orderId: string;
+  paymentId?: string;
+  errorCode?: string;
+  errorDescription?: string;
+  proposalId?: string;
+}) {
+  const portalUrl = process.env.URL || 'http://localhost:5173';
+  const actionUrl = data.proposalId
+    ? `${portalUrl}/#/admin/proposals/${data.proposalId}`
+    : `${portalUrl}/#/admin/payments`;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: #dc2626; text-align: center;">Payment Verification Failed</h2>
+      <p>A payment verification has failed and requires attention.</p>
+
+      <div style="background-color: #fef2f2; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #dc2626;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Order ID:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.orderId}</td>
+          </tr>
+          ${data.paymentId ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Payment ID:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.paymentId}</td>
+          </tr>
+          ` : ''}
+          ${data.errorCode ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Error Code:</td>
+            <td style="padding: 8px 0; color: #dc2626; font-weight: bold;">${data.errorCode}</td>
+          </tr>
+          ` : ''}
+          ${data.errorDescription ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Error:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.errorDescription}</td>
+          </tr>
+          ` : ''}
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Time:</td>
+            <td style="padding: 8px 0; color: #111827;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${actionUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View in Admin Portal</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        This is an automated notification. Please investigate the failed payment.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Admin Notifications
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `[ALERT] Payment Failed - Order ${data.orderId}`,
+    html,
+  });
+}
