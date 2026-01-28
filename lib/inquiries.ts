@@ -157,6 +157,7 @@ export async function createInquiry(data: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(inquiry),
+    credentials: 'include',
   });
 
   if (!response.ok) {

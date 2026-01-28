@@ -264,6 +264,7 @@ export const updateUserSettingsSchema = z.object({
 // Inquiry Schemas
 // ==========================================
 
+// Schema for public contact form
 export const createInquirySchema = z.object({
     name: nameSchema,
     email: emailSchema,
@@ -271,6 +272,24 @@ export const createInquirySchema = z.object({
     message: z.string().min(10).max(2000),
     projectType: z.string().max(100).optional(),
     budget: z.string().max(50).optional(),
+});
+
+// Schema for admin-created inquiries (NewInquiryModal)
+export const createAdminInquirySchema = z.object({
+    contactName: nameSchema,
+    contactEmail: emailSchema,
+    companyName: z.string().max(255).optional(),
+    contactPhone: z.string().max(50).optional(),
+    projectNotes: z.string().max(5000).optional(),
+    quizAnswers: z.object({
+        niche: z.string().optional().nullable(),
+        audience: z.string().optional().nullable(),
+        style: z.string().optional().nullable(),
+        mood: z.string().optional().nullable(),
+        duration: z.string().optional().nullable(),
+    }),
+    recommendedVideoType: z.string().max(255),
+    clientUserId: uuidSchema.optional(),
 });
 
 export const requestInquiryVerificationSchema = z.object({
@@ -420,6 +439,7 @@ export const SCHEMAS = {
     },
     inquiry: {
         create: createInquirySchema,
+        createAdmin: createAdminInquirySchema,
         requestVerification: requestInquiryVerificationSchema,
     },
     r2: {

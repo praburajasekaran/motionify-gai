@@ -128,33 +128,83 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      const validation = validateRequest(event.body, SCHEMAS.inquiry.create, origin);
-      if (!validation.success) return validation.response;
-      const payload = validation.data;
+      const body = JSON.parse(event.body || '{}');
 
-      const inquiryNumber = await generateInquiryNumber(client);
+      // Detect if this is an admin-created inquiry (has contactName) or public form (has name)
+      const isAdminPayload = 'contactName' in body;
 
-      const result = await client.query(
-        `INSERT INTO inquiries (
-          inquiry_number, contact_name, contact_email, company_name,
-          contact_phone, project_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *`,
-        [
-          inquiryNumber,
-          payload.name,
-          payload.email,
-          payload.company || null,
-          null, // contact_phone - schema doesn't include phone
-          payload.message || null,
-        ]
-      );
+      if (isAdminPayload) {
+        // Admin-created inquiry (from NewInquiryModal)
+        const validation = validateRequest(event.body, SCHEMAS.inquiry.createAdmin, origin);
+        if (!validation.success) return validation.response;
+        const payload = validation.data;
 
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify(result.rows[0]),
-      };
+        const inquiryNumber = await generateInquiryNumber(client);
+
+        const result = await client.query(
+          `INSERT INTO inquiries (
+            inquiry_number, contact_name, contact_email, company_name,
+            contact_phone, project_notes, quiz_answers, recommended_video_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *`,
+          [
+            inquiryNumber,
+            payload.contactName,
+            payload.contactEmail,
+            payload.companyName || null,
+            payload.contactPhone || null,
+            payload.projectNotes || null,
+            JSON.stringify(payload.quizAnswers),
+            payload.recommendedVideoType,
+          ]
+        );
+
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(result.rows[0]),
+        };
+      } else {
+        // Public contact form inquiry
+        const validation = validateRequest(event.body, SCHEMAS.inquiry.create, origin);
+        if (!validation.success) return validation.response;
+        const payload = validation.data;
+
+        const inquiryNumber = await generateInquiryNumber(client);
+
+        // Create default quiz answers for public form submissions
+        const defaultQuizAnswers = {
+          niche: payload.projectType || 'General',
+          audience: 'General',
+          style: 'Professional',
+          mood: 'Informative',
+          duration: 'Medium (1-3 min)',
+        };
+
+        const result = await client.query(
+          `INSERT INTO inquiries (
+            inquiry_number, contact_name, contact_email, company_name,
+            contact_phone, project_notes, quiz_answers, recommended_video_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *`,
+          [
+            inquiryNumber,
+            payload.name,
+            payload.email,
+            payload.company || null,
+            null, // contact_phone - schema doesn't include phone
+            payload.message || null,
+            JSON.stringify(defaultQuizAnswers),
+            payload.projectType || 'Explainer Video',
+          ]
+        );
+
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(result.rows[0]),
+        };
+      }
     }
 
     if (event.httpMethod === 'PUT') {
