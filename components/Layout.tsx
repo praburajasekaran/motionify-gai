@@ -269,8 +269,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <SidebarItem
                   icon={UserIcon}
                   label="Team"
-                  path="/team"
-                  active={location.pathname === '/team'}
+                  path="/admin/users"
+                  active={location.pathname === '/admin/users'}
                 />
                 <div
                   onClick={logout}
