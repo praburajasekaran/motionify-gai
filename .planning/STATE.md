@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-13 - Frontend Credential Wiring [Complete] |
-| **Current Plan** | PROD-13-03 (Payment API Credentials) |
-| **Status** | Phase complete - all 7 fetch calls now include credentials: 'include' |
-| **Progress** | PROD-13: 3/3 plans complete (100%) |
-| **Last activity** | 2026-01-28 - PROD-13 Frontend credential wiring complete |
+| **Current Phase** | Phase PROD-09 - Payment Production Wiring [In Progress] |
+| **Current Plan** | PROD-09-01 (Wire Email Notifications into Webhook Handler) [Complete] |
+| **Status** | Plan 1 complete - email notifications wired into payment webhook |
+| **Progress** | PROD-09: 1/2 plans complete (50%) |
+| **Last activity** | 2026-01-28 - PROD-09-01 Email notification wiring complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -219,6 +219,24 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ### This Session (2026-01-28)
 
+**Phase PROD-09 - Plan 01: Wire Email Notifications into Webhook Handler Complete:**
+- Added sendPaymentSuccessEmail() template to send-email.ts
+- Added POST handler for cross-service email calls
+- Created sendPaymentEmails() wrapper utility in webhook handler
+- Wired success email into handlePaymentCaptured
+- Wired failure email into handlePaymentFailed
+- All email calls use non-blocking .catch() pattern
+- Commits: 843651f, 540015b, f24de85, ef6112b, 7249fbf
+- Duration: 4 minutes
+- Created PROD-09-01-SUMMARY.md
+- **Status:** PROD-09-01 complete - payment emails wired into webhook
+
+**Next actions:**
+- Execute PROD-09-02: Wire Deliverables Flow into Payment Webhook
+- Complete PROD-09 phase
+
+---
+
 **Phase PROD-13 - Plan 02: Inquiry Detail Credentials Complete:**
 - Added credentials: 'include' to getInquiryById() fetch call
 - All 5 inquiry API fetch calls now properly authenticate with httpOnly cookies
@@ -227,10 +245,6 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Duration: 2 minutes
 - Created PROD-13-02-SUMMARY.md
 - **Status:** PROD-13-02 complete - getInquiryById() authenticated
-
-**Next actions:**
-- Execute PROD-13-03: Proposal credentials wiring
-- Complete PROD-13 phase
 
 ---
 
@@ -243,10 +257,6 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Duration: 2 minutes
 - Created PROD-13-03-SUMMARY.md
 - **Status:** PROD-13-03 complete - payment API fetch calls authenticated
-
-**Next actions:**
-- Continue with PROD-13-04 if more credential wiring needed
-- Or proceed to next phase in roadmap
 
 ---
 
