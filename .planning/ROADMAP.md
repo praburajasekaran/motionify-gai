@@ -228,7 +228,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 **v1 Coverage:** 8/8 requirements mapped (100%)
 **PROD-04 Coverage:** 4/4 requirements verified
 **PROD-06 Coverage:** 4/4 requirements verified
-**Phases:** 11 complete, 4 planned (gap closure + hardening)
+**Phases:** 12 complete, 3 planned (code cleanup + extended testing)
 
 ---
 
@@ -240,10 +240,10 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | Missing credentials in inquiries | PROD-08 | Must | Complete |
 | Payment emails console.log only | PROD-09 | Should | Complete |
 | Webhook E2E testing incomplete | PROD-09 | Should | Complete |
-| Client status label translation | PROD-10 | Should | Planned |
-| Proposal edit restriction | PROD-10 | Should | Planned |
-| Status timeline view | PROD-10 | Should | Planned |
-| Status change notifications | PROD-10 | Should | Planned |
+| Client status label translation | PROD-10 | Should | Complete |
+| Proposal edit restriction | PROD-10 | Should | Complete |
+| Status timeline view | PROD-10 | Should | Complete |
+| Status change notifications | PROD-10 | Should | Complete |
 | Production hardening (DB, errors, env) | PROD-11 | Must | Planned |
 | Unused 'review' enum | PROD-12 | Nice | Planned |
 | Frontend status casing | PROD-12 | Nice | Planned |
@@ -267,4 +267,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (PROD-11 Production Hardening planned)*
+*Last updated: 2026-01-28 (PROD-10 UX Polish complete)*
