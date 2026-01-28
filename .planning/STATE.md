@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-10 - UX Polish [In Progress] |
-| **Current Plan** | Plan 02 complete (Status Timeline) |
-| **Status** | Client-visible proposal status timeline with audit trail |
-| **Progress** | PROD-10: 1/4 plans complete (25%) |
-| **Last activity** | 2026-01-28 - PROD-10-02 complete, status timeline integrated |
+| **Current Phase** | Phase PROD-11 - Production Hardening [In Progress] |
+| **Current Plan** | Plan 02 complete (Sentry Error Monitoring) |
+| **Status** | Error monitoring with breadcrumb-based logging and sensitive data scrubbing |
+| **Progress** | PROD-11: 2/3 plans complete (67%) |
+| **Last activity** | 2026-01-28 - PROD-11-02 complete, Sentry monitoring integrated |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -165,6 +165,13 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Admin API auth proxy pattern | Next.js API routes proxy to /auth-me Netlify function for cookie-based authentication | Applied |
 | NULL-safe SQL parameter binding | Use `$N::type IS NULL OR condition` pattern for optional filter parameters | Applied |
 | Summary metrics from filtered results | Calculate totals from already-filtered payment list rather than separate DB query | Applied |
+| Lazy Sentry initialization | initSentry() checks flag, no-op if already initialized; safe to call multiple times per serverless cold start | Applied |
+| Production breadcrumb filtering | Only warn and error level breadcrumbs in production to reduce noise; all levels in development | Applied |
+| Human-readable error IDs | Format ERR-{timestamp-base36}-{random} for support lookup; included in Sentry tags and extra data | Applied |
+| Sentry sensitive data scrubbing | beforeSend removes email, IP, auth headers; beforeBreadcrumb redacts JWT tokens and API keys | Applied |
+| Privacy-first user context | User context includes ID and role only; email intentionally excluded from Sentry events | Applied |
+| Serverless Sentry flush pattern | flushSentry() must be awaited before function returns to ensure events transmitted | Applied |
+| Breadcrumb integration with logger | logger.ts automatically adds breadcrumbs on each log call; no manual addBreadcrumb needed in most cases | Applied |
 
 ### Technical Context
 
@@ -222,6 +229,26 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ### This Session (2026-01-28)
 
+**Phase PROD-11 - Plan 02: Sentry Error Monitoring Complete:**
+- Installed @sentry/node v10.37.0
+- Created sentry.ts module with lazy initialization and sensitive data scrubbing
+- Integrated breadcrumbs into logger.ts (automatic on each log call)
+- Production mode: only warn and error breadcrumbs captured
+- Human-readable error IDs: ERR-{timestamp-base36}-{random} format
+- Privacy-first: user context excludes email and IP address
+- Serverless-aware: flushSentry() for ensuring event transmission
+- Exported all Sentry utilities from _shared/index.ts
+- Commits: 243e4a3 (module), b8101d2 (logger integration)
+- Duration: 3 minutes
+- Created PROD-11-02-SUMMARY.md
+- **Status:** PROD-11-02 complete - error monitoring infrastructure ready
+
+**Next actions:**
+- Execute PROD-11-03: Apply captureError() to existing error handlers (if planned)
+- Or proceed to next production hardening plan
+
+---
+
 **Phase PROD-10 - Plan 02: Status Timeline Complete:**
 - Created StatusTimeline component for proposal status history
 - Fetches activities via activities API and filters to client-visible types only
@@ -233,10 +260,6 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Duration: 1 min 47 sec
 - Created PROD-10-02-SUMMARY.md
 - **Status:** PROD-10-02 complete - client audit trail feature ready
-
-**Next actions:**
-- Execute PROD-10-03: Visual Status Badges
-- Execute PROD-10-04: Enhanced Proposal Review Layout
 
 ---
 
