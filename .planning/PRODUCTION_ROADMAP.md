@@ -22,7 +22,7 @@ Systematic testing and hardening roadmap to take the Motionify platform from dev
 | **4** | Deliverables System | File upload/download, approval workflow, R2 integration | ✅ Complete |
 | **5** | Task Management | Task creation, AI generation, state transitions | ✅ Complete |
 | **6** | User Management | User CRUD, roles, permissions, invitations | ⏸️ Not Started |
-| **7** | Payment Integration | Razorpay, payment tracking, milestone payments | ⏸️ Not Started |
+| **7** | Payment Integration | Razorpay, payment tracking, milestone payments | 🔄 In Progress |
 | **8** | Email & Notifications | Email delivery, in-app notifications, real-time updates | ⏸️ Not Started |
 | **9** | Admin Features | Dashboard, activity logs, analytics, reports | ⏸️ Not Started |
 | **10** | Client Portal | Landing page, proposal viewing, portal access | ⏸️ Not Started |
@@ -354,7 +354,9 @@ From 04-UAT.md:
 
 ## Phase 7: Payment Integration
 
-**Goal:** Verify Razorpay integration, payment tracking, and milestone payments
+**Goal:** Verify Razorpay integration, payment tracking, and milestone payments work correctly for production
+
+**Status:** 🔄 In Progress (6 plans)
 
 ### Requirements
 - **PAY-01:** Payment Creation
@@ -386,11 +388,21 @@ From 04-UAT.md:
 4. Webhook signature invalid → rejected → no database update
 5. Payment history accurate for all proposals
 
-### Files to Test
-- `landing-page-new/src/app/api/payments/route.ts`
-- `netlify/functions/payments.ts`
-- `services/paymentApi.ts`
-- `landing-page-new/src/components/payment/`
+### Plans
+- [ ] `PROD-07-01-PLAN.md` — Razorpay webhook endpoint (Wave 1)
+- [ ] `PROD-07-02-PLAN.md` — Admin payments dashboard (Wave 1)
+- [ ] `PROD-07-03-PLAN.md` — Admin payments API and manual reminder (Wave 1)
+- [ ] `PROD-07-04-PLAN.md` — Client portal payments section (Wave 2)
+- [ ] `PROD-07-05-PLAN.md` — Failure handling and post-payment flow (Wave 2)
+- [ ] `PROD-07-06-PLAN.md` — Manual verification (Wave 3)
+
+### Files to Modify
+- `landing-page-new/src/app/api/webhooks/razorpay/route.ts`
+- `landing-page-new/src/app/api/payments/admin/route.ts`
+- `pages/admin/Payments.tsx`
+- `landing-page-new/src/lib/portal/pages/PaymentsPage.tsx`
+- `landing-page-new/src/app/payment/success/page.tsx`
+- `landing-page-new/src/app/payment/failure/page.tsx`
 
 ---
 
@@ -638,4 +650,4 @@ From 04-UAT.md:
 
 ---
 
-*Last updated: 2026-01-27*
+*Last updated: 2026-01-28*
