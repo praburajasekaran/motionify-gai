@@ -101,3 +101,14 @@ export {
     logResponse,
 } from './logger';
 export type { LogLevel } from './logger';
+
+// Sentry Error Monitoring
+export {
+    initSentry,
+    captureError,
+    addBreadcrumb,
+    flushSentry,
+    setUser,
+    clearUser,
+    generateErrorId,
+} from './sentry';
