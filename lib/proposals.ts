@@ -41,7 +41,9 @@ export interface Proposal {
 
 export async function getProposals(): Promise<Proposal[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposals`);
+    const response = await fetch(`${API_BASE_URL}/proposals`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -70,7 +72,9 @@ export async function getProposals(): Promise<Proposal[]> {
 
 export async function getProposalById(id: string): Promise<Proposal | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`);
+    const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -100,7 +104,9 @@ export async function getProposalById(id: string): Promise<Proposal | null> {
 
 export async function getProposalsByInquiryId(inquiryId: string): Promise<Proposal[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposals?inquiryId=${inquiryId}`);
+    const response = await fetch(`${API_BASE_URL}/proposals?inquiryId=${inquiryId}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
