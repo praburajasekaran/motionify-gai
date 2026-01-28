@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import type { Handler } from '@netlify/functions';
 
 // Initialize Resend with API key from environment
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -632,3 +633,64 @@ export async function sendPaymentSuccessEmail(data: {
     html,
   });
 }
+
+/**
+ * POST handler for cross-service email sending
+ * Called by webhook handlers to send payment emails
+ */
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const { type, ...data } = body;
+
+    let result;
+    switch (type) {
+      case 'payment_failure':
+        result = await sendPaymentFailureNotificationEmail({
+          to: data.to || process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com',
+          orderId: data.data?.orderId || 'unknown',
+          paymentId: data.data?.paymentId,
+          errorCode: data.data?.errorCode,
+          errorDescription: data.data?.errorDescription,
+          proposalId: data.data?.proposalId,
+        });
+        break;
+
+      case 'payment_success':
+        result = await sendPaymentSuccessEmail({
+          to: data.to,
+          clientName: data.clientName,
+          projectNumber: data.projectNumber,
+          amount: data.amount,
+          currency: data.currency,
+          paymentType: data.paymentType,
+          projectUrl: data.projectUrl,
+        });
+        break;
+
+      default:
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: `Unknown email type: ${type}` }),
+        };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, emailId: result?.id }),
+    };
+  } catch (error) {
+    console.error('Send email handler error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to send email' }),
+    };
+  }
+};
