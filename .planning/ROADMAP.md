@@ -118,28 +118,48 @@ Plans:
 
 ---
 
-### Phase PROD-11: Code Cleanup [Planned]
+### Phase PROD-11: Production Hardening [Planned]
+**Goal:** Prepare infrastructure for production load — database connection pooling, error monitoring, logging infrastructure, and environment configuration
+**Priority:** Must Have (blocks deployment)
+**Scale context:** ~15 concurrent clients, ~10 active proposals at a time
+
+**Plans:** 3 plans (0/3 complete)
+
+Plans:
+- [ ] PROD-11-01-PLAN.md — Replace pg Pool with @neondatabase/serverless HTTP driver
+- [ ] PROD-11-02-PLAN.md — Add Sentry error monitoring with breadcrumb logging
+- [ ] PROD-11-03-PLAN.md — Add Zod-based environment validation, block localhost in production
+
+**Key changes:**
+- Database: Replace `pg` with `@neondatabase/serverless` (HTTP-based, no connection lifecycle)
+- Errors: Sentry for monitoring with breadcrumb context trail
+- Logging: Sentry breadcrumbs (production: error + warn only)
+- Environment: Zod validation, fail-fast on misconfiguration
+
+---
+
+### Phase PROD-12: Code Cleanup [Planned]
 **Goal:** Remove unused database enum and align frontend status casing
 **Priority:** Nice to Have
 **Gap Closure:** Addresses technical debt from PROD-05
 
 Plans:
-- [ ] PROD-11-01-PLAN.md — Remove unused 'review' enum value via migration
-- [ ] PROD-11-02-PLAN.md — Align frontend status casing with backend
+- [ ] PROD-12-01-PLAN.md — Remove unused 'review' enum value via migration
+- [ ] PROD-12-02-PLAN.md — Align frontend status casing with backend
 
 ---
 
-### Phase PROD-12: Extended Testing [Planned]
+### Phase PROD-13: Extended Testing [Planned]
 **Goal:** Complete remaining manual tests requiring browser/Gemini
 **Priority:** Nice to Have
 **Gap Closure:** Addresses test coverage gaps from PROD-05
 
 Plans:
-- [ ] PROD-12-01-PLAN.md — Manual testing checkpoint (15 task management tests)
+- [ ] PROD-13-01-PLAN.md — Manual testing checkpoint (15 task management tests)
 
 ---
 
-### Phase PROD-13: Frontend Credential Wiring [Complete]
+### Phase PROD-14: Frontend Credential Wiring [Complete]
 **Goal:** Add `credentials: 'include'` to 7 fetch calls accessing protected endpoints
 **Priority:** Must Have (blocks deployment)
 **Gap Closure:** Addresses critical integration gaps from v1-PROD-MILESTONE-AUDIT.md
@@ -148,9 +168,9 @@ Plans:
 **Plans:** 3 plans (3/3 complete)
 
 Plans:
-- [x] PROD-13-01-PLAN.md — Add credentials to lib/proposals.ts (3 calls)
-- [x] PROD-13-02-PLAN.md — Add credentials to lib/inquiries.ts (1 call)
-- [x] PROD-13-03-PLAN.md — Add credentials to services/paymentApi.ts (3 calls)
+- [x] PROD-14-01-PLAN.md — Add credentials to lib/proposals.ts (3 calls)
+- [x] PROD-14-02-PLAN.md — Add credentials to lib/inquiries.ts (1 call)
+- [x] PROD-14-03-PLAN.md — Add credentials to services/paymentApi.ts (3 calls)
 
 ---
 
@@ -176,9 +196,10 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
 | PROD-09. Payment Production Wiring | PROD | 2/2 | Complete | 2026-01-28 |
 | PROD-10. UX Polish | PROD | 0/4 | Planned | - |
-| PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
-| PROD-12. Extended Testing | PROD | 0/1 | Planned | - |
-| PROD-13. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
+| PROD-11. Production Hardening | PROD | 0/3 | Planned | - |
+| PROD-12. Code Cleanup | PROD | 0/2 | Planned | - |
+| PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
+| PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
 
 ---
 
@@ -206,7 +227,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 **v1 Coverage:** 8/8 requirements mapped (100%)
 **PROD-04 Coverage:** 4/4 requirements verified
 **PROD-06 Coverage:** 4/4 requirements verified
-**Phases:** 10 complete, 4 planned (gap closure)
+**Phases:** 11 complete, 4 planned (gap closure + hardening)
 
 ---
 
@@ -222,12 +243,13 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | Proposal edit restriction | PROD-10 | Should | Planned |
 | Status timeline view | PROD-10 | Should | Planned |
 | Status change notifications | PROD-10 | Should | Planned |
-| Unused 'review' enum | PROD-11 | Nice | Planned |
-| Frontend status casing | PROD-11 | Nice | Planned |
-| 15 additional tests | PROD-12 | Nice | Planned |
-| lib/proposals.ts credentials | PROD-13 | Must | Complete |
-| lib/inquiries.ts credentials | PROD-13 | Must | Complete |
-| paymentApi.ts credentials | PROD-13 | Must | Complete |
+| Production hardening (DB, errors, env) | PROD-11 | Must | Planned |
+| Unused 'review' enum | PROD-12 | Nice | Planned |
+| Frontend status casing | PROD-12 | Nice | Planned |
+| 15 additional tests | PROD-13 | Nice | Planned |
+| lib/proposals.ts credentials | PROD-14 | Must | Complete |
+| lib/inquiries.ts credentials | PROD-14 | Must | Complete |
+| paymentApi.ts credentials | PROD-14 | Must | Complete |
 
 ---
 
@@ -244,4 +266,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (PROD-10 planned)*
+*Last updated: 2026-01-28 (PROD-11 Production Hardening planned)*
