@@ -87,7 +87,10 @@ export function Payment() {
             const orderData = await response.json();
 
             if (!response.ok) {
-                throw new Error(orderData.error || 'Failed to create order');
+                const errorMsg = orderData.details
+                    ? `${orderData.error}: ${orderData.details}`
+                    : orderData.error || 'Failed to create order';
+                throw new Error(errorMsg);
             }
 
             // 2. Initialize Razorpay

@@ -94,6 +94,18 @@ export const handler = compose(
           receipt: `receipt_${proposalId.substring(0, 8)}_${Date.now()}`,
         };
 
+        // Validate amount
+        if (!amount || amount <= 0) {
+          console.error('Invalid amount:', { amount, advanceAmount: proposal.advance_amount, balanceAmount: proposal.balance_amount });
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Invalid payment amount', details: `Amount: ${amount}` }),
+          };
+        }
+
+        console.log('Creating Razorpay order:', orderOptions);
+
         try {
           const razorpayOrder = await razorpay.orders.create(orderOptions);
 
@@ -118,12 +130,19 @@ export const handler = compose(
               description: "Project Payment",
             }),
           };
-        } catch (err) {
+        } catch (err: any) {
           console.error('Error creating Razorpay order:', err);
+          const errorMessage = err?.error?.description || err?.message || 'Unknown Razorpay error';
+          const errorCode = err?.error?.code || err?.statusCode || 'UNKNOWN';
           return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Failed to create payment order' }),
+            body: JSON.stringify({
+              error: 'Failed to create payment order',
+              details: errorMessage,
+              code: errorCode,
+              orderOptions: { amount: orderOptions.amount, currency: orderOptions.currency }
+            }),
           };
         }
       }
