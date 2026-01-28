@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-07 - Payment Integration [In Progress] |
-| **Current Plan** | PROD-07-02 (Admin Payments Dashboard) |
-| **Status** | Plan complete - dashboard accessible at /admin/payments |
-| **Progress** | PROD-07: 5/6 plans complete (83%) |
-| **Last activity** | 2026-01-28 - PROD-07-02 Admin payments dashboard complete |
+| **Current Plan** | PROD-07-04 (Client Portal Payments Page) |
+| **Status** | Plan complete - portal accessible at /portal/payments |
+| **Progress** | PROD-07: 6/6 plans complete (100%) |
+| **Last activity** | 2026-01-28 - PROD-07-04 Client portal payments page complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
