@@ -87,14 +87,16 @@ Plans:
 
 ---
 
-### Phase PROD-09: Payment Production Wiring [Planned]
-**Goal:** Wire payment email notifications via Resend and complete webhook testing
+### Phase PROD-09: Payment Production Wiring [Ready for Execution]
+**Goal:** Wire payment email notifications via Resend and complete webhook E2E testing
 **Priority:** Should Have
-**Gap Closure:** Addresses payment notification and webhook testing gaps
+**Gap Closure:** Addresses payment notification and webhook testing gaps from v1-PROD-MILESTONE-AUDIT.md
+
+**Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] PROD-09-01-PLAN.md — Wire Resend for payment notification emails
-- [ ] PROD-09-02-PLAN.md — Complete webhook E2E integration testing
+- [ ] PROD-09-01-PLAN.md — Wire email notifications into webhook handler (success + failure emails)
+- [ ] PROD-09-02-PLAN.md — E2E webhook integration testing with ngrok + Razorpay test mode
 
 ---
 
@@ -164,7 +166,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
 | PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
-| PROD-09. Payment Production Wiring | PROD | 0/2 | Planned | - |
+| PROD-09. Payment Production Wiring | PROD | 0/2 | Ready | - |
 | PROD-10. UX Polish | PROD | 0/2 | Planned | - |
 | PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
 | PROD-12. Extended Testing | PROD | 0/1 | Planned | - |
@@ -206,8 +208,8 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 |------|-------|----------|--------|
 | Inquiries GET unprotected | PROD-08 | Must | Complete |
 | Missing credentials in inquiries | PROD-08 | Must | Complete |
-| Payment emails console.log only | PROD-09 | Should | Planned |
-| Webhook E2E testing incomplete | PROD-09 | Should | Planned |
+| Payment emails console.log only | PROD-09 | Should | Ready |
+| Webhook E2E testing incomplete | PROD-09 | Should | Ready |
 | Client status label translation | PROD-10 | Should | Planned |
 | Proposal edit restriction | PROD-10 | Should | Planned |
 | Unused 'review' enum | PROD-11 | Nice | Planned |
@@ -232,4 +234,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (PROD-13 plans created)*
+*Last updated: 2026-01-28 (PROD-09 plans created)*
