@@ -61,7 +61,7 @@ export function UserManagement() {
             if (roleFilter !== 'all') params.set('role', roleFilter);
             if (searchQuery.trim()) params.set('search', searchQuery);
 
-            const response = await fetch(`/.netlify/functions/users-list?${params.toString()}`);
+            const response = await fetch(`/.netlify/functions/users-list?${params.toString()}`, { credentials: 'include' });
             const data = await response.json();
 
             if (data.success) {
@@ -84,6 +84,7 @@ export function UserManagement() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
+                credentials: 'include',
             });
             const data = await response.json();
 
@@ -128,6 +129,7 @@ export function UserManagement() {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: deactivateReason.trim() }),
+                credentials: 'include',
             });
             const data = await response.json();
 
