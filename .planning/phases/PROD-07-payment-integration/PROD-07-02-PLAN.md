@@ -2,8 +2,8 @@
 phase: PROD-07-payment-integration
 plan: 02
 type: execute
-wave: 1
-depends_on: []
+wave: 2
+depends_on: ["PROD-07-03"]
 files_modified:
   - pages/admin/Payments.tsx
   - src/routes.tsx
@@ -26,7 +26,7 @@ must_haves:
       exports: ["fetchAllPayments", "fetchPaymentsWithFilters"]
   key_links:
     - from: "pages/admin/Payments.tsx"
-      to: "/api/payments/history"
+      to: "/api/payments/admin"
       via: "paymentApi.fetchAllPayments"
       pattern: "fetchAllPayments"
     - from: "src/routes.tsx"

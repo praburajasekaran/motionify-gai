@@ -17,6 +17,7 @@ must_haves:
     - "Client sees payment history with receipts"
     - "Pay button appears in payments section for pending payments"
     - "Client can initiate payment from payments section"
+    - "Milestone payments (advance/final) display correctly with type labels"
   artifacts:
     - path: "landing-page-new/src/lib/portal/pages/PaymentsPage.tsx"
       provides: "Client portal payments page"
@@ -71,6 +72,11 @@ Features:
 3. For pending payments: Show "Pay Now" button using existing PaymentButton component
 4. For completed payments: Show "Download Receipt" link
 5. Group payments by project if client has multiple projects
+6. **Display payment type labels (Advance/Final) clearly** - this is the milestone payment visibility requirement
+
+Per CONTEXT.md, the system uses 2 milestones (advance + final):
+- Show "Advance Payment" or "Final Payment" badge for each payment
+- Show which deliverable/project phase the payment relates to (e.g., "Project Kickoff" vs "Final Delivery")
 
 Use existing AuthContext to get userId for fetching payments.
 
@@ -81,13 +87,13 @@ Structure:
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import PaymentButton from '@/components/payment/PaymentButton';
-import { Download, CreditCard, CheckCircle2, Clock } from 'lucide-react';
+import { Download, CreditCard, CheckCircle2, Clock, Milestone } from 'lucide-react';
 
 interface Payment {
   id: string;
   amount: number;
   currency: string;
-  paymentType: string;
+  paymentType: string;  // 'advance' | 'balance'
   status: string;
   proposalId: string;
   project: { projectNumber: string } | null;
@@ -104,6 +110,7 @@ export default function PaymentsPage() {
   // Display in cards/table
   // Show PaymentButton for pending
   // Show Download Receipt for completed
+  // Show payment type badge (Advance/Final) for each payment
 }
 ```
 
@@ -114,8 +121,9 @@ Follow styling from existing portal pages (ProjectsPage.tsx pattern).
 2. Fetches payments for authenticated user
 3. Shows PaymentButton for pending payments
 4. Shows download receipt for completed payments
+5. Shows payment type (advance/final) for each payment
   </verify>
-  <done>Client portal payments page component created</done>
+  <done>Client portal payments page component created with milestone payment display</done>
 </task>
 
 <task type="auto">
@@ -192,7 +200,8 @@ Keep backward compatible - existing usage on proposal page should continue worki
 4. Clicking "Pay Now" opens Razorpay modal
 5. Successful payment updates status in list
 6. Completed payments show "Download Receipt"
-7. All builds pass
+7. Payment type (Advance/Final) displayed for each payment
+8. All builds pass
 </verification>
 
 <success_criteria>
@@ -200,6 +209,7 @@ Keep backward compatible - existing usage on proposal page should continue worki
 - Payment history shows all payments
 - Pending payments have actionable Pay button
 - Completed payments have receipt download
+- Milestone payment types (advance/final) clearly labeled
 - Payment flow works end-to-end from portal
 </success_criteria>
 

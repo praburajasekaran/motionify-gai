@@ -13,10 +13,10 @@ user_setup: []
 
 must_haves:
   truths:
-    - "Razorpay webhooks are received and logged"
-    - "Webhook signature is verified before processing"
-    - "Duplicate webhooks are handled idempotently"
-    - "Payment status is updated asynchronously via webhook"
+    - "Payment status updates even if user closes browser during payment"
+    - "Payment confirmation does not depend on client-side callback alone"
+    - "Duplicate payment events are handled without double-processing"
+    - "Failed payments leave audit trail for troubleshooting"
   artifacts:
     - path: "landing-page-new/src/app/api/webhooks/razorpay/route.ts"
       provides: "Webhook endpoint for Razorpay events"
@@ -88,7 +88,18 @@ CREATE INDEX idx_payment_webhook_logs_status ON payment_webhook_logs(status);
 
 Note: razorpay_event_id is the `x-razorpay-event-id` header used for idempotency.
   </action>
-  <verify>File exists at database/migrations/002_payment_webhook_logs.sql with correct schema</verify>
+  <verify>
+```bash
+# Verify migration file exists
+ls -la database/migrations/002_payment_webhook_logs.sql
+
+# Verify table creation statement
+grep -E "CREATE TABLE.*payment_webhook_logs" database/migrations/002_payment_webhook_logs.sql
+
+# Verify idempotency column exists
+grep -E "razorpay_event_id.*UNIQUE" database/migrations/002_payment_webhook_logs.sql
+```
+  </verify>
   <done>Migration file ready to run on database</done>
 </task>
 
@@ -142,11 +153,22 @@ Processing logic:
 Return 200 even for duplicate events (idempotent).
   </action>
   <verify>
-1. File exists at landing-page-new/src/app/api/webhooks/razorpay/route.ts
-2. Exports POST handler
-3. Uses raw body for signature verification (request.text() before JSON.parse)
-4. Checks idempotency via razorpay_event_id
-5. npm run build passes in landing-page-new
+```bash
+# Verify file exists
+ls -la landing-page-new/src/app/api/webhooks/razorpay/route.ts
+
+# Verify POST export
+grep -E "export.*POST|export async function POST" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+
+# Verify raw body usage (request.text() before JSON.parse)
+grep -E "request\.text\(\)|await.*text\(\)" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+
+# Verify idempotency check via event ID header
+grep -E "x-razorpay-event-id|razorpay_event_id" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+
+# Verify build passes
+cd landing-page-new && npm run build
+```
   </verify>
   <done>Webhook endpoint implemented with signature verification and idempotent processing</done>
 </task>
@@ -186,8 +208,13 @@ export const razorpayWebhookSchema = z.object({
 Note: This validates structure after signature is verified. Validation failure should still return 200 but log error (don't reject valid Razorpay webhooks due to schema drift).
   </action>
   <verify>
-1. Schema exported from netlify/functions/_shared/schemas.ts
-2. npm run build passes in netlify folder
+```bash
+# Verify schema exported
+grep -E "export.*razorpayWebhookSchema" netlify/functions/_shared/schemas.ts
+
+# Verify build passes
+cd netlify && npm run build
+```
   </verify>
   <done>Webhook payload schema added for type safety</done>
 </task>
