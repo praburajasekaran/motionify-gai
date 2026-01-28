@@ -95,9 +95,13 @@ export const handler = compose(
             role,
         });
 
-        // In development, log the magic link
+        // In development, log the magic link prominently
         if (appUrl.includes('localhost')) {
             logger.info('Magic link generated for new user', { magicLink });
+            console.log('\n========================================');
+            console.log(`🔗 MAGIC LINK for ${email}:`);
+            console.log(magicLink);
+            console.log('========================================\n');
         }
 
         return {
