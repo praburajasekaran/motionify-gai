@@ -55,7 +55,9 @@ export function isValidPhone(phone: string): boolean {
 
 export async function getInquiries(): Promise<Inquiry[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/inquiries`);
+    const response = await fetch(`${API_BASE_URL}/inquiries`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -201,6 +203,7 @@ export async function updateInquiry(id: string, updates: Partial<Inquiry>): Prom
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snakeCaseUpdates),
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -301,7 +304,9 @@ export function generateInquiryNumber(): string {
 
 export async function getInquiriesByClientUserId(clientUserId: string): Promise<Inquiry[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/inquiries?clientUserId=${encodeURIComponent(clientUserId)}`);
+    const response = await fetch(`${API_BASE_URL}/inquiries?clientUserId=${encodeURIComponent(clientUserId)}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }

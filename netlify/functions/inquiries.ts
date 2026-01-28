@@ -73,8 +73,30 @@ export const handler = compose(
   try {
     await client.connect();
 
+    // Conditional authentication: GET and PUT require auth, POST is public
+    let auth: CookieAuthResult | null = null;
+    if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
+      auth = await requireAuthFromCookie(event);
+
+      if (!auth.authorized) {
+        return {
+          statusCode: auth.statusCode || 401,
+          headers,
+          body: JSON.stringify({
+            error: auth.error || 'Authentication required'
+          }),
+        };
+      }
+    }
+    // POST requests proceed without auth (public contact form)
+
     if (event.httpMethod === 'GET') {
       const { clientUserId } = event.queryStringParameters || {};
+
+      // auth is guaranteed to be non-null and authorized for GET
+      const userRole = auth!.user?.role;
+      const userId = auth!.user?.userId;
+      const isAdmin = userRole === 'super_admin' || userRole === 'project_manager';
 
       // Check if we're fetching a specific inquiry by ID
       const pathParts = event.path.split('/');
@@ -98,14 +120,44 @@ export const handler = compose(
           };
         }
 
+        const inquiry = result.rows[0];
+
+        // Ownership check for individual lookup: admins can access any, clients only their own
+        if (!isAdmin && inquiry.client_user_id && inquiry.client_user_id !== userId) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Cannot access this inquiry' }),
+          };
+        }
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows[0]),
+          body: JSON.stringify(inquiry),
         };
       }
 
-      // Otherwise, list all inquiries
+      // Listing inquiries - apply role-based access control
+      // Listing all inquiries (no clientUserId filter) requires admin role
+      if (!clientUserId && !isAdmin) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Admin access required to list all inquiries' }),
+        };
+      }
+
+      // If client is filtering by clientUserId, verify it matches their own ID
+      if (clientUserId && !isAdmin && clientUserId !== userId) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Cannot access other users inquiries' }),
+        };
+      }
+
+      // Build query based on filters
       let query = 'SELECT * FROM inquiries ORDER BY created_at DESC';
       const params: any[] = [];
 
