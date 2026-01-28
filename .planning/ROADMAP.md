@@ -41,24 +41,41 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 
 **Status:** Production Readiness Verification (PROD phases)
 
-### Phase PROD-04: Deliverables System
+### Phase PROD-04: Deliverables System [Complete]
 **Goal:** Verify file delivery workflow from creation through approval to final delivery
 
-**Plans:** 5 plans
+**Plans:** 5 plans (5/5 complete)
 
 Plans:
-- [ ] PROD-04-01-PLAN.md — Add key ownership validation to r2-presign (CRITICAL SECURITY)
-- [ ] PROD-04-02-PLAN.md — Align file size limits (100MB) across schema, backend, frontend
-- [ ] PROD-04-03-PLAN.md — Add auth credentials and error handling to storage service
-- [ ] PROD-04-04-PLAN.md — Add permission validation to deliverables API
-- [ ] PROD-04-05-PLAN.md — Manual testing verification (checkpoint)
+- [x] PROD-04-01-PLAN.md — Add key ownership validation to r2-presign (CRITICAL SECURITY)
+- [x] PROD-04-02-PLAN.md — Align file size limits (100MB) across schema, backend, frontend
+- [x] PROD-04-03-PLAN.md — Add auth credentials and error handling to storage service
+- [x] PROD-04-04-PLAN.md — Add permission validation to deliverables API
+- [x] PROD-04-05-PLAN.md — Manual testing verification (checkpoint)
+
+---
+
+### Phase PROD-06: User Management
+**Goal:** Verify user CRUD, role management, invitations, and permissions
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] PROD-06-01-PLAN.md — Fix database role constraint (4-role system migration)
+- [ ] PROD-06-02-PLAN.md — Fix credentials bug in UserManagement.tsx
+- [ ] PROD-06-03-PLAN.md — Manual UAT testing (checkpoint)
 
 **Wave Structure:**
 | Wave | Plans | Notes |
 |------|-------|-------|
-| 1 | PROD-04-01, PROD-04-02 | Security fixes (parallel) |
-| 2 | PROD-04-03, PROD-04-04 | API improvements (parallel, depends on Wave 1) |
-| 3 | PROD-04-05 | Manual verification (checkpoint, depends on Wave 2) |
+| 1 | PROD-06-01, PROD-06-02 | Bug fixes (parallel) |
+| 2 | PROD-06-03 | Manual verification (checkpoint, depends on Wave 1) |
+
+**Requirements:**
+- USER-01: User Creation & Invitations
+- USER-02: Role Management
+- USER-03: User Deactivation
+- USER-04: Permission System
 
 ---
 
@@ -78,7 +95,9 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | 4. Integration & Polish | v1 | 4/4 | Complete | 2026-01-21 |
 | 5. Credential Wiring Fix | v1 | 1/1 | Complete | 2026-01-25 |
 | 6. Schema Alignment | v1 | 1/1 | Complete | 2026-01-25 |
-| PROD-04. Deliverables System | PROD | 0/5 | In Progress | - |
+| PROD-04. Deliverables System | PROD | 5/5 | Complete | 2026-01-27 |
+| PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
+| PROD-06. User Management | PROD | 0/3 | Planned | - |
 
 ---
 
@@ -94,14 +113,19 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | COMM-06: Comment Editing | Phase 2, 4, 5, 6 | Could Have | Complete |
 | COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | Complete |
 | COMM-08: Persistent Comments | Phase 1 | Must Have | Complete |
-| DEL-01: Deliverable Creation | PROD-04 | Must Have | Pending |
-| DEL-02: Approval Workflow | PROD-04 | Must Have | Pending |
-| DEL-03: R2 File Storage | PROD-04 | Must Have | Pending |
-| DEL-04: Permissions | PROD-04 | Must Have | Pending |
+| DEL-01: Deliverable Creation | PROD-04 | Must Have | Verified |
+| DEL-02: Approval Workflow | PROD-04 | Must Have | Verified |
+| DEL-03: R2 File Storage | PROD-04 | Must Have | Verified |
+| DEL-04: Permissions | PROD-04 | Must Have | Verified |
+| USER-01: User Creation & Invitations | PROD-06 | Must Have | Pending |
+| USER-02: Role Management | PROD-06 | Must Have | Pending |
+| USER-03: User Deactivation | PROD-06 | Must Have | Pending |
+| USER-04: Permission System | PROD-06 | Must Have | Pending |
 
 **v1 Coverage:** 8/8 requirements mapped (100%)
-**PROD-04 Coverage:** 0/4 requirements verified
-**Phases:** 6 complete, 1 in progress
+**PROD-04 Coverage:** 4/4 requirements verified
+**PROD-06 Coverage:** 0/4 requirements pending
+**Phases:** 8 complete, 1 planned
 
 ---
 
@@ -118,4 +142,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-25 (PROD-04 planned)*
+*Last updated: 2026-01-28 (PROD-06 planned)*
