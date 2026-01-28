@@ -205,6 +205,44 @@ async function handlePaymentCaptured(
     return { success: true, paymentId: existingPayment.rows[0].id };
   }
 
+  // Send success email (non-blocking)
+  try {
+    // Fetch client and project info for email
+    const paymentInfo = await client.query(
+      `SELECT
+        p.payment_type, p.amount, p.currency,
+        proj.project_number,
+        u.email as client_email, u.full_name as client_name
+      FROM payments p
+      LEFT JOIN projects proj ON p.project_id = proj.id
+      LEFT JOIN users u ON proj.client_user_id = u.id
+      WHERE p.id = $1`,
+      [result.rows[0].id]
+    );
+
+    if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
+      const info = paymentInfo.rows[0];
+      const baseUrl = process.env.URL || 'http://localhost:3000';
+      const projectUrl = info.project_number
+        ? `${baseUrl}/portal/projects`
+        : `${baseUrl}/portal`;
+
+      const emails = await sendPaymentEmails();
+      emails.sendSuccessEmail({
+        to: info.client_email,
+        clientName: info.client_name || 'Client',
+        projectNumber: info.project_number || 'Your Project',
+        amount: (Number(info.amount) / 100).toFixed(2),
+        currency: info.currency,
+        paymentType: info.payment_type,
+        projectUrl
+      }).catch(e => console.error('[Webhook] Success email error:', e));
+    }
+  } catch (emailError) {
+    console.error('[Webhook] Error fetching payment info for email:', emailError);
+    // Don't fail the webhook - email is non-critical
+  }
+
   return { success: true, paymentId: result.rows[0].id };
 }
 
