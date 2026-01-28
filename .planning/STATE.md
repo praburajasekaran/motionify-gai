@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-10 - UX Polish [In Progress] |
-| **Current Plan** | Plan 01 complete (Status Labels) |
-| **Status** | Professional client-facing labels with traffic light colors and Lucide icons |
-| **Progress** | PROD-10: 1/3 plans complete (33%) |
-| **Last activity** | 2026-01-28 - PROD-10-01 complete, centralized status config created |
+| **Current Phase** | Phase PROD-11 - Production Hardening [In Progress] |
+| **Current Plan** | Plan 03 complete (Environment Validation) |
+| **Status** | Zod-based environment validation prevents production misconfiguration |
+| **Progress** | PROD-11: 3/3 plans complete (100%) |
+| **Last activity** | 2026-01-28 - PROD-11-03 complete, environment validation with fail-fast production mode |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -114,6 +114,10 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | Neon serverless HTTP driver | Replace pg Pool with HTTP-based queries for serverless-optimized database access | Applied - PROD-11-01 |
 | 5-second query timeout | Prevent hanging serverless functions with AbortSignal timeout | Applied - PROD-11-01 |
 | Backward-compatible query interface | Maintain query(text, params) signature to avoid breaking existing code | Applied - PROD-11-01 |
+| Module-load environment validation | Validate environment when module loads (not lazy) to fail fast before functions execute | Applied - PROD-11-03 |
+| Localhost blocking in production | Block localhost/127.0.0.1 in production DATABASE_URL to prevent dev database access | Applied - PROD-11-03 |
+| Development warnings for optional services | Warn about missing SENTRY_DSN, RESEND_API_KEY, etc. in development without failing | Applied - PROD-11-03 |
+| CONTEXT-based environment detection | Use Netlify's CONTEXT env var with NODE_ENV fallback for accurate environment detection | Applied - PROD-11-03 |
 | 3 phases (not 5) | "Quick" depth → combine research suggestions into fewer phases | Applied |
 | Polling for real-time (not Ably) | Simpler v1; Ably upgrade possible in v2 | Applied |
 | Comment editing included | Could Have priority; valuable for corrections | Applied |
@@ -265,9 +269,26 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Created PROD-11-02-SUMMARY.md
 - **Status:** PROD-11-02 complete - error monitoring infrastructure ready
 
+---
+
+**Phase PROD-11 - Plan 03: Environment Validation Complete:**
+- Created env.ts module with Zod-based environment validation
+- Validates environment on module load for fail-fast behavior
+- Blocks localhost/127.0.0.1 in production DATABASE_URL
+- Requires JWT_SECRET minimum 32 characters
+- Detects environment via CONTEXT (Netlify) or NODE_ENV
+- Logs warnings in development for missing optional services (SENTRY_DSN, RESEND_API_KEY, RAZORPAY_KEY_ID, R2_ACCOUNT_ID)
+- Throws errors in production for invalid configuration
+- Updated .env.example with CONTEXT, SENTRY_DSN, RAZORPAY_WEBHOOK_SECRET
+- Exported env utilities from _shared/index.ts
+- Commits: 0d66720 (env module), e788f65 (.env.example)
+- Duration: 1 min 48 sec
+- Created PROD-11-03-SUMMARY.md
+- **Status:** PROD-11-03 complete - environment validation prevents production misconfiguration
+
 **Next actions:**
-- Execute PROD-11-03: Apply captureError() to existing error handlers (if planned)
-- Or proceed to next production hardening plan
+- PROD-11 phase complete - all 3 plans executed
+- Continue to PROD-10 UX Polish or other production phases
 
 ---
 
