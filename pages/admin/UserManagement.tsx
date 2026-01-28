@@ -295,18 +295,23 @@ export function UserManagement() {
                                     <td className="px-6 py-4 text-right">
                                         {user.is_active && (() => {
                                             const isOwnAccount = user.id === currentUser?.id;
+
+                                            if (isOwnAccount) {
+                                                return (
+                                                    <span className="text-gray-500 text-sm font-medium">
+                                                        You
+                                                    </span>
+                                                );
+                                            }
+
                                             const activeSuperAdmins = users.filter(u => u.role === 'super_admin' && u.is_active).length;
                                             const isLastSuperAdmin = user.role === 'super_admin' && activeSuperAdmins <= 1;
-                                            const canDeactivate = !isOwnAccount && !isLastSuperAdmin;
 
-                                            if (!canDeactivate) {
-                                                const reason = isOwnAccount
-                                                    ? "You cannot deactivate your own account"
-                                                    : "Cannot deactivate the last Super Admin";
+                                            if (isLastSuperAdmin) {
                                                 return (
                                                     <span
                                                         className="text-gray-400 text-sm cursor-not-allowed"
-                                                        title={reason}
+                                                        title="Cannot deactivate the last Super Admin"
                                                     >
                                                         Deactivate
                                                     </span>
