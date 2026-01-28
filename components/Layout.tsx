@@ -272,12 +272,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   path="/settings"
                   active={location.pathname === '/settings'}
                 />
-                <SidebarItem
-                  icon={UserIcon}
-                  label="Team"
-                  path="/admin/users"
-                  active={location.pathname === '/admin/users'}
-                />
+                {isSuperAdmin(user) && (
+                  <SidebarItem
+                    icon={UserIcon}
+                    label="Team"
+                    path="/admin/users"
+                    active={location.pathname === '/admin/users'}
+                  />
+                )}
                 <div
                   onClick={logout}
                   className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5 cursor-pointer"
