@@ -285,6 +285,20 @@ async function handlePaymentFailed(
     };
   }
 
+  // Send failure notification to admin (non-blocking)
+  try {
+    const emails = await sendPaymentEmails();
+    emails.sendFailureEmail({
+      orderId: razorpayOrderId,
+      paymentId: result.rows[0]?.id,
+      errorCode: error_code || undefined,
+      errorDescription: error_description || undefined,
+    }).catch(e => console.error('[Webhook] Failure email error:', e));
+  } catch (emailError) {
+    console.error('[Webhook] Error sending failure notification:', emailError);
+    // Don't fail the webhook - email is non-critical
+  }
+
   return { success: true, paymentId: result.rows[0].id };
 }
 
