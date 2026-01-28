@@ -80,7 +80,8 @@ export function Payment() {
                     proposalId: proposal.id,
                     paymentType: 'advance' // Hardcoded for now based on UI
                 }),
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
             });
 
             const orderData = await response.json();
@@ -107,7 +108,8 @@ export function Payment() {
                                 razorpayPaymentId: response.razorpay_payment_id,
                                 razorpaySignature: response.razorpay_signature
                             }),
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include'
                         });
 
                         if (verifyResponse.ok) {
