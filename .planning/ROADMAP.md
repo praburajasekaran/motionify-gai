@@ -87,27 +87,34 @@ Plans:
 
 ---
 
-### Phase PROD-09: Payment Production Wiring [Ready for Execution]
+### Phase PROD-09: Payment Production Wiring [Complete]
 **Goal:** Wire payment email notifications via Resend and complete webhook E2E testing
 **Priority:** Should Have
 **Gap Closure:** Addresses payment notification and webhook testing gaps from v1-PROD-MILESTONE-AUDIT.md
+**Completed:** 2026-01-28
 
-**Plans:** 2 plans in 2 waves
+**Plans:** 2 plans (2/2 complete)
 
 Plans:
-- [ ] PROD-09-01-PLAN.md — Wire email notifications into webhook handler (success + failure emails)
-- [ ] PROD-09-02-PLAN.md — E2E webhook integration testing with ngrok + Razorpay test mode
+- [x] PROD-09-01-PLAN.md — Wire email notifications into webhook handler (success + failure emails)
+- [x] PROD-09-02-PLAN.md — E2E webhook integration testing with ngrok + Razorpay test mode
+
+**Notes:** Email code verified working. Resend domain verification required for production (test mode only sends to account owner email).
 
 ---
 
 ### Phase PROD-10: UX Polish [Planned]
-**Goal:** Improve client-facing status labels and resolve proposal editing decision
+**Goal:** Improve client-facing status labels, add status timeline, implement edit restrictions, and wire status change notifications
 **Priority:** Should Have
 **Gap Closure:** Addresses UX inconsistencies from PROD-02
 
+**Plans:** 4 plans (0/4 complete)
+
 Plans:
-- [ ] PROD-10-01-PLAN.md — Add client-facing status label translation
-- [ ] PROD-10-02-PLAN.md — Implement proposal edit restriction
+- [ ] PROD-10-01-PLAN.md — Create centralized STATUS_CONFIG with professional client-facing labels
+- [ ] PROD-10-02-PLAN.md — Add status timeline component showing proposal history
+- [ ] PROD-10-03-PLAN.md — Implement edit restrictions with super admin force edit
+- [ ] PROD-10-04-PLAN.md — Wire status change notifications (email + in-app)
 
 ---
 
@@ -167,8 +174,8 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
 | PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
-| PROD-09. Payment Production Wiring | PROD | 0/2 | Ready | - |
-| PROD-10. UX Polish | PROD | 0/2 | Planned | - |
+| PROD-09. Payment Production Wiring | PROD | 2/2 | Complete | 2026-01-28 |
+| PROD-10. UX Polish | PROD | 0/4 | Planned | - |
 | PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
 | PROD-12. Extended Testing | PROD | 0/1 | Planned | - |
 | PROD-13. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
@@ -209,10 +216,12 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 |------|-------|----------|--------|
 | Inquiries GET unprotected | PROD-08 | Must | Complete |
 | Missing credentials in inquiries | PROD-08 | Must | Complete |
-| Payment emails console.log only | PROD-09 | Should | Ready |
-| Webhook E2E testing incomplete | PROD-09 | Should | Ready |
+| Payment emails console.log only | PROD-09 | Should | Complete |
+| Webhook E2E testing incomplete | PROD-09 | Should | Complete |
 | Client status label translation | PROD-10 | Should | Planned |
 | Proposal edit restriction | PROD-10 | Should | Planned |
+| Status timeline view | PROD-10 | Should | Planned |
+| Status change notifications | PROD-10 | Should | Planned |
 | Unused 'review' enum | PROD-11 | Nice | Planned |
 | Frontend status casing | PROD-11 | Nice | Planned |
 | 15 additional tests | PROD-12 | Nice | Planned |
@@ -235,4 +244,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (PROD-13 complete)*
+*Last updated: 2026-01-28 (PROD-10 planned)*
