@@ -73,6 +73,60 @@ Plans:
 
 ---
 
+### Phase PROD-08: Security Hardening [Planned]
+**Goal:** Close medium-severity security gap in inquiries endpoint and complete credential wiring
+**Priority:** Must Have
+**Gap Closure:** Addresses audit items from v1-PROD-MILESTONE-AUDIT.md
+
+Plans:
+- [ ] PROD-08-01-PLAN.md — Add auth check to inquiries GET endpoint
+- [ ] PROD-08-02-PLAN.md — Add credentials to lib/inquiries.ts fetch calls
+
+---
+
+### Phase PROD-09: Payment Production Wiring [Planned]
+**Goal:** Wire payment email notifications via Resend and complete webhook testing
+**Priority:** Should Have
+**Gap Closure:** Addresses payment notification and webhook testing gaps
+
+Plans:
+- [ ] PROD-09-01-PLAN.md — Wire Resend for payment notification emails
+- [ ] PROD-09-02-PLAN.md — Complete webhook E2E integration testing
+
+---
+
+### Phase PROD-10: UX Polish [Planned]
+**Goal:** Improve client-facing status labels and resolve proposal editing decision
+**Priority:** Should Have
+**Gap Closure:** Addresses UX inconsistencies from PROD-02
+
+Plans:
+- [ ] PROD-10-01-PLAN.md — Add client-facing status label translation
+- [ ] PROD-10-02-PLAN.md — Implement proposal edit restriction
+
+---
+
+### Phase PROD-11: Code Cleanup [Planned]
+**Goal:** Remove unused database enum and align frontend status casing
+**Priority:** Nice to Have
+**Gap Closure:** Addresses technical debt from PROD-05
+
+Plans:
+- [ ] PROD-11-01-PLAN.md — Remove unused 'review' enum value via migration
+- [ ] PROD-11-02-PLAN.md — Align frontend status casing with backend
+
+---
+
+### Phase PROD-12: Extended Testing [Planned]
+**Goal:** Complete remaining manual tests requiring browser/Gemini
+**Priority:** Nice to Have
+**Gap Closure:** Addresses test coverage gaps from PROD-05
+
+Plans:
+- [ ] PROD-12-01-PLAN.md — Manual testing checkpoint (15 task management tests)
+
+---
+
 ## Phases
 
 All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-ROADMAP.md) for full details.
@@ -92,6 +146,11 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-04. Deliverables System | PROD | 5/5 | Complete | 2026-01-27 |
 | PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
 | PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
+| PROD-08. Security Hardening | PROD | 0/2 | Planned | - |
+| PROD-09. Payment Production Wiring | PROD | 0/2 | Planned | - |
+| PROD-10. UX Polish | PROD | 0/2 | Planned | - |
+| PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
+| PROD-12. Extended Testing | PROD | 0/1 | Planned | - |
 
 ---
 
@@ -119,7 +178,23 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 **v1 Coverage:** 8/8 requirements mapped (100%)
 **PROD-04 Coverage:** 4/4 requirements verified
 **PROD-06 Coverage:** 4/4 requirements verified
-**Phases:** 9 complete
+**Phases:** 9 complete, 5 planned (gap closure)
+
+---
+
+## Tech Debt Closure (from v1-PROD-MILESTONE-AUDIT)
+
+| Item | Phase | Priority | Status |
+|------|-------|----------|--------|
+| Inquiries GET unprotected | PROD-08 | Must | Planned |
+| Missing credentials in inquiries | PROD-08 | Must | Planned |
+| Payment emails console.log only | PROD-09 | Should | Planned |
+| Webhook E2E testing incomplete | PROD-09 | Should | Planned |
+| Client status label translation | PROD-10 | Should | Planned |
+| Proposal edit restriction | PROD-10 | Should | Planned |
+| Unused 'review' enum | PROD-11 | Nice | Planned |
+| Frontend status casing | PROD-11 | Nice | Planned |
+| 15 additional tests | PROD-12 | Nice | Planned |
 
 ---
 
@@ -136,4 +211,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (PROD-06 complete)*
+*Last updated: 2026-01-28 (Gap closure phases PROD-08 through PROD-12 added)*
