@@ -92,7 +92,9 @@ export async function sendPaymentReminder(paymentId: string): Promise<{ success:
 
 export const fetchPaymentsForProject = async (projectId: string): Promise<Payment[]> => {
     try {
-        const response = await fetch(`/.netlify/functions/payments?projectId=${projectId}`);
+        const response = await fetch(`/.netlify/functions/payments?projectId=${projectId}`, {
+            credentials: 'include',
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch payments');
         }
@@ -105,7 +107,9 @@ export const fetchPaymentsForProject = async (projectId: string): Promise<Paymen
 
 export const fetchPaymentsForProposal = async (proposalId: string): Promise<Payment[]> => {
     try {
-        const response = await fetch(`/.netlify/functions/payments?proposalId=${proposalId}`);
+        const response = await fetch(`/.netlify/functions/payments?proposalId=${proposalId}`, {
+            credentials: 'include',
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch payments');
         }
@@ -121,7 +125,8 @@ export const markPaymentAsPaid = async (paymentId: string): Promise<Payment | nu
         const response = await fetch('/.netlify/functions/payments/manual-complete', {
             method: 'POST',
             body: JSON.stringify({ paymentId }),
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
         });
 
         if (!response.ok) {
