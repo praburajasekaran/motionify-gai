@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-07 - Payment Integration [In Progress] |
-| **Current Plan** | PROD-07-05 (Payment Failure Handling) |
-| **Status** | Plan complete - failure handling and success redirect ready |
-| **Progress** | PROD-07: 5/6 plans complete (83%) |
-| **Last activity** | 2026-01-28 - PROD-07-05 Payment failure handling complete |
+| **Current Phase** | Phase PROD-08 - Security Hardening [Complete] |
+| **Current Plan** | PROD-08-02 (Frontend Credentials) |
+| **Status** | Phase complete - inquiries endpoint protected, credentials wired |
+| **Progress** | PROD-08: 2/2 plans complete (100%) |
+| **Last activity** | 2026-01-28 - PROD-08 Security hardening complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -218,6 +218,24 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-28)
+
+**Phase PROD-08 - Security Hardening Complete:**
+- Protected inquiries GET/PUT endpoints with conditional authentication
+- POST remains public for contact form (intentional)
+- Role-based access: admins see all, clients see only their own inquiries
+- Added ownership validation for individual inquiry lookups
+- Added credentials: 'include' to 3 fetch calls in lib/inquiries.ts
+- Closes medium-severity gap from v1-PROD-MILESTONE-AUDIT.md
+- Commit: 1a942ba
+- Duration: 3 minutes
+- Created PROD-08-01-SUMMARY.md and PROD-08-02-SUMMARY.md
+- **Status:** PROD-08 complete - inquiries endpoint secured
+
+**Next actions:**
+- Execute PROD-09: Payment Production Wiring (Resend emails)
+- Or proceed to PROD-10: UX Polish
+
+---
 
 **Phase PROD-07 - Plan 05: Payment Failure Handling Complete:**
 - Enhanced payment verify endpoint to log all payment attempts to payment_webhook_logs table

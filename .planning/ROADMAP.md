@@ -73,16 +73,17 @@ Plans:
 
 ---
 
-### Phase PROD-08: Security Hardening [Planned]
+### Phase PROD-08: Security Hardening [Complete]
 **Goal:** Close medium-severity security gap in inquiries endpoint and complete credential wiring
 **Priority:** Must Have
 **Gap Closure:** Addresses audit items from v1-PROD-MILESTONE-AUDIT.md
+**Completed:** 2026-01-28
 
-**Plans:** 2 plans
+**Plans:** 2 plans (2/2 complete)
 
 Plans:
-- [ ] PROD-08-01-PLAN.md — Add withAuth middleware and role-based access to inquiries GET endpoint
-- [ ] PROD-08-02-PLAN.md — Add credentials: 'include' to lib/inquiries.ts fetch calls
+- [x] PROD-08-01-PLAN.md — Conditional auth for inquiries GET/PUT, role-based access
+- [x] PROD-08-02-PLAN.md — Add credentials: 'include' to lib/inquiries.ts fetch calls
 
 ---
 
@@ -148,7 +149,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-04. Deliverables System | PROD | 5/5 | Complete | 2026-01-27 |
 | PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
 | PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
-| PROD-08. Security Hardening | PROD | 0/2 | Planned | - |
+| PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
 | PROD-09. Payment Production Wiring | PROD | 0/2 | Planned | - |
 | PROD-10. UX Polish | PROD | 0/2 | Planned | - |
 | PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
@@ -188,8 +189,8 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 
 | Item | Phase | Priority | Status |
 |------|-------|----------|--------|
-| Inquiries GET unprotected | PROD-08 | Must | Planned |
-| Missing credentials in inquiries | PROD-08 | Must | Planned |
+| Inquiries GET unprotected | PROD-08 | Must | Complete |
+| Missing credentials in inquiries | PROD-08 | Must | Complete |
 | Payment emails console.log only | PROD-09 | Should | Planned |
 | Webhook E2E testing incomplete | PROD-09 | Should | Planned |
 | Client status label translation | PROD-10 | Should | Planned |
