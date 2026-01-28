@@ -634,6 +634,111 @@ export async function sendPaymentSuccessEmail(data: {
   });
 }
 
+export async function sendProposalStatusChangeEmail(data: {
+  to: string;
+  recipientName: string;
+  proposalId: string;
+  proposalTitle: string;
+  newStatus: 'sent' | 'accepted' | 'rejected' | 'changes_requested';
+  isClientRecipient: boolean;
+  changedBy?: string;
+  feedback?: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const proposalUrl = `${appUrl}/proposal/${data.proposalId}`;
+
+  // Map status to user-friendly labels
+  const statusLabels = {
+    sent: 'Awaiting Review',
+    accepted: 'Accepted',
+    rejected: 'Declined',
+    changes_requested: 'Revision Requested',
+  };
+
+  // Define status-specific colors and messages
+  const statusInfo = {
+    sent: { color: '#f59e0b', bgColor: '#fef3c7', greeting: 'Your proposal has been sent' },
+    accepted: { color: '#16a34a', bgColor: '#dcfce7', greeting: 'Great news!' },
+    rejected: { color: '#dc2626', bgColor: '#fee2e2', greeting: 'Update on your proposal' },
+    changes_requested: { color: '#ea580c', bgColor: '#ffedd5', greeting: 'Feedback received' },
+  };
+
+  const info = statusInfo[data.newStatus];
+  const statusLabel = statusLabels[data.newStatus];
+
+  // Email subject - prefix with [Client Response] for admin recipients
+  const subjectPrefix = data.isClientRecipient ? '' : '[Client Response] ';
+  const subject = `${subjectPrefix}Proposal ${statusLabel}: ${data.proposalTitle}`;
+
+  // Dynamic message based on recipient and status
+  let message = '';
+  if (data.isClientRecipient) {
+    // Client receiving notification about admin status change
+    if (data.newStatus === 'sent') {
+      message = 'Your proposal is ready for review.';
+    } else {
+      message = `Your proposal status has been updated to <strong>${statusLabel}</strong>.`;
+    }
+  } else {
+    // Admin receiving notification about client response
+    message = `<strong>${data.changedBy || 'Client'}</strong> has responded to the proposal with status: <strong>${statusLabel}</strong>.`;
+  }
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: ${info.color}; text-align: center;">${info.greeting}</h2>
+      <p>Hi <strong>${data.recipientName}</strong>,</p>
+      <p>${message}</p>
+
+      <div style="background-color: ${info.bgColor}; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid ${info.color};">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Proposal:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.proposalTitle}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">New Status:</td>
+            <td style="padding: 8px 0; color: ${info.color}; font-weight: bold;">${statusLabel}</td>
+          </tr>
+          ${data.feedback ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; vertical-align: top;">Feedback:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.feedback}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${proposalUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Proposal</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        Have questions? Reply to this email or contact us at <a href="mailto:hello@motionify.studio" style="color: #7c3aed;">hello@motionify.studio</a>.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Studio<br>
+        <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    html,
+  });
+}
+
 /**
  * POST handler for cross-service email sending
  * Called by webhook handlers to send payment emails
