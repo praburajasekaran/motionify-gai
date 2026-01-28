@@ -22,13 +22,15 @@ Systematic testing and hardening roadmap to take the Motionify platform from dev
 | **4** | Deliverables System | File upload/download, approval workflow, R2 integration | ✅ Complete |
 | **5** | Task Management | Task creation, AI generation, state transitions | ✅ Complete |
 | **6** | User Management | User CRUD, roles, permissions, invitations | ✅ Complete |
-| **7** | Payment Integration | Razorpay, payment tracking, milestone payments | 🔄 In Progress |
+| **7** | Payment Integration | Razorpay, payment tracking, milestone payments | ✅ Complete |
 | **8** | Email & Notifications | Email delivery, in-app notifications, real-time updates | ⏸️ Not Started |
 | **9** | Admin Features | Dashboard, activity logs, analytics, reports | ⏸️ Not Started |
 | **10** | Client Portal | Landing page, proposal viewing, portal access | ⏸️ Not Started |
 | **11** | Production Hardening | Database pooling, logging, error handling, monitoring | ⏸️ Not Started |
 | **12** | Performance & Polish | Load testing, UX refinement, mobile responsive | ⏸️ Not Started |
 | **PROD-08** | Security Hardening | Inquiries endpoint protection, credential wiring | ✅ Complete |
+| **PROD-09** | Payment Production Wiring | Webhook E2E, email notifications | ✅ Complete |
+| **PROD-10** | UX Polish | Status labels, timeline, edit restrictions, notifications | ✅ Complete |
 | **PROD-13** | Frontend Credential Wiring | 7 fetch calls missing credentials: 'include' | ✅ Complete |
 
 ---
@@ -373,11 +375,11 @@ Systematic testing and hardening roadmap to take the Motionify platform from dev
 
 **Goal:** Verify Razorpay integration, payment tracking, and milestone payments work correctly for production
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 
 ### Sub-phases
 - **PROD-07:** Core Payment Infrastructure — ✅ Complete (6/6 plans)
-- **PROD-09:** Payment Production Wiring — 🔄 In Progress (email notifications, webhook E2E testing)
+- **PROD-09:** Payment Production Wiring — ✅ Complete (2/2 plans)
 
 ### PROD-07 Completed Work
 - [x] `PROD-07-01-PLAN.md` — Razorpay webhook endpoint with HMAC signature verification
@@ -387,9 +389,11 @@ Systematic testing and hardening roadmap to take the Motionify platform from dev
 - [x] `PROD-07-05-PLAN.md` — Failure handling and post-payment flow (retry, countdown redirect)
 - [x] `PROD-07-06-PLAN.md` — Manual verification
 
-### PROD-09 In Progress
-- [ ] `PROD-09-01-PLAN.md` — Wire email notifications into webhook handler (success + failure emails)
-- [ ] `PROD-09-02-PLAN.md` — E2E webhook integration testing with ngrok + Razorpay test mode
+### PROD-09 Completed Work
+- [x] `PROD-09-01-PLAN.md` — Wire email notifications into webhook handler (success + failure emails)
+- [x] `PROD-09-02-PLAN.md` — E2E webhook integration testing with ngrok + Razorpay test mode
+
+**Note:** Email code verified working. Production requires Resend domain verification (test mode only sends to account owner email).
 
 ### Requirements
 - **PAY-01:** Payment Creation ✅
@@ -479,6 +483,49 @@ All protected endpoints now receive httpOnly cookies for authentication:
 - 7/7 must-haves verified against codebase
 - All fetch calls now include `credentials: 'include'`
 - Build passes
+
+---
+
+## PROD-10: UX Polish
+
+**Goal:** Improve client-facing status labels, add status timeline, implement edit restrictions, and wire status change notifications
+
+**Status:** ✅ Complete (2026-01-28)
+
+### Work Completed
+- Created centralized STATUS_CONFIG with professional client-facing labels
+- Added status timeline showing proposal history with audit trail
+- Implemented edit restrictions (lock after client response, super admin force edit)
+- Wired bidirectional status change notifications (email + in-app)
+
+### Plans
+- [x] `PROD-10-01-PLAN.md` — Centralized STATUS_CONFIG with professional client-facing labels
+- [x] `PROD-10-02-PLAN.md` — Status timeline component showing proposal history
+- [x] `PROD-10-03-PLAN.md` — Edit restrictions with super admin force edit
+- [x] `PROD-10-04-PLAN.md` — Status change notifications (email + in-app)
+
+### Key Deliverables
+- **Status Labels:** Clients see "Awaiting Your Review" instead of "Sent", "Declined" instead of "Rejected"
+- **Traffic Light Colors:** Amber (pending), green (positive), red (negative), orange (action needed)
+- **Status Timeline:** Chronological audit trail with actor names and timestamps
+- **Edit Restrictions:** Admin cannot edit after client responds (accept/reject), CAN edit during revision cycle
+- **Force Edit:** Super admin override with confirmation dialog and audit logging
+- **Notifications:** Email + in-app on every status change, bidirectional (admin↔client)
+
+### Files Modified
+- `lib/status-config.ts` — Admin portal status config
+- `landing-page-new/src/lib/status-config.ts` — Client portal status config
+- `landing-page-new/src/components/proposal/StatusTimeline.tsx` — Timeline component
+- `landing-page-new/src/components/proposal/ProposalReview.tsx` — Timeline integration
+- `pages/admin/ProposalDetail.tsx` — Edit restrictions + force edit
+- `components/ui/ConfirmDialog.tsx` — Confirmation dialog
+- `netlify/functions/send-email.ts` — Status change email template
+- `netlify/functions/proposals.ts` — Notification dispatch
+
+### Verification
+- 8/8 must-haves verified against codebase
+- All artifacts exist and are substantive (no stubs)
+- All key links confirmed working
 
 ---
 
@@ -690,9 +737,9 @@ All protected endpoints now receive httpOnly cookies for authentication:
 ## Execution Strategy
 
 ### Current Status
-- **7 phases complete:** Auth, Proposals, Comments, Deliverables, Tasks, User Management, Security
-- **1 phase in progress:** Payment Integration (PROD-09 in separate session)
-- **5 phases remaining:** Email, Admin Features, Client Portal, Production Hardening, Performance
+- **8 phases complete:** Auth, Proposals, Comments, Deliverables, Tasks, User Management, Security, UX Polish
+- **0 phases in progress:** All critical/high priority complete
+- **4 phases remaining:** Email, Admin Features, Client Portal, Performance
 
 ### Recommended Next Steps
 1. **Complete PROD-09** (Payment email wiring) - In progress in separate session
@@ -730,8 +777,8 @@ All protected endpoints now receive httpOnly cookies for authentication:
 - ✅ Professional appearance and UX
 - ✅ Client can complete proposal → payment → deliverable workflow
 
-**Current Progress: 7/12 phases complete (58%)**
+**Current Progress: 8/12 phases complete (67%)**
 
 ---
 
-*Last updated: 2026-01-28 (PROD-08, PROD-13, Phase 6 marked complete)*
+*Last updated: 2026-01-28 (PROD-10 UX Polish complete)*
