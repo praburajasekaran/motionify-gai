@@ -5,6 +5,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { sendPaymentReminderEmail } from './send-email';
 
 const { Client } = pg;
 
@@ -403,10 +404,120 @@ export const handler = compose(
         };
       }
 
+      if (action === 'send-reminder') {
+        // Verify admin access for sending reminders
+        const adminRoles = ['super_admin', 'project_manager'];
+        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Admin access required to send payment reminders' }),
+          };
+        }
+
+        // Extract paymentId from request body
+        const body = JSON.parse(event.body || '{}');
+        const { paymentId } = body;
+
+        if (!paymentId) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'paymentId is required' }),
+          };
+        }
+
+        // Fetch payment with project and client information
+        const paymentResult = await client.query(
+          `SELECT
+            p.id, p.amount, p.currency, p.payment_type, p.status, p.created_at,
+            proj.id as project_id, proj.project_number,
+            u.id as client_id, u.full_name as client_name, u.email as client_email
+          FROM payments p
+          LEFT JOIN projects proj ON p.project_id = proj.id
+          LEFT JOIN users u ON proj.client_user_id = u.id
+          WHERE p.id = $1`,
+          [paymentId]
+        );
+
+        if (paymentResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Payment not found' }),
+          };
+        }
+
+        const payment = paymentResult.rows[0];
+
+        // Only send reminders for pending payments
+        if (payment.status !== 'pending') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: `Cannot send reminder for ${payment.status} payment` }),
+          };
+        }
+
+        if (!payment.client_email) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'No client email associated with this payment' }),
+          };
+        }
+
+        // Calculate days overdue
+        const createdDate = new Date(payment.created_at);
+        const now = new Date();
+        const daysOverdue = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Format amount for display (convert from paise/cents to rupees/dollars)
+        const displayAmount = (Number(payment.amount) / 100).toFixed(2);
+
+        // Build payment URL
+        const baseUrl = process.env.URL || 'http://localhost:3000';
+        const paymentUrl = payment.project_id
+          ? `${baseUrl}/portal/projects/${payment.project_id}`
+          : `${baseUrl}/portal`;
+
+        // Send the reminder email
+        const emailResult = await sendPaymentReminderEmail({
+          to: payment.client_email,
+          clientName: payment.client_name || 'Client',
+          projectNumber: payment.project_number || 'N/A',
+          amount: displayAmount,
+          currency: payment.currency,
+          paymentUrl,
+          daysOverdue,
+        });
+
+        if (!emailResult) {
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Failed to send reminder email' }),
+          };
+        }
+
+        console.log(`[Payments API] Reminder sent to ${payment.client_email} for payment ${paymentId}`);
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            message: `Reminder sent to ${payment.client_email}`,
+            paymentId,
+            clientEmail: payment.client_email,
+          }),
+        };
+      }
+
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid action. Use /create-order or /verify' }),
+        body: JSON.stringify({ error: 'Invalid action. Use /create-order, /verify, /manual-complete, or /send-reminder' }),
       };
     }
 
