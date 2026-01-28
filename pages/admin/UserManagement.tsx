@@ -293,15 +293,36 @@ export function UserManagement() {
                                         {new Date(user.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        {user.is_active && (
-                                            <button
-                                                onClick={() => openDeactivateModal(user)}
-                                                className="text-red-600 hover:text-red-800 text-sm"
-                                                title="Deactivate user"
-                                            >
-                                                Deactivate
-                                            </button>
-                                        )}
+                                        {user.is_active && (() => {
+                                            const isOwnAccount = user.id === currentUser?.id;
+                                            const activeSuperAdmins = users.filter(u => u.role === 'super_admin' && u.is_active).length;
+                                            const isLastSuperAdmin = user.role === 'super_admin' && activeSuperAdmins <= 1;
+                                            const canDeactivate = !isOwnAccount && !isLastSuperAdmin;
+
+                                            if (!canDeactivate) {
+                                                const reason = isOwnAccount
+                                                    ? "You cannot deactivate your own account"
+                                                    : "Cannot deactivate the last Super Admin";
+                                                return (
+                                                    <span
+                                                        className="text-gray-400 text-sm cursor-not-allowed"
+                                                        title={reason}
+                                                    >
+                                                        Deactivate
+                                                    </span>
+                                                );
+                                            }
+
+                                            return (
+                                                <button
+                                                    onClick={() => openDeactivateModal(user)}
+                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                    title="Deactivate user"
+                                                >
+                                                    Deactivate
+                                                </button>
+                                            );
+                                        })()}
                                     </td>
                                 </tr>
                             ))}
