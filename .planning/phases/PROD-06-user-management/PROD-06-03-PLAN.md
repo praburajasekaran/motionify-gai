@@ -48,10 +48,10 @@ Output: Test results documented, any issues identified for follow-up plans.
 <task type="checkpoint:human-verify" gate="blocking">
   <what-built>
 User management system with fixes:
-- Database migration for 4-role system (Plan 01)
+- Database migration creating user_invitations table and 4-role system (Plan 01)
 - Credentials fix for cookie auth (Plan 02)
 - Existing user CRUD API endpoints
-- Existing invitation system
+- Existing invitation system (invitations-create.ts, invitations-revoke.ts)
 - Permission enforcement middleware
   </what-built>
   <how-to-verify>
