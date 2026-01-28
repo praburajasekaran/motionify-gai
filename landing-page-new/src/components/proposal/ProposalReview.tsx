@@ -4,6 +4,7 @@ import { formatCurrencyWithConversion, formatDate } from '@/lib/proposals';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { Building2, Calendar, CheckCircle2, Clock, FileText, User } from 'lucide-react';
+import { StatusTimeline } from './StatusTimeline';
 
 interface ProposalReviewProps {
   proposal: Proposal;
@@ -186,6 +187,11 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Status Timeline */}
+      <div className="mt-8">
+        <StatusTimeline proposalId={proposal.id} />
       </div>
 
       {/* Response Information (if already responded) */}
