@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-11 - Production Hardening [In Progress] |
-| **Current Plan** | Plan 02 complete (Sentry Error Monitoring) |
-| **Status** | Error monitoring with breadcrumb-based logging and sensitive data scrubbing |
-| **Progress** | PROD-11: 2/3 plans complete (67%) |
-| **Last activity** | 2026-01-28 - PROD-11-02 complete, Sentry monitoring integrated |
+| **Current Phase** | Phase PROD-10 - UX Polish [In Progress] |
+| **Current Plan** | Plan 01 complete (Status Labels) |
+| **Status** | Professional client-facing labels with traffic light colors and Lucide icons |
+| **Progress** | PROD-10: 1/3 plans complete (33%) |
+| **Last activity** | 2026-01-28 - PROD-10-01 complete, centralized status config created |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -108,6 +108,9 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
+| Keep admin purple theme | Admin portal retains purple-themed status badges for consistency; traffic light colors applied to client portal only | Applied - PROD-10-01 |
+| Professional client labels | Use client-friendly labels: "Awaiting Your Review" instead of "Sent", "Declined" instead of "Rejected" | Applied - PROD-10-01 |
+| Traffic light color scheme | Amber (pending), green (positive), red (negative), orange (action) for intuitive status recognition | Applied - PROD-10-01 |
 | Neon serverless HTTP driver | Replace pg Pool with HTTP-based queries for serverless-optimized database access | Applied - PROD-11-01 |
 | 5-second query timeout | Prevent hanging serverless functions with AbortSignal timeout | Applied - PROD-11-01 |
 | Backward-compatible query interface | Maintain query(text, params) signature to avoid breaking existing code | Applied - PROD-11-01 |
@@ -228,6 +231,25 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-28)
+
+**Phase PROD-10 - Plan 01: Status Labels Complete:**
+- Created centralized STATUS_CONFIG in lib/status-config.ts (admin portal)
+- Created landing-page-new/src/lib/status-config.ts (client portal)
+- Professional client labels: "Awaiting Your Review" (not "Sent"), "Declined" (not "Rejected")
+- Added Lucide icons to all status badges (Clock, CheckCircle2, XCircle, MessageSquare)
+- Applied traffic light colors to client portal (amber/green/red/orange)
+- Maintained admin purple-themed colors for consistency
+- Updated ProposalDetail.tsx and ProposalReview.tsx to use centralized config
+- Commits: 2edc8c3 (admin), c57d27b (client)
+- Duration: 4 minutes
+- Created PROD-10-01-SUMMARY.md
+- **Status:** PROD-10-01 complete - role-aware status labels ready
+
+**Next actions:**
+- Execute PROD-10-02: Status Timeline (if planned)
+- Or proceed to next UX polish plan
+
+---
 
 **Phase PROD-11 - Plan 02: Sentry Error Monitoring Complete:**
 - Installed @sentry/node v10.37.0
