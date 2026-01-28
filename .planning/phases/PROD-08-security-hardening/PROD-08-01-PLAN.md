@@ -10,27 +10,28 @@ autonomous: true
 
 must_haves:
   truths:
-    - "Unauthenticated users cannot fetch all inquiries"
+    - "Unauthenticated users cannot fetch all inquiries (GET)"
     - "Authenticated admins can still fetch all inquiries"
     - "Clients can still fetch their own inquiries with clientUserId filter"
     - "Public inquiry creation (POST) remains accessible without auth"
+    - "Inquiry updates (PUT) require authentication"
   artifacts:
     - path: "netlify/functions/inquiries.ts"
-      provides: "Protected GET endpoint with role-based access"
-      contains: "withAuth()"
+      provides: "Protected GET/PUT with public POST"
+      contains: "requireAuthFromCookie"
   key_links:
     - from: "netlify/functions/inquiries.ts"
-      to: "_shared/middleware.ts"
-      via: "withAuth() middleware import"
-      pattern: "withAuth\\(\\)"
+      to: "_shared/auth.ts"
+      via: "requireAuthFromCookie() direct import"
+      pattern: "requireAuthFromCookie"
 ---
 
 <objective>
-Add authentication middleware to the inquiries GET endpoint to prevent unauthorized access to all inquiry data.
+Add conditional authentication to the inquiries endpoint: protect GET and PUT methods while keeping POST public for the contact form.
 
-Purpose: Close medium-severity security gap where unauthenticated users can fetch all inquiries. The GET endpoint without clientUserId filter exposes business-sensitive data (client contact info, quiz answers, inquiry status).
+Purpose: Close medium-severity security gap where unauthenticated users can fetch all inquiries, while preserving the public contact form submission flow that doesn't require login.
 
-Output: Protected inquiries endpoint that requires authentication for admin listing but preserves public inquiry creation flow.
+Output: Protected inquiries endpoint that requires authentication for GET/PUT but allows unauthenticated POST.
 </objective>
 
 <execution_context>
@@ -45,56 +46,70 @@ Output: Protected inquiries endpoint that requires authentication for admin list
 @.planning/phases/PROD-08-security-hardening/PROD-08-RESEARCH.md
 @netlify/functions/inquiries.ts
 @netlify/functions/_shared/middleware.ts
+@netlify/functions/_shared/auth.ts
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Add withAuth middleware to inquiries endpoint</name>
+  <name>Task 1: Import requireAuthFromCookie and AuthResult for manual auth checks</name>
   <files>netlify/functions/inquiries.ts</files>
   <action>
-Add withAuth() middleware to the compose() chain in netlify/functions/inquiries.ts.
+Add imports for manual authentication. Do NOT use withAuth() middleware - it protects all methods including POST, which would break the public contact form.
 
-IMPORTANT: Middleware order matters.
-- withCORS() MUST be first (handles OPTIONS preflight)
-- withAuth() comes AFTER withCORS()
-- withRateLimit() comes last
+Add to imports at top of file:
+```typescript
+import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
+```
 
-Update the handler signature to accept auth parameter (AuthResult type).
-
-The compose chain should be:
+IMPORTANT: Do NOT add withAuth() to the compose() chain. The compose chain should remain:
 ```typescript
 export const handler = compose(
   withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
-  withAuth(),
   withRateLimit(RATE_LIMITS.api, 'inquiries')
-)(async (event: NetlifyEvent, auth?: AuthResult) => {
+)(async (event: NetlifyEvent) => {
 ```
 
-Add import for AuthResult type from middleware:
-```typescript
-import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type NetlifyResponse, type AuthResult } from './_shared/middleware';
-```
-
-PRESERVE the existing behavior where:
-- Clients can filter by their own clientUserId
-- Admins can list all inquiries (no filter)
-- Individual inquiry lookup by ID/number works for authenticated users
+This allows us to check auth conditionally inside the handler based on HTTP method.
   </action>
   <verify>
 Run `npm run build` to ensure TypeScript compilation passes.
-Verify withAuth() is imported and used in compose chain.
+Verify requireAuthFromCookie is imported from _shared/auth.
+Verify compose() chain does NOT include withAuth().
   </verify>
   <done>
-inquiries.ts has withAuth() in compose chain after withCORS() and accepts AuthResult parameter.
+inquiries.ts imports requireAuthFromCookie for manual auth checks, compose chain unchanged (no withAuth middleware).
   </done>
 </task>
 
 <task type="auto">
-  <name>Task 2: Add role-based access control for GET requests</name>
+  <name>Task 2: Add conditional auth for GET and PUT methods only</name>
   <files>netlify/functions/inquiries.ts</files>
   <action>
-Update the GET handler logic to implement role-based access:
+Add authentication check inside the handler that only applies to GET and PUT methods. POST remains unauthenticated for public contact form.
+
+At the start of the handler function (after `await client.connect();`), add:
+
+```typescript
+// Conditional authentication: GET and PUT require auth, POST is public
+let auth: CookieAuthResult | null = null;
+if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
+  auth = await requireAuthFromCookie(event);
+
+  if (!auth.authorized) {
+    return {
+      statusCode: auth.statusCode || 401,
+      headers,
+      body: JSON.stringify({
+        error: auth.error || 'Authentication required'
+      }),
+    };
+  }
+}
+// POST requests proceed without auth (public contact form)
+```
+
+Then update the GET handler section to implement role-based access:
 
 1. For listing all inquiries (no clientUserId filter):
    - Require admin role (super_admin or project_manager)
@@ -105,22 +120,19 @@ Update the GET handler logic to implement role-based access:
    - Allow if user is client AND clientUserId matches their own userId
    - Reject if client tries to fetch another user's inquiries
 
-3. For individual inquiry lookup by ID:
-   - Admins can access any inquiry
-   - Clients can only access inquiries where they are the client
-
-Implementation approach:
+Inside the GET block (after checking for specific inquiry ID lookup):
 ```typescript
 if (event.httpMethod === 'GET') {
   const { clientUserId } = event.queryStringParameters || {};
 
-  // After withAuth(), auth is guaranteed to exist and be authorized
-  const userRole = auth?.user?.role;
-  const userId = auth?.user?.userId;
+  // auth is guaranteed to be non-null and authorized for GET
+  const userRole = auth!.user?.role;
+  const userId = auth!.user?.userId;
   const isAdmin = userRole === 'super_admin' || userRole === 'project_manager';
 
-  // For listing all inquiries (admin only)
+  // If not looking up by specific ID, apply listing restrictions
   if (!potentialId || potentialId === 'inquiries' || potentialId === 'api') {
+    // Listing all inquiries requires admin role
     if (!clientUserId && !isAdmin) {
       return {
         statusCode: 403,
@@ -139,23 +151,37 @@ if (event.httpMethod === 'GET') {
     }
   }
 
-  // ... rest of existing GET logic
+  // For individual inquiry lookups, add ownership check after fetching
+  // (existing code fetches by ID - add check before returning)
 }
 ```
 
-For individual inquiry lookups, add ownership check before returning:
-- If user is admin, allow access
-- If user is client, verify inquiry.client_user_id matches their userId OR the inquiry was created without a client_user_id
+For individual inquiry lookup by ID, after fetching the inquiry but before returning:
+```typescript
+// After fetching individual inquiry by ID:
+const inquiry = result.rows[0];
+
+// Ownership check for individual lookup
+if (!isAdmin && inquiry.client_user_id && inquiry.client_user_id !== userId) {
+  return {
+    statusCode: 403,
+    headers,
+    body: JSON.stringify({ error: 'Cannot access this inquiry' }),
+  };
+}
+```
+
+The PUT handler already exists - auth is already checked at handler entry, so it will return 401 for unauthenticated PUT requests.
   </action>
   <verify>
 Run `npm run build` to ensure no TypeScript errors.
 Review the logic flow to confirm:
-- Admins can list all and filter
-- Clients can only filter by their own userId
-- Individual lookup respects ownership
+- GET requires auth and enforces role-based access
+- PUT requires auth
+- POST proceeds without auth check (public form)
   </verify>
   <done>
-GET requests enforce role-based access: admins see all, clients only see their own.
+GET/PUT require authentication with role-based access control, POST remains unauthenticated for public contact form.
   </done>
 </task>
 
@@ -163,19 +189,23 @@ GET requests enforce role-based access: admins see all, clients only see their o
 
 <verification>
 1. Build passes: `npm run build` succeeds
-2. Middleware order: withCORS() before withAuth() before withRateLimit()
-3. Auth import: AuthResult type imported from middleware
-4. Role check: Listing all inquiries requires admin role
-5. Client filter: Clients can only fetch their own inquiries
+2. Import check: requireAuthFromCookie imported from _shared/auth
+3. No withAuth middleware: compose() chain does NOT include withAuth()
+4. Conditional auth: Auth check inside handler applies only to GET/PUT
+5. Role check: Listing all inquiries requires admin role
+6. Client filter: Clients can only fetch their own inquiries
+7. POST public: No auth check for POST method
 </verification>
 
 <success_criteria>
 - Unauthenticated GET /inquiries returns 401 Unauthorized
+- Unauthenticated PUT /inquiries returns 401 Unauthorized
+- POST /inquiries (public form) works without authentication (200/201)
 - Client GET /inquiries (no filter) returns 403 Forbidden
 - Client GET /inquiries?clientUserId=their-own-id returns their inquiries
 - Client GET /inquiries?clientUserId=other-user-id returns 403 Forbidden
 - Admin GET /inquiries returns all inquiries
-- POST /inquiries (public form) still works (protected by auth but allows through for public submission)
+- npm run build succeeds
 </success_criteria>
 
 <output>
