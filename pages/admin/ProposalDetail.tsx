@@ -8,6 +8,7 @@ import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, Dol
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { CommentThread } from '../../components/proposals';
+import { getStatusConfig } from '../../lib/status-config';
 
 interface DeliverableInput {
   id: string;
@@ -370,34 +371,15 @@ export function ProposalDetail() {
     }
   };
 
-  const STATUS_CONFIG = {
-    sent: {
-      label: 'Sent',
-      icon: Clock,
-      color: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
-      iconColor: 'text-purple-400',
-    },
-    accepted: {
-      label: 'Accepted',
-      icon: CheckCircle2,
-      color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
-      iconColor: 'text-emerald-400',
-    },
-    rejected: {
-      label: 'Rejected',
-      icon: XCircle,
-      color: 'bg-red-500/10 text-red-400 ring-red-500/20',
-      iconColor: 'text-red-400',
-    },
-    changes_requested: {
-      label: 'Changes Requested',
-      icon: MessageSquare,
-      color: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
-      iconColor: 'text-orange-400',
-    },
+  const statusInfo = getStatusConfig(proposal.status);
+  // Admin uses custom purple-themed colors, keeping original design
+  const ADMIN_STATUS_COLORS = {
+    sent: { color: 'bg-purple-500/10 text-purple-400 ring-purple-500/20', iconColor: 'text-purple-400' },
+    accepted: { color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20', iconColor: 'text-emerald-400' },
+    rejected: { color: 'bg-red-500/10 text-red-400 ring-red-500/20', iconColor: 'text-red-400' },
+    changes_requested: { color: 'bg-orange-500/10 text-orange-400 ring-orange-500/20', iconColor: 'text-orange-400' },
   };
-
-  const statusInfo = STATUS_CONFIG[proposal.status];
+  const adminColors = ADMIN_STATUS_COLORS[proposal.status];
   const StatusIcon = statusInfo.icon;
 
   const pricing = isEditMode ? calculatePricing() : {
@@ -422,9 +404,9 @@ export function ProposalDetail() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold text-gray-900">Proposal</h1>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${statusInfo.color}`}>
-                <StatusIcon className={`w-4 h-4 ${statusInfo.iconColor}`} />
-                {statusInfo.label}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
+                <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
+                {statusInfo.adminLabel}
               </span>
             </div>
             {inquiry && (
