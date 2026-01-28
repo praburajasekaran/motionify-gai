@@ -5,7 +5,7 @@ interface User {
     id: string;
     email: string;
     full_name: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'project_manager' | 'team_member' | 'client';
     is_active: boolean;
     created_at: string;
     updated_at?: string;
@@ -34,7 +34,7 @@ export function UserManagement() {
     const [formData, setFormData] = useState({
         email: '',
         full_name: '',
-        role: 'project_manager' as 'super_admin' | 'project_manager' | 'client' | 'team',
+        role: 'project_manager' as 'super_admin' | 'project_manager' | 'team_member' | 'client',
     });
 
     // Deactivation modal states
@@ -152,7 +152,7 @@ export function UserManagement() {
             case 'super_admin': return 'bg-purple-100 text-purple-800';
             case 'project_manager': return 'bg-blue-100 text-blue-800';
             case 'client': return 'bg-green-100 text-green-800';
-            case 'team': return 'bg-gray-100 text-gray-800';
+            case 'team_member': return 'bg-gray-100 text-gray-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
@@ -234,7 +234,7 @@ export function UserManagement() {
                         <option value="super_admin">Super Admin</option>
                         <option value="project_manager">Project Manager</option>
                         <option value="client">Client</option>
-                        <option value="team">Team</option>
+                        <option value="team_member">Team Member</option>
                     </select>
                 </div>
                 <div className="text-sm text-gray-600">
@@ -348,7 +348,7 @@ export function UserManagement() {
                                     required
                                 >
                                     <option value="project_manager">Project Manager</option>
-                                    <option value="team">Team</option>
+                                    <option value="team_member">Team Member</option>
                                     <option value="client">Client</option>
                                     <option value="super_admin">Super Admin</option>
                                 </select>
