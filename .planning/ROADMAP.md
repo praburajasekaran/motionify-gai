@@ -103,38 +103,39 @@ Plans:
 
 ---
 
-### Phase PROD-10: UX Polish [Planned]
+### Phase PROD-10: UX Polish [Complete]
 **Goal:** Improve client-facing status labels, add status timeline, implement edit restrictions, and wire status change notifications
 **Priority:** Should Have
 **Gap Closure:** Addresses UX inconsistencies from PROD-02
+**Completed:** 2026-01-28
 
-**Plans:** 4 plans (0/4 complete)
+**Plans:** 4 plans (4/4 complete)
 
 Plans:
-- [ ] PROD-10-01-PLAN.md — Create centralized STATUS_CONFIG with professional client-facing labels
-- [ ] PROD-10-02-PLAN.md — Add status timeline component showing proposal history
-- [ ] PROD-10-03-PLAN.md — Implement edit restrictions with super admin force edit
-- [ ] PROD-10-04-PLAN.md — Wire status change notifications (email + in-app)
+- [x] PROD-10-01-PLAN.md — Create centralized STATUS_CONFIG with professional client-facing labels
+- [x] PROD-10-02-PLAN.md — Add status timeline component showing proposal history
+- [x] PROD-10-03-PLAN.md — Implement edit restrictions with super admin force edit
+- [x] PROD-10-04-PLAN.md — Wire status change notifications (email + in-app)
 
 ---
 
-### Phase PROD-11: Production Hardening [Planned]
-**Goal:** Prepare infrastructure for production load — database connection pooling, error monitoring, logging infrastructure, and environment configuration
+### Phase PROD-11: Production Hardening [Complete]
+**Goal:** Prepare infrastructure for production load — error monitoring, logging infrastructure, and environment configuration
 **Priority:** Must Have (blocks deployment)
-**Scale context:** ~15 concurrent clients, ~10 active proposals at a time
+**Completed:** 2026-01-28
 
-**Plans:** 3 plans (0/3 complete)
+**Plans:** 3 plans (3/3 complete)
 
 Plans:
-- [ ] PROD-11-01-PLAN.md — Replace pg Pool with @neondatabase/serverless HTTP driver
-- [ ] PROD-11-02-PLAN.md — Add Sentry error monitoring with breadcrumb logging
-- [ ] PROD-11-03-PLAN.md — Add Zod-based environment validation, block localhost in production
+- [x] PROD-11-01-PLAN.md — Neon HTTP driver (rolled back - pg Pool retained for compatibility)
+- [x] PROD-11-02-PLAN.md — Sentry error monitoring with breadcrumb logging
+- [x] PROD-11-03-PLAN.md — Zod-based environment validation, block localhost in production
 
-**Key changes:**
-- Database: Replace `pg` with `@neondatabase/serverless` (HTTP-based, no connection lifecycle)
-- Errors: Sentry for monitoring with breadcrumb context trail
+**Key deliverables:**
+- Sentry: Error monitoring with breadcrumb context trail and sensitive data scrubbing
 - Logging: Sentry breadcrumbs (production: error + warn only)
 - Environment: Zod validation, fail-fast on misconfiguration
+- Note: @neondatabase/serverless installed for future use; pg Pool retained for existing code compatibility
 
 ---
 
@@ -195,8 +196,8 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
 | PROD-09. Payment Production Wiring | PROD | 2/2 | Complete | 2026-01-28 |
-| PROD-10. UX Polish | PROD | 0/4 | Planned | - |
-| PROD-11. Production Hardening | PROD | 0/3 | Planned | - |
+| PROD-10. UX Polish | PROD | 4/4 | Complete | 2026-01-28 |
+| PROD-11. Production Hardening | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-12. Code Cleanup | PROD | 0/2 | Planned | - |
 | PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
 | PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
