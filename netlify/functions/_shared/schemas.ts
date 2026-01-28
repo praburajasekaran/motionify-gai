@@ -218,6 +218,35 @@ export const manualCompletePaymentSchema = z.object({
     paymentId: uuidSchema,
 });
 
+// Razorpay webhook payload schema (validated AFTER signature verification)
+// Note: Validation failure should still return 200 but log error
+// to avoid rejecting valid Razorpay webhooks due to schema drift
+export const razorpayWebhookSchema = z.object({
+    entity: z.literal('event'),
+    account_id: z.string(),
+    event: z.string(),
+    contains: z.array(z.string()),
+    payload: z.object({
+        payment: z.object({
+            entity: z.object({
+                id: z.string(),
+                order_id: z.string(),
+                amount: z.number(),
+                currency: z.string(),
+                status: z.string(),
+                method: z.string().optional(),
+                captured: z.boolean().optional(),
+                error_code: z.string().nullable().optional(),
+                error_description: z.string().nullable().optional(),
+            }),
+        }).optional(),
+    }),
+    created_at: z.number(),
+});
+
+// Type export for webhook payload
+export type RazorpayWebhookPayload = z.infer<typeof razorpayWebhookSchema>;
+
 // ==========================================
 // User Settings Schemas
 // ==========================================
@@ -384,6 +413,7 @@ export const SCHEMAS = {
         createOrder: createPaymentOrderSchema,
         verify: verifyPaymentSchema,
         manualComplete: manualCompletePaymentSchema,
+        webhook: razorpayWebhookSchema,
     },
     userSettings: {
         update: updateUserSettingsSchema,
