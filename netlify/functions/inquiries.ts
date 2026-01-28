@@ -4,6 +4,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 
 const { Client } = pg;
 
