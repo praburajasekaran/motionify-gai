@@ -17,6 +17,60 @@ import crypto from 'crypto';
 import { query, transaction } from '@/lib/db';
 import type { PoolClient } from 'pg';
 
+// Email helper - calls Netlify Function endpoint for cross-service email sending
+const sendPaymentEmails = async () => {
+  // Netlify Functions are at /.netlify/functions/ path in production
+  // We call them via fetch to maintain separation
+  return {
+    sendFailureEmail: async (data: {
+      orderId: string;
+      paymentId?: string;
+      errorCode?: string;
+      errorDescription?: string;
+      proposalId?: string;
+    }) => {
+      const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
+      const baseUrl = process.env.INTERNAL_API_URL || process.env.URL || 'http://localhost:8888';
+      try {
+        await fetch(`${baseUrl}/.netlify/functions/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'payment_failure',
+            to: adminEmail,
+            data
+          })
+        });
+      } catch (e) {
+        console.error('[Webhook] Failed to send failure notification:', e);
+      }
+    },
+    sendSuccessEmail: async (data: {
+      to: string;
+      clientName: string;
+      projectNumber: string;
+      amount: string;
+      currency: string;
+      paymentType: 'advance' | 'balance';
+      projectUrl: string;
+    }) => {
+      const baseUrl = process.env.INTERNAL_API_URL || process.env.URL || 'http://localhost:8888';
+      try {
+        await fetch(`${baseUrl}/.netlify/functions/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'payment_success',
+            ...data
+          })
+        });
+      } catch (e) {
+        console.error('[Webhook] Failed to send success notification:', e);
+      }
+    }
+  };
+};
+
 /**
  * Razorpay webhook payload structure
  */
