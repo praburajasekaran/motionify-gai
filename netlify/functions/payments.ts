@@ -152,6 +152,7 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = validation.data;
 
+        try {
         const result = await client.query(
           `UPDATE payments 
            SET razorpay_order_id = $1, 
@@ -284,6 +285,18 @@ export const handler = compose(
           headers,
           body: JSON.stringify(result.rows[0]),
         };
+        } catch (verifyError: any) {
+          console.error('Payment verification error:', verifyError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+              error: 'Payment verification failed',
+              details: verifyError.message || 'Unknown error',
+              stack: verifyError.stack,
+            }),
+          };
+        }
       }
 
       if (action === 'manual-complete') {
