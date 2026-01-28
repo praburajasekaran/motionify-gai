@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-13 - Frontend Credential Wiring [In Progress] |
-| **Current Plan** | PROD-13-03 (Payment API Credentials) |
-| **Status** | Plan complete - payment API fetch calls now include credentials |
-| **Progress** | PROD-13: 3/? plans complete |
-| **Last activity** | 2026-01-28 - PROD-13-03 Payment API credentials wired |
+| **Current Plan** | PROD-13-02 (Inquiry Detail Credentials) |
+| **Status** | Plan complete - getInquiryById() now includes credentials |
+| **Progress** | PROD-13: 2/3 plans complete |
+| **Last activity** | 2026-01-28 - PROD-13-02 Inquiry detail credentials wired |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -218,6 +218,21 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-28)
+
+**Phase PROD-13 - Plan 02: Inquiry Detail Credentials Complete:**
+- Added credentials: 'include' to getInquiryById() fetch call
+- All 5 inquiry API fetch calls now properly authenticate with httpOnly cookies
+- Build verified passing with no regressions
+- Commit: dc13f5a
+- Duration: 2 minutes
+- Created PROD-13-02-SUMMARY.md
+- **Status:** PROD-13-02 complete - getInquiryById() authenticated
+
+**Next actions:**
+- Execute PROD-13-03: Proposal credentials wiring
+- Complete PROD-13 phase
+
+---
 
 **Phase PROD-13 - Plan 03: Payment API Credentials Complete:**
 - Added credentials: 'include' to fetchPaymentsForProject()
@@ -709,4 +724,4 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ---
 
-*Last updated: 2026-01-28 02:14 UTC*
+*Last updated: 2026-01-28 07:38 UTC*
