@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
@@ -251,6 +251,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   label="Inquiries"
                   path="/admin/inquiries"
                   active={location.pathname.startsWith('/admin/inquiries')}
+                />
+                <SidebarItem
+                  icon={CreditCard}
+                  label="Payments"
+                  path="/admin/payments"
+                  active={location.pathname === '/admin/payments'}
                 />
               </div>
             </div>
