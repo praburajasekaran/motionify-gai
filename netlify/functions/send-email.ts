@@ -568,3 +568,67 @@ export async function sendPaymentFailureNotificationEmail(data: {
     html,
   });
 }
+
+export async function sendPaymentSuccessEmail(data: {
+  to: string;
+  clientName: string;
+  projectNumber: string;
+  amount: string;
+  currency: string;
+  paymentType: 'advance' | 'balance';
+  projectUrl: string;
+}) {
+  const paymentTypeLabel = data.paymentType === 'advance' ? 'Advance Payment' : 'Balance Payment';
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: #16a34a; text-align: center;">Payment Successful!</h2>
+      <p>Hi <strong>${data.clientName}</strong>,</p>
+      <p>Thank you! Your ${paymentTypeLabel.toLowerCase()} for project <strong>${data.projectNumber}</strong> has been received.</p>
+
+      <div style="background-color: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #16a34a;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Amount Paid:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #166534; font-size: 18px;">${data.currency} ${data.amount}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Payment Type:</td>
+            <td style="padding: 8px 0; color: #111827;">${paymentTypeLabel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Project:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.projectNumber}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${data.projectUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Project</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        If you have any questions, please contact us at <a href="mailto:billing@motionify.studio" style="color: #7c3aed;">billing@motionify.studio</a>.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Studio<br>
+        <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `Payment Confirmed - ${data.projectNumber} (${data.currency} ${data.amount})`,
+    html,
+  });
+}
