@@ -12,64 +12,13 @@
  * - Returns 200 quickly to acknowledge receipt (Razorpay expects <5 seconds)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { Handler } from '@netlify/functions';
 import crypto from 'crypto';
-import { query, transaction } from '@/lib/db';
-import type { PoolClient } from 'pg';
-
-// Email helper - calls Netlify Function endpoint for cross-service email sending
-const sendPaymentEmails = async () => {
-  // Netlify Functions are at /.netlify/functions/ path in production
-  // We call them via fetch to maintain separation
-  return {
-    sendFailureEmail: async (data: {
-      orderId: string;
-      paymentId?: string;
-      errorCode?: string;
-      errorDescription?: string;
-      proposalId?: string;
-    }) => {
-      const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
-      const baseUrl = process.env.INTERNAL_API_URL || process.env.URL || 'http://localhost:8888';
-      try {
-        await fetch(`${baseUrl}/.netlify/functions/send-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'payment_failure',
-            to: adminEmail,
-            data
-          })
-        });
-      } catch (e) {
-        console.error('[Webhook] Failed to send failure notification:', e);
-      }
-    },
-    sendSuccessEmail: async (data: {
-      to: string;
-      clientName: string;
-      projectNumber: string;
-      amount: string;
-      currency: string;
-      paymentType: 'advance' | 'balance';
-      projectUrl: string;
-    }) => {
-      const baseUrl = process.env.INTERNAL_API_URL || process.env.URL || 'http://localhost:8888';
-      try {
-        await fetch(`${baseUrl}/.netlify/functions/send-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'payment_success',
-            ...data
-          })
-        });
-      } catch (e) {
-        console.error('[Webhook] Failed to send success notification:', e);
-      }
-    }
-  };
-};
+import { query, transaction, type PoolClient } from './_shared/db';
+import {
+  sendPaymentSuccessEmail,
+  sendPaymentFailureNotificationEmail,
+} from './send-email';
 
 /**
  * Razorpay webhook payload structure
@@ -222,21 +171,19 @@ async function handlePaymentCaptured(
 
     if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
       const info = paymentInfo.rows[0];
-      const baseUrl = process.env.URL || 'http://localhost:3000';
-      const projectUrl = info.project_number
-        ? `${baseUrl}/portal/projects`
-        : `${baseUrl}/portal`;
+      const baseUrl = process.env.URL || 'http://localhost:5173';
+      const projectUrl = `${baseUrl}/#/portal/projects`;
 
-      const emails = await sendPaymentEmails();
-      emails.sendSuccessEmail({
+      // Call email function directly (non-blocking)
+      sendPaymentSuccessEmail({
         to: info.client_email,
         clientName: info.client_name || 'Client',
         projectNumber: info.project_number || 'Your Project',
         amount: (Number(info.amount) / 100).toFixed(2),
         currency: info.currency,
         paymentType: info.payment_type,
-        projectUrl
-      }).catch(e => console.error('[Webhook] Success email error:', e));
+        projectUrl,
+      }).catch((e) => console.error('[Webhook] Success email error:', e));
     }
   } catch (emailError) {
     console.error('[Webhook] Error fetching payment info for email:', emailError);
@@ -287,13 +234,14 @@ async function handlePaymentFailed(
 
   // Send failure notification to admin (non-blocking)
   try {
-    const emails = await sendPaymentEmails();
-    emails.sendFailureEmail({
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
+    sendPaymentFailureNotificationEmail({
+      to: adminEmail,
       orderId: razorpayOrderId,
       paymentId: result.rows[0]?.id,
       errorCode: error_code || undefined,
       errorDescription: error_description || undefined,
-    }).catch(e => console.error('[Webhook] Failure email error:', e));
+    }).catch((e) => console.error('[Webhook] Failure email error:', e));
   } catch (emailError) {
     console.error('[Webhook] Error sending failure notification:', emailError);
     // Don't fail the webhook - email is non-critical
@@ -303,27 +251,38 @@ async function handlePaymentFailed(
 }
 
 /**
- * POST /api/webhooks/razorpay
+ * POST /.netlify/functions/razorpay-webhook
  *
  * Receives Razorpay webhook events for asynchronous payment confirmation.
  */
-export async function POST(request: NextRequest) {
+export const handler: Handler = async (event) => {
+  // Only accept POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
+  }
+
   const startTime = Date.now();
 
-  // Get raw body for signature verification (CRITICAL: must use text(), not json())
-  const rawBody = await request.text();
-  const signature = request.headers.get('x-razorpay-signature') || '';
-  const eventId = request.headers.get('x-razorpay-event-id') || '';
+  // Get raw body for signature verification (event.body is already raw string)
+  const rawBody = event.body || '';
+  const signature = event.headers['x-razorpay-signature'] || '';
+  const eventId = event.headers['x-razorpay-event-id'] || '';
   const ipAddress =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
+    event.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    event.headers['x-real-ip'] ||
     'unknown';
 
   // Get webhook secret from environment
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error('[Webhook] RAZORPAY_WEBHOOK_SECRET not configured');
-    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Webhook not configured' }),
+    };
   }
 
   // Verify signature using raw body
@@ -335,15 +294,18 @@ export async function POST(request: NextRequest) {
     payload = JSON.parse(rawBody);
   } catch {
     console.error('[Webhook] Failed to parse payload');
-    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid JSON payload' }),
+    };
   }
 
-  const event = payload.event;
+  const webhookEvent = payload.event;
   const orderId = payload.payload.payment?.entity?.order_id || '';
   const razorpayPaymentId = payload.payload.payment?.entity?.id || null;
 
   console.log('[Webhook] Received:', {
-    event,
+    event: webhookEvent,
     eventId,
     orderId,
     razorpayPaymentId,
@@ -363,7 +325,7 @@ export async function POST(request: NextRequest) {
           payload, signature, signature_verified, status, error, ip_address
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
-          event,
+          webhookEvent,
           eventId || null,
           orderId,
           razorpayPaymentId,
@@ -379,7 +341,10 @@ export async function POST(request: NextRequest) {
       console.error('[Webhook] Failed to log invalid signature attempt:', logError);
     }
 
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Invalid signature' }),
+    };
   }
 
   // Check for duplicate event (idempotency)
@@ -388,7 +353,10 @@ export async function POST(request: NextRequest) {
       const alreadyProcessed = await isEventProcessed(eventId);
       if (alreadyProcessed) {
         console.log('[Webhook] Event already processed:', eventId);
-        return NextResponse.json({ status: 'already_processed' });
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ status: 'already_processed' }),
+        };
       }
     } catch (checkError) {
       console.error('[Webhook] Error checking idempotency:', checkError);
@@ -404,7 +372,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Handle different event types
-      switch (event) {
+      switch (webhookEvent) {
         case 'payment.captured':
         case 'order.paid':
           processResult = await handlePaymentCaptured(client, payload);
@@ -416,12 +384,12 @@ export async function POST(request: NextRequest) {
 
         default:
           // Log unhandled events but return success (don't want Razorpay to retry)
-          console.log('[Webhook] Unhandled event type:', event);
+          console.log('[Webhook] Unhandled event type:', webhookEvent);
       }
 
       // Log webhook to audit table
       await logWebhook(client, {
-        event,
+        event: webhookEvent,
         eventId,
         orderId,
         paymentId: razorpayPaymentId,
@@ -438,14 +406,17 @@ export async function POST(request: NextRequest) {
     });
 
     const duration = Date.now() - startTime;
-    console.log('[Webhook] Processed:', { event, eventId, duration: `${duration}ms`, result });
+    console.log('[Webhook] Processed:', { event: webhookEvent, eventId, duration: `${duration}ms`, result });
 
     // Always return 200 to acknowledge receipt
-    return NextResponse.json({
-      status: 'ok',
-      event,
-      processed: result.success,
-    });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        status: 'ok',
+        event: webhookEvent,
+        processed: result.success,
+      }),
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Webhook] Processing error:', errorMessage);
@@ -458,7 +429,7 @@ export async function POST(request: NextRequest) {
           payload, signature, signature_verified, status, error, ip_address
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
-          event,
+          webhookEvent,
           eventId || null,
           orderId,
           razorpayPaymentId,
@@ -476,9 +447,12 @@ export async function POST(request: NextRequest) {
 
     // Still return 200 to prevent Razorpay from retrying indefinitely
     // The error is logged and can be reviewed in admin dashboard
-    return NextResponse.json({
-      status: 'error',
-      error: errorMessage,
-    });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        status: 'error',
+        error: errorMessage,
+      }),
+    };
   }
-}
+};
