@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-11 - Production Hardening [In Progress] |
-| **Current Plan** | Plan 03 complete (Environment Validation) |
-| **Status** | Zod-based environment validation prevents production misconfiguration |
-| **Progress** | PROD-11: 3/3 plans complete (100%) |
-| **Last activity** | 2026-01-28 - PROD-11-03 complete, environment validation with fail-fast production mode |
+| **Current Phase** | Phase PROD-10 - UX Polish [In Progress] |
+| **Current Plan** | Plan 04 complete (Status Change Notifications) |
+| **Status** | Email and in-app notifications for proposal status changes with bidirectional flow |
+| **Progress** | PROD-10: 4/11 plans complete (36%) |
+| **Last activity** | 2026-01-28 - PROD-10-04 complete, proposal status notifications wired |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -108,6 +108,9 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
+| Bidirectional proposal notifications | Admin status changes notify clients; client responses notify all admins (super_admin + project_manager) | Applied - PROD-10-04 |
+| [Client Response] prefix for admin notifications | Enables quick filtering and prioritization of client-initiated status changes | Applied - PROD-10-04 |
+| Non-blocking notification dispatch | Notification errors logged but don't fail status update requests to ensure core workflow succeeds | Applied - PROD-10-04 |
 | Keep admin purple theme | Admin portal retains purple-themed status badges for consistency; traffic light colors applied to client portal only | Applied - PROD-10-01 |
 | Professional client labels | Use client-friendly labels: "Awaiting Your Review" instead of "Sent", "Declined" instead of "Rejected" | Applied - PROD-10-01 |
 | Traffic light color scheme | Amber (pending), green (positive), red (negative), orange (action) for intuitive status recognition | Applied - PROD-10-01 |
