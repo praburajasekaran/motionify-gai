@@ -139,8 +139,11 @@ async function handlePaymentCaptured(
     [razorpayPaymentId, method?.toUpperCase() || null, razorpayOrderId]
   );
 
+  // Get the payment ID - either from the update result or from existing query
+  let paymentId: string;
+
   if (result.rows.length === 0) {
-    // Either payment not found or already completed - both are OK
+    // Either payment not found or already completed - check which
     const existingPayment = await client.query(
       `SELECT id, status FROM payments WHERE razorpay_order_id = $1`,
       [razorpayOrderId]
@@ -150,8 +153,11 @@ async function handlePaymentCaptured(
       return { success: false, error: `Payment not found for order ${razorpayOrderId}` };
     }
 
-    // Payment already completed - idempotent success
-    return { success: true, paymentId: existingPayment.rows[0].id };
+    // Payment already completed by frontend verification - still send email
+    paymentId = existingPayment.rows[0].id;
+    console.log('[Webhook] Payment already completed, sending email anyway:', paymentId);
+  } else {
+    paymentId = result.rows[0].id;
   }
 
   // Send success email (non-blocking)
@@ -166,13 +172,15 @@ async function handlePaymentCaptured(
       LEFT JOIN projects proj ON p.project_id = proj.id
       LEFT JOIN users u ON proj.client_user_id = u.id
       WHERE p.id = $1`,
-      [result.rows[0].id]
+      [paymentId]
     );
 
     if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
       const info = paymentInfo.rows[0];
       const baseUrl = process.env.URL || 'http://localhost:5173';
       const projectUrl = `${baseUrl}/#/portal/projects`;
+
+      console.log('[Webhook] Sending payment success email to:', info.client_email);
 
       // Call email function directly (non-blocking)
       sendPaymentSuccessEmail({
@@ -184,13 +192,15 @@ async function handlePaymentCaptured(
         paymentType: info.payment_type,
         projectUrl,
       }).catch((e) => console.error('[Webhook] Success email error:', e));
+    } else {
+      console.log('[Webhook] No client email found for payment:', paymentId, paymentInfo.rows[0]);
     }
   } catch (emailError) {
     console.error('[Webhook] Error fetching payment info for email:', emailError);
     // Don't fail the webhook - email is non-critical
   }
 
-  return { success: true, paymentId: result.rows[0].id };
+  return { success: true, paymentId };
 }
 
 /**

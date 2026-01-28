@@ -2,7 +2,7 @@
  * Shared Modules Index
  *
  * Re-exports all shared functionality for easy importing:
- * import { getPool, getCorsHeaders, requireAuth } from './_shared';
+ * import { query, getCorsHeaders, requireAuth } from './_shared';
  */
 
 // Database
