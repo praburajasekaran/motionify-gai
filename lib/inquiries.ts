@@ -88,7 +88,9 @@ export async function getInquiries(): Promise<Inquiry[]> {
 
 export async function getInquiryById(id: string): Promise<Inquiry | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/inquiry-detail/${id}`);
+    const response = await fetch(`${API_BASE_URL}/inquiry-detail/${id}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
