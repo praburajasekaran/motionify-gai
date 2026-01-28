@@ -248,7 +248,7 @@ export function ProposalBuilder() {
         logProposalSent({
           senderId: user.id,
           senderName: user.fullName || user.email || 'Admin',
-          recipientId: inquiry.clientUserId || inquiry.contactEmail, // Use clientUserId if available, fallback to email
+          ...(inquiry.clientUserId && { recipientId: inquiry.clientUserId }),
           recipientName: inquiry.contactName,
           inquiryId: inquiry.id,
           proposalId: proposal.id,
