@@ -280,12 +280,12 @@ export const handler = compose(
       }
 
       // Send notifications if status changed
-      if (updates.status && auth?.user?.id) {
+      if (updates.status && auth?.user?.userId) {
         await notifyStatusChange(
           client,
           proposalId,
           updates.status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
-          auth.user.id,
+          auth.user.userId,
           updates.feedback as string | undefined
         );
       }
@@ -346,12 +346,12 @@ export const handler = compose(
       }
 
       // Send notifications on status change
-      if (status && auth?.user?.id) {
+      if (status && auth?.user?.userId) {
         await notifyStatusChange(
           client,
           proposalId,
           status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
-          auth.user.id,
+          auth.user.userId,
           feedback as string | undefined
         );
       }
