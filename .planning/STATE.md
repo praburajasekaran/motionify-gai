@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-08 - Security Hardening [Complete] |
-| **Current Plan** | PROD-08-02 (Frontend Credentials) |
-| **Status** | Phase complete - inquiries endpoint protected, credentials wired |
-| **Progress** | PROD-08: 2/2 plans complete (100%) |
-| **Last activity** | 2026-01-28 - PROD-08 Security hardening complete |
+| **Current Phase** | Phase PROD-13 - Frontend Credential Wiring [In Progress] |
+| **Current Plan** | PROD-13-03 (Payment API Credentials) |
+| **Status** | Plan complete - payment API fetch calls now include credentials |
+| **Progress** | PROD-13: 3/? plans complete |
+| **Last activity** | 2026-01-28 - PROD-13-03 Payment API credentials wired |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -218,6 +218,22 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-28)
+
+**Phase PROD-13 - Plan 03: Payment API Credentials Complete:**
+- Added credentials: 'include' to fetchPaymentsForProject()
+- Added credentials: 'include' to fetchPaymentsForProposal()
+- Added credentials: 'include' to markPaymentAsPaid()
+- All payment fetch calls now properly authenticate with httpOnly cookies
+- Commit: 36c593a
+- Duration: 2 minutes
+- Created PROD-13-03-SUMMARY.md
+- **Status:** PROD-13-03 complete - payment API fetch calls authenticated
+
+**Next actions:**
+- Continue with PROD-13-04 if more credential wiring needed
+- Or proceed to next phase in roadmap
+
+---
 
 **Phase PROD-08 - Security Hardening Complete:**
 - Protected inquiries GET/PUT endpoints with conditional authentication
