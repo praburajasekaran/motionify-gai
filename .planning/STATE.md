@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-06 - User Management [In Progress] |
-| **Current Plan** | PROD-06-02 (Cookie Authentication Fix) |
-| **Status** | Plan complete - credentials added to UserManagement.tsx |
-| **Progress** | PROD-06: 2/3 plans complete (67%) |
-| **Last activity** | 2026-01-28 - PROD-06-02 cookie auth fix complete |
+| **Current Plan** | PROD-06-01 (Database Schema for User Invitations and Roles) |
+| **Status** | Plan complete - migration and schema.sql updated |
+| **Progress** | PROD-06: 1/5 plans complete (20%) |
+| **Last activity** | 2026-01-28 - PROD-06-01 database schema complete |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -157,6 +157,8 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 | R2 XML error parsing | Parse R2 XML error responses using DOMParser to extract Code and Message elements for better debugging | Applied |
 | Dynamic upload timeouts | Calculate XHR timeout based on file size: max(2min, fileSize/10MB * 1min + 2min) to prevent premature failures | Applied |
 | Specific error code handling | Handle ACCESS_DENIED and FILES_EXPIRED error codes with user-friendly messages in getDownloadUrl | Applied |
+| 4-role system | super_admin, project_manager, team_member, client - replacing 2-role admin/client system | Applied |
+| user_invitations vs project_invitations | Separate tables for different use cases: user_invitations for admin-level user creation, project_invitations for project team invitations | Applied |
 
 ### Technical Context
 
@@ -212,7 +214,28 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ## Session Continuity
 
-### This Session (2026-01-27)
+### This Session (2026-01-28)
+
+**Phase PROD-06 - Plan 01: Database Schema for User Invitations and Roles Complete:**
+- Created migration 008_create_user_invitations_and_roles.sql
+- user_invitations table with columns: id, email, role, full_name, token, invited_by, status, expires_at, accepted_at, revoked_at, revoked_by, created_at, updated_at
+- Added indexes for email, token, status, expires_at
+- Migrates existing 'admin' users to 'super_admin'
+- Updates users table role constraint to 4-role system (super_admin, project_manager, team_member, client)
+- Updated schema.sql to reflect post-migration state
+- Updated seed data to use super_admin role
+- Commits: e9b6f32 (migration), 04c361c (schema.sql)
+- Duration: 2 minutes
+- Created PROD-06-01-SUMMARY.md
+- **Status:** PROD-06-01 complete - database schema ready for PROD-06-02
+
+**Next actions:**
+- Execute PROD-06-02: Role Hierarchy and Permission Utilities
+- Run migration on production database before deploying code changes
+
+---
+
+### Previous Session (2026-01-27)
 
 **Phase PROD-04 - Plan 05: Manual Testing Complete:**
 - DEL-01: Deliverable creation verified (files stored in deliverable_files table)
@@ -558,4 +581,4 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 ---
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-01-28*
