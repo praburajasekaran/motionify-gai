@@ -85,9 +85,9 @@ export const handler = compose(
             [email.toLowerCase(), token, expiresAt]
         );
 
-        // Build magic link URL
+        // Build magic link URL - points to /login which handles token verification
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
-        const magicLink = `${appUrl}/#/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+        const magicLink = `${appUrl}/#/login?token=${token}&email=${encodeURIComponent(email)}`;
 
         logger.info('User created', {
             userId: newUser.id,
