@@ -78,9 +78,11 @@ Plans:
 **Priority:** Must Have
 **Gap Closure:** Addresses audit items from v1-PROD-MILESTONE-AUDIT.md
 
+**Plans:** 2 plans
+
 Plans:
-- [ ] PROD-08-01-PLAN.md — Add auth check to inquiries GET endpoint
-- [ ] PROD-08-02-PLAN.md — Add credentials to lib/inquiries.ts fetch calls
+- [ ] PROD-08-01-PLAN.md — Add withAuth middleware and role-based access to inquiries GET endpoint
+- [ ] PROD-08-02-PLAN.md — Add credentials: 'include' to lib/inquiries.ts fetch calls
 
 ---
 
@@ -211,4 +213,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-28 (Gap closure phases PROD-08 through PROD-12 added)*
+*Last updated: 2026-01-28 (PROD-08 plans created)*
