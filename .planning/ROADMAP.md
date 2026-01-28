@@ -130,6 +130,18 @@ Plans:
 
 ---
 
+### Phase PROD-13: Frontend Credential Wiring [Planned]
+**Goal:** Add `credentials: 'include'` to 7 fetch calls accessing protected endpoints
+**Priority:** Must Have (blocks deployment)
+**Gap Closure:** Addresses critical integration gaps from v1-PROD-MILESTONE-AUDIT.md
+
+Plans:
+- [ ] PROD-13-01-PLAN.md — Add credentials to lib/proposals.ts (3 calls)
+- [ ] PROD-13-02-PLAN.md — Add credentials to lib/inquiries.ts (1 call)
+- [ ] PROD-13-03-PLAN.md — Add credentials to services/paymentApi.ts (3 calls)
+
+---
+
 ## Phases
 
 All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-ROADMAP.md) for full details.
@@ -154,6 +166,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-10. UX Polish | PROD | 0/2 | Planned | - |
 | PROD-11. Code Cleanup | PROD | 0/2 | Planned | - |
 | PROD-12. Extended Testing | PROD | 0/1 | Planned | - |
+| PROD-13. Frontend Credential Wiring | PROD | 0/3 | Planned | - |
 
 ---
 
@@ -198,6 +211,9 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | Unused 'review' enum | PROD-11 | Nice | Planned |
 | Frontend status casing | PROD-11 | Nice | Planned |
 | 15 additional tests | PROD-12 | Nice | Planned |
+| lib/proposals.ts credentials | PROD-13 | Must | Planned |
+| lib/inquiries.ts credentials | PROD-13 | Must | Planned |
+| paymentApi.ts credentials | PROD-13 | Must | Planned |
 
 ---
 
