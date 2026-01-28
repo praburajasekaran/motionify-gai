@@ -75,12 +75,39 @@ grep -E "RAZORPAY_WEBHOOK_SECRET|RESEND_API_KEY|ADMIN_NOTIFICATION_EMAIL" landin
 The webhook handler checks for RAZORPAY_WEBHOOK_SECRET and returns 500 if not configured.
   </action>
   <verify>
-List environment variables (without values) that are configured.
-Note any missing variables that need to be set.
+Run `grep -c "RAZORPAY_WEBHOOK_SECRET" landing-page-new/.env.local` - should return 1 if set.
+Run `grep -c "ADMIN_NOTIFICATION_EMAIL" landing-page-new/.env.local` - should return 1 if set.
+List any missing variables that need to be set.
   </verify>
   <done>
 Environment variable checklist completed. Missing variables documented for user action.
   </done>
+</task>
+
+<task type="checkpoint:human-verify" gate="blocking">
+  <what-built>Environment variable check for webhook testing</what-built>
+  <how-to-verify>
+**Confirm these environment variables are set in `landing-page-new/.env.local`:**
+
+1. `RAZORPAY_WEBHOOK_SECRET` - Get from Razorpay Dashboard > Settings > Webhooks > Create/Edit Webhook > Secret
+2. `ADMIN_NOTIFICATION_EMAIL` - Your email to receive failure notifications
+3. `RESEND_API_KEY` - Already set if emails work elsewhere
+4. `RAZORPAY_KEY_ID` - Already set if payments work
+5. `RAZORPAY_KEY_SECRET` - Already set if payments work
+
+**To set missing variables:**
+```bash
+# Edit the file
+nano landing-page-new/.env.local
+
+# Add missing lines like:
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
+ADMIN_NOTIFICATION_EMAIL=your@email.com
+```
+
+**Note:** RAZORPAY_WEBHOOK_SECRET is different from RAZORPAY_KEY_SECRET. The webhook secret is generated when you create a webhook endpoint in Razorpay Dashboard.
+  </how-to-verify>
+  <resume-signal>Type "env configured" to continue, or list which variables are missing</resume-signal>
 </task>
 
 <task type="checkpoint:human-action" gate="blocking">
@@ -117,9 +144,6 @@ ngrok http 3000
    - Edit `landing-page-new/.env.local`
    - Add: `RAZORPAY_WEBHOOK_SECRET=<paste-secret-here>`
    - Restart Next.js dev server
-
-6. **Verify admin email is set:**
-   - Add to `.env.local`: `ADMIN_NOTIFICATION_EMAIL=your@email.com`
   </instructions>
   <resume-signal>Type "webhook configured" with ngrok URL to continue, or describe any issues</resume-signal>
 </task>
@@ -182,7 +206,7 @@ psql $DATABASE_URL -c "SELECT event, status, error FROM payment_webhook_logs WHE
 </task>
 
 <task type="auto">
-  <name>Task 4: Document test results and cleanup</name>
+  <name>Task 5: Document test results and cleanup</name>
   <files></files>
   <action>
 After verification checkpoint passes:
@@ -203,7 +227,7 @@ After verification checkpoint passes:
 ```
   </action>
   <verify>
-Test results documented.
+Test results documented in summary.
 Production setup requirements noted.
   </verify>
   <done>
