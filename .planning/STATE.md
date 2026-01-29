@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | PROD-13 - Extended Testing [In Progress] |
-| **Current Plan** | 01 of 1 complete |
-| **Status** | Extended task management API tests, client permission fix |
-| **Progress** | PROD-13: 1/1 plans complete (100%) |
-| **Last activity** | 2026-01-29 - Completed PROD-13-01: Extended Task Management UAT |
+| **Current Phase** | PROD-13 - Extended Testing [Complete] |
+| **Current Plan** | 02 of 2 complete |
+| **Status** | API pre-verification tests, browser checklist generated |
+| **Progress** | PROD-13: 2/2 plans complete (100%) |
+| **Last activity** | 2026-01-29 - Completed PROD-13-02: Browser Pre-Verification & Checklist |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -107,6 +107,9 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ### Key Decisions
 
 | Decision | Rationale | Status |
+| API pre-verification before browser tests | Maximize automated coverage before manual testing to reduce browser testing burden | Applied - PROD-13-02 |
+| Conditional browser checklist generation | Include API status for each test; only include browser steps for items needing UI confirmation | Applied - PROD-13-02 |
+| Test data limitations documented as notes | Cross-client isolation shows both clients seeing same tasks because they share project in test DB - this is expected behavior, not bug | Applied - PROD-13-02 |
 | Client PATCH permission enforcement | Clients must not edit tasks; PATCH endpoint must mirror POST permission checks for consistent security | Applied - PROD-13-01 |
 | Test skip pattern for quota limits | When test data quota exhausted, mark SKIP not FAIL to distinguish environment limits from bugs | Applied - PROD-13-01 |
 | Task-deliverable linking deferred | deliverable_id field not in schema; linking feature not yet implemented, documented for future | Documented - PROD-13-01 |
@@ -255,6 +258,18 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-29)
+
+**Phase PROD-13 - Plan 02: Browser Pre-Verification & Checklist Complete:**
+- Added CLIENT_USER_2 (ekalaivan+c@gmail.com) with JWT generation for cross-client testing
+- Implemented 3 API pre-verification tests: T01-04 (visibility toggle), T06-04 (cross-client isolation), T05-02/03 (comment editing)
+- Fixed bug: updateTaskSchema missing visibleToClient field (was causing PATCH 400 errors)
+- API results: Visibility toggle works correctly, comment editing not implemented, cross-client shares test project
+- Generated PROD-13-BROWSER-CHECKLIST.md with conditional items based on API results
+- Test results: 23/24 pass, 1 documents test data limitation (not code bug)
+- Commits: f5358ad (tests + bug fix), cfdb96b (browser checklist)
+- Duration: 5 minutes
+- Created PROD-13-02-SUMMARY.md
+- **Status:** PROD-13 complete - browser testing checklist ready for user
 
 **Phase PROD-13 - Plan 01: Extended Task Management UAT Complete:**
 - Extended test-runner.js from 11 to 21 tests
