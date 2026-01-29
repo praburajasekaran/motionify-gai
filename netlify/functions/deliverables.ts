@@ -204,16 +204,10 @@ export const handler = compose(
           return d;
         });
 
-        // For clients, filter out deliverables not yet ready for viewing
-        const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'revision_requested', 'payment_pending', 'final_delivered'];
-        const filteredDeliverables = userRole === 'client'
-          ? deliverables.filter(d => viewableStatuses.includes(d.status))
-          : deliverables;
-
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(filteredDeliverables),
+          body: JSON.stringify(deliverables),
         };
       }
 

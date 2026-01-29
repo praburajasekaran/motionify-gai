@@ -28,9 +28,25 @@ import {
   Download,
   UserPlus,
   UserMinus,
-  Users
+  Users,
+  Circle,
+  Loader,
+  Eye,
+  Clock,
+  Download as DownloadIcon
 } from 'lucide-react';
 import { timeAgo } from '@/lib/portal/utils/dateUtils';
+
+const CLIENT_STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  pending: { label: 'Not Started', color: 'text-zinc-400', icon: Circle },
+  in_progress: { label: 'In Progress', color: 'text-blue-400', icon: Loader },
+  beta_ready: { label: 'Ready for Review', color: 'text-purple-400', icon: Eye },
+  awaiting_approval: { label: 'Awaiting Your Approval', color: 'text-amber-400', icon: Clock },
+  approved: { label: 'Approved', color: 'text-emerald-400', icon: CheckCircle2 },
+  revision_requested: { label: 'Revision Requested', color: 'text-red-400', icon: AlertCircle },
+  payment_pending: { label: 'Payment Pending', color: 'text-amber-400', icon: CreditCard },
+  final_delivered: { label: 'Delivered', color: 'text-emerald-400', icon: DownloadIcon },
+};
 
 interface ProjectHomeProps {
   onSelectDeliverable: (deliverableId: string) => void;
@@ -495,17 +511,27 @@ const ProjectHome = ({ onSelectDeliverable }: ProjectHomeProps) => {
                 <div>
                   <h4 className="font-semibold text-white mb-3">Deliverables</h4>
                   <div className="space-y-2">
-                    {project.scope.deliverables.map((deliverable) => (
-                      <div
-                        key={deliverable.id}
-                        onClick={() => onSelectDeliverable(deliverable.id)}
-                        className="p-4 flex items-center justify-between bg-white/5 rounded-xl border border-white/10 cursor-pointer hover:bg-white/10 hover:border-cyan-500/50 transition-all duration-200 group"
-                        role="button" tabIndex={0}
-                      >
-                        <h5 className="font-semibold text-sm text-white group-hover:text-cyan-400 transition-colors">{deliverable.name}</h5>
-                        <CornerDownRight className="h-4 w-4 text-white/40 group-hover:text-cyan-400 transition-colors" />
-                      </div>
-                    ))}
+                    {project.scope.deliverables.map((deliverable) => {
+                      const statusConfig = CLIENT_STATUS_CONFIG[deliverable.status] || CLIENT_STATUS_CONFIG.pending;
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <div
+                          key={deliverable.id}
+                          onClick={() => onSelectDeliverable(deliverable.id)}
+                          className="p-4 flex items-center justify-between bg-white/5 rounded-xl border border-white/10 cursor-pointer hover:bg-white/10 hover:border-cyan-500/50 transition-all duration-200 group"
+                          role="button" tabIndex={0}
+                        >
+                          <div className="flex items-center gap-3">
+                            <h5 className="font-semibold text-sm text-white group-hover:text-cyan-400 transition-colors">{deliverable.name}</h5>
+                            <span className={`flex items-center gap-1 text-xs ${statusConfig.color}`}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                          <CornerDownRight className="h-4 w-4 text-white/40 group-hover:text-cyan-400 transition-colors" />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

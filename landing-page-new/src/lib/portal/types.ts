@@ -32,6 +32,7 @@ export enum ProjectStatus {
 export interface Deliverable {
   id: string;
   name: string;
+  status: string;
 }
 
 export interface Comment {

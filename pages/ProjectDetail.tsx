@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-    Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
+    Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
     Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
     Bell, BellOff, Settings, Share2, CreditCard
@@ -16,6 +16,7 @@ import { analyzeProjectRisk } from '../services/geminiService';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskEditModal } from '../components/tasks/TaskEditModal';
+import { TaskCreateForm } from '../components/tasks/TaskCreateForm';
 import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
 import { InviteModal } from '../components/team/InviteModal';
 import { TeamTab } from '../components/team/TeamTab';
@@ -170,7 +171,6 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [newTaskInput, setNewTaskInput] = useState('');
     const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
     const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
     const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
@@ -813,7 +813,9 @@ export const ProjectDetail = () => {
                             {/* Team Avatars */}
                             <div className="flex items-center -space-x-2 hidden md:flex">
                                 {project.team.slice(0, 4).map((member, index) => (
-                                    <Avatar key={`${member.id}-${index}`} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                    <div key={`${member.id}-${index}`} title={`${member.name}${member.email ? ` (${member.email})` : ''}`}>
+                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                    </div>
                                 ))}
                                 {project.team.length > 4 && (
                                     <button
@@ -940,7 +942,13 @@ export const ProjectDetail = () => {
                                                         </div>
                                                         <Progress value={del.progress} className="h-1.5" />
                                                     </div>
-                                                    <Badge variant={del.status === 'approved' ? 'success' : del.status === 'awaiting_approval' ? 'warning' : 'secondary'}>
+                                                    <Badge variant={
+                                                        del.status === 'approved' || del.status === 'final_delivered' ? 'success' :
+                                                        del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
+                                                        del.status === 'in_progress' || del.status === 'beta_ready' ? 'info' :
+                                                        del.status === 'revision_requested' ? 'destructive' :
+                                                        'secondary'
+                                                    }>
                                                         {del.status.replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
@@ -1213,27 +1221,21 @@ export const ProjectDetail = () => {
                             )}
                         </div>
 
-                        {/* Add Task Input - Only visible to Motionify team (not clients) */}
-                        {user && !isClient(user) && (
-                            <div className="space-y-2 pt-2">
-                                <div className="flex gap-3 items-center">
-                                    <div className="relative flex-1">
-                                        <Input
-                                            placeholder="Add a task... (e.g., 'Review design @john tomorrow')"
-                                            value={newTaskInput}
-                                            onChange={(e) => setNewTaskInput(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                            className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
-                                        />
-                                    </div>
-                                    <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
-                                        <PlusCircle className="h-4 w-4 mr-2" /> Add Task
-                                    </Button>
-                                </div>
-                                <p className="text-xs text-zinc-400 pl-1">
-                                    Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
-                                </p>
-                            </div>
+                        {/* Add Task Form - Only visible to Motionify team (not clients) */}
+                        {user && !isClient(user) && project && (
+                            <TaskCreateForm
+                                projectId={project.id}
+                                teamMembers={project.team || []}
+                                onTaskCreated={(task) => {
+                                    setTasks(prev => [...prev, task]);
+                                    addToast({
+                                        title: 'Task Created',
+                                        description: 'Task has been created successfully',
+                                        variant: 'success'
+                                    });
+                                }}
+                                userId={user.id}
+                            />
                         )}
 
                         <TaskEditModal
