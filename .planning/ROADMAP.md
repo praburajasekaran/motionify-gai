@@ -155,6 +155,19 @@ Plans:
 
 ---
 
+### Phase 9: Admin Features [Planned]
+**Goal:** Build admin dashboard with real metrics, activity log with real data, and administrative oversight tools
+**Priority:** Should Have
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Create activities table migration + dashboard-metrics endpoint + enhance activities API
+- [ ] 09-02-PLAN.md — Rewrite Dashboard with real metrics and interactive expandable cards
+- [ ] 09-03-PLAN.md — Rewrite ActivityLogs with real API data, all/my toggle, and Load More
+
+---
+
 ### Phase PROD-13: Extended Testing [Planned]
 **Goal:** Complete remaining manual tests requiring browser/Gemini
 **Priority:** Nice to Have
@@ -204,6 +217,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-10. UX Polish | PROD | 4/4 | Complete | 2026-01-28 |
 | PROD-11. Production Hardening | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-12. Performance & Polish | PROD | 5/5 | Complete | 2026-01-29 |
+| 9. Admin Features | PROD | 0/3 | Planned | - |
 | PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
 | PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
 
