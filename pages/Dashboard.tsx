@@ -194,7 +194,28 @@ export const Dashboard = () => {
       }
 
       const data = await response.json();
-      setMetrics(data);
+      // Transform flat API response to nested structure
+      setMetrics({
+        projects: {
+          total: data.totalProjects ?? 0,
+          active: data.activeProjects ?? 0,
+          completed: (data.totalProjects ?? 0) - (data.activeProjects ?? 0),
+        },
+        proposals: {
+          total: data.totalProposals ?? 0,
+          pending: data.pendingProposals ?? 0,
+          accepted: data.acceptedProposals ?? 0,
+        },
+        revenue: {
+          total: data.totalRevenue ?? 0,
+          completed: data.totalRevenue ?? 0,
+          pending: data.pendingRevenue ?? 0,
+        },
+        inquiries: {
+          total: data.totalInquiries ?? 0,
+          new: data.newInquiries ?? 0,
+        },
+      });
     } catch (error: any) {
       console.error('Failed to fetch dashboard metrics:', error);
       setErrorMetrics(error.message || 'Failed to load metrics');
