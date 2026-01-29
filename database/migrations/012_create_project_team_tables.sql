@@ -10,13 +10,17 @@
 
 -- UP
 
+-- Drop partially-created tables from failed migration attempt
+DROP TABLE IF EXISTS project_invitations;
+DROP TABLE IF EXISTS project_team;
+
 -- ============================================================================
 -- 1. PROJECT_TEAM TABLE
 -- ============================================================================
 -- Tracks which users are members of which projects.
 -- Supports soft delete via removed_at for historical data retention.
 
-CREATE TABLE IF NOT EXISTS project_team (
+CREATE TABLE project_team (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
