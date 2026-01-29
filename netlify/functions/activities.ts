@@ -34,15 +34,22 @@ export const handler = compose(
 
     // GET - Fetch activities by context (inquiry, proposal, or project)
     if (event.httpMethod === 'GET') {
-      const { inquiryId, proposalId, projectId, limit = '50' } = event.queryStringParameters || {};
+      const { inquiryId, proposalId, projectId, userId, offset = '0', limit = '50' } = event.queryStringParameters || {};
+
+      // Check if user is admin (super_admin or project_manager)
+      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'project_manager';
 
       let query = `
         SELECT
-          id, type, user_id, user_name,
-          target_user_id, target_user_name,
-          inquiry_id, proposal_id, project_id,
-          details, created_at
-        FROM activities
+          a.id, a.type, a.user_id, a.user_name,
+          a.target_user_id, a.target_user_name,
+          a.inquiry_id, a.proposal_id, a.project_id,
+          a.details, a.created_at,
+          p.project_number as project_name,
+          i.inquiry_number
+        FROM activities a
+        LEFT JOIN projects p ON a.project_id = p.id
+        LEFT JOIN inquiries i ON a.inquiry_id = i.id
         WHERE 1=1
       `;
       const params: (string | number)[] = [];
@@ -50,25 +57,32 @@ export const handler = compose(
 
       // Filter by context - activities can relate to multiple contexts
       if (inquiryId) {
-        query += ` AND inquiry_id = $${paramIndex}`;
+        query += ` AND a.inquiry_id = $${paramIndex}`;
         params.push(inquiryId);
         paramIndex++;
       }
 
       if (proposalId) {
-        query += ` AND proposal_id = $${paramIndex}`;
+        query += ` AND a.proposal_id = $${paramIndex}`;
         params.push(proposalId);
         paramIndex++;
       }
 
       if (projectId) {
-        query += ` AND project_id = $${paramIndex}`;
+        query += ` AND a.project_id = $${paramIndex}`;
         params.push(projectId);
         paramIndex++;
       }
 
-      // If no context specified, return empty (don't expose all activities)
-      if (!inquiryId && !proposalId && !projectId) {
+      // Filter by userId (admin feature)
+      if (userId) {
+        query += ` AND a.user_id = $${paramIndex}`;
+        params.push(userId);
+        paramIndex++;
+      }
+
+      // If no context specified and user is not admin, return error
+      if (!inquiryId && !proposalId && !projectId && !isAdmin) {
         return {
           statusCode: 400,
           headers,
@@ -76,8 +90,10 @@ export const handler = compose(
         };
       }
 
-      query += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
+      // Add pagination support
+      query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       params.push(parseInt(limit, 10));
+      params.push(parseInt(offset, 10));
 
       const result = await client.query(query, params);
 
@@ -92,6 +108,8 @@ export const handler = compose(
         inquiryId: row.inquiry_id,
         proposalId: row.proposal_id,
         projectId: row.project_id,
+        projectName: row.project_name,
+        inquiryNumber: row.inquiry_number,
         details: row.details,
         timestamp: new Date(row.created_at).getTime(),
       }));
