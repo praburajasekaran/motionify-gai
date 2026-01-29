@@ -314,7 +314,7 @@ export const ProjectDetail = () => {
                 project_id: project.id,
                 title: parsed.title,
                 description: parsed.title, // Use title as description for now
-                visible_to_client: true,
+                visible_to_client: false,
                 status: 'pending',
                 assignee_id: parsed.assigneeId,
                 deadline: parsed.deadline

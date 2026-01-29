@@ -484,7 +484,7 @@ export const handler = compose(
           taskData.title,
           taskData.description,
           taskData.status || 'pending',
-          rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : true,
+          rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false,
           taskData.assignedTo || null,
           taskData.dueDate || null,
           0, // position - default to 0

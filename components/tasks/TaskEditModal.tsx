@@ -23,14 +23,14 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState<'pending' | 'in_progress' | 'awaiting_approval' | 'completed' | 'revision_requested'>('pending');
   const [assigneeId, setAssigneeId] = useState('');
-  const [visibleToClient, setVisibleToClient] = useState(true);
+  const [visibleToClient, setVisibleToClient] = useState(false);
 
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setStatus(task.status);
       setAssigneeId(task.assignee?.id || '');
-      setVisibleToClient(task.visibleToClient ?? true);
+      setVisibleToClient(task.visibleToClient ?? false);
     }
   }, [task, isOpen]);
 
