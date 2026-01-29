@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 09 - Admin Features [In Progress] |
-| **Current Plan** | 09-01 of 3 [Complete] |
-| **Status** | Admin dashboard foundation - activities table, metrics endpoint, enhanced API |
-| **Progress** | Phase 09: 1/3 plans complete (33%) |
-| **Last activity** | 2026-01-29 - Completed 09-01-PLAN.md (Admin Dashboard Foundation) |
+| **Current Plan** | 09-02 of 3 [Complete] |
+| **Status** | Admin dashboard with real metrics and recent activity |
+| **Progress** | Phase 09: 2/3 plans complete (67%) |
+| **Last activity** | 2026-01-29 - Completed 09-02-PLAN.md (Admin Dashboard UI) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -254,6 +254,13 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Enhanced activities API with admin-level queries, userId filter, offset pagination, and context JOINs
 - Subquery aggregation pattern prevents cartesian products in metrics endpoint
 - Admin role detection allows global queries without context filters
+
+**Phase 09 - Plan 02: Admin Dashboard UI Complete:**
+- Rewrote Dashboard.tsx removing all Recharts imports and mock data
+- Implemented 4 expandable metric cards fetching real data from dashboard-metrics API
+- Built recent activity table with Time/User/Action/Context columns from activities API
+- Added navigation links to projects/proposals/inquiries in activity context
+- Parallel API fetching with independent loading/error states for better UX
 - Commits: 6300e75 (migration), 401265f (endpoints)
 - Duration: 2 minutes
 - Created 09-01-SUMMARY.md
