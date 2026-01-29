@@ -1,357 +1,408 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../contexts/AuthContext';
-// TODO: Implement real activity fetching from API
-// import { fetchActivities } from '../../lib/activities';
-import { ActivityType, Activity, Project } from '../../landing-page-new/src/lib/portal/types';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Activity, Users, Loader2 } from 'lucide-react';
 
-interface AggregatedActivity extends Activity {
-    projectId: string;
-    projectName: string;
+interface ActivityEntry {
+  id: string;
+  type: string;
+  userId: string;
+  userName: string;
+  targetUserId: string | null;
+  targetUserName: string | null;
+  inquiryId: string | null;
+  proposalId: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  inquiryNumber: string | null;
+  details: Record<string, string | number>;
+  timestamp: number;
 }
 
-// Helper to get readable label for activity type
-function getActivityTypeLabel(type: ActivityType): string {
-    const labels: Record<ActivityType, string> = {
-        [ActivityType.TASK_STATUS_CHANGED]: 'Task Status Changed',
-        [ActivityType.COMMENT_ADDED]: 'Comment Added',
-        [ActivityType.FILE_UPLOADED]: 'File Uploaded',
-        [ActivityType.FILE_RENAMED]: 'File Renamed',
-        [ActivityType.TEAM_MEMBER_INVITED]: 'Team Member Invited',
-        [ActivityType.TEAM_MEMBER_REMOVED]: 'Team Member Removed',
-        [ActivityType.TASK_CREATED]: 'Task Created',
-        [ActivityType.TASK_UPDATED]: 'Task Updated',
-        [ActivityType.REVISION_REQUESTED]: 'Revision Requested',
-        [ActivityType.TEAM_UPDATED]: 'Team Updated',
-    };
-    return labels[type] || type;
+// Helper to get activity type badge color by category
+function getActivityTypeBadgeColor(type: string): string {
+  const lower = type.toLowerCase();
+
+  // Proposals
+  if (lower.includes('proposal')) {
+    return 'bg-purple-100 text-purple-800';
+  }
+
+  // Payments
+  if (lower.includes('payment')) {
+    return 'bg-green-100 text-green-800';
+  }
+
+  // Deliverables
+  if (lower.includes('deliverable')) {
+    return 'bg-blue-100 text-blue-800';
+  }
+
+  // Tasks
+  if (lower.includes('task')) {
+    return 'bg-cyan-100 text-cyan-800';
+  }
+
+  // Files
+  if (lower.includes('file')) {
+    return 'bg-indigo-100 text-indigo-800';
+  }
+
+  // Team
+  if (lower.includes('team') || lower.includes('member') || lower.includes('invited')) {
+    return 'bg-orange-100 text-orange-800';
+  }
+
+  // Comments
+  if (lower.includes('comment')) {
+    return 'bg-emerald-100 text-emerald-800';
+  }
+
+  // Default
+  return 'bg-gray-100 text-gray-800';
 }
 
-// Helper to get activity type badge color
-function getActivityTypeBadgeColor(type: ActivityType): string {
-    switch (type) {
-        case ActivityType.TASK_STATUS_CHANGED:
-            return 'bg-blue-100 text-blue-800';
-        case ActivityType.COMMENT_ADDED:
-            return 'bg-green-100 text-green-800';
-        case ActivityType.FILE_UPLOADED:
-        case ActivityType.FILE_RENAMED:
-            return 'bg-purple-100 text-purple-800';
-        case ActivityType.TEAM_MEMBER_INVITED:
-        case ActivityType.TEAM_MEMBER_REMOVED:
-        case ActivityType.TEAM_UPDATED:
-            return 'bg-orange-100 text-orange-800';
-        case ActivityType.TASK_CREATED:
-        case ActivityType.TASK_UPDATED:
-            return 'bg-cyan-100 text-cyan-800';
-        case ActivityType.REVISION_REQUESTED:
-            return 'bg-amber-100 text-amber-800';
-        default:
-            return 'bg-gray-100 text-gray-800';
-    }
+// Helper to get human-readable action description
+function getActionDescription(type: string): string {
+  const typeMap: Record<string, string> = {
+    PROPOSAL_SENT: 'sent a proposal',
+    PROPOSAL_ACCEPTED: 'accepted a proposal',
+    PROPOSAL_REJECTED: 'rejected a proposal',
+    PROPOSAL_CHANGES_REQUESTED: 'requested changes on a proposal',
+    DELIVERABLE_APPROVED: 'approved a deliverable',
+    DELIVERABLE_REJECTED: 'rejected a deliverable',
+    PAYMENT_RECEIVED: 'received a payment',
+    COMMENT_ADDED: 'added a comment',
+    PROJECT_CREATED: 'created a project',
+    TASK_CREATED: 'created a task',
+    TASK_STATUS_CHANGED: 'updated task status',
+    FILE_UPLOADED: 'uploaded a file',
+    TEAM_MEMBER_INVITED: 'invited a team member',
+  };
+
+  if (typeMap[type]) {
+    return typeMap[type];
+  }
+
+  // Humanize by replacing underscores and lowercasing
+  return type.replace(/_/g, ' ').toLowerCase();
 }
 
-// Helper to format activity details
-function formatDetails(details: Record<string, string | number>): string {
-    return Object.entries(details)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ')
-        .substring(0, 80) + (Object.keys(details).length > 2 ? '...' : '');
+// Helper to format relative time
+function getRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+
+  return new Date(timestamp).toLocaleDateString();
 }
 
 /**
- * Activity Logs page - Super Admin only
- * 
- * Allows Super Admins to:
- * - View all project activities
- * - Filter by date range, project, user, action type
- * - Search activities
- * - Export to CSV
+ * Activity Logs page - Super Admin and Project Manager only
+ *
+ * Shows a clean stream of platform activities with:
+ * - Toggle between "All Activity" and "My Activity"
+ * - Real-time data from activities API
+ * - Load More pagination
+ * - Navigation links to projects/proposals
  */
 export function ActivityLogs() {
-    const { user: currentUser } = useAuthContext();
-    const [loading, setLoading] = useState(true);
+  const { user: currentUser } = useAuthContext();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [activities, setActivities] = useState<ActivityEntry[]>([]);
+  const [viewMode, setViewMode] = useState<'all' | 'my'>('all');
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-    // Filter states
-    const [projectFilter, setProjectFilter] = useState('all');
-    const [actionTypeFilter, setActionTypeFilter] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+  const limit = 50;
 
-    // Check user roles
-    const isSuperAdmin = currentUser?.role === 'super_admin';
-    const isProjectManager = currentUser?.role === 'project_manager';
+  // Check user roles
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isProjectManager = currentUser?.role === 'project_manager';
 
-    // Aggregate activities based on role
-    // TODO: Fetch real activities from API instead of mock data
-    const allActivities = useMemo((): AggregatedActivity[] => {
-        // Return empty array - activities will be fetched from API when implemented
-        // The API endpoint /activities requires projectId, so we need to:
-        // 1. First fetch all projects the user has access to
-        // 2. Then fetch activities for each project
-        // 3. Aggregate and sort them
-        return [];
+  // Fetch activities
+  const fetchActivities = async (append = false) => {
+    if (!currentUser) return;
 
-    }, [currentUser, isSuperAdmin, isProjectManager]);
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setError(null);
+      }
 
-    // Get unique users from activities
-    const uniqueUsers = useMemo(() => {
-        const users = new Map<string, string>();
-        allActivities.forEach((a) => {
-            users.set(a.userId, a.userName);
-        });
-        return Array.from(users.entries());
-    }, [allActivities]);
+      // Build query params
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        offset: append ? offset.toString() : '0',
+      });
 
-    // ... existing filtering logic (filteredActivities useMemo) ...
+      // Add userId filter for "my" mode
+      if (viewMode === 'my') {
+        params.append('userId', currentUser.id);
+      }
 
-    // Filter filteredActivities from allActivities as before
-    const filteredActivities = useMemo(() => {
-        return allActivities.filter((activity) => {
-            // Project filter
-            if (projectFilter !== 'all' && activity.projectId !== projectFilter) {
-                return false;
-            }
+      const response = await fetch(`/.netlify/functions/activities?${params}`, {
+        credentials: 'include',
+      });
 
-            // Action type filter
-            if (actionTypeFilter !== 'all' && activity.type !== actionTypeFilter) {
-                return false;
-            }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.status}`);
+      }
 
-            // Date range filter
-            if (startDate) {
-                const startTimestamp = new Date(startDate).getTime();
-                if (activity.timestamp < startTimestamp) {
-                    return false;
-                }
-            }
-            if (endDate) {
-                const endTimestamp = new Date(endDate).getTime() + 86400000; // Include full day
-                if (activity.timestamp > endTimestamp) {
-                    return false;
-                }
-            }
+      const data: ActivityEntry[] = await response.json();
 
-            // Search filter (by user name or details)
-            if (searchQuery.trim()) {
-                const query = searchQuery.toLowerCase();
-                const matchesUser = activity.userName.toLowerCase().includes(query);
-                const matchesDetails = Object.values(activity.details).some(
-                    (val) => String(val).toLowerCase().includes(query)
-                );
-                if (!matchesUser && !matchesDetails) {
-                    return false;
-                }
-            }
+      if (append) {
+        setActivities(prev => [...prev, ...data]);
+        setOffset(prev => prev + limit);
+      } else {
+        setActivities(data);
+        setOffset(limit);
+      }
 
-            return true;
-        });
-    }, [allActivities, projectFilter, actionTypeFilter, startDate, endDate, searchQuery]);
-
-    useEffect(() => {
-        // Simulate loading
-        const timer = setTimeout(() => setLoading(false), 300);
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Export to CSV
-    const handleExportCSV = () => {
-        const headers = ['Timestamp', 'Project', 'User', 'Action', 'Details'];
-        const rows = filteredActivities.map((a) => [
-            new Date(a.timestamp).toISOString(),
-            a.projectName,
-            a.userName,
-            getActivityTypeLabel(a.type),
-            Object.entries(a.details).map(([k, v]) => `${k}: ${v}`).join('; '),
-        ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-    };
-
-    // Clear all filters
-    const handleClearFilters = () => {
-        setProjectFilter('all');
-        setActionTypeFilter('all');
-        setSearchQuery('');
-        setStartDate('');
-        setEndDate('');
-    };
-
-    if (!isSuperAdmin && !isProjectManager) {
-        return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
-                    <h2 className="text-xl font-semibold text-red-800 mb-2">Access Denied</h2>
-                    <p className="text-red-600">
-                        You don't have permission to access Activity Logs.
-                        Only Super Admins and Project Managers can view activity logs.
-                    </p>
-                </div>
-            </div>
-        );
+      // Check if there are more activities
+      setHasMore(data.length === limit);
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch activities'));
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
+  };
 
+  // Fetch on mount and when view mode changes
+  useEffect(() => {
+    fetchActivities(false);
+  }, [viewMode, currentUser]);
+
+  // Handle Load More
+  const handleLoadMore = () => {
+    fetchActivities(true);
+  };
+
+  // Handle toggle switch
+  const handleToggle = (mode: 'all' | 'my') => {
+    if (mode !== viewMode) {
+      setViewMode(mode);
+      setOffset(0);
+      setActivities([]);
+    }
+  };
+
+  // Access control
+  if (!isSuperAdmin && !isProjectManager) {
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold text-gray-900">Activity Logs</h1>
-                    <p className="mt-2 text-sm text-gray-600">View and filter activity across all projects</p>
-                </div>
-                <button
-                    onClick={handleExportCSV}
-                    disabled={filteredActivities.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Export CSV
-                </button>
-            </div>
-
-            {/* Filters */}
-            <div className="bg-white rounded-lg border p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* Search */}
-                    <input
-                        type="text"
-                        placeholder="Search by user or action..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-
-                    {/* Project Filter */}
-                    <select
-                        value={projectFilter}
-                        onChange={(e) => setProjectFilter(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg"
-                    >
-                        <option value="all">All Projects</option>
-                        {MOCK_PROJECTS.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
-
-                    {/* Action Type Filter */}
-                    <select
-                        value={actionTypeFilter}
-                        onChange={(e) => setActionTypeFilter(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg"
-                    >
-                        <option value="all">All Actions</option>
-                        {Object.values(ActivityType).map((type) => (
-                            <option key={type} value={type}>{getActivityTypeLabel(type)}</option>
-                        ))}
-                    </select>
-
-                    {/* Start Date */}
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        placeholder="Start Date"
-                    />
-
-                    {/* End Date */}
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        placeholder="End Date"
-                    />
-                </div>
-
-                <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                        Showing {filteredActivities.length} of {allActivities.length} activities
-                    </div>
-                    <button
-                        onClick={handleClearFilters}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                        Clear all filters
-                    </button>
-                </div>
-            </div>
-
-            {/* Activity Table */}
-            <div className="bg-white rounded-lg border overflow-hidden">
-                {loading ? (
-                    <div className="text-center py-12 text-gray-500">Loading activities...</div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {filteredActivities.map((activity) => (
-                                    <tr key={activity.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <div>{new Date(activity.timestamp).toLocaleDateString()}</div>
-                                            <div className="text-xs text-gray-400">
-                                                {new Date(activity.timestamp).toLocaleTimeString()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-sm font-medium text-gray-900">
-                                                {activity.projectName}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                                    <span className="text-gray-600 font-medium text-sm">
-                                                        {activity.userName.charAt(0).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                                <div className="ml-3">
-                                                    <div className="text-sm font-medium text-gray-900">{activity.userName}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getActivityTypeBadgeColor(activity.type)}`}>
-                                                {getActivityTypeLabel(activity.type)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                            {formatDetails(activity.details)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-                {!loading && filteredActivities.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                        No activities found matching your filters.
-                    </div>
-                )}
-            </div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-red-800 mb-2">Access Denied</h2>
+          <p className="text-red-600">
+            You don't have permission to access Activity Logs.
+            Only Super Admins and Project Managers can view activity logs.
+          </p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold text-gray-900">Activity Logs</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Platform activity stream with navigation to projects and proposals
+        </p>
+      </div>
+
+      {/* Toggle Bar */}
+      <div className="flex items-center gap-2 bg-white rounded-lg p-1 border w-fit">
+        <button
+          onClick={() => handleToggle('all')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'all'
+              ? 'bg-purple-600 text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            All Activity
+          </div>
+        </button>
+        <button
+          onClick={() => handleToggle('my')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            viewMode === 'my'
+              ? 'bg-purple-600 text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            My Activity
+          </div>
+        </button>
+      </div>
+
+      {/* Activity Stream */}
+      <div className="space-y-3">
+        {/* Loading State */}
+        {loading && (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg p-4 border animate-pulse">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {!loading && error && (
+          <div className="bg-white rounded-lg border p-6">
+            <ErrorState error={error} onRetry={() => fetchActivities(false)} />
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && activities.length === 0 && (
+          <div className="bg-white rounded-lg border p-6">
+            <EmptyState
+              icon={Activity}
+              title={viewMode === 'all' ? 'No activities yet' : 'No activities from you yet'}
+              description={
+                viewMode === 'all'
+                  ? 'Platform activities will appear here as they happen.'
+                  : 'Your activities will appear here as you interact with the platform.'
+              }
+            />
+          </div>
+        )}
+
+        {/* Activity List */}
+        {!loading && !error && activities.length > 0 && (
+          <>
+            {activities.map((activity) => {
+              // Determine context link
+              let contextLink: { href: string; label: string } | null = null;
+
+              if (activity.projectId && activity.projectName) {
+                contextLink = {
+                  href: `/projects/${activity.projectId}`,
+                  label: activity.projectName,
+                };
+              } else if (activity.proposalId) {
+                contextLink = {
+                  href: `/admin/proposals/${activity.proposalId}`,
+                  label: `Proposal #${activity.proposalId.slice(0, 8)}`,
+                };
+              } else if (activity.inquiryId && activity.inquiryNumber) {
+                contextLink = {
+                  href: `/admin/inquiries/${activity.inquiryId}`,
+                  label: activity.inquiryNumber,
+                };
+              }
+
+              return (
+                <div
+                  key={activity.id}
+                  className="bg-white rounded-lg p-4 hover:bg-gray-50 transition-colors border"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* User Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-600 font-medium text-sm">
+                        {activity.userName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Activity Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="font-medium text-gray-900">
+                          {activity.userName}
+                        </span>
+                        <span className="text-gray-600">
+                          {getActionDescription(activity.type)}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 text-xs font-semibold rounded-full ${getActivityTypeBadgeColor(activity.type)}`}
+                        >
+                          {activity.type.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                        <span>{getRelativeTime(activity.timestamp)}</span>
+                        {contextLink && (
+                          <>
+                            <span>·</span>
+                            <a
+                              href={contextLink.href}
+                              className="text-purple-600 hover:text-purple-700 hover:underline"
+                            >
+                              {contextLink.label}
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* No More Activities */}
+            {!hasMore && activities.length > 0 && (
+              <div className="text-center py-4 text-sm text-gray-500">
+                You've seen all activities
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default ActivityLogs;
