@@ -10,16 +10,18 @@ autonomous: true
 
 must_haves:
   truths:
-    - "8 new API tests added to test-runner.js and executed"
+    - "10 new API tests added to test-runner.js and executed"
     - "Task creation with assignee, deadline, and deliverable link all pass"
     - "State transitions AWAITING_APPROVAL->REVISION_REQUESTED and REVISION_REQUESTED->IN_PROGRESS pass"
     - "Follow/unfollow task endpoints work correctly"
     - "Client can post comments on tasks"
     - "Client cannot edit tasks (403)"
-    - "All 8 new tests pass (or document why skipped)"
+    - "Assignment notification API trigger works (T04-02)"
+    - "@mention comment API trigger works (T04-03)"
+    - "All 10 new tests pass (or document why skipped)"
   artifacts:
     - path: ".planning/phases/PROD-05-task-management/test-runner.js"
-      provides: "Extended test runner with 8 new API tests"
+      provides: "Extended test runner with 10 new API tests"
       min_lines: 500
   key_links:
     - from: "test-runner.js"
@@ -29,10 +31,10 @@ must_haves:
 ---
 
 <objective>
-Extend the existing PROD-05 test-runner.js with 8 new API-automatable tests covering task creation variants, additional state machine transitions, follow/unfollow, client comments, and client edit permissions.
+Extend the existing PROD-05 test-runner.js with 10 new API-automatable tests covering task creation variants, additional state machine transitions, follow/unfollow, notification triggers, client comments, and client edit permissions.
 
 Purpose: Verify remaining task management API behaviors that can be tested without a browser, closing the PROD-05 test coverage gap.
-Output: Extended test-runner.js with 8 new test functions, executed with results logged.
+Output: Extended test-runner.js with 10 new test functions, executed with results logged.
 </objective>
 
 <execution_context>
@@ -54,10 +56,10 @@ Output: Extended test-runner.js with 8 new test functions, executed with results
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Add 8 new API test functions to test-runner.js</name>
+  <name>Task 1: Add 10 new API test functions to test-runner.js</name>
   <files>.planning/phases/PROD-05-task-management/test-runner.js</files>
   <action>
-Extend the existing test-runner.js by adding these 8 new test functions, following the existing patterns (apiCall helper, logResult, ADMIN_TOKEN/CLIENT_TOKEN):
+Extend the existing test-runner.js by adding these 10 new test functions, following the existing patterns (apiCall helper, logResult, ADMIN_TOKEN/CLIENT_TOKEN):
 
 **Task Creation Tests (3):**
 
@@ -73,23 +75,31 @@ Extend the existing test-runner.js by adding these 8 new test functions, followi
 
 5. `testT03_05_RevisionRequestedToInProgress(taskId)` — Takes a taskId already in `revision_requested` state, transitions to `in_progress`. Verify response status is `in_progress`. Backend: `revision_requested: ['in_progress']`.
 
+**Notification Trigger Tests (2):**
+
+6. `testT04_02_AssignmentNotification(taskId)` — Create a task with `assigned_to` set to a valid user (ADMIN_USER.id). Verify the API returns 201 and the task includes the assignee. This confirms the API-side assignment trigger works. Note: actual email delivery is manual-verify only (email content cannot be checked via API), so log "API PASS — email delivery is manual-verify" if the assignment API call succeeds.
+
+7. `testT04_03_MentionNotification(taskId)` — POST `/tasks/${taskId}/comments` as admin with content containing "@ekalaivan" (or another known username). Verify 201 and comment is created with the @mention text. This confirms the API-side @mention trigger works. Note: actual notification delivery is manual-verify only, so log "API PASS — notification delivery is manual-verify" if the comment API call succeeds.
+
 **Assignment Tests (1):**
 
-6. `testT04_04_FollowUnfollowTask(taskId)` — POST `/tasks/${taskId}/follow` as admin, verify 200/201. Then POST `/tasks/${taskId}/unfollow` as admin, verify 200. Test idempotency: follow again, verify no error (ON CONFLICT DO NOTHING).
+8. `testT04_04_FollowUnfollowTask(taskId)` — POST `/tasks/${taskId}/follow` as admin, verify 200/201. Then POST `/tasks/${taskId}/unfollow` as admin, verify 200. Test idempotency: follow again, verify no error (ON CONFLICT DO NOTHING).
 
 **Comments Tests (1):**
 
-7. `testT05_05_ClientCanComment(taskId)` — POST `/tasks/${taskId}/comments` as CLIENT (useClientAuth=true) with content "Client test comment". Verify 201 and comment created. This tests that clients with visibility to the task can post comments.
+9. `testT05_05_ClientCanComment(taskId)` — POST `/tasks/${taskId}/comments` as CLIENT (useClientAuth=true) with content "Client test comment". Verify 201 and comment created. This tests that clients with visibility to the task can post comments.
 
 **Permissions Tests (1):**
 
-8. `testT06_02_ClientCannotEditTask(taskId)` — PATCH `/tasks/${taskId}` as CLIENT (useClientAuth=true) with `{ title: 'Client edit attempt' }`. Expect 403. This validates client role cannot modify tasks.
+10. `testT06_02_ClientCannotEditTask(taskId)` — PATCH `/tasks/${taskId}` as CLIENT (useClientAuth=true) with `{ title: 'Client edit attempt' }`. Expect 403. This validates client role cannot modify tasks.
 
 **Integration into runAllTests():**
 
 Update the `runAllTests()` function to:
 - Run T01-02, T01-03, T01-06 in the Task Creation section
 - Create a fresh task for state machine tests, run T03-04, T03-05 in sequence (they need sequential state)
+- Run T04-02 with a task that has an assignee (can reuse T01-02's task)
+- Run T04-03 with a task that accepts comments (post @mention comment)
 - Run T04-04 with the task from T01-01
 - Run T05-05 with a visible task (ensure `visible_to_client: true` on creation)
 - Run T06-02 with any task
@@ -108,10 +118,10 @@ Run the extended test runner:
 cd /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1
 node .planning/phases/PROD-05-task-management/test-runner.js
 ```
-Verify output shows all original tests (T01-01, T01-05, T03-01 through T03-08, T05-01, T06-01, T06-03) plus all 8 new tests (T01-02, T01-03, T01-06, T03-04, T03-05, T04-04, T05-05, T06-02).
+Verify output shows all original tests (T01-01, T01-05, T03-01 through T03-08, T05-01, T06-01, T06-03) plus all 10 new tests (T01-02, T01-03, T01-06, T03-04, T03-05, T04-02, T04-03, T04-04, T05-05, T06-02).
   </verify>
   <done>
-All 8 new API tests added and integrated into runAllTests(). Test runner executes successfully. Each test logs PASS/FAIL with details. Any inline bugs found are fixed and re-tested (document as "pass-after-fix").
+All 10 new API tests added and integrated into runAllTests(). Test runner executes successfully. Each test logs PASS/FAIL with details. Any inline bugs found are fixed and re-tested (document as "pass-after-fix").
   </done>
 </task>
 
@@ -147,7 +157,7 @@ Log final tally: Total / Passed / Failed / Skipped
 Final test run shows all tests either PASS, pass-after-fix, or SKIP (with documented reason). No unresolved failures on critical permissions or state machine tests.
   </verify>
   <done>
-All 8 new API tests executed. Results documented with pass/fail/skip status. Any inline bugs fixed and committed. No critical security or state machine failures remain.
+All 10 new API tests executed. Results documented with pass/fail/skip status. Any inline bugs fixed and committed. No critical security or state machine failures remain.
   </done>
 </task>
 
@@ -156,13 +166,13 @@ All 8 new API tests executed. Results documented with pass/fail/skip status. Any
 <verification>
 - Run the full test suite: `node .planning/phases/PROD-05-task-management/test-runner.js`
 - All original 11 tests still pass (no regressions)
-- All 8 new tests either PASS or have documented SKIP reason
+- All 10 new tests either PASS or have documented SKIP reason
 - No permission bypasses (T06-02 must pass — client cannot edit)
 - State machine transitions T03-04 and T03-05 work correctly
 </verification>
 
 <success_criteria>
-- 8 new test functions added to test-runner.js
+- 10 new test functions added to test-runner.js
 - All tests executed with clear PASS/FAIL/SKIP output
 - Inline bugs fixed if found (documented as pass-after-fix)
 - No critical failures on permissions or state machine tests
