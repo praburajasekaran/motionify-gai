@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import PaymentButton from '@/components/payment/PaymentButton';
 import Card from '@/lib/portal/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Download,
   CreditCard,
@@ -206,15 +208,8 @@ export default function PaymentsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-red-500">
-        <AlertCircle className="w-12 h-12 mb-4" />
-        <p>{error}</p>
-        <button
-          onClick={fetchPayments}
-          className="mt-4 px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700"
-        >
-          Try Again
-        </button>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <ErrorState error={error} onRetry={fetchPayments} />
       </div>
     );
   }
@@ -277,11 +272,11 @@ export default function PaymentsPage() {
       {/* Payments List */}
       {payments.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-            <Receipt className="w-16 h-16 mb-4 text-gray-300" />
-            <p className="text-lg font-medium">No payments yet</p>
-            <p className="text-sm mt-1">Your payment history will appear here</p>
-          </div>
+          <EmptyState
+            icon={CreditCard}
+            title="No payments yet"
+            description="Your payment history will appear here"
+          />
         </Card>
       ) : (
         Object.entries(paymentsByProject).map(([projectNumber, projectPayments]) => (

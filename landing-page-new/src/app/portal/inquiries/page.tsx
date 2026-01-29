@@ -7,6 +7,9 @@ import { fetchInquiries, fetchInquiriesByClientUserId, Inquiry } from '@/lib/inq
 import { fetchProposalsByInquiryId, updateProposalStatus, ProposalStatus } from '@/lib/proposals';
 import Button from '@/lib/portal/components/ui/Button';
 import Card from '@/lib/portal/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FileText } from 'lucide-react';
 import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 const statusColors: Record<string, string> = {
@@ -72,6 +75,7 @@ export default function InquiriesPage() {
   const { currentUser, isLoading } = useContext(AppContext);
   const [inquiries, setInquiries] = useState<InquiryWithProposal[]>([]);
   const [loadingInquiries, setLoadingInquiries] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [feedbackText, setFeedbackText] = useState<Record<string, string>>({});
   const [showFeedbackModal, setShowFeedbackModal] = useState<string | null>(null);
@@ -87,6 +91,7 @@ export default function InquiriesPage() {
 
     try {
       setLoadingInquiries(true);
+      setLoadError(null);
       let data: Inquiry[] = [];
 
       const isAdmin = currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER;
@@ -121,6 +126,7 @@ export default function InquiriesPage() {
       setInquiries(inquiriesWithProposals);
     } catch (error) {
       console.error('Error loading inquiries:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load inquiries');
     } finally {
       setLoadingInquiries(false);
     }
@@ -203,9 +209,17 @@ export default function InquiriesPage() {
           </p>
         </div>
 
-        {inquiries.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-[var(--todoist-gray-600)]">No inquiries found</p>
+        {loadError ? (
+          <Card className="p-0 overflow-hidden">
+            <ErrorState error={loadError} onRetry={loadInquiries} />
+          </Card>
+        ) : inquiries.length === 0 ? (
+          <Card className="p-0 overflow-hidden">
+            <EmptyState
+              icon={FileText}
+              title="No inquiries yet"
+              description="You'll see your inquiries and proposals here when they're submitted."
+            />
           </Card>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
