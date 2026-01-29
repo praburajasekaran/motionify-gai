@@ -170,12 +170,15 @@ Plans:
 ---
 
 ### Phase PROD-13: Extended Testing [Planned]
-**Goal:** Complete remaining manual tests requiring browser/Gemini
+**Goal:** Complete 12 remaining task management tests (API + browser) and produce deployment readiness verdict
 **Priority:** Nice to Have
 **Gap Closure:** Addresses test coverage gaps from PROD-05
 
+**Plans:** 2 plans
+
 Plans:
-- [ ] PROD-13-01-PLAN.md — Manual testing checkpoint (15 task management tests)
+- [ ] PROD-13-01-PLAN.md — Extend test-runner.js with 8 API-automatable tests (creation, state machine, follow, comments, permissions)
+- [ ] PROD-13-02-PLAN.md — Browser-guided testing (4 tests) + deployment readiness verdict
 
 ---
 
