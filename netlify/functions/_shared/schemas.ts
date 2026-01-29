@@ -181,6 +181,7 @@ export const updateTaskSchema = z.object({
     dueDate: dateSchema.optional().nullable(),
     priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     status: taskStatusEnum.optional(),
+    visibleToClient: z.boolean().optional(),
 });
 
 // ==========================================
