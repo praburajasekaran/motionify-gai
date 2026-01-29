@@ -20,6 +20,18 @@ export interface Task {
 }
 
 /**
+ * Map API response fields to frontend Task field names.
+ * The backend uses assignedTo/dueDate; the frontend uses assigneeId/deadline.
+ */
+function mapApiTask(task: any): Task {
+    return {
+        ...task,
+        assigneeId: task.assignedTo || task.assigneeId,
+        deadline: task.deadline || task.dueDate,
+    };
+}
+
+/**
  * Fetch all tasks for a project
  */
 export async function fetchTasksForProject(
@@ -32,7 +44,7 @@ export async function fetchTasksForProject(
         throw new Error(response.error?.message || 'Failed to fetch tasks');
     }
 
-    return response.data;
+    return response.data.map(mapApiTask);
 }
 
 /**
@@ -68,7 +80,7 @@ export async function createTask(taskData: {
         throw new Error(response.error?.message || 'Failed to create task');
     }
 
-    return response.data;
+    return mapApiTask(response.data);
 }
 
 /**
@@ -103,7 +115,7 @@ export async function updateTask(
         throw new Error(response.error?.message || 'Failed to update task');
     }
 
-    return response.data;
+    return mapApiTask(response.data);
 }
 
 /**
