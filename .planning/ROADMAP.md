@@ -155,16 +155,17 @@ Plans:
 
 ---
 
-### Phase 9: Admin Features [Planned]
+### Phase 9: Admin Features [Complete]
 **Goal:** Build admin dashboard with real metrics, activity log with real data, and administrative oversight tools
 **Priority:** Should Have
+**Completed:** 2026-01-29
 
-**Plans:** 3 plans
+**Plans:** 3 plans (3/3 complete)
 
 Plans:
-- [ ] 09-01-PLAN.md — Create activities table migration + dashboard-metrics endpoint + enhance activities API
-- [ ] 09-02-PLAN.md — Rewrite Dashboard with real metrics and interactive expandable cards
-- [ ] 09-03-PLAN.md — Rewrite ActivityLogs with real API data, all/my toggle, and Load More
+- [x] 09-01-PLAN.md — Create activities table migration + dashboard-metrics endpoint + enhance activities API
+- [x] 09-02-PLAN.md — Rewrite Dashboard with real metrics and interactive expandable cards
+- [x] 09-03-PLAN.md — Rewrite ActivityLogs with real API data, all/my toggle, and Load More
 
 ---
 
@@ -217,7 +218,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-10. UX Polish | PROD | 4/4 | Complete | 2026-01-28 |
 | PROD-11. Production Hardening | PROD | 3/3 | Complete | 2026-01-28 |
 | PROD-12. Performance & Polish | PROD | 5/5 | Complete | 2026-01-29 |
-| 9. Admin Features | PROD | 0/3 | Planned | - |
+| 9. Admin Features | PROD | 3/3 | Complete | 2026-01-29 |
 | PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
 | PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
 
@@ -286,4 +287,4 @@ The following require additional research before planning but are covered in cur
 
 ---
 
-*Last updated: 2026-01-29 (PROD-12 Performance & Polish complete)*
+*Last updated: 2026-01-29 (Phase 9 Admin Features complete)*
