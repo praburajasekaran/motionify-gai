@@ -139,14 +139,18 @@ Plans:
 
 ---
 
-### Phase PROD-12: Code Cleanup [Planned]
-**Goal:** Remove unused database enum and align frontend status casing
-**Priority:** Nice to Have
-**Gap Closure:** Addresses technical debt from PROD-05
+### Phase PROD-12: Performance & Polish [Planned]
+**Goal:** Optimize performance and refine UX for client demo - load testing, mobile responsiveness, and consistent UI feedback
+**Priority:** Should Have
+
+**Plans:** 5 plans
 
 Plans:
-- [ ] PROD-12-01-PLAN.md — Remove unused 'review' enum value via migration
-- [ ] PROD-12-02-PLAN.md — Align frontend status casing with backend
+- [ ] PROD-12-01-PLAN.md — Artillery load testing setup (API + frontend scenarios)
+- [ ] PROD-12-02-PLAN.md — Mobile responsiveness tests (Playwright device emulation)
+- [ ] PROD-12-03-PLAN.md — ErrorState and EmptyState UI components (both portals)
+- [ ] PROD-12-04-PLAN.md — Apply ErrorState/EmptyState across all list pages
+- [ ] PROD-12-05-PLAN.md — Core Web Vitals monitoring (web-vitals + Sentry)
 
 ---
 
@@ -198,7 +202,7 @@ All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-R
 | PROD-09. Payment Production Wiring | PROD | 2/2 | Complete | 2026-01-28 |
 | PROD-10. UX Polish | PROD | 4/4 | Complete | 2026-01-28 |
 | PROD-11. Production Hardening | PROD | 3/3 | Complete | 2026-01-28 |
-| PROD-12. Code Cleanup | PROD | 0/2 | Planned | - |
+| PROD-12. Performance & Polish | PROD | 0/5 | Planned | - |
 | PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
 | PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
 
