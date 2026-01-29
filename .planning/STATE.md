@@ -17,10 +17,10 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase PROD-12 - Extended Testing [In Progress] |
-| **Current Plan** | PROD-12-02 complete (Mobile Responsiveness Testing) |
-| **Status** | Mobile E2E test suite with 32 tests across 3 devices and 4 breakpoints |
-| **Progress** | PROD-12: 2/5 plans complete |
-| **Last activity** | 2026-01-29 - Completed PROD-12-02-PLAN.md (Mobile Responsiveness Testing) |
+| **Current Plan** | PROD-12-05 complete (Core Web Vitals Monitoring) |
+| **Status** | Web Vitals monitoring active in both portals, reporting LCP/INP/CLS/FCP/TTFB |
+| **Progress** | PROD-12: 5/5 plans complete (phase complete) |
+| **Last activity** | 2026-01-29 - Completed PROD-12-05-PLAN.md (Core Web Vitals Monitoring) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
