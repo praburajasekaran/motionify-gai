@@ -85,6 +85,26 @@ export const handler = compose(
 
         const project = result.rows[0];
 
+        // Fetch team members for this project
+        const teamResult = await client.query(
+          `SELECT pt.id as membership_id, pt.role as team_role, pt.is_primary_contact, pt.added_at,
+                  u.id as user_id, u.full_name, u.email, u.profile_picture_url
+           FROM project_team pt
+           JOIN users u ON pt.user_id = u.id
+           WHERE pt.project_id = $1 AND pt.removed_at IS NULL
+           ORDER BY pt.is_primary_contact DESC, pt.added_at ASC`,
+          [projectId]
+        );
+
+        project.team = teamResult.rows.map((row: any) => ({
+          id: row.user_id,
+          name: row.full_name || 'Unknown',
+          email: row.email || '',
+          avatar: row.profile_picture_url || '',
+          role: row.team_role,
+          isPrimaryContact: row.is_primary_contact,
+        }));
+
         // Permission check
         if (userRole !== 'super_admin' && userRole !== 'project_manager') {
           if (userRole === 'client' && project.client_user_id !== userId) {
@@ -320,6 +340,26 @@ export const handler = compose(
         `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
         [inquiryId]
       );
+
+      // Auto-populate project team: add client as primary contact
+      if (assignedClientUserId) {
+        await client.query(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, 'client', true, $3)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [assignedClientUserId, project.id, auth?.user?.userId || null]
+        );
+      }
+
+      // Auto-populate project team: add creator (the authenticated user)
+      if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
+        await client.query(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, $3, false, $1)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [auth.user.userId, project.id, auth.user.role || 'super_admin']
+        );
+      }
 
       return {
         statusCode: 201,

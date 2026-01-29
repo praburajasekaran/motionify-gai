@@ -64,21 +64,50 @@ export const handler = compose(
 
     const invitation = result.rows[0];
 
-    // Mark invitation as accepted
-    await client.query(
-      `UPDATE project_invitations 
-       SET status = 'accepted', accepted_at = NOW() 
-       WHERE id = $1`,
-      [invitation.id]
-    );
-
     // Check if user already exists
     const userCheck = await client.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [invitation.email]
     );
 
     const requiresSignup = userCheck.rows.length === 0;
+    const acceptedByUserId = userCheck.rows[0]?.id || null;
+
+    // Mark invitation as accepted
+    await client.query(
+      `UPDATE project_invitations
+       SET status = 'accepted', accepted_at = NOW(), accepted_by = $2
+       WHERE id = $1`,
+      [invitation.id, acceptedByUserId]
+    );
+
+    // If user exists, add them to project_team
+    if (acceptedByUserId) {
+      await client.query(
+        `INSERT INTO project_team (user_id, project_id, role, invitation_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, project_id) DO UPDATE SET
+           removed_at = NULL, removed_by = NULL, invitation_id = $4`,
+        [acceptedByUserId, invitation.project_id, invitation.role, invitation.id]
+      );
+
+      // Log activity
+      try {
+        const userName = await client.query('SELECT full_name FROM users WHERE id = $1', [acceptedByUserId]);
+        await client.query(
+          `INSERT INTO activities (type, user_id, user_name, project_id, details)
+           VALUES ('TEAM_MEMBER_ADDED', $1, $2, $3, $4)`,
+          [
+            acceptedByUserId,
+            userName.rows[0]?.full_name || 'Unknown',
+            invitation.project_id,
+            JSON.stringify({ role: invitation.role, viaInvitation: true }),
+          ]
+        );
+      } catch (logError) {
+        console.error('Failed to log activity:', logError);
+      }
+    }
 
     return {
       statusCode: 200,
@@ -89,7 +118,7 @@ export const handler = compose(
           id: invitation.project_id,
           name: invitation.project_name,
         },
-        user_id: userCheck.rows[0]?.id,
+        user_id: acceptedByUserId,
         requires_signup: requiresSignup,
       }),
     };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
-    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox, Mail, Crown,
+    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
     Bell, BellOff, Settings, Share2, CreditCard
 } from 'lucide-react';
@@ -18,16 +18,66 @@ import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskEditModal } from '../components/tasks/TaskEditModal';
 import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
 import { InviteModal } from '../components/team/InviteModal';
+import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { ProjectFile } from '../types';
 import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { fetchActivities, Activity as ApiActivity } from '../services/activityApi';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
+
+// --- Activity formatting helpers ---
+// isCurrentUser: true when the activity's userId matches the logged-in user
+// This enables first-person ("you sent") vs third-person ("Alice sent") phrasing
+function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean): string {
+    const me = !!isCurrentUser;
+    switch (type) {
+        // Proposal lifecycle
+        case 'PROPOSAL_SENT':              return me ? 'sent a proposal'              : 'sent a proposal';
+        case 'PROPOSAL_ACCEPTED':          return me ? 'accepted the proposal'        : 'accepted the proposal';
+        case 'PROPOSAL_REJECTED':          return me ? 'rejected the proposal'        : 'rejected the proposal';
+        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on'         : 'requested changes on';
+        // Tasks
+        case 'TASK_CREATED':        return me ? 'created task'                          : 'created task';
+        case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
+        case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
+        case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
+        case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
+        // Files
+        case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
+        case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
+        // Team
+        case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
+        case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
+        // Deliverables
+        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable'  : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable'  : 'approved deliverable';
+        // Payments — the userId is the client who paid
+        case 'PAYMENT_RECEIVED': {
+            const label = details.paymentLabel || 'payment';
+            return me ? `made ${label} of` : `received ${label} of`;
+        }
+        // Project
+        case 'PROJECT_CREATED': return 'created the project';
+        case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
+        default: return type.toLowerCase().replace(/_/g, ' ');
+    }
+}
+
+function formatActivityTarget(type: string, details: Record<string, string | number>, targetUserName?: string): string {
+    if (type === 'PAYMENT_RECEIVED' && details.amount) return String(details.amount);
+    if (details.taskTitle) return String(details.taskTitle);
+    if (details.proposalName) return String(details.proposalName);
+    if (details.fileName) return String(details.fileName);
+    if (details.deliverableName) return String(details.deliverableName);
+    if (targetUserName) return targetUserName;
+    return '';
+}
 
 // --- Battery Component ---
 const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
@@ -169,7 +219,13 @@ export const ProjectDetail = () => {
                         progress: 0,
                         description: data.description || '',
                         budget: 0,
-                        team: [],
+                        team: (data.team || []).map((m: any) => ({
+                            id: m.id,
+                            name: m.name || 'Unknown',
+                            email: m.email || '',
+                            avatar: m.avatar || '',
+                            role: m.role || 'team_member',
+                        })),
                         tasks: [],
                         deliverables: [],
                         files: [],
@@ -212,6 +268,36 @@ export const ProjectDetail = () => {
         loadTasks();
         setProjectFiles(project.files || []);
     }, [project?.id]);
+
+    // Load activities from API when project loads
+    useEffect(() => {
+        if (!project?.id) return;
+
+        const loadActivities = async () => {
+            try {
+                const activities = await fetchActivities({ projectId: project.id, limit: 50 });
+
+                // Map API Activity to ActivityLog shape used by the template
+                const activityLog = activities.map((a: ApiActivity) => {
+                    const isCurrentUser = !!(user && a.userId === user.id);
+                    return {
+                        id: a.id,
+                        userId: a.userId,
+                        userName: a.userName,
+                        action: formatActivityAction(a.type, a.details, isCurrentUser),
+                        target: formatActivityTarget(a.type, a.details, a.targetUserName),
+                        timestamp: new Date(a.timestamp).toISOString(),
+                    };
+                });
+
+                setProject(prev => prev ? { ...prev, activityLog } : prev);
+            } catch (error) {
+                console.error('Failed to load activities:', error);
+            }
+        };
+
+        loadActivities();
+    }, [project?.id, user?.id]);
 
     // Load deliverables from API (for Overview tab consistency with Deliverables tab)
     useEffect(() => {
@@ -686,7 +772,18 @@ export const ProjectDetail = () => {
                                 {project.team.slice(0, 4).map((member, index) => (
                                     <Avatar key={`${member.id}-${index}`} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
                                 ))}
-                                <button className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10">
+                                {project.team.length > 4 && (
+                                    <button
+                                        onClick={() => navigate(`/projects/${id}/5`)}
+                                        className="h-8 w-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-primary hover:border-primary transition-colors ring-2 ring-white z-10"
+                                    >
+                                        +{project.team.length - 4}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => navigate(`/projects/${id}/5`)}
+                                    className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10"
+                                >
                                     <Users className="h-4 w-4" />
                                 </button>
                             </div>
@@ -828,26 +925,30 @@ export const ProjectDetail = () => {
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     <div className="space-y-0">
-                                        {project.activityLog.map((log, i) => {
-                                            const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                        {project.activityLog.length > 0 ? project.activityLog.map((log, i) => {
+                                            const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                            const isCurrentUser = user && log.userId === user.id;
+                                            const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                             return (
                                                 <div key={log.id} className="flex gap-3 pb-6 relative last:pb-0 group">
                                                     {i !== project.activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
                                                     )}
-                                                    <Avatar src={user.avatar} fallback={user.name[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
+                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
                                                     <div>
                                                         <p className="text-xs text-zinc-500 mb-0.5 group-hover:text-zinc-700 transition-colors">
-                                                            <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                         </p>
                                                         <p className="text-[10px] text-zinc-400 flex items-center gap-1 font-medium">
                                                             <Clock className="h-3 w-3" />
-                                                            {new Date(log.timestamp).toLocaleDateString()}
+                                                            {formatTimeAgo(log.timestamp)}
                                                         </p>
                                                     </div>
                                                 </div>
                                             )
-                                        })}
+                                        }) : (
+                                            <p className="text-sm text-zinc-400 italic">No activity yet.</p>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -880,71 +981,14 @@ export const ProjectDetail = () => {
 
                 {/* --- TEAM TAB --- */}
                 <TabsContent value="team">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-bold text-zinc-900">Project Team</h3>
-                            <p className="text-sm text-zinc-500">Manage members and permissions for this project.</p>
-                        </div>
-                        {(isPrimaryContact || user?.role === 'project_manager' || user?.role === 'super_admin') && (
-                            <Button
-                                className="gap-2 shadow-sm"
-                                aria-label="Add Member"
-                                onClick={() => setIsInviteModalOpen(true)}
-                            >
-                                <Users className="h-4 w-4" /> Add Member
-                            </Button>
-                        )}
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {project.team.map((member) => (
-                            <Card key={member.id} hoverable className="group relative border-zinc-200/60">
-                                {member.role === 'project_manager' && (
-                                    <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
-                                        <Crown className="h-3.5 w-3.5" />
-                                    </div>
-                                )}
-                                <CardContent className="p-8 flex flex-col items-center text-center">
-                                    <div className="relative mb-5">
-                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-20 w-20 ring-4 ring-zinc-50 shadow-md group-hover:ring-primary/10 transition-all" />
-                                        <div className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 border-4 border-white rounded-full"></div>
-                                    </div>
-                                    <h4 className="font-bold text-lg text-zinc-900">{member.name}</h4>
-                                    <p className="text-sm text-zinc-500 font-medium mb-1">{member.role}</p>
-                                    <p className="text-xs text-zinc-400 mb-6 font-mono">{member.email}</p>
-
-                                    <div className="flex gap-2 w-full">
-                                        <Button variant="outline" size="sm" className="flex-1 text-xs h-9 bg-zinc-50/50">Profile</Button>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
-                                            <Mail className="h-4 w-4" />
-                                        </Button>
-                                        <DropdownMenu trigger={
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        }>
-                                            <DropdownMenuItem>Change Role</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                                        </DropdownMenu>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-
-                    {/* Invite Modal */}
-                    <InviteModal
-                        isOpen={isInviteModalOpen}
-                        onClose={() => setIsInviteModalOpen(false)}
-                        projectId={project.id}
-                        currentUserRole={user?.role}
-                        onInviteSent={() => {
-                            addToast({
-                                title: 'Invitation Sent',
-                                description: 'Team member has been invited to the project.',
-                                variant: 'success'
-                            });
-                        }}
+                    <TeamTab
+                        project={project}
+                        user={user}
+                        isPrimaryContact={isPrimaryContact}
+                        isInviteModalOpen={isInviteModalOpen}
+                        setIsInviteModalOpen={setIsInviteModalOpen}
+                        onTeamUpdated={(updatedTeam) => setProject(prev => prev ? { ...prev, team: updatedTeam } : prev)}
+                        addToast={addToast}
                     />
                 </TabsContent>
 
@@ -1232,16 +1276,18 @@ export const ProjectDetail = () => {
                                                 </h4>
                                                 <div className="space-y-0">
                                                     {project.activityLog.slice(0, 3).map((log, i) => {
-                                                        const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                                        const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                                        const isCurrentUser = user && log.userId === user.id;
+                                                        const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                                         return (
                                                             <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
                                                                 {i !== 2 && (
                                                                     <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                 )}
-                                                                <Avatar src={user.avatar} fallback={user.name[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
                                                                 <div className="flex-1 pt-1">
                                                                     <p className="text-sm text-zinc-600 mb-1">
-                                                                        <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                        <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                                     </p>
                                                                     <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
                                                                         <Clock className="h-3 w-3" />
@@ -1264,16 +1310,18 @@ export const ProjectDetail = () => {
                                                     </h4>
                                                     <div className="space-y-0">
                                                         {project.activityLog.slice(3).map((log, i, arr) => {
-                                                            const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                                            const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                                            const isCurrentUser = user && log.userId === user.id;
+                                                            const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                                             return (
                                                                 <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
                                                                     {i !== arr.length - 1 && (
                                                                         <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                     )}
-                                                                    <Avatar src={user.avatar} fallback={user.name[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
                                                                     <div className="flex-1 pt-1">
                                                                         <p className="text-sm text-zinc-600 mb-1">
-                                                                            <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                                         </p>
                                                                         <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
                                                                             <Clock className="h-3 w-3" />
