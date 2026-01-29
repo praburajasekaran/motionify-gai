@@ -555,6 +555,21 @@ export const handler = compose(
         };
       }
 
+      // Permission check: Only Motionify team can edit tasks (not clients)
+      const userRole = auth?.user?.role;
+      const clientRoles = ['client', 'client_primary', 'client_team'];
+
+      if (userRole && clientRoles.includes(userRole)) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Only Motionify team can edit tasks',
+            code: 'PERMISSION_DENIED'
+          }),
+        };
+      }
+
       const validation = validateRequest(event.body, SCHEMAS.task.update, origin);
       if (!validation.success) return validation.response;
       const updates = validation.data;
