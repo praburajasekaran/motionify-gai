@@ -374,6 +374,31 @@ CREATE TRIGGER update_user_invitations_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
+-- 11. ACTIVITIES TABLE (for audit trail)
+-- ============================================================================
+CREATE TABLE activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type VARCHAR(100) NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id),
+  user_name VARCHAR(255) NOT NULL,
+  target_user_id UUID REFERENCES users(id),
+  target_user_name VARCHAR(255),
+  inquiry_id UUID REFERENCES inquiries(id),
+  proposal_id UUID REFERENCES proposals(id),
+  project_id UUID REFERENCES projects(id),
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for activities
+CREATE INDEX idx_activities_user ON activities(user_id);
+CREATE INDEX idx_activities_project ON activities(project_id);
+CREATE INDEX idx_activities_proposal ON activities(proposal_id);
+CREATE INDEX idx_activities_inquiry ON activities(inquiry_id);
+CREATE INDEX idx_activities_type ON activities(type);
+CREATE INDEX idx_activities_created_at ON activities(created_at DESC);
+
+-- ============================================================================
 -- INDEXES FOR INVITATIONS
 -- ============================================================================
 
