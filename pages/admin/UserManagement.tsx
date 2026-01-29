@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Users } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface User {
     id: string;
@@ -195,7 +198,10 @@ export function UserManagement() {
             </div>
 
             {/* Error Display */}
-            {error && (
+            {error && !loading && users.length === 0 && (
+                <ErrorState error={error} onRetry={loadUsers} />
+            )}
+            {error && (loading || users.length > 0) && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     {error}
                 </div>
@@ -245,7 +251,10 @@ export function UserManagement() {
             {/* Users Table */}
             <div className="bg-white rounded-lg border overflow-hidden">
                 {loading ? (
-                    <div className="text-center py-12 text-gray-500">Loading users...</div>
+                    <div className="text-center py-12 text-gray-500">
+                        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                        Loading users...
+                    </div>
                 ) : (
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
@@ -334,8 +343,12 @@ export function UserManagement() {
                         </tbody>
                     </table>
                 )}
-                {!loading && users.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">No users found matching your filters.</div>
+                {!loading && users.length === 0 && !error && (
+                    <EmptyState
+                        icon={Users}
+                        title="No team members yet"
+                        description="Invite team members to get started"
+                    />
                 )}
             </div>
 

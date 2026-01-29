@@ -37,6 +37,8 @@ import {
     TableCell,
     Spinner,
 } from '../../components/ui/design-system';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // Status badge color mapping
 const STATUS_COLORS: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'secondary'; icon: React.ElementType }> = {
@@ -391,24 +393,20 @@ export function Payments() {
                     <p className="text-gray-700">Loading payments...</p>
                 </div>
             ) : error ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-                    <p className="text-red-700 mb-4">{error}</p>
-                    <Button variant="outline" onClick={loadPayments}>
-                        Try Again
-                    </Button>
+                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                    <ErrorState error={error} onRetry={loadPayments} />
                 </div>
             ) : payments.length === 0 ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CreditCard className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-700 mb-2">No payments found</p>
-                    <p className="text-sm text-gray-500">
-                        {hasActiveFilters
-                            ? 'Try adjusting your filters'
-                            : 'Payments will appear here when clients make transactions'}
-                    </p>
+                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                    <EmptyState
+                        icon={CreditCard}
+                        title="No payments found"
+                        description={
+                            hasActiveFilters
+                                ? 'Try adjusting your filters'
+                                : 'Payment records will appear here when clients make transactions'
+                        }
+                    />
                 </div>
             ) : (
                 /* Payments Table */
