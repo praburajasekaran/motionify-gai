@@ -417,8 +417,10 @@ export const ProjectDetail = () => {
             // Only send fields that exist in the backend API
             const updatedTask = await updateTaskAPI(taskId, {
                 title: updates.title,
+                description: updates.description,
                 status: updates.status,
                 assigneeId: updates.assignee?.id,
+                deadline: updates.deadline,
                 visibleToClient: updates.visibleToClient
             });
 
@@ -1168,7 +1170,8 @@ export const ProjectDetail = () => {
                             }}
                             task={editingTask}
                             onSave={handleSaveTask}
-                            teamMembers={TEAM_MEMBERS}
+                            teamMembers={project.team || []}
+                            userId={user?.id}
                         />
                     </div>
                 </TabsContent>

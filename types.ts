@@ -49,6 +49,7 @@ export interface User {
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   status: 'Todo' | 'In Progress' | 'Done' | 'pending' | 'in_progress' | 'awaiting_approval' | 'completed' | 'revision_requested';
   assignee?: User;
   assignees?: User[]; // Support for multiple assignees (team members can upload beta files only to assigned tasks)
@@ -94,6 +95,7 @@ export interface Deliverable {
 export interface ActivityLog {
   id: string;
   userId: string;
+  userName?: string;
   action: string;
   target: string;
   timestamp: string; // ISO date string
