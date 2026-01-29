@@ -416,13 +416,19 @@ export const ProjectDetail = () => {
                 title: updates.title,
                 description: updates.description,
                 status: updates.status,
-                assigneeId: updates.assignee?.id,
+                assigneeId: updates.assigneeId ?? updates.assignee?.id,
                 deadline: updates.deadline,
                 visibleToClient: updates.visibleToClient
             });
 
+            // Merge API response with local assignee data (API returns assignedTo UUID, not User object)
             setTasks(prevTasks =>
-                prevTasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t)
+                prevTasks.map(t => t.id === taskId ? {
+                    ...t,
+                    ...updatedTask,
+                    assignee: updates.assignee,
+                    assigneeId: updates.assigneeId ?? updates.assignee?.id,
+                } : t)
             );
             setEditingTask(null);
 

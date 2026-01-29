@@ -398,15 +398,12 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      const assignee = assigneeId
-        ? teamMembers.find(m => m.id === assigneeId)
-        : undefined;
-
       await onSave(task.id, {
         title: trimmedTitle,
         description: description.trim() || undefined,
         status: status as Task['status'],
-        assignee,
+        assigneeId: assigneeId || undefined,
+        assignee: assigneeId ? teamMembers.find(m => m.id === assigneeId) : undefined,
         deadline: dueDate || undefined,
         visibleToClient,
       });
