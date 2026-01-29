@@ -15,10 +15,18 @@ function sendToAnalytics(metric: Metric): void {
     return;
   }
 
-  // Production: report to Sentry
-  import('@sentry/react')
-    .then((Sentry) => {
-      Sentry.captureMessage(`Web Vital: ${metric.name}`, {
+  // Production: report to Sentry (dynamic import avoids hard dependency)
+  // Use variable to prevent Rollup from statically resolving the module
+  const sentryModule = '@sentry/react';
+  (import(sentryModule) as Promise<Record<string, unknown>>)
+    .then((mod) => {
+      const captureMessage = mod.captureMessage as
+        | ((message: string, options: Record<string, unknown>) => void)
+        | undefined;
+      if (typeof captureMessage !== 'function') {
+        throw new Error('captureMessage not available');
+      }
+      captureMessage(`Web Vital: ${metric.name}`, {
         level: metric.rating === 'good' ? 'info' : 'warning',
         tags: {
           metric: metric.name,
