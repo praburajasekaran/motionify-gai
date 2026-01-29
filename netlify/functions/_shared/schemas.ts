@@ -176,7 +176,7 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
     title: nameSchema.optional(),
-    description: z.string().max(5000).optional(),
+    description: z.string().max(5000).optional().nullable(),
     assignedTo: uuidSchema.optional().nullable(),
     dueDate: dateSchema.optional().nullable(),
     priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
@@ -211,8 +211,8 @@ export const createPaymentOrderSchema = z.object({
 export const verifyPaymentSchema = z.object({
     paymentId: uuidSchema,
     razorpayPaymentId: z.string().min(1).max(255),
-    razorpayOrderId: z.string().min(1).max(255).optional(),
-    razorpaySignature: z.string().min(1).max(500).optional(),
+    razorpayOrderId: z.string().min(1).max(255),
+    razorpaySignature: z.string().min(1).max(500),
 });
 
 export const manualCompletePaymentSchema = z.object({
