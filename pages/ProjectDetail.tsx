@@ -15,8 +15,7 @@ import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '.
 import { analyzeProjectRisk } from '../services/geminiService';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
-import { TaskEditModal } from '../components/tasks/TaskEditModal';
-import { TaskCreateForm } from '../components/tasks/TaskCreateForm';
+import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
 import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
 import { InviteModal } from '../components/team/InviteModal';
 import { TeamTab } from '../components/team/TeamTab';
@@ -185,7 +184,6 @@ export const ProjectDetail = () => {
     }>>([]);
     const [deliverablesLoading, setDeliverablesLoading] = useState(true);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
@@ -409,7 +407,6 @@ export const ProjectDetail = () => {
         }
 
         setEditingTask(task);
-        setIsEditModalOpen(true);
     };
 
     const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
@@ -428,7 +425,6 @@ export const ProjectDetail = () => {
                 prevTasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t)
             );
             setEditingTask(null);
-            setIsEditModalOpen(false);
 
             addToast({
                 title: 'Task Updated',
@@ -987,6 +983,19 @@ export const ProjectDetail = () => {
                                     const creator = task.createdBy ? project.team.find(m => m.id === task.createdBy) : null;
                                     const assignee = task.assignee || (task.assigneeId ? project.team.find(u => u.id === task.assigneeId) : null);
 
+                                    if (editingTask?.id === task.id && user) {
+                                        return (
+                                            <TaskEditForm
+                                                key={task.id}
+                                                task={task}
+                                                teamMembers={project.team || []}
+                                                onSave={handleSaveTask}
+                                                onCancel={() => setEditingTask(null)}
+                                                userId={user.id}
+                                            />
+                                        );
+                                    }
+
                                     return (
                                         <div key={task.id} className="group flex flex-col p-4 rounded-lg border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all duration-200">
                                             <div className="flex items-center justify-between">
@@ -1162,17 +1171,6 @@ export const ProjectDetail = () => {
                             />
                         )}
 
-                        <TaskEditModal
-                            isOpen={isEditModalOpen}
-                            onClose={() => {
-                                setIsEditModalOpen(false);
-                                setEditingTask(null);
-                            }}
-                            task={editingTask}
-                            onSave={handleSaveTask}
-                            teamMembers={project.team || []}
-                            userId={user?.id}
-                        />
                     </div>
                 </TabsContent>
 
