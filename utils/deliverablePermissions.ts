@@ -77,16 +77,9 @@ export function canViewDeliverable(
     return true;
   }
 
-  // Clients can only view when status is beta_ready or later
+  // Clients can view deliverables in any status
   if (isClient(user)) {
-    const viewableStatuses: DeliverableStatus[] = [
-      'beta_ready',
-      'awaiting_approval',
-      'approved',
-      'payment_pending',
-      'final_delivered',
-    ];
-    return viewableStatuses.includes(deliverable.status);
+    return true;
   }
 
   return false;
@@ -396,11 +389,6 @@ export function getPermissionDeniedReason(
     case 'view':
       if (project.status === 'Archived') return 'Project is archived';
       if (project.status === 'Draft') return 'Project is in draft status';
-      if (deliverable && isClient(user)) {
-        if (deliverable.status === 'pending' || deliverable.status === 'in_progress') {
-          return 'Deliverable is not yet ready for client review';
-        }
-      }
       return 'You do not have permission to view this deliverable';
 
     case 'approve':

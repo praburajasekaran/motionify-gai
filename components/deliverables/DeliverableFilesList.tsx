@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2 } from 'lucide-react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
@@ -203,9 +203,19 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             ) : fileItems.length === 0 ? (
                 <div className="text-center py-12 bg-zinc-50 rounded-lg border-2 border-dashed border-zinc-200">
                     <div className="flex justify-center mb-3">
-                        <FileVideo className="h-10 w-10 text-zinc-300" />
+                        {deliverable.status === 'pending' || deliverable.status === 'in_progress' ? (
+                            <Clock className="h-10 w-10 text-zinc-300" />
+                        ) : (
+                            <FileVideo className="h-10 w-10 text-zinc-300" />
+                        )}
                     </div>
-                    <p className="text-zinc-500 text-sm">No files uploaded yet.</p>
+                    <p className="text-zinc-500 text-sm">
+                        {deliverable.status === 'pending'
+                            ? 'This deliverable has not been started yet. Files will appear here once work begins.'
+                            : deliverable.status === 'in_progress'
+                            ? 'This deliverable is currently being worked on. Files will appear here once ready for review.'
+                            : 'No files uploaded yet.'}
+                    </p>
                     {canUploadBeta && (
                         <Button variant="link" onClick={handleUploadClick} className="mt-2 text-indigo-600">
                             Upload your first file

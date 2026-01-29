@@ -31,6 +31,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const DeliverableReviewContent: React.FC = () => {
   const { id: projectId, deliverableId } = useParams<{
@@ -38,7 +39,7 @@ const DeliverableReviewContent: React.FC = () => {
     deliverableId: string;
   }>();
   const navigate = useNavigate();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, currentProject, currentUser, refreshDeliverables } =
+  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -46,6 +47,10 @@ const DeliverableReviewContent: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showSendForReviewDialog, setShowSendForReviewDialog] = useState(false);
+  const [isSendingForReview, setIsSendingForReview] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
@@ -65,35 +70,61 @@ const DeliverableReviewContent: React.FC = () => {
     navigate(`/projects/${projectId}/3`); // Tab 3 = Deliverables
   };
 
+  // Shared helper: refresh deliverables and reload current one
+  const refreshCurrentDeliverable = async () => {
+    await refreshDeliverables();
+    if (deliverableId) {
+      dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
+    }
+  };
+
+  // Shared helper: show success toast
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessMessage(true);
+    setTimeout(() => setShowSuccessMessage(false), 5000);
+  };
+
+  // Shared helper: show error toast
+  const showError = (error: unknown, fallback: string) => {
+    setErrorMessage(error instanceof Error ? error.message : fallback);
+    setShowErrorMessage(true);
+    setTimeout(() => setShowErrorMessage(false), 5000);
+  };
+
+  // Handle send for client review (beta_ready → awaiting_approval)
+  const handleSendForReview = async () => {
+    if (!deliverable) return;
+
+    setIsSendingForReview(true);
+    try {
+      await sendForReview(deliverable.id);
+      setShowSendForReviewDialog(false);
+      showSuccess('Deliverable sent for client review! The client will receive an email notification.');
+      await refreshCurrentDeliverable();
+    } catch (error) {
+      setShowSendForReviewDialog(false);
+      showError(error, 'Failed to send for review');
+    } finally {
+      setIsSendingForReview(false);
+    }
+  };
+
   // Handle approve
   const handleApprove = async () => {
     if (!deliverable) return;
 
-    const confirmed = window.confirm(
-      `Are you sure you want to approve "${deliverable.title}"?\n\nAfter approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours.`
-    );
-
-    if (confirmed) {
-      try {
-        await approveDeliverable(deliverable.id);
-        setSuccessMessage(
-          'Deliverable approved successfully! Payment link will be sent to your email.'
-        );
-        setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 5000);
-
-        // Reload deliverable to restore selectedDeliverable after reducer clears it
-        await refreshDeliverables();
-        if (deliverableId) {
-          dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
-        }
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Failed to approve deliverable'
-        );
-        setShowErrorMessage(true);
-        setTimeout(() => setShowErrorMessage(false), 5000);
-      }
+    setIsApproving(true);
+    try {
+      await approveDeliverable(deliverable.id);
+      setShowApproveDialog(false);
+      showSuccess('Deliverable approved successfully! Payment link will be sent to your email.');
+      await refreshCurrentDeliverable();
+    } catch (error) {
+      setShowApproveDialog(false);
+      showError(error, 'Failed to approve deliverable');
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -106,25 +137,12 @@ const DeliverableReviewContent: React.FC = () => {
   const handleSubmitRevision = async (approval: DeliverableApproval) => {
     try {
       await rejectDeliverable(approval.deliverableId, approval);
-      setSuccessMessage(
-        'Revision request submitted successfully! The team will review within 2-3 business days.'
-      );
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 5000);
+      showSuccess('Revision request submitted successfully! The team will review within 2-3 business days.');
       setShowRevisionForm(false);
       dispatch({ type: 'RESET_REVISION_FORM' });
-
-      // Reload deliverable to restore selectedDeliverable after reducer clears it
-      await refreshDeliverables();
-      if (deliverableId) {
-        dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
-      }
+      await refreshCurrentDeliverable();
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to submit revision request'
-      );
-      setShowErrorMessage(true);
-      setTimeout(() => setShowErrorMessage(false), 5000);
+      showError(error, 'Failed to submit revision request');
     }
   };
 
@@ -239,10 +257,7 @@ const DeliverableReviewContent: React.FC = () => {
       }
 
       // Also refresh deliverables for status update
-      await refreshDeliverables();
-      if (deliverableId) {
-        dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
-      }
+      await refreshCurrentDeliverable();
 
       // Allow success message to show for a bit
       setTimeout(() => setShowSuccessMessage(false), 3000);
@@ -250,9 +265,7 @@ const DeliverableReviewContent: React.FC = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setShowSuccessMessage(false);
-      setErrorMessage('Failed to upload file');
-      setShowErrorMessage(true);
-      setTimeout(() => setShowErrorMessage(false), 5000);
+      showError(error, 'Failed to upload file');
     }
   };
 
@@ -282,10 +295,13 @@ const DeliverableReviewContent: React.FC = () => {
   }
 
   const statusColors: Record<string, string> = {
+    pending: 'secondary',
+    in_progress: 'info',
     beta_ready: 'warning',
     awaiting_approval: 'info',
     approved: 'success',
     revision_requested: 'destructive',
+    payment_pending: 'warning',
     final_delivered: 'success',
   };
 
@@ -310,6 +326,32 @@ const DeliverableReviewContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Send for Review Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showSendForReviewDialog}
+        onClose={() => setShowSendForReviewDialog(false)}
+        onConfirm={handleSendForReview}
+        title="Send for Client Review?"
+        message="This will notify the client that the deliverable is ready for their review. They will be able to approve or request revisions."
+        confirmLabel="Send for Review"
+        cancelLabel="Cancel"
+        variant="warning"
+        isLoading={isSendingForReview}
+      />
+
+      {/* Approve Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showApproveDialog}
+        onClose={() => setShowApproveDialog(false)}
+        onConfirm={handleApprove}
+        title={`Approve "${deliverable?.title}"?`}
+        message="After approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours."
+        confirmLabel="Approve Deliverable"
+        cancelLabel="Cancel"
+        variant="warning"
+        isLoading={isApproving}
+      />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -373,8 +415,10 @@ const DeliverableReviewContent: React.FC = () => {
           <DeliverableMetadataSidebar
             deliverable={deliverable}
             project={currentProject}
-            onApprove={handleApprove}
+            onApprove={() => setShowApproveDialog(true)}
             onRequestRevision={handleRequestRevisionClick}
+            onSendForReview={() => setShowSendForReviewDialog(true)}
+            isSendingForReview={isSendingForReview}
           />
         </div>
       </div>
