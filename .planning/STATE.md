@@ -16,11 +16,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase PROD-12 - Performance & Polish [Complete] |
-| **Current Plan** | All plans complete |
-| **Status** | Load testing, mobile E2E tests, ErrorState/EmptyState components, Web Vitals monitoring |
-| **Progress** | PROD-12: 5/5 plans complete (100%) |
-| **Last activity** | 2026-01-29 - PROD-12 execution complete, 5/5 must-haves verified |
+| **Current Phase** | Phase 09 - Admin Features [In Progress] |
+| **Current Plan** | 09-01 of 3 [Complete] |
+| **Status** | Admin dashboard foundation - activities table, metrics endpoint, enhanced API |
+| **Progress** | Phase 09: 1/3 plans complete (33%) |
+| **Last activity** | 2026-01-29 - Completed 09-01-PLAN.md (Admin Dashboard Foundation) |
 
 ```
 Phase 1: Foundation (Database, API, Embedded UI)     [Complete]
@@ -107,6 +107,10 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ### Key Decisions
 
 | Decision | Rationale | Status |
+| No CHECK constraint on activities table | Existing API uses Zod .refine() for context validation; DB constraint would cause runtime failures for valid edge cases | Applied - 09-01 |
+| Subquery aggregation for dashboard metrics | Avoids cartesian product when aggregating across multiple tables (projects/proposals/payments/inquiries) | Applied - 09-01 |
+| Admin-level global activities queries | Admin dashboard needs all platform activities without context filters; security preserved for non-admin users | Applied - 09-01 |
+| Context names via LEFT JOINs in activities API | Activity log UI needs project names and inquiry numbers without separate API calls | Applied - 09-01 |
 |----------|-----------|--------|
 | Edit restrictions after client response | Lock editing for sent/accepted/rejected to prevent confusion after client has responded; allow editing during changes_requested (revision cycle) | Applied - PROD-10-03 |
 | Super admin force edit override | Super admins can override edit restrictions with confirmation dialog and audit logging for exceptional cases | Applied - PROD-10-03 |
@@ -243,6 +247,23 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 ## Session Continuity
 
 ### This Session (2026-01-29)
+
+**Phase 09 - Plan 01: Admin Dashboard Foundation Complete:**
+- Created activities table migration (011_create_activities_table.sql) with 6 indexes
+- Created dashboard-metrics endpoint returning 12 aggregated platform statistics
+- Enhanced activities API with admin-level queries, userId filter, offset pagination, and context JOINs
+- Subquery aggregation pattern prevents cartesian products in metrics endpoint
+- Admin role detection allows global queries without context filters
+- Commits: 6300e75 (migration), 401265f (endpoints)
+- Duration: 2 minutes
+- Created 09-01-SUMMARY.md
+- **Status:** 09-01 complete - backend foundation ready for admin UI
+
+**Next actions:**
+- Execute 09-02: Admin Dashboard UI
+- Execute 09-03: Activity Log UI
+
+---
 
 **Phase PROD-12 - Plan 04: ErrorState/EmptyState Integration Complete:**
 - Integrated ErrorState and EmptyState into 6 list pages across both portals
