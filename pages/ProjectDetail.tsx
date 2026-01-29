@@ -997,55 +997,52 @@ export const ProjectDetail = () => {
                                     }
 
                                     return (
-                                        <div key={task.id} className="group flex flex-col p-4 rounded-lg border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all duration-200">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <button
-                                                        onClick={() => {
-                                                            const newStatus = task.status === 'Done' || task.status === 'completed' ? 'pending' : 'completed';
-                                                            handleSaveTask(task.id, { status: newStatus as any });
-                                                        }}
-                                                        className={cn(
-                                                            "h-5 w-5 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
-                                                            task.status === 'Done' || task.status === 'completed'
-                                                                ? "bg-primary border-primary text-white"
-                                                                : "border-zinc-300 hover:border-primary bg-white"
-                                                        )}
-                                                    >
-                                                        {(task.status === 'Done' || task.status === 'completed') && <CheckSquare className="h-3.5 w-3.5" />}
-                                                    </button>
-                                                    <span className={cn(
-                                                        "text-sm font-medium transition-colors",
-                                                        (task.status === 'Done' || task.status === 'completed') ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
-                                                    )}>
-                                                        {task.title}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    {assignee && (
-                                                        <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
-                                                            <Avatar src={assignee.avatar} fallback={assignee.name[0]} className="h-4 w-4" />
-                                                            <span className="hidden sm:inline">{assignee.name}</span>
-                                                        </div>
+                                        <div key={task.id} className="group flex flex-col gap-2 px-4 py-3 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition-colors">
+                                            {/* Top row: checkbox + title + actions */}
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const newStatus = task.status === 'Done' || task.status === 'completed' ? 'pending' : 'completed';
+                                                        handleSaveTask(task.id, { status: newStatus as any });
+                                                    }}
+                                                    className={cn(
+                                                        "h-5 w-5 shrink-0 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
+                                                        task.status === 'Done' || task.status === 'completed'
+                                                            ? "bg-primary border-primary text-white"
+                                                            : "border-zinc-300 hover:border-primary bg-white"
                                                     )}
-                                                    <Badge variant="secondary" className={cn("font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
+                                                >
+                                                    {(task.status === 'Done' || task.status === 'completed') && <CheckSquare className="h-3.5 w-3.5" />}
+                                                </button>
+                                                <span className={cn(
+                                                    "text-sm font-medium flex-1 min-w-0 truncate",
+                                                    (task.status === 'Done' || task.status === 'completed') ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
+                                                )}>
+                                                    {task.title}
+                                                </span>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <Badge variant="secondary" className={cn("text-[11px] font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
 
                                                     <Button
                                                         size="sm"
                                                         variant="ghost"
                                                         onClick={() => toggleTaskComments(task.id)}
                                                         className={cn(
-                                                            "h-7 px-2 rounded-md transition-all gap-1.5",
+                                                            "h-7 w-7 p-0 rounded-md transition-all",
                                                             expandedComments.has(task.id)
                                                                 ? "text-blue-600 bg-blue-50"
                                                                 : "text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
                                                         )}
                                                         title="Comments"
                                                     >
-                                                        <MessageSquare className="h-3.5 w-3.5" />
-                                                        {(task.comments?.length || 0) > 0 && (
-                                                            <span className="text-xs font-medium">{task.comments?.length}</span>
-                                                        )}
+                                                        <div className="relative">
+                                                            <MessageSquare className="h-3.5 w-3.5" />
+                                                            {(task.comments?.length || 0) > 0 && (
+                                                                <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[9px] font-bold rounded-full h-3.5 min-w-[14px] flex items-center justify-center">
+                                                                    {task.comments?.length}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </Button>
 
                                                     <Button
@@ -1053,7 +1050,7 @@ export const ProjectDetail = () => {
                                                         variant="ghost"
                                                         onClick={() => handleFollowTask(task)}
                                                         className={cn(
-                                                            "h-7 w-7 p-0 rounded-full transition-all",
+                                                            "h-7 w-7 p-0 rounded-md transition-all",
                                                             task.followers?.includes(user?.id || '')
                                                                 ? "text-emerald-500 hover:text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
                                                                 : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
@@ -1066,17 +1063,27 @@ export const ProjectDetail = () => {
                                                     {user && canEditTask(user, task) && (
                                                         <Button
                                                             size="sm"
+                                                            variant="ghost"
                                                             onClick={() => handleEditTask(task)}
-                                                            className="opacity-100 transition-opacity gap-1.5 h-7 px-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border border-zinc-200"
+                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all"
+                                                            title="Edit task"
                                                         >
                                                             <Edit2 className="h-3.5 w-3.5" />
-                                                            <span className="hidden sm:inline text-xs font-medium">Edit</span>
                                                         </Button>
                                                     )}
                                                 </div>
                                             </div>
-                                            {/* Task Metadata Row */}
-                                            <div className="flex items-center gap-4 mt-2 pl-9 text-xs text-zinc-400">
+                                            {/* Meta row: assignee, time, creator, deadline */}
+                                            <div className="flex items-center gap-3 pl-8 text-xs text-zinc-400">
+                                                {assignee && (
+                                                    <span className="flex items-center gap-1.5 text-zinc-600 font-medium" title={`Assigned to ${assignee.name}`}>
+                                                        <Avatar src={assignee.avatar} fallback={assignee.name[0]} className="h-4 w-4" />
+                                                        {assignee.name}
+                                                    </span>
+                                                )}
+                                                {assignee && (task.createdAt || creator || task.deadline) && (
+                                                    <span className="text-zinc-200">·</span>
+                                                )}
                                                 {task.createdAt && (
                                                     <span className="flex items-center gap-1" title={new Date(task.createdAt).toLocaleString()}>
                                                         <Clock className="h-3 w-3" />
@@ -1085,7 +1092,6 @@ export const ProjectDetail = () => {
                                                 )}
                                                 {creator && (
                                                     <span className="flex items-center gap-1" title={`Created by ${creator.name}`}>
-                                                        <Users className="h-3 w-3" />
                                                         By {creator.name.split(' ')[0]}
                                                     </span>
                                                 )}
