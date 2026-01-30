@@ -26,7 +26,7 @@ export type DeliverableStatus =
   | 'beta_ready'
   | 'awaiting_approval'
   | 'approved'
-  | 'rejected'
+  | 'revision_requested'
   | 'payment_pending'
   | 'final_delivered';
 
@@ -76,6 +76,8 @@ export interface FeedbackAttachment {
   fileType: string; // MIME type (e.g., 'image/png')
   url: string;
   thumbnailUrl?: string; // For image previews
+  file?: File;    // Raw file for upload (before persisted)
+  r2Key?: string; // Storage key after upload
 }
 
 // ============================================================================

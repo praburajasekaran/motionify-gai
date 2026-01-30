@@ -3,11 +3,17 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { XCircle, AlertTriangle, ArrowLeft, Mail } from 'lucide-react';
+import { XCircle, AlertTriangle, ArrowLeft, Mail, RefreshCw } from 'lucide-react';
 
 function FailureContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error') || 'Payment processing failed';
+  const orderId = searchParams.get('orderId');
+  const proposalId = searchParams.get('proposalId');
+  const errorCode = searchParams.get('errorCode');
+
+  // Determine retry URL - go back to payment page if proposalId available
+  const retryUrl = proposalId ? `/payment/${proposalId}` : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
@@ -23,7 +29,7 @@ function FailureContent() {
               Payment Failed
             </h1>
             <p className="text-red-50 text-lg">
-              Unfortunately, we couldn't process your payment
+              Unfortunately, we couldn&apos;t process your payment
             </p>
           </div>
 
@@ -35,6 +41,11 @@ function FailureContent() {
                 <p className="text-sm text-red-800">
                   {error}
                 </p>
+                {errorCode && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Error Code: <code className="font-mono bg-red-100 px-1 rounded">{errorCode}</code>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -42,19 +53,19 @@ function FailureContent() {
               <h3 className="font-semibold text-blue-900 mb-4">What you can do:</h3>
               <ul className="space-y-2 text-sm text-blue-900">
                 <li className="flex gap-2">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-600 font-bold">1.</span>
                   <span>Check that your card details are correct</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-600 font-bold">2.</span>
                   <span>Ensure your card has sufficient balance</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-600 font-bold">3.</span>
                   <span>Try a different payment method if available</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-blue-600 font-bold">•</span>
+                  <span className="text-blue-600 font-bold">4.</span>
                   <span>Contact your bank if the issue persists</span>
                 </li>
               </ul>
@@ -66,9 +77,14 @@ function FailureContent() {
                 <h3 className="font-semibold text-purple-900 mb-1">Need Help?</h3>
                 <p className="text-sm text-purple-800">
                   If you continue to experience issues, our support team is here to help. Contact us at{' '}
-                  <a href="mailto:hello@motionify.com" className="font-semibold underline">
-                    hello@motionify.com
+                  <a href="mailto:support@motionify.com" className="font-semibold underline">
+                    support@motionify.com
                   </a>
+                  {orderId && (
+                    <span className="block mt-1 text-xs text-purple-600">
+                      Reference: {orderId}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -81,25 +97,41 @@ function FailureContent() {
                 <ArrowLeft className="w-4 h-4" />
                 Back to Home
               </Link>
-              <a
-                href={typeof window !== 'undefined' ? window.history.length > 1 ? '#' : '/' : '/'}
-                onClick={(e) => {
-                  if (typeof window !== 'undefined' && window.history.length > 1) {
-                    e.preventDefault();
-                    window.history.back();
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors font-medium"
-              >
-                Try Again
-              </a>
+              {retryUrl ? (
+                <Link
+                  href={retryUrl}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.history.length > 1) {
+                      window.history.back();
+                    } else {
+                      window.location.href = '/';
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
+                </button>
+              )}
             </div>
 
-            <p className="text-xs text-gray-500 text-center mt-6">
-              Error: <code className="font-mono">{error}</code>
-              {' • '}
-              <span>Time: {new Date().toLocaleString()}</span>
-            </p>
+            <div className="text-xs text-gray-500 text-center mt-6 space-y-1">
+              {orderId && (
+                <p>
+                  Order Reference: <code className="font-mono bg-gray-100 px-1 rounded">{orderId}</code>
+                </p>
+              )}
+              <p>
+                Time: {new Date().toLocaleString()}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -107,7 +139,7 @@ function FailureContent() {
           <p className="text-white/60 text-sm">
             Still having trouble?{' '}
             <a
-              href="mailto:hello@motionify.com"
+              href="mailto:support@motionify.com"
               className="text-white hover:text-white/80 underline"
             >
               Contact our support team

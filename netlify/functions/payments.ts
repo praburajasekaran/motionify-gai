@@ -1,21 +1,13 @@
 import pg from 'pg';
 import Razorpay from 'razorpay';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
+import { sendPaymentReminderEmail } from './send-email';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -34,19 +26,13 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.apiStrict, 'payments')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -81,23 +67,9 @@ export const handler = async (
       const action = pathParts[pathParts.length - 1];
 
       if (action === 'create-order') {
-        const { proposalId, paymentType } = JSON.parse(event.body || '{}');
-
-        if (!proposalId || !paymentType) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'proposalId and paymentType are required' }),
-          };
-        }
-
-        if (!['advance', 'balance'].includes(paymentType)) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentType must be advance or balance' }),
-          };
-        }
+        const validation = validateRequest(event.body, SCHEMAS.payment.createOrder, origin);
+        if (!validation.success) return validation.response;
+        const { proposalId, paymentType } = validation.data;
 
         const proposalResult = await client.query(
           'SELECT * FROM proposals WHERE id = $1',
@@ -121,6 +93,18 @@ export const handler = async (
           currency: proposal.currency,
           receipt: `receipt_${proposalId.substring(0, 8)}_${Date.now()}`,
         };
+
+        // Validate amount
+        if (!amount || amount <= 0) {
+          console.error('Invalid amount:', { amount, advanceAmount: proposal.advance_amount, balanceAmount: proposal.balance_amount });
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Invalid payment amount', details: `Amount: ${amount}` }),
+          };
+        }
+
+        console.log('Creating Razorpay order:', orderOptions);
 
         try {
           const razorpayOrder = await razorpay.orders.create(orderOptions);
@@ -146,27 +130,29 @@ export const handler = async (
               description: "Project Payment",
             }),
           };
-        } catch (err) {
+        } catch (err: any) {
           console.error('Error creating Razorpay order:', err);
+          const errorMessage = err?.error?.description || err?.message || 'Unknown Razorpay error';
+          const errorCode = err?.error?.code || err?.statusCode || 'UNKNOWN';
           return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Failed to create payment order' }),
+            body: JSON.stringify({
+              error: 'Failed to create payment order',
+              details: errorMessage,
+              code: errorCode,
+              orderOptions: { amount: orderOptions.amount, currency: orderOptions.currency }
+            }),
           };
         }
       }
 
       if (action === 'verify') {
-        const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = JSON.parse(event.body || '{}');
+        const validation = validateRequest(event.body, SCHEMAS.payment.verify, origin);
+        if (!validation.success) return validation.response;
+        const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = validation.data;
 
-        if (!paymentId || !razorpayPaymentId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentId and razorpayPaymentId are required' }),
-          };
-        }
-
+        try {
         const result = await client.query(
           `UPDATE payments 
            SET razorpay_order_id = $1, 
@@ -299,18 +285,24 @@ export const handler = async (
           headers,
           body: JSON.stringify(result.rows[0]),
         };
+        } catch (verifyError: any) {
+          console.error('Payment verification error:', verifyError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+              error: 'Payment verification failed',
+              details: verifyError.message || 'Unknown error',
+              stack: verifyError.stack,
+            }),
+          };
+        }
       }
 
       if (action === 'manual-complete') {
-        const { paymentId } = JSON.parse(event.body || '{}');
-
-        if (!paymentId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'paymentId is required' }),
-          };
-        }
+        const validation = validateRequest(event.body, SCHEMAS.payment.manualComplete, origin);
+        if (!validation.success) return validation.response;
+        const { paymentId } = validation.data;
 
         const result = await client.query(
           `UPDATE payments 
@@ -444,10 +436,120 @@ export const handler = async (
         };
       }
 
+      if (action === 'send-reminder') {
+        // Verify admin access for sending reminders
+        const adminRoles = ['super_admin', 'project_manager'];
+        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Admin access required to send payment reminders' }),
+          };
+        }
+
+        // Extract paymentId from request body
+        const body = JSON.parse(event.body || '{}');
+        const { paymentId } = body;
+
+        if (!paymentId) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'paymentId is required' }),
+          };
+        }
+
+        // Fetch payment with project and client information
+        const paymentResult = await client.query(
+          `SELECT
+            p.id, p.amount, p.currency, p.payment_type, p.status, p.created_at,
+            proj.id as project_id, proj.project_number,
+            u.id as client_id, u.full_name as client_name, u.email as client_email
+          FROM payments p
+          LEFT JOIN projects proj ON p.project_id = proj.id
+          LEFT JOIN users u ON proj.client_user_id = u.id
+          WHERE p.id = $1`,
+          [paymentId]
+        );
+
+        if (paymentResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Payment not found' }),
+          };
+        }
+
+        const payment = paymentResult.rows[0];
+
+        // Only send reminders for pending payments
+        if (payment.status !== 'pending') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: `Cannot send reminder for ${payment.status} payment` }),
+          };
+        }
+
+        if (!payment.client_email) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'No client email associated with this payment' }),
+          };
+        }
+
+        // Calculate days overdue
+        const createdDate = new Date(payment.created_at);
+        const now = new Date();
+        const daysOverdue = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Format amount for display (convert from paise/cents to rupees/dollars)
+        const displayAmount = (Number(payment.amount) / 100).toFixed(2);
+
+        // Build payment URL
+        const baseUrl = process.env.URL || 'http://localhost:3000';
+        const paymentUrl = payment.project_id
+          ? `${baseUrl}/portal/projects/${payment.project_id}`
+          : `${baseUrl}/portal`;
+
+        // Send the reminder email
+        const emailResult = await sendPaymentReminderEmail({
+          to: payment.client_email,
+          clientName: payment.client_name || 'Client',
+          projectNumber: payment.project_number || 'N/A',
+          amount: displayAmount,
+          currency: payment.currency,
+          paymentUrl,
+          daysOverdue,
+        });
+
+        if (!emailResult) {
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Failed to send reminder email' }),
+          };
+        }
+
+        console.log(`[Payments API] Reminder sent to ${payment.client_email} for payment ${paymentId}`);
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            message: `Reminder sent to ${payment.client_email}`,
+            paymentId,
+            clientEmail: payment.client_email,
+          }),
+        };
+      }
+
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid action. Use /create-order or /verify' }),
+        body: JSON.stringify({ error: 'Invalid action. Use /create-order, /verify, /manual-complete, or /send-reminder' }),
       };
     }
 
@@ -470,4 +572,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

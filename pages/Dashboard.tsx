@@ -1,163 +1,448 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, Badge, cn } from '../components/ui/design-system';
-import { MOCK_PROJECTS } from '../constants';
-import { Clock, CheckCircle2, AlertCircle, PlayCircle, ArrowUpRight, TrendingUp, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  FolderOpen,
+  FileText,
+  DollarSign,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Send,
+  CheckCircle,
+  CreditCard,
+  Package,
+  FolderPlus,
+  Clock,
+  User,
+  Calendar
+} from 'lucide-react';
+import { useAuthContext } from '../contexts/AuthContext';
+import { ErrorState } from '../components/ui/ErrorState';
+import { EmptyState } from '../components/ui/EmptyState';
 
-const StatCard = ({ title, value, change, icon: Icon, trend, delay }: { title: string, value: string, change: string, icon: any, trend: 'up' | 'down' | 'neutral', delay: string }) => (
-  <Card hoverable className={cn("bg-white border-zinc-200 animate-fade-in-up", delay)}>
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between space-y-0 pb-2">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="p-2.5 bg-white rounded-full ring-1 ring-inset ring-zinc-100 shadow-sm">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-      </div>
-      <div className="flex flex-col gap-1 pt-4">
-        <div className="text-3xl font-bold tracking-tight text-foreground">{value}</div>
-        <div className={cn("text-xs font-medium flex items-center",
-          trend === 'up' ? "text-emerald-600" : trend === 'down' ? "text-red-600" : "text-zinc-500"
-        )}>
-          {trend === 'up' && <TrendingUp className="h-3 w-3 mr-1" />}
-          {change}
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+// Dashboard metrics type
+interface DashboardMetrics {
+  projects: {
+    total: number;
+    active: number;
+    completed: number;
+  };
+  proposals: {
+    total: number;
+    pending: number;
+    accepted: number;
+  };
+  revenue: {
+    total: number;
+    completed: number;
+    pending: number;
+  };
+  inquiries: {
+    total: number;
+    new: number;
+  };
+}
 
-const data = [
-  { name: 'Mon', completed: 2, active: 4 },
-  { name: 'Tue', completed: 1, active: 5 },
-  { name: 'Wed', completed: 3, active: 6 },
-  { name: 'Thu', completed: 4, active: 5 },
-  { name: 'Fri', completed: 2, active: 8 },
-  { name: 'Sat', completed: 1, active: 2 },
-  { name: 'Sun', completed: 0, active: 1 },
-];
+// Activity type from activities API
+interface Activity {
+  id: string;
+  type: string;
+  userId: string;
+  userName: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  inquiryId?: string;
+  proposalId?: string;
+  projectId?: string;
+  details: Record<string, string | number>;
+  timestamp: number;
+  // Enhanced fields from 09-01 (JOINs)
+  inquiryNumber?: string;
+  proposalName?: string;
+  projectName?: string;
+}
+
+// Map activity types to human-readable labels
+const ACTIVITY_LABELS: Record<string, string> = {
+  PROPOSAL_SENT: 'Sent proposal',
+  PROPOSAL_ACCEPTED: 'Proposal accepted',
+  PROPOSAL_REJECTED: 'Proposal rejected',
+  PROPOSAL_CHANGES_REQUESTED: 'Requested changes',
+  PAYMENT_RECEIVED: 'Payment received',
+  DELIVERABLE_APPROVED: 'Deliverable approved',
+  DELIVERABLE_REJECTED: 'Deliverable rejected',
+  DELIVERABLE_UPLOADED: 'Deliverable uploaded',
+  COMMENT_ADDED: 'Comment added',
+  PROJECT_CREATED: 'Project created',
+  TASK_CREATED: 'Task created',
+  TASK_STATUS_CHANGED: 'Task status changed',
+  FILE_UPLOADED: 'File uploaded',
+  TERMS_ACCEPTED: 'Terms accepted',
+};
+
+// Map activity types to icons
+const ACTIVITY_ICONS: Record<string, typeof Send> = {
+  PROPOSAL_SENT: Send,
+  PROPOSAL_ACCEPTED: CheckCircle,
+  PROPOSAL_REJECTED: CheckCircle,
+  PROPOSAL_CHANGES_REQUESTED: FileText,
+  PAYMENT_RECEIVED: CreditCard,
+  DELIVERABLE_APPROVED: Package,
+  DELIVERABLE_REJECTED: Package,
+  DELIVERABLE_UPLOADED: Package,
+  COMMENT_ADDED: MessageSquare,
+  PROJECT_CREATED: FolderPlus,
+  TASK_CREATED: CheckCircle,
+  TASK_STATUS_CHANGED: CheckCircle,
+  FILE_UPLOADED: FileText,
+  TERMS_ACCEPTED: CheckCircle,
+};
+
+// Relative time formatting helper
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Metric card component
+interface MetricCardProps {
+  title: string;
+  value: number;
+  icon: typeof FolderOpen;
+  color: 'blue' | 'purple' | 'green' | 'amber';
+  breakdown?: { label: string; value: number }[];
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, onToggle }: MetricCardProps) {
+  const colors = {
+    blue: { bg: 'bg-blue-500/10', icon: 'text-blue-500', ring: 'ring-blue-500/20' },
+    purple: { bg: 'bg-purple-500/10', icon: 'text-purple-500', ring: 'ring-purple-500/20' },
+    green: { bg: 'bg-green-500/10', icon: 'text-green-500', ring: 'ring-green-500/20' },
+    amber: { bg: 'bg-amber-500/10', icon: 'text-amber-500', ring: 'ring-amber-500/20' },
+  };
+
+  const colorClasses = colors[color];
+
+  return (
+    <button
+      onClick={onToggle}
+      className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all text-left w-full"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className={`w-12 h-12 rounded-lg ${colorClasses.bg} flex items-center justify-center ring-1 ${colorClasses.ring}`}>
+          <Icon className={`w-6 h-6 ${colorClasses.icon}`} />
+        </div>
+        {breakdown && (
+          <div className="text-gray-400">
+            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </div>
+        )}
+      </div>
+      <p className="text-sm text-gray-600 mb-1">{title}</p>
+      <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
+
+      {breakdown && isExpanded && (
+        <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+          {breakdown.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">{item.label}:</span>
+              <span className="font-semibold text-gray-900">{item.value.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
 
 export const Dashboard = () => {
-  const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
-  const completedProjects = MOCK_PROJECTS.filter(p => p.status === 'Completed').length;
+  const { user } = useAuthContext();
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
+  const [errorActivities, setErrorActivities] = useState<string | null>(null);
+
+  // Fetch dashboard metrics
+  const fetchMetrics = async () => {
+    setLoadingMetrics(true);
+    setErrorMetrics(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/dashboard-metrics', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch metrics: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Transform flat API response to nested structure
+      setMetrics({
+        projects: {
+          total: data.totalProjects ?? 0,
+          active: data.activeProjects ?? 0,
+          completed: (data.totalProjects ?? 0) - (data.activeProjects ?? 0),
+        },
+        proposals: {
+          total: data.totalProposals ?? 0,
+          pending: data.pendingProposals ?? 0,
+          accepted: data.acceptedProposals ?? 0,
+        },
+        revenue: {
+          total: data.totalRevenue ?? 0,
+          completed: data.totalRevenue ?? 0,
+          pending: data.pendingRevenue ?? 0,
+        },
+        inquiries: {
+          total: data.totalInquiries ?? 0,
+          new: data.newInquiries ?? 0,
+        },
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch dashboard metrics:', error);
+      setErrorMetrics(error.message || 'Failed to load metrics');
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
+
+  // Fetch recent activities
+  const fetchActivities = async () => {
+    setLoadingActivities(true);
+    setErrorActivities(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/activities?limit=10', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setActivities(data);
+    } catch (error: any) {
+      console.error('Failed to fetch activities:', error);
+      setErrorActivities(error.message || 'Failed to load recent activity');
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMetrics();
+    fetchActivities();
+  }, []);
+
+  // Get context link for activity
+  function getActivityContextLink(activity: Activity): { to: string; label: string } | null {
+    if (activity.projectId && activity.projectName) {
+      return { to: `/project/${activity.projectId}`, label: activity.projectName };
+    }
+    if (activity.proposalId && activity.proposalName) {
+      return { to: `/admin/inquiries/${activity.inquiryId}`, label: activity.proposalName };
+    }
+    if (activity.inquiryId && activity.inquiryNumber) {
+      return { to: `/admin/inquiries/${activity.inquiryId}`, label: activity.inquiryNumber };
+    }
+    return null;
+  }
+
+  const isLoading = loadingMetrics || loadingActivities;
+  const hasError = errorMetrics || errorActivities;
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
+      {/* Header */}
       <div className="flex flex-col gap-1 animate-fade-in">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
-        <p className="text-muted-foreground">Overview of your projects and team activity.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h2>
+        <p className="text-gray-600">
+          {user?.name ? `Welcome back, ${user.name}` : 'Overview of platform metrics and activity'}
+          {user?.role && ` · ${user.role === 'superadmin' ? 'Super Admin' : user.role}`}
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Active Projects"
-          value={activeProjects.toString()}
-          change="+12% from last week"
-          icon={PlayCircle}
-          trend="up"
-          delay="animation-delay-[100ms]"
-        />
-        <StatCard
-          title="Completed This Month"
-          value={completedProjects.toString()}
-          change="+4 vs last month"
-          icon={CheckCircle2}
-          trend="up"
-          delay="animation-delay-[200ms]"
-        />
-        <StatCard
-          title="Pending Review"
-          value="3"
-          change="-2 from yesterday"
-          icon={Clock}
-          trend="down"
-          delay="animation-delay-[300ms]"
-        />
-        <StatCard
-          title="Team Utilization"
-          value="85%"
-          change="High Utilization"
-          icon={Users}
-          trend="neutral"
-          delay="animation-delay-[400ms]"
-        />
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-7">
-        <Card hoverable className="md:col-span-4 border-zinc-200 animate-fade-in-up animation-delay-[500ms]">
-          <CardHeader>
-            <CardTitle>Weekly Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-0">
-            <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    dy={10}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}`}
-                  />
-                  <Tooltip
-                    cursor={{ stroke: 'hsl(var(--border))' }}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: 'none',
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      color: 'hsl(var(--popover-foreground))'
-                    }}
-                  />
-                  <Area type="monotone" dataKey="active" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorActive)" />
-                </AreaChart>
-              </ResponsiveContainer>
+      {/* Metric Cards */}
+      {errorMetrics ? (
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+          <ErrorState error={errorMetrics} onRetry={fetchMetrics} />
+        </div>
+      ) : loadingMetrics ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm animate-pulse">
+              <div className="w-12 h-12 bg-gray-200 rounded-lg mb-3" />
+              <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
+              <div className="h-8 bg-gray-200 rounded w-16" />
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
+      ) : metrics ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total Projects"
+            value={metrics.projects.total}
+            icon={FolderOpen}
+            color="blue"
+            breakdown={[
+              { label: 'Active', value: metrics.projects.active },
+              { label: 'Completed', value: metrics.projects.completed },
+              { label: 'Total', value: metrics.projects.total },
+            ]}
+            isExpanded={expandedCard === 'projects'}
+            onToggle={() => setExpandedCard(expandedCard === 'projects' ? null : 'projects')}
+          />
+          <MetricCard
+            title="Proposals"
+            value={metrics.proposals.total}
+            icon={FileText}
+            color="purple"
+            breakdown={[
+              { label: 'Pending', value: metrics.proposals.pending },
+              { label: 'Accepted', value: metrics.proposals.accepted },
+              { label: 'Total', value: metrics.proposals.total },
+            ]}
+            isExpanded={expandedCard === 'proposals'}
+            onToggle={() => setExpandedCard(expandedCard === 'proposals' ? null : 'proposals')}
+          />
+          <MetricCard
+            title="Revenue"
+            value={metrics.revenue.total}
+            icon={DollarSign}
+            color="green"
+            breakdown={[
+              { label: 'Completed', value: metrics.revenue.completed },
+              { label: 'Pending', value: metrics.revenue.pending },
+              { label: 'Total', value: metrics.revenue.total },
+            ]}
+            isExpanded={expandedCard === 'revenue'}
+            onToggle={() => setExpandedCard(expandedCard === 'revenue' ? null : 'revenue')}
+          />
+          <MetricCard
+            title="Inquiries"
+            value={metrics.inquiries.total}
+            icon={MessageSquare}
+            color="amber"
+            breakdown={[
+              { label: 'New', value: metrics.inquiries.new },
+              { label: 'Total', value: metrics.inquiries.total },
+            ]}
+            isExpanded={expandedCard === 'inquiries'}
+            onToggle={() => setExpandedCard(expandedCard === 'inquiries' ? null : 'inquiries')}
+          />
+        </div>
+      ) : null}
 
-        <Card hoverable className="md:col-span-3 border-zinc-200 animate-fade-in-up animation-delay-[600ms]">
-          <CardHeader>
-            <CardTitle>What's Happening</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-start gap-4 group cursor-pointer p-3 rounded-xl hover:bg-zinc-50 transition-colors">
-                  <div className="relative pt-0.5">
-                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center ring-4 ring-white shadow-sm group-hover:scale-110 transition-transform duration-200">
-                      <Users className="h-4 w-4 text-blue-500 transition-colors" />
-                    </div>
-                    {i === 1 && <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-blue-500 rounded-full ring-2 ring-white animate-pulse" />}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none text-foreground group-hover:text-primary transition-colors">
-                      Sarah just dropped 3 new assets on <span className="font-bold">Nike Air Campaign</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      2 hours ago
-                    </p>
-                  </div>
+      {/* Recent Activity Table */}
+      <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          <p className="text-sm text-gray-500 mt-1">Latest platform actions and updates</p>
+        </div>
+
+        {errorActivities ? (
+          <ErrorState error={errorActivities} onRetry={fetchActivities} />
+        ) : loadingActivities ? (
+          <div className="p-6 space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="w-10 h-10 bg-gray-200 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        ) : activities.length === 0 ? (
+          <EmptyState
+            icon={Clock}
+            title="No recent activity"
+            description="Platform activity will appear here as users interact with projects, proposals, and inquiries"
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Context
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {activities.map((activity) => {
+                  const ActivityIcon = ACTIVITY_ICONS[activity.type] || FileText;
+                  const activityLabel = ACTIVITY_LABELS[activity.type] || activity.type.replace(/_/g, ' ').toLowerCase();
+                  const contextLink = getActivityContextLink(activity);
+
+                  return (
+                    <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          {formatRelativeTime(activity.timestamp)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">{activity.userName}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-2">
+                          <ActivityIcon className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-700">{activityLabel}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {contextLink ? (
+                          <Link
+                            to={contextLink.to}
+                            className="text-purple-600 hover:text-purple-700 font-medium hover:underline"
+                          >
+                            {contextLink.label}
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

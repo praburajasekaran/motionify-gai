@@ -2,19 +2,13 @@
  * Authentication Context
  *
  * Provides current user information and authentication state to all components.
- * Integrates with real backend authentication via JWT tokens.
+ * Integrates with real backend authentication via httpOnly cookies.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User } from '@/types';
-import {
-    getStoredUser,
-    getAuthToken,
-    clearAuthSession,
-    storeAuthSession,
-    MOCK_USERS,
-    setMockUser as setMockUserAuth,
-} from '@/lib/auth';
+import { clearAuthSession } from '@/lib/auth';
+import { API_BASE } from '@/lib/api-config';
 
 interface AuthContextType {
     user: User | null;
@@ -41,23 +35,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [isLoading, setIsLoading] = useState(true);
 
     /**
-     * Load user from stored session
+     * Load user from cookie-based session via /auth-me endpoint
      */
-    const loadUser = useCallback(() => {
-        try {
-            const storedToken = getAuthToken();
-            const storedUser = getStoredUser();
+    const loadUser = useCallback(async () => {
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-            if (storedToken && storedUser) {
-                setToken(storedToken);
-                setUserState(storedUser);
-            } else {
-                setToken(null);
-                setUserState(null);
+        try {
+            const response = await fetch(`${API_BASE}/auth-me`, {
+                method: 'GET',
+                credentials: 'include',
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.user) {
+                    setUserState(data.user);
+                    setToken('cookie'); // Indicate we have a valid session
+                    return;
+                }
             }
-        } catch (error) {
-            console.error('Failed to load user session:', error);
-            clearAuthSession();
+
+            // No valid session
+            setToken(null);
+            setUserState(null);
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Auth check timed out - API server may not be running');
+            } else {
+                console.error('Failed to load user session:', error);
+            }
             setToken(null);
             setUserState(null);
         } finally {
@@ -70,12 +82,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
      */
     const setUser = useCallback((newUser: User | null) => {
         if (newUser) {
-            // If setting a new user without going through login,
-            // we need a token - this is for mock mode
-            const currentToken = getAuthToken();
-            if (currentToken) {
-                setUserState(newUser);
-            }
+            setUserState(newUser);
+            setToken('cookie'); // Indicate we have a valid session
         } else {
             clearAuthSession();
             setToken(null);
@@ -86,7 +94,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     /**
      * Logout and clear session
      */
-    const logout = useCallback(() => {
+    const logout = useCallback(async () => {
+        try {
+            // Call /auth-logout to clear the httpOnly cookie
+            await fetch(`${API_BASE}/auth-logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch (error) {
+            console.error('Logout API call failed:', error);
+        }
+        // Clean up any legacy localStorage data
         clearAuthSession();
         setToken(null);
         setUserState(null);
@@ -95,20 +113,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     /**
-     * Refresh session - check if still valid
+     * Refresh session - check if still valid via /auth-me endpoint
      */
-    const refreshSession = useCallback(() => {
-        const currentToken = getAuthToken();
-        if (!currentToken) {
-            // Session expired
+    const refreshSession = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/auth-me`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.user) {
+                    setUserState(data.user);
+                    setToken('cookie');
+                    return;
+                }
+            }
+
+            // Session expired or invalid
             setToken(null);
             setUserState(null);
-        } else {
-            // Update user from storage in case it changed
-            const storedUser = getStoredUser();
-            if (storedUser) {
-                setUserState(storedUser);
-            }
+        } catch (error) {
+            console.error('Failed to refresh session:', error);
+            // Don't clear session on network errors - keep current state
         }
     }, []);
 
@@ -126,16 +154,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => clearInterval(interval);
     }, [refreshSession]);
 
-    // Listen for storage changes (for multi-tab support)
+    // Multi-tab support: Listen for visibility changes to refresh session when tab becomes visible
     useEffect(() => {
-        const handleStorageChange = (event: StorageEvent) => {
-            if (event.key === 'auth_token' || event.key === 'auth_user') {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
                 refreshSession();
             }
         };
 
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [refreshSession]);
 
     const value: AuthContextType = {
@@ -162,14 +190,3 @@ export function useAuthContext(): AuthContextType {
     }
     return context;
 }
-
-/**
- * Development helper: Set a mock user for testing
- * This should only be used in development/testing
- */
-export function setMockUser(user: User) {
-    setMockUserAuth(user);
-}
-
-// Re-export MOCK_USERS for backward compatibility
-export { MOCK_USERS };

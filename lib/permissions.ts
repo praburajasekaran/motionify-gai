@@ -107,4 +107,11 @@ export const Permissions = {
   canAccessSettings(user: User | null): boolean {
     return isSuperAdmin(user);
   },
+
+  /**
+   * Can manage projects (including payments)
+   */
+  canManageProjects(user: User | null): boolean {
+    return isMotionifyAdmin(user);
+  },
 };

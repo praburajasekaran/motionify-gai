@@ -40,10 +40,11 @@ interface CommentItemProps {
         updatedAt: string;
     };
     currentUserId?: string;
+    hasSubsequentReplies?: boolean;
     onEdit?: (id: string, newContent: string) => void;
 }
 
-export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps) {
+export function CommentItem({ comment, currentUserId, hasSubsequentReplies = false, onEdit }: CommentItemProps) {
     const isOwner = currentUserId === comment.userId;
     const isRecentlyCreated = Date.now() - new Date(comment.createdAt).getTime() < 60000;
     const showEditedBadge = comment.isEdited && !isRecentlyCreated;
@@ -151,7 +152,7 @@ export function CommentItem({ comment, currentUserId, onEdit }: CommentItemProps
                             edited
                         </span>
                     )}
-                    {isOwner && !isEditing && (
+                    {isOwner && !hasSubsequentReplies && !isEditing && (
                         <button
                             onClick={() => setIsEditing(true)}
                             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"

@@ -1,20 +1,10 @@
 import pg from 'pg';
+import { compose, withCORS, withAuth, withRateLimit, withValidation, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-    path: string;
-    queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
 
 const getDbClient = () => {
     const DATABASE_URL = process.env.DATABASE_URL;
@@ -28,40 +18,34 @@ const getDbClient = () => {
     });
 };
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json',
-    };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
-
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ error: 'Method not allowed' }),
-        };
-    }
+export const handler = compose(
+    withCORS(['POST']),
+    withAuth(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'project_accept_terms'),
+    withValidation(SCHEMAS.project.acceptTerms)
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+    const origin = event.headers.origin || event.headers.Origin;
+    const headers = getCorsHeaders(origin);
 
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        const { projectId, userId } = JSON.parse(event.body || '{}');
+        // Get validated data from middleware
+        const data = (event as any).validatedData;
+        const { projectId, accepted } = data;
 
-        if (!projectId || !userId) {
+        // Note: The schema expects { projectId, accepted } but the endpoint also uses userId
+        // Extract userId from the body manually for now
+        const rawBody = JSON.parse(event.body || '{}');
+        const userId = rawBody.userId;
+
+        if (!userId) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ error: 'projectId and userId are required' }),
+                body: JSON.stringify({ error: 'userId is required' }),
             };
         }
 
@@ -161,4 +145,4 @@ export const handler = async (
     } finally {
         await client.end();
     }
-};
+});

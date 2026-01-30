@@ -27,7 +27,7 @@ export async function fetchTasksForProject(
     includeComments = false
 ): Promise<Task[]> {
     const url = `${API_BASE}/tasks?projectId=${projectId}&includeComments=${includeComments}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'include' });
 
     if (!response.ok) {
         throw new Error(`Failed to fetch tasks: ${response.statusText}`);
@@ -50,15 +50,32 @@ export async function createTask(taskData: {
     delivery?: string;
     status?: string;
 }): Promise<Task> {
+    // Transform snake_case to camelCase for API schema
+    // Only include fields that have values to avoid validation errors
+    const apiPayload: Record<string, unknown> = {
+        projectId: taskData.project_id,
+        title: taskData.title,
+    };
+
+    if (taskData.description) apiPayload.description = taskData.description;
+    if (taskData.assignee_id) apiPayload.assignedTo = taskData.assignee_id;
+    if (taskData.deadline) apiPayload.dueDate = new Date(taskData.deadline).toISOString();
+    if (taskData.status) apiPayload.status = taskData.status;
+    if (taskData.visible_to_client !== undefined) apiPayload.visible_to_client = taskData.visible_to_client;
+
     const response = await fetch(`${API_BASE}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData),
+        credentials: 'include',
+        body: JSON.stringify(apiPayload),
     });
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create task');
+        const errorMessage = typeof error.error === 'string'
+            ? error.error
+            : JSON.stringify(error.error || error);
+        throw new Error(errorMessage || 'Failed to create task');
     }
 
     return response.json();
@@ -80,15 +97,28 @@ export async function updateTask(
         delivery?: string;
     }
 ): Promise<Task> {
+    // Transform to API schema field names
+    const apiPayload: Record<string, unknown> = {};
+    if (updates.title) apiPayload.title = updates.title;
+    if (updates.description) apiPayload.description = updates.description;
+    if (updates.status) apiPayload.status = updates.status;
+    if (updates.visibleToClient !== undefined) apiPayload.visibleToClient = updates.visibleToClient;
+    if (updates.assigneeId) apiPayload.assignedTo = updates.assigneeId;
+    if (updates.deadline) apiPayload.dueDate = new Date(updates.deadline).toISOString();
+
     const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        credentials: 'include',
+        body: JSON.stringify(apiPayload),
     });
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update task');
+        const errorMessage = typeof error.error === 'string'
+            ? error.error
+            : JSON.stringify(error.error || error);
+        throw new Error(errorMessage || 'Failed to update task');
     }
 
     return response.json();
@@ -100,6 +130,7 @@ export async function updateTask(
 export async function deleteTask(taskId: string): Promise<void> {
     const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
         method: 'DELETE',
+        credentials: 'include',
     });
 
     if (!response.ok) {
@@ -114,6 +145,7 @@ export async function followTask(taskId: string, userId: string): Promise<Task> 
     const response = await fetch(`${API_BASE}/tasks/${taskId}/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ userId }),
     });
 
@@ -131,6 +163,7 @@ export async function unfollowTask(taskId: string, userId: string): Promise<Task
     const response = await fetch(`${API_BASE}/tasks/${taskId}/unfollow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ userId }),
     });
 
@@ -152,6 +185,7 @@ export async function addComment(taskId: string, commentData: {
     const response = await fetch(`${API_BASE}/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(commentData),
     });
 

@@ -4,10 +4,12 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare, Lock, Send } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { CommentThread } from '../../components/proposals';
+import { getStatusConfig } from '../../lib/status-config';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface DeliverableInput {
   id: string;
@@ -40,6 +42,8 @@ export function ProposalDetail() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [showForceEditDialog, setShowForceEditDialog] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -360,9 +364,9 @@ export function ProposalDetail() {
         const updatedPayments = await fetchPaymentsForProposal(proposalId);
         setPayments(updatedPayments);
 
-        // Also refresh proposal as status might have changed implicitly via backend logic if we were listening to it, 
+        // Also refresh proposal as status might have changed implicitly via backend logic if we were listening to it,
         // but explicit refresh is safer if backend modified related entities.
-        // Logic in backend: project creation, etc. 
+        // Logic in backend: project creation, etc.
       }
     } catch (error) {
       console.error('Error marking payment as paid:', error);
@@ -370,34 +374,114 @@ export function ProposalDetail() {
     }
   };
 
-  const STATUS_CONFIG = {
-    sent: {
-      label: 'Sent',
-      icon: Clock,
-      color: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
-      iconColor: 'text-purple-400',
-    },
-    accepted: {
-      label: 'Accepted',
-      icon: CheckCircle2,
-      color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
-      iconColor: 'text-emerald-400',
-    },
-    rejected: {
-      label: 'Rejected',
-      icon: XCircle,
-      color: 'bg-red-500/10 text-red-400 ring-red-500/20',
-      iconColor: 'text-red-400',
-    },
-    changes_requested: {
-      label: 'Changes Requested',
-      icon: MessageSquare,
-      color: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
-      iconColor: 'text-orange-400',
-    },
+  // Edit permission logic
+  const getEditPermission = () => {
+    if (!proposal) return { canEdit: false, canForceEdit: false, reason: '' };
+
+    // changes_requested allows normal editing (revision cycle)
+    if (proposal.status === 'changes_requested') {
+      return { canEdit: true, canForceEdit: true, reason: '' };
+    }
+
+    // accepted/rejected = client responded, editing locked
+    if (proposal.status === 'accepted' || proposal.status === 'rejected') {
+      return {
+        canEdit: false,
+        canForceEdit: user?.role === 'super_admin',
+        reason: 'Editing locked - client has responded to this proposal',
+      };
+    }
+
+    // sent = waiting for client, editing locked
+    if (proposal.status === 'sent') {
+      return {
+        canEdit: false,
+        canForceEdit: user?.role === 'super_admin',
+        reason: 'Editing locked - proposal sent to client, awaiting response',
+      };
+    }
+
+    return { canEdit: true, canForceEdit: true, reason: '' };
   };
 
-  const statusInfo = STATUS_CONFIG[proposal.status];
+  const editPermission = proposal ? getEditPermission() : { canEdit: false, canForceEdit: false, reason: '' };
+
+  const handleForceEdit = async () => {
+    setShowForceEditDialog(false);
+    setIsEditMode(true);
+
+    // Log force edit action to activities
+    try {
+      const response = await fetch('/.netlify/functions/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: 'PROPOSAL_FORCE_EDITED',
+          userId: user?.id,
+          userName: user?.name,
+          proposalId: proposal?.id,
+          inquiryId: proposal?.inquiryId,
+          details: {
+            previousStatus: proposal?.status,
+            reason: 'Super admin force edit override',
+          },
+        }),
+      });
+      if (!response.ok) console.error('Failed to log force edit activity');
+    } catch (error) {
+      console.error('Error logging force edit:', error);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!proposal || proposal.status !== 'changes_requested') return;
+
+    setIsResending(true);
+    try {
+      // Log resend activity
+      await fetch('/.netlify/functions/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: 'PROPOSAL_SENT',
+          userId: user?.id,
+          userName: user?.name,
+          proposalId: proposal.id,
+          inquiryId: proposal.inquiryId,
+          details: {
+            version: (proposal.version || 1) + 1,
+            action: 'resent_after_revision',
+          },
+        }),
+      });
+
+      // Update proposal status back to sent and increment version
+      const updatedProposal = await updateProposal(proposal.id, {
+        status: 'sent',
+        version: (proposal.version || 1) + 1,
+      });
+
+      setProposal(updatedProposal);
+      alert('Proposal resent to client!');
+    } catch (error) {
+      console.error('Error resending proposal:', error);
+      alert('Failed to resend proposal. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const statusInfo = getStatusConfig(proposal.status);
+  // Admin uses custom purple-themed colors, keeping original design
+  const ADMIN_STATUS_COLORS = {
+    sent: { color: 'bg-purple-500/10 text-purple-400 ring-purple-500/20', iconColor: 'text-purple-400' },
+    accepted: { color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20', iconColor: 'text-emerald-400' },
+    rejected: { color: 'bg-red-500/10 text-red-400 ring-red-500/20', iconColor: 'text-red-400' },
+    changes_requested: { color: 'bg-orange-500/10 text-orange-400 ring-orange-500/20', iconColor: 'text-orange-400' },
+  };
+  const adminColors = ADMIN_STATUS_COLORS[proposal.status];
   const StatusIcon = statusInfo.icon;
 
   const pricing = isEditMode ? calculatePricing() : {
@@ -422,9 +506,9 @@ export function ProposalDetail() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold text-gray-900">Proposal</h1>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${statusInfo.color}`}>
-                <StatusIcon className={`w-4 h-4 ${statusInfo.iconColor}`} />
-                {statusInfo.label}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
+                <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
+                {statusInfo.adminLabel}
               </span>
             </div>
             {inquiry && (
@@ -438,17 +522,65 @@ export function ProposalDetail() {
             </p>
           </div>
 
-          {isAdmin && !isEditMode && proposal.status === 'sent' && (
-            <button
-              onClick={() => setIsEditMode(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors font-medium"
-            >
-              <Edit2 className="w-4 h-4" />
-              Edit Proposal
-            </button>
+          {isAdmin && !isEditMode && (
+            <>
+              {editPermission.canEdit ? (
+                <button
+                  onClick={() => setIsEditMode(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors font-medium"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Proposal
+                </button>
+              ) : editPermission.canForceEdit ? (
+                <button
+                  onClick={() => setShowForceEditDialog(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors font-medium"
+                >
+                  <Lock className="w-4 h-4" />
+                  Force Edit
+                </button>
+              ) : null}
+
+              {/* Resend button for revision cycle */}
+              {proposal.status === 'changes_requested' && (
+                <button
+                  onClick={handleResend}
+                  disabled={isResending}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50"
+                >
+                  {isResending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-green-700/30 border-t-green-700 rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Resend to Client
+                    </>
+                  )}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Edit Restriction Banner */}
+      {isAdmin && !isEditMode && !editPermission.canEdit && editPermission.reason && (
+        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">{editPermission.reason}</p>
+            {editPermission.canForceEdit && (
+              <p className="text-xs text-amber-600 mt-1">
+                As a super admin, you can use "Force Edit" to override this restriction.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Project Description */}
@@ -877,6 +1009,18 @@ export function ProposalDetail() {
           </div>
         )}
       </div>
+
+      {/* Force Edit Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showForceEditDialog}
+        onClose={() => setShowForceEditDialog(false)}
+        onConfirm={handleForceEdit}
+        title="Force Edit Proposal?"
+        message="This proposal has already received a client response. Editing it may cause confusion or inconsistency. Your action will be logged. Are you sure you want to proceed?"
+        confirmLabel="Yes, Force Edit"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@
  */
 
 import crypto from 'crypto';
+import { addBreadcrumb } from './sentry';
 
 // Log levels
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -185,6 +186,18 @@ export function createLogger(functionName: string, correlationId?: string) {
                 console.log(`${prefix}${suffix} ${message}`);
             }
         }
+
+        // Add Sentry breadcrumb for context trail
+        // In production, only capture warn and error level
+        const shouldAddBreadcrumb = !isProduction || (level === 'warn' || level === 'error');
+        if (shouldAddBreadcrumb) {
+            addBreadcrumb(
+                functionName,
+                message,
+                level === 'warn' ? 'warning' : level,
+                entry.data
+            );
+        }
     };
 
     return {
@@ -240,6 +253,18 @@ function createLoggerWithContext(functionName: string, correlationId?: string, u
             } else {
                 console.log(`${prefix}${suffix} ${message}`);
             }
+        }
+
+        // Add Sentry breadcrumb for context trail
+        // In production, only capture warn and error level
+        const shouldAddBreadcrumb = !isProduction || (level === 'warn' || level === 'error');
+        if (shouldAddBreadcrumb) {
+            addBreadcrumb(
+                functionName,
+                message,
+                level === 'warn' ? 'warning' : level,
+                entry.data
+            );
         }
     };
 

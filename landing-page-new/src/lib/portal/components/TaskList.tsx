@@ -72,12 +72,18 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     };
   }, [focusedDeliverableId, setFocusedDeliverableId]);
 
+  // Helper to check if a role is a client role
+  const isClientRole = (role: string) => {
+    const clientRoleValues = [UserRole.PRIMARY_CONTACT, UserRole.TEAM_MEMBER, 'client', 'client_primary', 'client_team'];
+    return clientRoleValues.includes(role as UserRole);
+  };
+
   const visibleTasks = useMemo(() => {
     if (!project || !currentUser) return [];
 
-    const isInternalUser = currentUser.role === UserRole.MOTIONIFY_MEMBER || currentUser.role === UserRole.PROJECT_MANAGER;
+    const isInternal = currentUser.role && !isClientRole(currentUser.role);
 
-    let tasks = isInternalUser
+    let tasks = isInternal
       ? project.tasks
       : project.tasks.filter(task => task.visibleToClient);
 
@@ -126,25 +132,27 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     setEditingTask(null);
   };
 
+  const isInternalUser = currentUser?.role && !isClientRole(currentUser.role);
+  const isClientUser = currentUser?.role && isClientRole(currentUser.role);
+
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickAddInput.trim() || !project) return;
 
-    const allMembers = [...project.clientTeam, ...project.motionifyTeam];
+    // Clients don't get assignee parsing
+    const allMembers = isClientUser ? [] : [...project.clientTeam, ...project.motionifyTeam];
     const parsed = parseTaskInput(quickAddInput, allMembers);
 
     addTask({
       title: parsed.title,
       description: parsed.title, // Use title as description for quick add
       visibleToClient: true, // Default to visible
-      assigneeId: parsed.assigneeId,
+      assigneeId: isClientUser ? undefined : parsed.assigneeId,
       deadline: parsed.deadline,
     });
 
     setQuickAddInput('');
   };
-
-  const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
 
   if (!project) {
     return (
@@ -177,39 +185,39 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
           />
         </button>
       </div>
-      {isInternalUser && <Button onClick={handleAddTaskClick}>Add Task</Button>}
+      <Button onClick={handleAddTaskClick}>Add Task</Button>
     </div>
   );
 
   return (
     <>
       <Card title="Tasks" headerActions={headerActions}>
-        {/* Quick-add form - only visible to Motionify team members */}
-        {isInternalUser && (
-          <div className="mb-6">
-            <form onSubmit={handleQuickAdd} className="relative">
-              <input
-                type="text"
-                value={quickAddInput}
-                onChange={(e) => setQuickAddInput(e.target.value)}
-                placeholder="Quick add task: Fix bug @john tomorrow..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-12 py-3 text-white placeholder-white/40 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-              />
-              <button
-                type="submit"
-                disabled={!quickAddInput.trim()}
-                className="absolute right-2 top-2 p-1.5 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </form>
+        {/* Quick-add form - visible to all authenticated users */}
+        <div className="mb-6">
+          <form onSubmit={handleQuickAdd} className="relative">
+            <input
+              type="text"
+              value={quickAddInput}
+              onChange={(e) => setQuickAddInput(e.target.value)}
+              placeholder={isClientUser ? "Add a task..." : "Quick add task: Fix bug @john tomorrow..."}
+              className="w-full bg-white/5 border border-white/10 rounded-lg pl-4 pr-12 py-3 text-white placeholder-white/40 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+            />
+            <button
+              type="submit"
+              disabled={!quickAddInput.trim()}
+              className="absolute right-2 top-2 p-1.5 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </form>
+          {!isClientUser && (
             <p className="text-xs text-white/40 mt-2 ml-1">
               Tip: Use <strong>@name</strong> to assign and words like <strong>tomorrow</strong> for deadlines.
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {visibleTasks.length > 0 ? (
           <div className="space-y-8">

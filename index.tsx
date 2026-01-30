@@ -2,6 +2,7 @@ import React from 'react';
 import './index.css';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { initWebVitals } from './lib/vitals';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -14,3 +15,6 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Start measuring Core Web Vitals after app mount
+initWebVitals();

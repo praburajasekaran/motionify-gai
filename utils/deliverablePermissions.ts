@@ -23,10 +23,21 @@ export function isClient(user: User): boolean {
 
 /**
  * Helper: Check if user is Client Primary Contact for a specific project
+ *
+ * For MVP: If projectTeamMemberships is not populated (e.g., auth-me doesn't
+ * return it), default all clients to primary contact status. This matches
+ * the client portal behavior where all clients are treated as PRIMARY_CONTACT.
  */
 export function isClientPrimaryContact(user: User, projectId: string): boolean {
   if (user.role !== 'client') return false;
-  const membership = user.projectTeamMemberships?.[projectId];
+
+  // If projectTeamMemberships is not populated, default to true for all clients
+  // This allows MVP approval flow to work before team membership API is built
+  if (!user.projectTeamMemberships || Object.keys(user.projectTeamMemberships).length === 0) {
+    return true;
+  }
+
+  const membership = user.projectTeamMemberships[projectId];
   return membership?.isPrimaryContact === true;
 }
 
@@ -308,6 +319,22 @@ export function canDeleteDeliverable(
 }
 
 /**
+ * Check if user can delete a task
+ * Only Admin and PM can delete tasks
+ */
+export function canDeleteTask(user: User): boolean {
+  return user.role === 'super_admin' || user.role === 'project_manager';
+}
+
+/**
+ * Check if user can create a task
+ * All authenticated users can create tasks (clients with restricted fields)
+ */
+export function canCreateTask(user: User): boolean {
+  return true;
+}
+
+/**
  * Check if user can view beta files
  * Beta files are watermarked versions shown to clients for approval
  */
@@ -374,7 +401,7 @@ export function canEditTask(user: User, task?: Task): boolean {
  * Get user-friendly reason why action is not permitted
  */
 export function getPermissionDeniedReason(
-  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task',
+  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task',
   user: User,
   deliverable?: Deliverable,
   project?: Project
@@ -451,6 +478,15 @@ export function getPermissionDeniedReason(
         return 'You can only edit tasks assigned to you';
       }
       return 'Clients cannot edit tasks';
+
+    case 'delete_task':
+      if (user.role === 'super_admin' || user.role === 'project_manager') {
+        return 'You have permission to delete this task';
+      }
+      return 'Only admins and project managers can delete tasks';
+
+    case 'create_task':
+      return 'All authenticated users can create tasks';
 
     default:
       return 'Permission denied';

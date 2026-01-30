@@ -10,7 +10,7 @@
  * - Permission violations throw errors with user-friendly messages
  */
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import {
   Deliverable,
   DeliverableApproval,
@@ -20,7 +20,13 @@ import {
   IssueCategory,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
-import { MOCK_DELIVERABLES, MOCK_REVISION_QUOTA } from './mockDeliverables';
+
+// Default revision quota - will be overwritten by project data from API
+const DEFAULT_REVISION_QUOTA: RevisionQuota = {
+  total: 3,
+  used: 0,
+  remaining: 3,
+};
 import { Project, User } from '@/types';
 import {
   canApproveDeliverable,
@@ -55,6 +61,8 @@ interface DeliverableState {
 // ============================================================================
 
 type DeliverableAction =
+  | { type: 'SET_DELIVERABLES'; deliverables: Deliverable[] }
+  | { type: 'DELETE_DELIVERABLE'; payload: string }
   | { type: 'APPROVE_DELIVERABLE'; id: string; userId: string; userName: string; userEmail: string }
   | { type: 'REJECT_DELIVERABLE'; id: string; approval: DeliverableApproval }
   | { type: 'OPEN_REVIEW_MODAL'; deliverable: Deliverable }
@@ -79,8 +87,8 @@ type DeliverableAction =
 // ============================================================================
 
 const initialState: DeliverableState = {
-  deliverables: MOCK_DELIVERABLES,
-  quota: MOCK_REVISION_QUOTA,
+  deliverables: [], // Will be loaded from API
+  quota: DEFAULT_REVISION_QUOTA, // Will be loaded from project data
   selectedDeliverable: null,
   isReviewModalOpen: false,
   isRevisionFormOpen: false,
@@ -100,6 +108,18 @@ const initialState: DeliverableState = {
 
 function deliverableReducer(state: DeliverableState, action: DeliverableAction): DeliverableState {
   switch (action.type) {
+    case 'SET_DELIVERABLES':
+      return {
+        ...state,
+        deliverables: action.deliverables,
+      };
+
+    case 'DELETE_DELIVERABLE':
+      return {
+        ...state,
+        deliverables: state.deliverables.filter((d) => d.id !== action.payload),
+      };
+
     case 'APPROVE_DELIVERABLE': {
       const approval: DeliverableApproval = {
         id: `appr-${Date.now()}`,
@@ -141,7 +161,7 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
           d.id === action.approval.deliverableId
             ? {
               ...d,
-              status: 'rejected' as DeliverableStatus,
+              status: 'revision_requested' as DeliverableStatus,
               approvalHistory: [...d.approvalHistory, action.approval],
             }
             : d
@@ -336,8 +356,14 @@ interface DeliverableContextType {
   onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
 
   // Permission-aware action helpers
-  approveDeliverable: (deliverableId: string) => void;
-  rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => void;
+  approveDeliverable: (deliverableId: string) => Promise<void>;
+  rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => Promise<void>;
+  deleteDeliverable: (deliverableId: string) => Promise<void>;
+
+  // Loading state
+  isLoading: boolean;
+  error: string | null;
+  refreshDeliverables: () => Promise<void>;
 
   // Context data
   currentProject: Project;
@@ -364,12 +390,71 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   onConvertToTask,
 }) => {
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch deliverables from API when project changes
+  useEffect(() => {
+    const fetchDeliverables = async () => {
+      if (!currentProject?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/deliverables?projectId=${currentProject.id}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || 'Failed to load deliverables');
+        }
+
+        const deliverables = await response.json();
+
+        // Transform API response to match Deliverable type
+        const transformedDeliverables = (deliverables || []).map((d: any) => ({
+          id: d.id,
+          projectId: d.project_id,
+          title: d.name || d.title || 'Untitled',
+          description: d.description || '',
+          type: d.type || 'Video', // Default to Video if missing
+          status: d.status || 'pending',
+          dueDate: d.estimated_completion_week
+            ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+            : new Date().toISOString(),
+          betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+          betaFileKey: d.beta_file_key,
+          finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+          finalFileKey: d.final_file_key,
+          revisionCount: d.revision_count || 0,
+          approvalHistory: d.approval_history || [],
+          thumbnailUrl: undefined,
+          deliveryNotes: d.delivery_notes,
+          version: d.version || 1,
+        }));
+
+        dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
+      } catch (err) {
+        console.error('[DeliverableContext] Failed to fetch deliverables:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load deliverables');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDeliverables();
+  }, [currentProject?.id]);
 
   /**
    * Permission-aware approve action
-   * Validates user permissions before dispatching APPROVE_DELIVERABLE
+   * Validates user permissions before calling API and dispatching APPROVE_DELIVERABLE
    */
-  const approveDeliverable = (deliverableId: string) => {
+  const approveDeliverable = async (deliverableId: string) => {
     if (!currentUser) {
       throw new Error('You must be logged in to approve deliverables');
     }
@@ -385,7 +470,23 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error(reason);
     }
 
-    // Permission granted - dispatch action
+    // Call backend API to persist the status change
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        status: 'approved',
+        approved_by: currentUser.id,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to approve deliverable');
+    }
+
+    // API success - dispatch local state update
     dispatch({
       type: 'APPROVE_DELIVERABLE',
       id: deliverableId,
@@ -397,9 +498,10 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
   /**
    * Permission-aware reject action
-   * Validates user permissions before dispatching REJECT_DELIVERABLE
+   * Validates user permissions before calling API and dispatching REJECT_DELIVERABLE
+   * Uploads attachments to R2 and creates revision request with full feedback
    */
-  const rejectDeliverable = (deliverableId: string, approval: DeliverableApproval) => {
+  const rejectDeliverable = async (deliverableId: string, approval: DeliverableApproval) => {
     if (!currentUser) {
       throw new Error('You must be logged in to request revisions');
     }
@@ -420,12 +522,160 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error('No revision quota remaining. Please contact support to request additional revisions.');
     }
 
-    // Permission granted - dispatch action
+    // Step 1: Upload attachments to R2
+    const uploadedAttachments: Array<{
+      fileName: string;
+      fileSize: number;
+      fileType: string;
+      r2Key: string;
+    }> = [];
+
+    for (const attachment of approval.attachments || []) {
+      if (!attachment.file) continue;
+
+      try {
+        // Get presigned URL
+        const presignRes = await fetch('/api/r2-presign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            fileName: attachment.fileName,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+          }),
+        });
+
+        if (!presignRes.ok) {
+          const error = await presignRes.json().catch(() => ({}));
+          throw new Error(error.error?.message || 'Failed to get upload URL');
+        }
+
+        const { uploadUrl, key } = await presignRes.json();
+
+        // Upload to R2
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: attachment.file,
+          headers: { 'Content-Type': attachment.fileType },
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Failed to upload ${attachment.fileName}`);
+        }
+
+        uploadedAttachments.push({
+          fileName: attachment.fileName,
+          fileSize: attachment.fileSize,
+          fileType: attachment.fileType,
+          r2Key: key,
+        });
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${attachment.fileName}:`, uploadError);
+        // Continue with other attachments even if one fails
+      }
+    }
+
+    // Step 2: Create revision request via API
+    const response = await fetch('/api/revision-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        deliverableId,
+        feedbackText: approval.feedback || '',
+        timestampedComments: approval.timestampedComments?.map(c => ({
+          id: c.id,
+          timestamp: c.timestamp,
+          comment: c.comment,
+          resolved: c.resolved,
+          userId: c.userId,
+          userName: c.userName,
+        })),
+        issueCategories: approval.issueCategories,
+        attachments: uploadedAttachments,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to request revision');
+    }
+
+    // API success - dispatch local state update
     dispatch({
       type: 'REJECT_DELIVERABLE',
       id: deliverableId,
       approval,
     });
+  };
+
+  /**
+   * Delete a deliverable (admin/PM only)
+   * Calls backend API to delete deliverable and all associated files
+   */
+  const deleteDeliverable = async (deliverableId: string): Promise<void> => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to delete deliverables');
+    }
+
+    // Permission check: only super_admin and project_manager can delete
+    if (currentUser.role !== 'super_admin' && currentUser.role !== 'project_manager') {
+      throw new Error('Only administrators and project managers can delete deliverables');
+    }
+
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error || 'Failed to delete deliverable');
+    }
+
+    dispatch({ type: 'DELETE_DELIVERABLE', payload: deliverableId });
+  };
+
+  // Refresh function to reload deliverables
+  const refreshDeliverables = async (): Promise<void> => {
+    if (!currentProject?.id) return;
+
+    dispatch({ type: 'SET_DELIVERABLES', deliverables: [] });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/deliverables?projectId=${currentProject.id}`, {
+        credentials: 'include',
+      });
+      const deliverables = await res.json();
+      const transformedDeliverables = (deliverables || []).map((d: any) => ({
+        id: d.id,
+        projectId: d.project_id,
+        title: d.name || d.title || 'Untitled',
+        description: d.description || '',
+        type: d.type || 'Video', // Default to Video if missing
+        status: d.status || 'pending',
+        dueDate: d.estimated_completion_week
+          ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+          : new Date().toISOString(),
+        betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+        betaFileKey: d.beta_file_key,
+        finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+        finalFileKey: d.final_file_key,
+        revisionCount: d.revision_count || 0,
+        approvalHistory: d.approval_history || [],
+        thumbnailUrl: undefined,
+        deliveryNotes: d.delivery_notes,
+        version: d.version || 1,
+      }));
+      dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -436,6 +686,10 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         onConvertToTask,
         approveDeliverable,
         rejectDeliverable,
+        deleteDeliverable,
+        isLoading,
+        error,
+        refreshDeliverables,
         currentProject,
         currentUser,
       }}

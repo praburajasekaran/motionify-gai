@@ -41,6 +41,11 @@ export const RATE_LIMITS = {
         windowMs: 60 * 1000, // 1 minute
         maxRequests: 10,
     },
+    // Auth actions (magic link verification, etc.): 5 per hour
+    authAction: {
+        windowMs: 60 * 60 * 1000, // 1 hour
+        maxRequests: 5,
+    },
 } as const;
 
 // Rate limit result

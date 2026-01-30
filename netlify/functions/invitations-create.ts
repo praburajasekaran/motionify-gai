@@ -1,132 +1,59 @@
-import pg from 'pg';
+import { compose, withCORS, withSuperAdmin, withRateLimit, withValidation, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { query } from './_shared/db';
+import { getCorsHeaders } from './_shared/cors';
 import crypto from 'crypto';
 
-const { Client } = pg;
+export const handler = compose(
+  withCORS(['POST']),
+  withSuperAdmin(),
+  withRateLimit(RATE_LIMITS.apiStrict, 'invitation_create'),
+  withValidation(SCHEMAS.invitation.create)
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
-// Valid client roles
-const VALID_ROLES = ['client', 'team'];
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-  
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
-
-  // Only allow POST
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
-  // Extract projectId from path
-  const pathParts = event.path.split('/');
-  const projectId = pathParts[pathParts.length - 1];
-
-  if (!projectId) {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: 'Project ID is required' }),
-    };
-  }
-
-  // Parse request body
-  let payload: { email?: string; role?: string };
-  try {
-    payload = JSON.parse(event.body || '{}');
-  } catch {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
-    };
-  }
-
-  const { email, role } = payload;
-
-  // Validation
-  if (!email || !role) {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: 'Email and role are required' }),
-    };
-  }
-
-  if (!VALID_ROLES.includes(role)) {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: 'Invalid role. Must be "client" or "team"' }),
-    };
-  }
-
-  // Basic email format validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: 'Invalid email format' }),
-    };
-  }
-
-  const client = getDbClient();
+  const data = (event as any).validatedData;
+  const { email, role, full_name } = data;
 
   try {
-    await client.connect();
-
-    // Check if invitation already exists
-    const existingCheck = await client.query(
-      `SELECT id FROM project_invitations 
-       WHERE project_id = $1 AND email = $2 AND status = 'pending'
-       AND expires_at > NOW()`,
-      [projectId, email.toLowerCase()]
+    // Check if user already exists
+    const existingUser = await query(
+      `SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)`,
+      [email]
     );
 
-    if (existingCheck.rows.length > 0) {
+    if (existingUser.rows.length > 0) {
       return {
         statusCode: 409,
         headers,
-        body: JSON.stringify({ error: 'An invitation has already been sent to this email' }),
+        body: JSON.stringify({
+          error: {
+            code: 'USER_EXISTS',
+            message: 'A user with this email already exists',
+          },
+        }),
+      };
+    }
+
+    // Check if invitation already exists
+    const existingInvitation = await query(
+      `SELECT id FROM user_invitations
+       WHERE LOWER(email) = LOWER($1) AND status = 'pending' AND expires_at > NOW()`,
+      [email]
+    );
+
+    if (existingInvitation.rows.length > 0) {
+      return {
+        statusCode: 409,
+        headers,
+        body: JSON.stringify({
+          error: {
+            code: 'INVITATION_EXISTS',
+            message: 'An invitation has already been sent to this email',
+          },
+        }),
       };
     }
 
@@ -135,11 +62,11 @@ export const handler = async (
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // Insert invitation
-    const result = await client.query(
-      `INSERT INTO project_invitations (project_id, email, role, token, invited_by, expires_at)
+    const result = await query(
+      `INSERT INTO user_invitations (email, role, token, invited_by, expires_at, full_name)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, project_id, email, role, status, expires_at, created_at`,
-      [projectId, email.toLowerCase(), role, token, null, expiresAt]
+       RETURNING id, email, role, status, expires_at, created_at, full_name`,
+      [email.toLowerCase(), role, token, auth!.user!.userId, expiresAt, full_name || null]
     );
 
     const invitation = result.rows[0];
@@ -148,9 +75,10 @@ export const handler = async (
     // For development, log the invitation link
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const inviteLink = `${appUrl}/invitation/accept?token=${token}`;
-    console.log(`[Mock Email] Invitation sent to ${email}:`);
+    console.log(`[Invitation] Sent to ${email}:`);
     console.log(`  Link: ${inviteLink}`);
     console.log(`  Expires: ${expiresAt.toISOString()}`);
+    console.log(`  Invited by: ${auth!.user!.email}`);
 
     return {
       statusCode: 201,
@@ -159,13 +87,12 @@ export const handler = async (
         success: true,
         invitation: {
           id: invitation.id,
-          project_id: invitation.project_id,
           email: invitation.email,
           role: invitation.role,
+          full_name: invitation.full_name,
           status: invitation.status,
           expires_at: invitation.expires_at,
           created_at: invitation.created_at,
-          invited_by_name: undefined,
         },
       }),
     };
@@ -175,11 +102,11 @@ export const handler = async (
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: 'Failed to create invitation',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create invitation',
+        },
       }),
     };
-  } finally {
-    await client.end();
   }
-};
+});

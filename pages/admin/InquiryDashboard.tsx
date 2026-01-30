@@ -5,6 +5,8 @@ import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
 import { NewInquiryModal } from '../../components/admin/NewInquiryModal';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -301,31 +303,23 @@ export function InquiryDashboard() {
           <p className="text-gray-700">Loading inquiries...</p>
         </div>
       ) : error ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
-          <p className="text-red-700 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500 text-white hover:bg-violet-600 transition-colors"
-          >
-            Retry
-          </button>
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+          <ErrorState error={error} onRetry={loadInquiries} />
         </div>
       ) : (
         <>
           {/* Inquiries List */}
           <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
             {filteredInquiries.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-gray-700 mb-2">No inquiries found</p>
-                <p className="text-sm text-gray-500">
-                  {searchTerm || statusFilter !== 'all'
+              <EmptyState
+                icon={FileText}
+                title="No inquiries found"
+                description={
+                  searchTerm || statusFilter !== 'all'
                     ? 'Try adjusting your filters'
-                    : 'Inquiries will appear here when customers submit landing page quiz'}
-                </p>
-              </div>
+                    : 'Inquiries will appear here when customers submit the landing page quiz'
+                }
+              />
             ) : (
               <div className="divide-y divide-gray-200">
                 {filteredInquiries.map((inquiry) => (

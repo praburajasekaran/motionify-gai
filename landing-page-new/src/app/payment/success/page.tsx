@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,7 +15,8 @@ import {
   Users,
   ChevronRight,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 
 interface ProjectDetails {
@@ -37,6 +38,8 @@ interface PaymentDetails {
   paidAt: string;
 }
 
+const REDIRECT_COUNTDOWN_SECONDS = 5;
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -46,16 +49,59 @@ function SuccessContent() {
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [showCelebration, setShowCelebration] = useState(true);
+  const [countdown, setCountdown] = useState(REDIRECT_COUNTDOWN_SECONDS);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const paymentId = searchParams.get('paymentId') || 'N/A';
   const projectId = searchParams.get('projectId');
   const projectNumber = searchParams.get('projectNumber');
+  const proposalId = searchParams.get('proposalId');
+
+  // Determine redirect URL - project page if available, otherwise portal projects list
+  const redirectUrl = projectId
+    ? `/portal/projects/${projectId}`
+    : '/portal/projects';
 
   const formatCurrency = useCallback((amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase()
     }).format(amount / 100);
+  }, []);
+
+  // Auto-redirect countdown effect
+  useEffect(() => {
+    // Start countdown after component mounts
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          // Clear interval and redirect
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+          }
+          setIsRedirecting(true);
+          router.push(redirectUrl);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, [redirectUrl, router]);
+
+  // Stop countdown when user interacts with the page
+  const cancelCountdown = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setCountdown(0);
   }, []);
 
   useEffect(() => {
@@ -218,6 +264,26 @@ function SuccessContent() {
             <p className="text-xl text-violet-200/80 max-w-2xl mx-auto">
               Thank you for your payment, {clientName}! We&apos;re excited to start working on your project.
             </p>
+
+            {/* Auto-redirect countdown banner */}
+            {countdown > 0 && !isRedirecting && (
+              <div className="mt-6 inline-flex items-center gap-3 px-6 py-3 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-200">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Redirecting to your project in {countdown} seconds...</span>
+                <button
+                  onClick={cancelCountdown}
+                  className="text-xs text-emerald-300 hover:text-white underline ml-2"
+                >
+                  Stay here
+                </button>
+              </div>
+            )}
+            {isRedirecting && (
+              <div className="mt-6 inline-flex items-center gap-3 px-6 py-3 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-200">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Redirecting...</span>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2 mb-8">
@@ -363,7 +429,7 @@ function SuccessContent() {
                 </div>
               </div>
 
-              {projectDetails && (
+              {projectDetails ? (
                 <div className="bg-white rounded-2xl shadow-2xl p-6 animate-fadeUp" style={{ animationDelay: '0.3s' }}>
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-lg bg-purple-100">
@@ -395,13 +461,36 @@ function SuccessContent() {
 
                   <div className="mt-6 pt-4 border-t border-gray-100">
                     <Link
-                      href="/portal/dashboard"
+                      href={redirectUrl}
+                      onClick={cancelCountdown}
                       className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium hover:from-violet-700 hover:to-purple-700 transition-all group"
                     >
-                      Go to Dashboard
+                      View Your Project
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl shadow-2xl p-6 animate-fadeUp" style={{ animationDelay: '0.3s' }}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 rounded-lg bg-purple-100">
+                      <Users className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900">Access Your Project</h2>
+                  </div>
+
+                  <p className="text-gray-600 mb-6">
+                    Your project is being set up. Click below to view your project and deliverables.
+                  </p>
+
+                  <Link
+                    href={redirectUrl}
+                    onClick={cancelCountdown}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium hover:from-violet-700 hover:to-purple-700 transition-all group"
+                  >
+                    View Your Project
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </div>
               )}
             </div>

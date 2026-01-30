@@ -1,20 +1,9 @@
 import pg from 'pg';
+import { compose, withCORS, withProjectManager, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-    path: string;
-    queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
 
 const getDbClient = () => {
     const DATABASE_URL = process.env.DATABASE_URL;
@@ -28,27 +17,13 @@ const getDbClient = () => {
     });
 };
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'DELETE, POST, OPTIONS',
-        'Content-Type': 'application/json',
-    };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
-
-    if (event.httpMethod !== 'POST' && event.httpMethod !== 'DELETE') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ error: 'Method not allowed' }),
-        };
-    }
+export const handler = compose(
+    withCORS(['POST', 'DELETE']),
+    withProjectManager(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'project_members_remove')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+    const origin = event.headers.origin || event.headers.Origin;
+    const headers = getCorsHeaders(origin);
 
     // Parse body
     let projectId: string | undefined;
@@ -84,7 +59,7 @@ export const handler = async (
         // 1. Check if the user is the assigned Project Manager (via Inquiry)
         const projectResult = await client.query(
             `SELECT p.id, i.assigned_to_admin_id, i.id as inquiry_id
-       FROM vertical_slice_projects p
+       FROM projects p
        JOIN inquiries i ON p.inquiry_id = i.id
        WHERE p.id = $1`,
             [projectId]
@@ -157,7 +132,7 @@ export const handler = async (
 
         // Also check if they are the Client Primary Contact (sanity check, covered by TC-TC-007 but good to enforce)
         const projectClientResult = await client.query(
-            `SELECT client_user_id FROM vertical_slice_projects WHERE id = $1`,
+            `SELECT client_user_id FROM projects WHERE id = $1`,
             [projectId]
         );
 
@@ -200,4 +175,4 @@ export const handler = async (
     } finally {
         await client.end();
     }
-};
+});

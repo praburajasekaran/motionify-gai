@@ -1,4 +1,4 @@
-# Roadmap: Proposal Comments Feature
+# Roadmap: Motionify Comment Thread System
 
 **Project:** Motionify Comment Thread System
 **Depth:** Quick (3-4 phases)
@@ -11,166 +11,219 @@ Implementation roadmap for Fiverr/Upwork-style comment threads enabling real-tim
 
 ---
 
-## Phase Map
+## Milestones
 
-| Phase | Goal | Requirements | Status |
-|-------|------|--------------|--------|
-| **1** | Foundation (Database, API, Embedded UI) | COMM-07, COMM-08 | ✅ Complete |
-| **2** | Core Comment Experience (Posting, Real-time) | COMM-01, COMM-02, COMM-06 | ✅ Complete |
-| **3** | Attachments & Notifications | COMM-03, COMM-04, COMM-05 | ✅ Complete |
-| **4** | Integration & Polish (Gap Closure) | COMM-02, COMM-03, COMM-06 | ✅ Complete |
+<details>
+<summary>v1 Proposal Comments Feature — Phases 1-6 (shipped 2026-01-25)</summary>
 
----
+**Delivered:** Fiverr/Upwork-style comment thread with real-time polling, file attachments, and email + in-app notifications.
 
-## Phase 1: Foundation
+**Key accomplishments:**
+- Full comment system with posting, editing, real-time polling in both portals
+- File attachments via R2 presigned URLs with proper metadata handling
+- Email and in-app notifications triggered on new comments
+- Smart UI features including auto-scroll, edit button constraints, attachment previews
+- Gap closure including credential wiring fixes and database schema alignment
 
-**Goal:** Users can view and persist comments in the proposal detail page with a working database and API layer.
+**Stats:**
+- 6 phases, 14 plans
+- 5 days development (2026-01-20 → 2026-01-25)
+- 8/8 requirements delivered (100%)
 
-### Requirements
-- **COMM-07:** Comments Embedded in Proposal Page
-- **COMM-08:** Persistent Comments
+**Git range:** `feat(01-01)` → `feat(06-01)`
 
-### Dependencies
-- Existing: Proposal detail pages (`landing-page-new/.../proposal/[proposalId]/page.tsx`, `pages/admin/ProposalDetail.tsx`)
-- Existing: PostgreSQL database with connection pooling
-- Existing: Netlify Functions infrastructure
-
-### Success Criteria
-
-1. **Users see comment section on proposal detail page**
-   Client users viewing `landing-page-new/src/app/proposal/[proposalId]/page.tsx` see a comment thread section. Superadmins viewing `pages/admin/ProposalDetail.tsx` also see the comment section. Both views show an empty state when no comments exist.
-
-2. **Comments persist in database across sessions**
-   When a comment is posted, it is stored in the `proposal_comments` table. Closing and reopening the browser (or starting a new session) displays previously posted comments in chronological order.
-
-3. **Both user types can view the same comment thread**
-   A client and superadmin viewing the same proposalId see identical comments. Comments are filtered by proposal (no cross-proposal leakage).
+**Full details:** See [.planning/milestones/v1-ROADMAP.md](.planning/milestones/v1-ROADMAP.md)
+</details>
 
 ---
 
-## Phase 2: Core Comment Experience
+## Current Work
 
-**Goal:** Users can post comments freely, see updates via polling, and edit their own comments before replies.
+**Status:** Production Readiness Verification (PROD phases)
 
-### Requirements
-- **COMM-01:** Unlimited Comment Exchange
-- **COMM-02:** Real-Time Comment Updates
-- **COMM-06:** Comment Editing
+### Phase PROD-04: Deliverables System [Complete]
+**Goal:** Verify file delivery workflow from creation through approval to final delivery
 
-### Dependencies
-- Phase 1 complete (database schema, API, embedded UI exist)
+**Plans:** 5 plans (5/5 complete)
 
-### Success Criteria
-
-1. **Both parties can post comments without turn restrictions**
-   A client can post multiple consecutive comments without waiting for a superadmin response. A superadmin can similarly post multiple comments in sequence. Neither party encounters "waiting for response" restrictions.
-
-2. **New comments appear without page refresh**
-   When User A posts a comment, User B sees it appear within 10 seconds without manually refreshing the page. The comment stream updates automatically via polling.
-
-3. **User can edit their own recent comments**
-   A user sees an "Edit" button on comments they authored. Clicking edit opens a form to modify the comment content. Edited comments display an edit indicator.
-
-4. **Edit option unavailable after replies**
-   Once another user replies to a comment, the "Edit" button disappears from that comment. The user can no longer edit that comment.
-
-### Plans
-- [x] `02-01-comment-editing-PLAN.md` — PUT endpoint + edit UI for both portals
-- [x] `02-02-realtime-polling-PLAN.md` — Polling for real-time updates + API URL fix
+Plans:
+- [x] PROD-04-01-PLAN.md — Add key ownership validation to r2-presign (CRITICAL SECURITY)
+- [x] PROD-04-02-PLAN.md — Align file size limits (100MB) across schema, backend, frontend
+- [x] PROD-04-03-PLAN.md — Add auth credentials and error handling to storage service
+- [x] PROD-04-04-PLAN.md — Add permission validation to deliverables API
+- [x] PROD-04-05-PLAN.md — Manual testing verification (checkpoint)
 
 ---
 
-## Phase 3: Attachments & Notifications
+### Phase PROD-06: User Management [Complete]
+**Goal:** Verify user CRUD, role management, invitations, and permissions
 
-**Goal:** Users can attach files to comments and receive notifications when new comments are posted.
+**Plans:** 3 plans (3/3 complete)
 
-### Requirements
-- **COMM-03:** File Attachments on Comments
-- **COMM-04:** Email Notifications on Comments
-- **COMM-05:** In-App Notifications
+Plans:
+- [x] PROD-06-01-PLAN.md — Fix database role constraint (4-role system migration)
+- [x] PROD-06-02-PLAN.md — Fix credentials bug in UserManagement.tsx
+- [x] PROD-06-03-PLAN.md — Manual UAT testing (checkpoint) + 8 bugs fixed
 
-### Dependencies
-- Phase 2 complete (comment posting, viewing, editing work)
-- Existing: R2 presign API (`netlify/functions/r2-presign.ts`)
-- Existing: NotificationContext.tsx
-- Existing: Resend email integration
-
-### Success Criteria
-
-1. **Users can attach files to comments**
-   When composing a comment, a user can click "Attach file" and select a file from their device. After upload, the file appears as an attachment below the comment. Both parties can download attached files.
-
-2. **Users receive email notifications on new comments**
-   When a client posts a comment, the assigned superadmin receives an email notification. When a superadmin posts a comment, the client receives an email. Emails contain a preview of the comment and a link to the proposal.
-
-3. **In-app notification badge updates on new comments**
-   Users see a notification badge increment when new comments are posted. The notification is visible in the existing notification dropdown/panel. Clicking the notification navigates to the proposal with the comment highlighted.
-
-4. **Attachment upload uses existing R2 infrastructure**
-    Files upload via the existing R2 presigned URL system. No custom file storage implementation required. Upload respects existing file type and size policies.
-
-### Plans
-- [x] `03-01-PLAN.md` — File attachments infrastructure (database, API, UI)
-- [x] `03-02-PLAN.md` — Email + in-app notifications (admin portal complete)
-- [x] `03-03-PLAN.md` — Gap closure: Client portal notification infrastructure
-- [x] `03-04-PLAN.md` — Gap closure: Backend robustness (CORS, DB safety)
-- [x] `03-05-PLAN.md` — Gap closure: Client API path and validation fixes
+**Requirements:**
+- USER-01: User Creation & Invitations ✓
+- USER-02: Role Management ✓
+- USER-03: User Deactivation ✓
+- USER-04: Permission System ✓
 
 ---
 
-## Phase 4: Integration & Polish
+### Phase PROD-08: Security Hardening [Complete]
+**Goal:** Close medium-severity security gap in inquiries endpoint and complete credential wiring
+**Priority:** Must Have
+**Gap Closure:** Addresses audit items from v1-PROD-MILESTONE-AUDIT.md
+**Completed:** 2026-01-28
 
-**Goal:** Fix component wiring to restore attachment metadata flow between CommentInput and CommentThread.
+**Plans:** 2 plans (2/2 complete)
 
-### Requirements
-- **COMM-02:** Real-Time Comment Updates (scroll preservation verification)
-- **COMM-03:** File Attachments on Comments (wire metadata through submit flow)
-- **COMM-06:** Comment Editing (verify handler connection)
-
-### Gap Closure
-Addresses critical gap from v1 milestone audit:
-- **Integration gap:** CommentInput → CommentThread attachment data flow (metadata dropped on submit)
-- **Verification gaps:** Edit handler wiring and scroll preservation (likely already correct, needs verification)
-
-### Dependencies
-- Phase 3 complete (attachment upload and API endpoints exist)
-- Existing: CommentThread, CommentInput, CommentItem components in both portals
-
-### Success Criteria
-
-1. **Attachment metadata flows from child to parent**
-   When user uploads file in CommentInput, the attachment metadata is communicated to CommentThread via callback prop.
-
-2. **Attachments link to comments on submit**
-   When user uploads file and submits comment, the attachment metadata flows from CommentInput to CommentThread, and comment_attachments table is populated with correct comment_id.
-
-3. **Both portals handle attachment flow**
-   Admin portal (Vite SPA) and client portal (Next.js) both correctly wire attachment data through onAttachmentsChange callback.
-
-4. **Scroll position preserved during updates** (verification)
-   Polling updates preserve scroll position when user was actively reading. Implementation confirmed correct.
-
-5. **Edit handler connected** (verification)
-   Edit button on user's own comments opens inline editor and submits edits. Implementation confirmed correct.
-
-### Plans
-- [x] `04-01-PLAN.md` — Wire attachment data flow via callback, verify edit/scroll implementations (1 plan)
-
-**Plan Count:** 1 plan in 1 wave
+Plans:
+- [x] PROD-08-01-PLAN.md — Conditional auth for inquiries GET/PUT, role-based access
+- [x] PROD-08-02-PLAN.md — Add credentials: 'include' to lib/inquiries.ts fetch calls
 
 ---
 
-## Dependencies Between Phases
+### Phase PROD-09: Payment Production Wiring [Complete]
+**Goal:** Wire payment email notifications via Resend and complete webhook E2E testing
+**Priority:** Should Have
+**Gap Closure:** Addresses payment notification and webhook testing gaps from v1-PROD-MILESTONE-AUDIT.md
+**Completed:** 2026-01-28
 
-```
-Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
-          │              │                  │
-          │              │                  └── Gap Closure: Fix component wiring
-          │              │
-          │              └── Requires: Phase 2, R2 presign API, NotificationContext
-          │
-          └── Requires: Existing proposal pages, PostgreSQL, Netlify Functions
-```
+**Plans:** 2 plans (2/2 complete)
+
+Plans:
+- [x] PROD-09-01-PLAN.md — Wire email notifications into webhook handler (success + failure emails)
+- [x] PROD-09-02-PLAN.md — E2E webhook integration testing with ngrok + Razorpay test mode
+
+**Notes:** Email code verified working. Resend domain verification required for production (test mode only sends to account owner email).
+
+---
+
+### Phase PROD-10: UX Polish [Complete]
+**Goal:** Improve client-facing status labels, add status timeline, implement edit restrictions, and wire status change notifications
+**Priority:** Should Have
+**Gap Closure:** Addresses UX inconsistencies from PROD-02
+**Completed:** 2026-01-28
+
+**Plans:** 4 plans (4/4 complete)
+
+Plans:
+- [x] PROD-10-01-PLAN.md — Create centralized STATUS_CONFIG with professional client-facing labels
+- [x] PROD-10-02-PLAN.md — Add status timeline component showing proposal history
+- [x] PROD-10-03-PLAN.md — Implement edit restrictions with super admin force edit
+- [x] PROD-10-04-PLAN.md — Wire status change notifications (email + in-app)
+
+---
+
+### Phase PROD-11: Production Hardening [Complete]
+**Goal:** Prepare infrastructure for production load — error monitoring, logging infrastructure, and environment configuration
+**Priority:** Must Have (blocks deployment)
+**Completed:** 2026-01-28
+
+**Plans:** 3 plans (3/3 complete)
+
+Plans:
+- [x] PROD-11-01-PLAN.md — Neon HTTP driver (rolled back - pg Pool retained for compatibility)
+- [x] PROD-11-02-PLAN.md — Sentry error monitoring with breadcrumb logging
+- [x] PROD-11-03-PLAN.md — Zod-based environment validation, block localhost in production
+
+**Key deliverables:**
+- Sentry: Error monitoring with breadcrumb context trail and sensitive data scrubbing
+- Logging: Sentry breadcrumbs (production: error + warn only)
+- Environment: Zod validation, fail-fast on misconfiguration
+- Note: @neondatabase/serverless installed for future use; pg Pool retained for existing code compatibility
+
+---
+
+### Phase PROD-12: Performance & Polish [Complete]
+**Goal:** Optimize performance and refine UX for client demo - load testing, mobile responsiveness, and consistent UI feedback
+**Priority:** Should Have
+**Completed:** 2026-01-29
+
+**Plans:** 5 plans (5/5 complete)
+
+Plans:
+- [x] PROD-12-01-PLAN.md — Artillery load testing setup (API + frontend scenarios)
+- [x] PROD-12-02-PLAN.md — Mobile responsiveness tests (Playwright device emulation)
+- [x] PROD-12-03-PLAN.md — ErrorState and EmptyState UI components (both portals)
+- [x] PROD-12-04-PLAN.md — Apply ErrorState/EmptyState across all list pages
+- [x] PROD-12-05-PLAN.md — Core Web Vitals monitoring (web-vitals + Sentry)
+
+---
+
+### Phase 9: Admin Features [Complete]
+**Goal:** Build admin dashboard with real metrics, activity log with real data, and administrative oversight tools
+**Priority:** Should Have
+**Completed:** 2026-01-29
+
+**Plans:** 3 plans (3/3 complete)
+
+Plans:
+- [x] 09-01-PLAN.md — Create activities table migration + dashboard-metrics endpoint + enhance activities API
+- [x] 09-02-PLAN.md — Rewrite Dashboard with real metrics and interactive expandable cards
+- [x] 09-03-PLAN.md — Rewrite ActivityLogs with real API data, all/my toggle, and Load More
+
+---
+
+### Phase PROD-13: Extended Testing [Planned]
+**Goal:** Complete 12 remaining task management tests (API + browser) and produce deployment readiness verdict
+**Priority:** Nice to Have
+**Gap Closure:** Addresses test coverage gaps from PROD-05
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] PROD-13-01-PLAN.md — Extend test-runner.js with 8 API-automatable tests (creation, state machine, follow, comments, permissions)
+- [ ] PROD-13-02-PLAN.md — Browser-guided testing (4 tests) + deployment readiness verdict
+
+---
+
+### Phase PROD-14: Frontend Credential Wiring [Complete]
+**Goal:** Add `credentials: 'include'` to 7 fetch calls accessing protected endpoints
+**Priority:** Must Have (blocks deployment)
+**Gap Closure:** Addresses critical integration gaps from v1-PROD-MILESTONE-AUDIT.md
+**Completed:** 2026-01-28
+
+**Plans:** 3 plans (3/3 complete)
+
+Plans:
+- [x] PROD-14-01-PLAN.md — Add credentials to lib/proposals.ts (3 calls)
+- [x] PROD-14-02-PLAN.md — Add credentials to lib/inquiries.ts (1 call)
+- [x] PROD-14-03-PLAN.md — Add credentials to services/paymentApi.ts (3 calls)
+
+---
+
+## Phases
+
+All v1 phases complete. See [milestones/v1-ROADMAP.md](.planning/milestones/v1-ROADMAP.md) for full details.
+
+---
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|---------|-----------|
+| 1. Foundation | v1 | 1/1 | Complete | 2026-01-20 |
+| 2. Core Comment Experience | v1 | 2/2 | Complete | 2026-01-20 |
+| 3. Attachments & Notifications | v1 | 5/5 | Complete | 2026-01-20 |
+| 4. Integration & Polish | v1 | 4/4 | Complete | 2026-01-21 |
+| 5. Credential Wiring Fix | v1 | 1/1 | Complete | 2026-01-25 |
+| 6. Schema Alignment | v1 | 1/1 | Complete | 2026-01-25 |
+| PROD-04. Deliverables System | PROD | 5/5 | Complete | 2026-01-27 |
+| PROD-05. Task Management | PROD | 1/1 | Complete | 2026-01-27 |
+| PROD-06. User Management | PROD | 3/3 | Complete | 2026-01-28 |
+| PROD-08. Security Hardening | PROD | 2/2 | Complete | 2026-01-28 |
+| PROD-09. Payment Production Wiring | PROD | 2/2 | Complete | 2026-01-28 |
+| PROD-10. UX Polish | PROD | 4/4 | Complete | 2026-01-28 |
+| PROD-11. Production Hardening | PROD | 3/3 | Complete | 2026-01-28 |
+| PROD-12. Performance & Polish | PROD | 5/5 | Complete | 2026-01-29 |
+| 9. Admin Features | PROD | 3/3 | Complete | 2026-01-29 |
+| PROD-13. Extended Testing | PROD | 0/1 | Planned | - |
+| PROD-14. Frontend Credential Wiring | PROD | 3/3 | Complete | 2026-01-28 |
 
 ---
 
@@ -178,19 +231,49 @@ Phase 1 ──┬──► Phase 2 ──┬──► Phase 3 ──► Phase 4
 
 | Requirement | Phase | Priority | Status |
 |-------------|-------|----------|--------|
-| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | ✅ Complete |
-| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | ⚠️ Needs Verification |
-| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | ⚠️ Needs Wiring |
-| COMM-04: Email Notifications on Comments | Phase 3 | Should Have | ✅ Complete |
-| COMM-05: In-App Notifications | Phase 3 | Should Have | ✅ Complete |
-| COMM-06: Comment Editing | Phase 2, 4 | Could Have | ⚠️ Needs Verification |
-| COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | ✅ Complete |
-| COMM-08: Persistent Comments | Phase 1 | Must Have | ✅ Complete |
+| COMM-01: Unlimited Comment Exchange | Phase 2 | Must Have | Complete |
+| COMM-02: Real-Time Comment Updates | Phase 2, 4 | Must Have | Complete |
+| COMM-03: File Attachments on Comments | Phase 3, 4 | Should Have | Complete |
+| COMM-04: Email Notifications on Comments | Phase 3 | Should Have | Complete |
+| COMM-05: In-App Notifications | Phase 3, 5 | Should Have | Complete |
+| COMM-06: Comment Editing | Phase 2, 4, 5, 6 | Could Have | Complete |
+| COMM-07: Comments Embedded in Proposal Page | Phase 1 | Must Have | Complete |
+| COMM-08: Persistent Comments | Phase 1 | Must Have | Complete |
+| DEL-01: Deliverable Creation | PROD-04 | Must Have | Verified |
+| DEL-02: Approval Workflow | PROD-04 | Must Have | Verified |
+| DEL-03: R2 File Storage | PROD-04 | Must Have | Verified |
+| DEL-04: Permissions | PROD-04 | Must Have | Verified |
+| USER-01: User Creation & Invitations | PROD-06 | Must Have | Verified |
+| USER-02: Role Management | PROD-06 | Must Have | Verified |
+| USER-03: User Deactivation | PROD-06 | Must Have | Verified |
+| USER-04: Permission System | PROD-06 | Must Have | Verified |
 
-**Coverage:** 8/8 requirements mapped (100%)
-**Phases:** 4 (3 complete + 1 gap closure)
-**Phase 3:** Complete (backend solid)
-**Phase 4:** Planned (attachment wiring fix)
+**v1 Coverage:** 8/8 requirements mapped (100%)
+**PROD-04 Coverage:** 4/4 requirements verified
+**PROD-06 Coverage:** 4/4 requirements verified
+**Phases:** 12 complete, 3 planned (code cleanup + extended testing)
+
+---
+
+## Tech Debt Closure (from v1-PROD-MILESTONE-AUDIT)
+
+| Item | Phase | Priority | Status |
+|------|-------|----------|--------|
+| Inquiries GET unprotected | PROD-08 | Must | Complete |
+| Missing credentials in inquiries | PROD-08 | Must | Complete |
+| Payment emails console.log only | PROD-09 | Should | Complete |
+| Webhook E2E testing incomplete | PROD-09 | Should | Complete |
+| Client status label translation | PROD-10 | Should | Complete |
+| Proposal edit restriction | PROD-10 | Should | Complete |
+| Status timeline view | PROD-10 | Should | Complete |
+| Status change notifications | PROD-10 | Should | Complete |
+| Production hardening (DB, errors, env) | PROD-11 | Must | Planned |
+| Unused 'review' enum | PROD-12 | Nice | Planned |
+| Frontend status casing | PROD-12 | Nice | Planned |
+| 15 additional tests | PROD-13 | Nice | Planned |
+| lib/proposals.ts credentials | PROD-14 | Must | Complete |
+| lib/inquiries.ts credentials | PROD-14 | Must | Complete |
+| paymentApi.ts credentials | PROD-14 | Must | Complete |
 
 ---
 
@@ -203,7 +286,8 @@ The following require additional research before planning but are covered in cur
 | Ably real-time (vs polling) | Phase 2 | Polling used for v1. Ably upgrade possible in v2. |
 | R2 presign CORS configuration | Phase 3 | Confirm existing API supports direct uploads |
 | File type allowlist validation | Phase 3 | Define allowed types; existing validation may apply |
+| Multipart upload for >100MB | Future | Required if deliverables exceed 100MB single-part limit |
 
 ---
 
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-29 (Phase 9 Admin Features complete)*

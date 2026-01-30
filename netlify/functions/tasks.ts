@@ -1,21 +1,12 @@
 import pg from 'pg';
 import { sendMentionNotification, sendTaskAssignmentEmail, sendRevisionRequestEmail } from './send-email';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -55,7 +46,7 @@ function mapTaskFromDB(row: any): any {
     description: row.description,
     status: row.stage, // Map stage to status for frontend
     visibleToClient: row.is_client_visible,
-    assigneeId: row.assigned_to,
+    assignedTo: row.assigned_to,
     deadline: row.due_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -74,19 +65,13 @@ const mapCommentFromDB = (dbComment: any) => {
   };
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'tasks')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -454,47 +439,25 @@ export const handler = async (
       }
 
       // POST /tasks - Create new task
-      const taskData = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.task.create, origin);
+      if (!validation.success) return validation.response;
+      const taskData = validation.data;
 
-      // Permission check: Only Motionify team can create tasks (not clients)
-      // Check the user_role from the request body or header
-      const userRole = taskData.user_role || event.headers['x-user-role'];
-      const clientRoles = ['Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'];
+      // Permission check: Clients can create tasks but with restricted fields
+      const userRole = auth?.user?.role;
+      const clientRoles = ['client', 'client_primary', 'client_team'];
+      const isClientUser = userRole && clientRoles.includes(userRole);
 
-      if (userRole && clientRoles.includes(userRole)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Only Motionify team can create tasks',
-            code: 'PERMISSION_DENIED'
-          }),
-        };
+      // For client users: strip restricted fields and force visible_to_client = true
+      if (isClientUser) {
+        taskData.assignedTo = undefined;
+        taskData.priority = undefined;
       }
 
-      if (!taskData.project_id || !taskData.title || !taskData.description) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'project_id, title, and description are required'
-          }),
-        };
-      }
-
-      // Validate Project ID format
-      if (!isValidUUID(taskData.project_id)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'Invalid project_id format: Must be a UUID'
-          }),
-        };
-      }
+      const rawBody = JSON.parse(event.body || '{}');
 
       // Get a user ID for created_by (use first user or create a default)
-      let createdBy = taskData.created_by;
+      let createdBy = rawBody.created_by;
       if (createdBy && !isValidUUID(createdBy)) {
         createdBy = null;
       }
@@ -504,8 +467,10 @@ export const handler = async (
         createdBy = userResult.rows[0]?.id;
       }
 
-      // Sanitize assignee_id (must be valid UUID or null)
-      const assigneeId = (taskData.assignee_id && isValidUUID(taskData.assignee_id)) ? taskData.assignee_id : null;
+      // Clients: force visible_to_client = true; others: use provided value or default false
+      const visibleToClient = isClientUser
+        ? true
+        : (rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false);
 
       const result = await client.query(
         `INSERT INTO tasks (
@@ -515,13 +480,13 @@ export const handler = async (
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
         [
-          taskData.project_id,
+          taskData.projectId,
           taskData.title,
           taskData.description,
           taskData.status || 'pending',
-          taskData.visible_to_client !== undefined ? taskData.visible_to_client : true,
-          assigneeId,
-          taskData.deadline || null,
+          visibleToClient,
+          isClientUser ? null : (taskData.assignedTo || null),
+          taskData.dueDate || null,
           0, // position - default to 0
           createdBy
         ]
@@ -531,10 +496,10 @@ export const handler = async (
       newTask.comments = [];
 
       // Send email notification if assigned
-      if (assigneeId) {
+      if (taskData.assignedTo) {
         try {
-          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [taskData.project_id]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assigneeId]);
+          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [taskData.projectId]);
+          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [taskData.assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -544,7 +509,7 @@ export const handler = async (
             // Check user preferences
             const prefResult = await client.query(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [assigneeId]
+              [taskData.assignedTo]
             );
             const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
 
@@ -590,14 +555,31 @@ export const handler = async (
         };
       }
 
-      const updates = JSON.parse(event.body || '{}');
+      // Permission check: Only Motionify team can edit tasks (not clients)
+      const userRole = auth?.user?.role;
+      const clientRoles = ['client', 'client_primary', 'client_team'];
+
+      if (userRole && clientRoles.includes(userRole)) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Only Motionify team can edit tasks',
+            code: 'PERMISSION_DENIED'
+          }),
+        };
+      }
+
+      const validation = validateRequest(event.body, SCHEMAS.task.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'title',
         'description',
         'status', // maps to 'stage' in DB
         'visibleToClient', // maps to 'is_client_visible' in DB
-        'assigneeId', // maps to 'assigned_to' in DB
+        'assignedTo', // maps to 'assigned_to' in DB
         'deadline', // maps to 'due_date' in DB
       ];
 
@@ -711,7 +693,7 @@ export const handler = async (
         if (allowedFields.includes(key)) {
           // Convert camelCase to snake_case for DB
           const dbKey = key === 'visibleToClient' ? 'is_client_visible' :
-            key === 'assigneeId' ? 'assigned_to' :
+            key === 'assignedTo' ? 'assigned_to' :
               key === 'deadline' ? 'due_date' :
                 key === 'status' ? 'stage' :
                   key;
@@ -754,18 +736,18 @@ export const handler = async (
       const updatedTask = mapTaskFromDB(result.rows[0]);
 
       // Check for assignment change and send email
-      if (updates.assigneeId) {
+      if (updates.assignedTo) {
         try {
-          // Get current user ID from checking the assigneeId update vs old one? 
+          // Get current user ID from checking the assignedTo update vs old one?
           // Actually, we just check if it's set.
           // Note: Ideally we should check if it CHANGED, but standard update logic usually implies intention.
           // Plus we already did the update.
 
-          const assigneeId = updates.assigneeId;
+          const assignedTo = updates.assignedTo;
           const projectId = updatedTask.projectId;
 
           const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [projectId]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assigneeId]);
+          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -775,7 +757,7 @@ export const handler = async (
             // Check user preferences
             const prefResult = await client.query(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [assigneeId]
+              [assignedTo]
             );
             const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
 
@@ -820,6 +802,21 @@ export const handler = async (
         };
       }
 
+      // Permission check: Only Admin and PM can delete tasks
+      const deleteUserRole = auth?.user?.role;
+      const deleteAllowedRoles = ['super_admin', 'project_manager'];
+
+      if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Only admins and project managers can delete tasks',
+            code: 'PERMISSION_DENIED'
+          }),
+        };
+      }
+
       const result = await client.query(
         `DELETE FROM tasks WHERE id = $1 RETURNING id`,
         [taskId]
@@ -859,4 +856,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

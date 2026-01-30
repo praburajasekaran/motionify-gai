@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { Users } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface User {
     id: string;
     email: string;
     full_name: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'project_manager' | 'team_member' | 'client';
     is_active: boolean;
     created_at: string;
     updated_at?: string;
@@ -34,7 +37,7 @@ export function UserManagement() {
     const [formData, setFormData] = useState({
         email: '',
         full_name: '',
-        role: 'project_manager' as 'super_admin' | 'project_manager' | 'client' | 'team',
+        role: 'project_manager' as 'super_admin' | 'project_manager' | 'team_member' | 'client',
     });
 
     // Deactivation modal states
@@ -61,7 +64,7 @@ export function UserManagement() {
             if (roleFilter !== 'all') params.set('role', roleFilter);
             if (searchQuery.trim()) params.set('search', searchQuery);
 
-            const response = await fetch(`/.netlify/functions/users-list?${params.toString()}`);
+            const response = await fetch(`/.netlify/functions/users-list?${params.toString()}`, { credentials: 'include' });
             const data = await response.json();
 
             if (data.success) {
@@ -84,6 +87,7 @@ export function UserManagement() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
+                credentials: 'include',
             });
             const data = await response.json();
 
@@ -128,6 +132,7 @@ export function UserManagement() {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: deactivateReason.trim() }),
+                credentials: 'include',
             });
             const data = await response.json();
 
@@ -150,7 +155,7 @@ export function UserManagement() {
             case 'super_admin': return 'bg-purple-100 text-purple-800';
             case 'project_manager': return 'bg-blue-100 text-blue-800';
             case 'client': return 'bg-green-100 text-green-800';
-            case 'team': return 'bg-gray-100 text-gray-800';
+            case 'team_member': return 'bg-gray-100 text-gray-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
@@ -193,7 +198,10 @@ export function UserManagement() {
             </div>
 
             {/* Error Display */}
-            {error && (
+            {error && !loading && users.length === 0 && (
+                <ErrorState error={error} onRetry={loadUsers} />
+            )}
+            {error && (loading || users.length > 0) && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     {error}
                 </div>
@@ -232,7 +240,7 @@ export function UserManagement() {
                         <option value="super_admin">Super Admin</option>
                         <option value="project_manager">Project Manager</option>
                         <option value="client">Client</option>
-                        <option value="team">Team</option>
+                        <option value="team_member">Team Member</option>
                     </select>
                 </div>
                 <div className="text-sm text-gray-600">
@@ -243,7 +251,10 @@ export function UserManagement() {
             {/* Users Table */}
             <div className="bg-white rounded-lg border overflow-hidden">
                 {loading ? (
-                    <div className="text-center py-12 text-gray-500">Loading users...</div>
+                    <div className="text-center py-12 text-gray-500">
+                        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+                        Loading users...
+                    </div>
                 ) : (
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
@@ -291,23 +302,53 @@ export function UserManagement() {
                                         {new Date(user.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        {user.is_active && (
-                                            <button
-                                                onClick={() => openDeactivateModal(user)}
-                                                className="text-red-600 hover:text-red-800 text-sm"
-                                                title="Deactivate user"
-                                            >
-                                                Deactivate
-                                            </button>
-                                        )}
+                                        {user.is_active && (() => {
+                                            const isOwnAccount = user.id === currentUser?.id;
+
+                                            if (isOwnAccount) {
+                                                return (
+                                                    <span className="text-gray-500 text-sm font-medium">
+                                                        You
+                                                    </span>
+                                                );
+                                            }
+
+                                            const activeSuperAdmins = users.filter(u => u.role === 'super_admin' && u.is_active).length;
+                                            const isLastSuperAdmin = user.role === 'super_admin' && activeSuperAdmins <= 1;
+
+                                            if (isLastSuperAdmin) {
+                                                return (
+                                                    <span
+                                                        className="text-gray-400 text-sm cursor-not-allowed"
+                                                        title="Cannot deactivate the last Super Admin"
+                                                    >
+                                                        Deactivate
+                                                    </span>
+                                                );
+                                            }
+
+                                            return (
+                                                <button
+                                                    onClick={() => openDeactivateModal(user)}
+                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                    title="Deactivate user"
+                                                >
+                                                    Deactivate
+                                                </button>
+                                            );
+                                        })()}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 )}
-                {!loading && users.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">No users found matching your filters.</div>
+                {!loading && users.length === 0 && !error && (
+                    <EmptyState
+                        icon={Users}
+                        title="No team members yet"
+                        description="Invite team members to get started"
+                    />
                 )}
             </div>
 
@@ -346,7 +387,7 @@ export function UserManagement() {
                                     required
                                 >
                                     <option value="project_manager">Project Manager</option>
-                                    <option value="team">Team</option>
+                                    <option value="team_member">Team Member</option>
                                     <option value="client">Client</option>
                                     <option value="super_admin">Super Admin</option>
                                 </select>
@@ -401,6 +442,11 @@ export function UserManagement() {
                                 {deactivateReason.length}/10 characters minimum
                             </p>
                         </div>
+                        {error && (
+                            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                                {error}
+                            </div>
+                        )}
                         <div className="flex justify-end gap-3">
                             <button
                                 type="button"

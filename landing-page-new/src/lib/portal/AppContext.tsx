@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Project, User, UserRole, TaskStatus, Task, Comment, ProjectFile, ProjectStatus, Client, Deliverable, Notification, Milestone } from './types';
-import { MOCK_PROJECTS, MOCK_NOTIFICATIONS } from './data';
+// Mock data removed - using API data only
 import {
   generateNotificationId,
   generateUserId,
@@ -29,6 +29,7 @@ import {
   updateTaskAPI,
   addTaskComment
 } from './api/tasks.api';
+import { fetchProjects } from './api/projects.api';
 
 type AddTaskData = {
   title: string;
@@ -72,6 +73,8 @@ export const AppContext = React.createContext<{
   addFileComment: (fileId: string, content: string) => void;
   updateProjectStatus: (projectId: string, status: ProjectStatus) => void;
   addProject: (data: { name: string; client: Client; scope: { deliverables: Deliverable[]; nonInclusions: string[] }; totalRevisions: number }) => void;
+  deleteFile: (fileId: string) => void;
+  addFiles: (filesData: AddFileData[]) => void;
   isLoading: boolean;
   logout: () => void;
 }>({
@@ -97,12 +100,14 @@ export const AppContext = React.createContext<{
   addFileComment: () => { },
   updateProjectStatus: () => { },
   addProject: () => { },
+  deleteFile: () => { },
+  addFiles: () => { },
   isLoading: true,
   logout: () => { },
 });
 
 export function AppProvider({ children, selectedProjectId }: { children: React.ReactNode; selectedProjectId?: string | null }) {
-  const [projectsData, setProjectsData] = useState<Project[]>(MOCK_PROJECTS);
+  const [projectsData, setProjectsData] = useState<Project[]>([]);
   const { user: authUser, isLoading: isAuthLoading, logout: authLogout } = useAuth();
 
   // Map AuthUser to legacy User type
@@ -127,7 +132,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
   }, [authUser]);
 
   const [projectId, setProjectId] = useState<string | null>(selectedProjectId || null);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]); // Loaded from API via NotificationContext
 
 
   const selectedProject = useMemo(() =>
@@ -161,6 +166,24 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
 
     loadProjectTasks();
   }, [projectId]);
+
+  // Fetch projects from API when user is authenticated
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const loadProjects = async () => {
+      console.log('[AppContext] Fetching projects for user:', currentUser.id);
+      const result = await fetchProjects(currentUser.id);
+      if (result.success && result.projects) {
+        console.log('[AppContext] Loaded projects from API:', result.projects.length);
+        setProjectsData(result.projects);
+      } else {
+        console.warn('[AppContext] Failed to load projects:', result.error);
+      }
+    };
+
+    loadProjects();
+  }, [currentUser]);
 
   // Update projectId when selectedProjectId prop changes or when localStorage changes
   useEffect(() => {
@@ -568,6 +591,39 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     }));
   }, [projectId, currentUser]);
 
+  const addFiles = useCallback((filesData: AddFileData[]) => {
+    if (!projectId || !currentUser) return;
+
+    const newFiles: ProjectFile[] = filesData.map(fileData => ({
+      id: generateFileId(),
+      url: '#',
+      uploadedAt: Date.now(),
+      uploadedById: currentUser.id,
+      comments: [],
+      ...fileData,
+    }));
+
+    setProjectsData(prevData => prevData.map(p => {
+      if (p.id !== projectId) return p;
+      return { ...p, files: [...newFiles, ...p.files] };
+    }));
+  }, [projectId, currentUser]);
+
+  const deleteFile = useCallback((fileId: string) => {
+    if (!projectId || !currentUser) return;
+    // Check if user has permission (Motionify Member or Project Manager)
+    if (currentUser.role !== UserRole.MOTIONIFY_MEMBER && currentUser.role !== UserRole.PROJECT_MANAGER) {
+      console.error('Unauthorized: Only admins can delete files.');
+      return;
+    }
+
+    setProjectsData(prevData => prevData.map(p => {
+      if (p.id !== projectId) return p;
+      const newFiles = p.files.filter(f => f.id !== fileId);
+      return { ...p, files: newFiles };
+    }));
+  }, [projectId, currentUser]);
+
   const renameFile = useCallback((fileId: string, newName: string): { success: boolean; error?: string } => {
     if (!projectId || !currentUser) return { success: false, error: 'Not authenticated' };
 
@@ -731,9 +787,11 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     addFileComment,
     updateProjectStatus,
     addProject,
+    deleteFile,
+    addFiles,
     isLoading: isAuthLoading,
     logout: authLogout,
-  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
+  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, deleteFile, addFiles, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
 
 
   return (

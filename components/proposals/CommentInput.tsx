@@ -132,6 +132,8 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                 return newAttachments;
             });
 
+            setUploadingFiles(prev => prev.filter(f => f.id !== uploadingFile.id));
+
         } catch (error) {
             console.error('Upload error:', error);
             setUploadingFiles(prev =>

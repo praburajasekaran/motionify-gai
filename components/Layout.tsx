@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
-import { MOCK_PROJECTS, TAB_INDEX_MAP } from '../constants';
+import { TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
@@ -183,11 +183,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 
 
-  // Detect if on project detail page and extract project ID from pathname
-  const projectMatch = location.pathname.match(/^\/projects\/(\d+)/);
+  // Detect if on project detail page
+  const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
   const isProjectPage = !!projectMatch;
-  const projectId = projectMatch ? projectMatch[1] : null;
-  const currentProject = projectId ? MOCK_PROJECTS.find(p => p.id === projectId) : null;
 
   // Get current tab from URL
   const currentTabIndex = location.pathname.split('/')[3];
@@ -247,13 +245,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   label="Projects"
                   path="/projects"
                   active={location.pathname.startsWith('/projects')}
-                  count={MOCK_PROJECTS.length}
                 />
                 <SidebarItem
                   icon={Mail}
                   label="Inquiries"
                   path="/admin/inquiries"
                   active={location.pathname.startsWith('/admin/inquiries')}
+                />
+                <SidebarItem
+                  icon={CreditCard}
+                  label="Payments"
+                  path="/admin/payments"
+                  active={location.pathname === '/admin/payments'}
                 />
               </div>
             </div>
@@ -269,12 +272,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   path="/settings"
                   active={location.pathname === '/settings'}
                 />
-                <SidebarItem
-                  icon={UserIcon}
-                  label="Team"
-                  path="/team"
-                  active={location.pathname === '/team'}
-                />
+                {isSuperAdmin(user) && (
+                  <SidebarItem
+                    icon={UserIcon}
+                    label="Team"
+                    path="/admin/users"
+                    active={location.pathname === '/admin/users'}
+                  />
+                )}
                 <div
                   onClick={logout}
                   className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5 cursor-pointer"
@@ -330,13 +335,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
 
               <div className="flex items-center gap-3 md:gap-5">
-                {/* Revision Battery - only on project pages */}
-                {isProjectPage && currentProject && (
-                  <div className="hidden md:block">
-                    <RevisionBattery used={currentProject.revisionCount} max={currentProject.maxRevisions} />
-                  </div>
-                )}
-
                 <div className="hidden md:flex items-center relative group">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
                   <input

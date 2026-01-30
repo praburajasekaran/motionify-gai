@@ -86,7 +86,9 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`);
+            const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`, {
+                credentials: 'include',
+            });
             const data = await response.json();
 
             if (data.success && data.notifications) {
@@ -150,6 +152,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             await fetch(`${API_BASE}/notifications`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ userId: user.id, notificationId: id }),
             });
         } catch (error) {
@@ -169,6 +172,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             await fetch(`${API_BASE}/notifications?markAll=true`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ userId: user.id }),
             });
         } catch (error) {

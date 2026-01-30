@@ -1,20 +1,23 @@
 /**
  * DeliverablesList Component
  *
- * Grid view of all deliverables with:
+ * List view of all deliverables with:
  * - Filter by status
  * - Sort by due date, status, or updated
- * - Responsive grid layout (1/2/3 columns)
+ * - Compact list layout
+ * - Inline "Add New" card at bottom
  * - Empty state
  */
 
 import React from 'react';
-import { Filter, ArrowUpDown, FileBox } from 'lucide-react';
-import { Select, EmptyState, Button } from '../ui/design-system';
-import { DeliverableCard } from './DeliverableCard';
+import { Filter, ArrowUpDown, FileBox, Plus } from 'lucide-react';
+import { Select, EmptyState } from '../ui/design-system';
+import { DeliverableListItem } from './DeliverableListItem';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { BatchUploadModal } from './BatchUploadModal';
-import { Upload } from 'lucide-react';
+import { AddDeliverableModal } from './AddDeliverableModal';
+import { useDeliverables } from './DeliverableContext';
+import { canCreateDeliverable } from '../../utils/deliverablePermissions';
 
 export interface DeliverablesListProps {
   deliverables: Deliverable[];
@@ -34,6 +37,11 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
   className,
 }) => {
   const [isBatchModalOpen, setIsBatchModalOpen] = React.useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const { currentProject, currentUser, refreshDeliverables } = useDeliverables();
+
+  // Check if user can create deliverables
+  const canCreate = currentUser && currentProject && canCreateDeliverable(currentUser, currentProject);
 
   // Filter deliverables
   const filteredDeliverables =
@@ -63,7 +71,7 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
     { label: 'Awaiting Approval', value: 'awaiting_approval' },
     { label: 'In Progress', value: 'in_progress' },
     { label: 'Approved', value: 'approved' },
-    { label: 'Rejected', value: 'rejected' },
+    { label: 'Revision Requested', value: 'revision_requested' },
     { label: 'Final Delivered', value: 'final_delivered' },
     { label: 'Pending', value: 'pending' },
   ];
@@ -114,18 +122,14 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         </div>
       </div>
 
-      {/* Batch Upload Button */}
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setIsBatchModalOpen(true)}
-        >
-          <Upload className="h-4 w-4" />
-          Batch Upload
-        </Button>
-      </div>
+      <AddDeliverableModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        projectId={currentProject?.id || ''}
+        onSuccess={() => {
+          refreshDeliverables();
+        }}
+      />
 
       <BatchUploadModal
         isOpen={isBatchModalOpen}
@@ -134,30 +138,45 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
         onUploadComplete={() => window.location.reload()}
       />
 
-      {/* Deliverables Grid */}
-      {
-        sortedDeliverables.length === 0 ? (
-          <EmptyState
-            title="No deliverables found"
-            description={
-              filter === 'all'
-                ? 'This project does not have any deliverables yet.'
-                : `No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`
-            }
-            icon={FileBox}
-            className="py-16"
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedDeliverables.map((deliverable) => (
-              <DeliverableCard
-                key={deliverable.id}
-                deliverable={deliverable}
-              />
-            ))}
-          </div>
-        )
-      }
-    </div >
+      {/* Deliverables List */}
+      {sortedDeliverables.length === 0 && filter !== 'all' ? (
+        <EmptyState
+          title="No deliverables found"
+          description={`No deliverables match the "${filterOptions.find((o) => o.value === filter)?.label}" filter.`}
+          icon={FileBox}
+          className="py-16"
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {sortedDeliverables.map((deliverable) => (
+            <DeliverableListItem
+              key={deliverable.id}
+              deliverable={deliverable}
+            />
+          ))}
+
+          {/* Inline Add New Card */}
+          {canCreate && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-zinc-300 rounded-lg text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="font-medium">Add New Deliverable</span>
+            </button>
+          )}
+
+          {/* Empty state when no deliverables and filter is 'all' */}
+          {sortedDeliverables.length === 0 && filter === 'all' && !canCreate && (
+            <EmptyState
+              title="No deliverables yet"
+              description="This project does not have any deliverables yet."
+              icon={FileBox}
+              className="py-16"
+            />
+          )}
+        </div>
+      )}
+    </div>
   );
 };

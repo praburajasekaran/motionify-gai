@@ -40,7 +40,7 @@ const TYPE_ICONS = {
   Document: FileText,
 };
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB for admin deliverables
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB for deliverables (aligned with backend)
 const ALLOWED_FILE_TYPES = [
   'video/',
   'image/',
@@ -107,16 +107,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
 
-  const Icon = TYPE_ICONS[deliverable.type];
+  const Icon = TYPE_ICONS[deliverable.type] || FileVideo;
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
 
   // Determine if card is actionable (can be reviewed or downloaded)
-  const isActionable =
-    deliverable.status === 'beta_ready' ||
-    deliverable.status === 'awaiting_approval' ||
-    deliverable.status === 'final_delivered';
+  // All cards are now actionable to show details/empty state
+  const isActionable = true;
 
   // Navigate to deliverable detail page
   const handleNavigate = (e?: React.MouseEvent) => {
@@ -166,8 +164,10 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     if (!file) return;
 
     // 1. Validate File Size
+    console.log(`[DeliverableCard] File selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+
     if (file.size > MAX_FILE_SIZE) {
-      alert(`File is too large (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB). Max size is 5GB.`);
+      alert(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max size is 100MB. For larger files, contact support.`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -235,6 +235,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(updateData),
       });
 
@@ -310,6 +311,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           status: 'final_delivered'
         }),
@@ -385,8 +387,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
 
   // Admin Actions (Uploads) - Simplified for Demo
   const getAdminActions = () => {
-    // Upload Beta when in progress or rejected
-    if (deliverable.status === 'in_progress' || deliverable.status === 'rejected') {
+    // Upload Beta when in progress or revision requested
+    if (deliverable.status === 'in_progress' || deliverable.status === 'revision_requested') {
       return (
         <Button
           variant="outline"

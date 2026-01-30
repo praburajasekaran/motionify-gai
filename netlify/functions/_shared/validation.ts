@@ -55,7 +55,7 @@ export const paginationSchema = z.object({
 });
 
 // User role schema
-export const userRoleSchema = z.enum(['super_admin', 'project_manager', 'client', 'team']);
+export const userRoleSchema = z.enum(['super_admin', 'project_manager', 'team_member', 'client']);
 
 // Common request schemas
 export const createUserSchema = z.object({
