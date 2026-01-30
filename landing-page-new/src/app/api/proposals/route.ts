@@ -24,6 +24,7 @@ export interface Proposal {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded: number;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       advancePercentage: body.advancePercentage || 50,
       advanceAmount: body.advanceAmount || 0,
       balanceAmount: body.balanceAmount || 0,
+      revisionsIncluded: body.revisionsIncluded ?? 2,
     };
     
     const proposals = await readJSON<Proposal>(STORAGE_FILES.PROPOSALS);

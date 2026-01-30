@@ -24,6 +24,7 @@ interface CreateProposalPayload {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded?: number;
 }
 
 const getDbClient = () => {
@@ -203,7 +204,7 @@ export const handler = compose(
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
         'advance_percentage', 'advance_amount', 'balance_amount',
-        'status', 'feedback', 'version', 'edit_history'
+        'status', 'feedback', 'version', 'edit_history', 'revisions_included'
       ];
 
       // Map camelCase to snake_case
@@ -213,6 +214,7 @@ export const handler = compose(
         advanceAmount: 'advance_amount',
         balanceAmount: 'balance_amount',
         editHistory: 'edit_history',
+        revisionsIncluded: 'revisions_included',
         acceptedAt: 'accepted_at',
         rejectedAt: 'rejected_at',
       };
@@ -448,8 +450,8 @@ export const handler = compose(
       const result = await client.query(
         `INSERT INTO proposals (
           inquiry_id, description, deliverables, currency, total_price,
-          advance_percentage, advance_amount, balance_amount, client_user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          advance_percentage, advance_amount, balance_amount, client_user_id, revisions_included
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *`,
         [
           payload.inquiryId,
@@ -461,6 +463,7 @@ export const handler = compose(
           payload.advanceAmount,
           payload.balanceAmount,
           clientUserId,
+          payload.revisionsIncluded ?? 2,
         ]
       );
 

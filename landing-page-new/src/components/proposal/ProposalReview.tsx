@@ -3,7 +3,7 @@
 import { formatCurrencyWithConversion, formatDate } from '@/lib/proposals';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
-import { Building2, Calendar, CheckCircle2, Clock, FileText, User } from 'lucide-react';
+import { Building2, Calendar, CheckCircle2, Clock, FileText, RotateCcw, User } from 'lucide-react';
 import { StatusTimeline } from './StatusTimeline';
 import { getStatusConfig } from '@/lib/status-config';
 
@@ -124,6 +124,22 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Project Terms */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Terms</h2>
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center gap-3">
+            <RotateCcw className="w-5 h-5 text-violet-600" />
+            <div>
+              <p className="text-sm text-gray-600">Revisions Included</p>
+              <p className="text-gray-900 font-semibold">
+                {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

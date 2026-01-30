@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
                     proposal.inquiryId,
                     proposalId,
                     'active',
-                    2, // Default 2 revisions
+                    proposal.revisionsIncluded ?? 2,
                     0
                 ]
             );

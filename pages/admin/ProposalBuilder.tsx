@@ -32,6 +32,7 @@ export function ProposalBuilder() {
   const [totalPrice, setTotalPrice] = useState<string>('');
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
+  const [revisionsIncluded, setRevisionsIncluded] = useState<number>(2);
   const [isSaving, setIsSaving] = useState(false);
 
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
@@ -196,6 +197,7 @@ export function ProposalBuilder() {
         advancePercentage,
         advanceAmount: pricing.advanceAmount,
         balanceAmount: pricing.balanceAmount,
+        revisionsIncluded,
       });
 
       await updateInquiryStatus(inquiry.id, 'proposal_sent', {
@@ -218,6 +220,7 @@ export function ProposalBuilder() {
           advancePercentage: proposal.advancePercentage,
           advanceAmount: proposal.advanceAmount,
           balanceAmount: proposal.balanceAmount,
+          revisionsIncluded: proposal.revisionsIncluded,
         },
         inquiry: {
           id: inquiry.id,
@@ -393,6 +396,27 @@ ${proposalLink}
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Project Terms */}
+        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Terms</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Revisions Included
+            </label>
+            <p className="text-xs text-gray-600 mb-3">
+              Number of revision rounds included in this project
+            </p>
+            <input
+              type="number"
+              min="0"
+              max="20"
+              value={revisionsIncluded}
+              onChange={(e) => setRevisionsIncluded(parseInt(e.target.value) || 0)}
+              className="w-24 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+            />
           </div>
         </div>
 

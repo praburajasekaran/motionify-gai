@@ -38,6 +38,7 @@ export function ProposalDetail() {
   const [totalPrice, setTotalPrice] = useState<string>('');
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
+  const [revisionsIncluded, setRevisionsIncluded] = useState<number>(2);
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -77,6 +78,7 @@ export function ProposalDetail() {
       setTotalPrice((proposal.totalPrice / 100).toString());
       setCurrency(proposal.currency);
       setAdvancePercentage(proposal.advancePercentage as 40 | 50 | 60);
+      setRevisionsIncluded(proposal.revisionsIncluded ?? 2);
     }
   }, [isEditMode, proposal]);
 
@@ -238,6 +240,7 @@ export function ProposalDetail() {
         advancePercentage,
         advanceAmount: pricing.advanceAmount,
         balanceAmount: pricing.balanceAmount,
+        revisionsIncluded,
       });
 
       setProposal(updatedProposal);
@@ -716,6 +719,41 @@ export function ProposalDetail() {
               ))
             )}
           </div>
+        </div>
+
+        {/* Project Terms */}
+        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Terms</h2>
+          {isEditMode ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Revisions Included
+              </label>
+              <p className="text-xs text-gray-600 mb-3">
+                Number of revision rounds included in this project
+              </p>
+              <input
+                type="number"
+                min="0"
+                max="20"
+                value={revisionsIncluded}
+                onChange={(e) => setRevisionsIncluded(parseInt(e.target.value) || 0)}
+                className="w-24 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 bg-violet-100 text-violet-700 rounded-full">
+                <span className="text-sm font-semibold">{proposal.revisionsIncluded ?? 2}</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Revisions Included</p>
+                <p className="text-gray-900 font-medium">
+                  {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pricing */}

@@ -33,6 +33,7 @@ export interface Proposal {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded: number;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -74,6 +75,7 @@ function mapProposal(data: any): Proposal {
     balanceAmount: Number(data.balance_amount || data.balanceAmount),
     acceptedAt: data.accepted_at || data.acceptedAt,
     rejectedAt: data.rejected_at || data.rejectedAt,
+    revisionsIncluded: data.revisions_included ?? data.revisionsIncluded ?? 2,
     feedback: data.feedback,
     editHistory: data.edit_history || data.editHistory,
   };
@@ -108,6 +110,7 @@ export async function createProposal(data: {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded?: number;
   id?: string;
 }): Promise<Proposal> {
   if (!data.inquiryId || data.inquiryId.trim() === '') {
@@ -146,6 +149,7 @@ export async function createProposal(data: {
     advancePercentage: data.advancePercentage,
     advanceAmount: data.advanceAmount,
     balanceAmount: data.balanceAmount,
+    revisionsIncluded: data.revisionsIncluded ?? 2,
     id: data.id,
   };
 

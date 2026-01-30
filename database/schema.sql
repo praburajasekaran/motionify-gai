@@ -86,6 +86,9 @@ CREATE TABLE proposals (
   rejected_at TIMESTAMPTZ,
   feedback TEXT,
   
+  -- Project terms
+  revisions_included INTEGER NOT NULL DEFAULT 2,
+
   -- Edit history
   edit_history JSONB,
   
