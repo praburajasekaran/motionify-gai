@@ -14,9 +14,13 @@ import {
   FolderPlus,
   Clock,
   User,
-  Calendar
+  Calendar,
+  Mail,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
+import { isClient } from '../lib/permissions';
+import { getInquiriesByClientUserId, type Inquiry, type InquiryStatus } from '../lib/inquiries';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -78,6 +82,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   TASK_STATUS_CHANGED: 'Task status changed',
   FILE_UPLOADED: 'File uploaded',
   TERMS_ACCEPTED: 'Terms accepted',
+  INQUIRY_SUBMITTED: 'Inquiry submitted',
 };
 
 // Map activity types to icons
@@ -96,6 +101,7 @@ const ACTIVITY_ICONS: Record<string, typeof Send> = {
   TASK_STATUS_CHANGED: CheckCircle,
   FILE_UPLOADED: FileText,
   TERMS_ACCEPTED: CheckCircle,
+  INQUIRY_SUBMITTED: Mail,
 };
 
 // Relative time formatting helper
@@ -169,8 +175,165 @@ function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, on
   );
 }
 
+// Status display config for client-facing inquiry statuses
+const CLIENT_STATUS_CONFIG: Record<InquiryStatus, { label: string; color: string; icon: typeof Send; description: string }> = {
+  new: { label: 'Submitted', color: 'blue', icon: Send, description: 'Your inquiry has been received. Our team will review it shortly.' },
+  reviewing: { label: 'Under Review', color: 'amber', icon: Clock, description: 'Our team is reviewing your requirements and preparing a proposal.' },
+  proposal_sent: { label: 'Proposal Ready', color: 'purple', icon: FileText, description: 'We\'ve prepared a proposal for you. Click to view it.' },
+  negotiating: { label: 'In Discussion', color: 'amber', icon: MessageSquare, description: 'We\'re discussing the details of your project.' },
+  accepted: { label: 'Accepted', color: 'green', icon: CheckCircle, description: 'Your proposal has been accepted. We\'re preparing your project.' },
+  project_setup: { label: 'Setting Up', color: 'blue', icon: FolderPlus, description: 'Your project is being set up. You\'ll have access soon.' },
+  payment_pending: { label: 'Payment Pending', color: 'amber', icon: CreditCard, description: 'Awaiting payment to begin production.' },
+  paid: { label: 'Paid', color: 'green', icon: CreditCard, description: 'Payment received. Your project is now in active production.' },
+  converted: { label: 'Project Started', color: 'green', icon: FolderOpen, description: 'Your inquiry has been converted to a live project.' },
+  rejected: { label: 'Declined', color: 'red', icon: FileText, description: 'This inquiry was declined.' },
+  archived: { label: 'Archived', color: 'gray', icon: FileText, description: 'This inquiry has been archived.' },
+};
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  blue: 'bg-blue-500',
+  amber: 'bg-amber-500',
+  purple: 'bg-purple-500',
+  green: 'bg-emerald-500',
+  red: 'bg-red-500',
+  gray: 'bg-gray-400',
+};
+
+const STATUS_BG_COLORS: Record<string, string> = {
+  blue: 'bg-blue-50 ring-blue-200',
+  amber: 'bg-amber-50 ring-amber-200',
+  purple: 'bg-purple-50 ring-purple-200',
+  green: 'bg-emerald-50 ring-emerald-200',
+  red: 'bg-red-50 ring-red-200',
+  gray: 'bg-gray-50 ring-gray-200',
+};
+
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  blue: 'text-blue-700',
+  amber: 'text-amber-700',
+  purple: 'text-purple-700',
+  green: 'text-emerald-700',
+  red: 'text-red-700',
+  gray: 'text-gray-600',
+};
+
+function ClientDashboard({ userName, userId }: { userName: string; userId?: string }) {
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchClientInquiries = async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await getInquiriesByClientUserId(userId);
+        setInquiries(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load inquiries');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClientInquiries();
+  }, [userId]);
+
+  return (
+    <div className="space-y-8 max-w-[1600px] mx-auto">
+      <div className="flex flex-col gap-1 animate-fade-in">
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h2>
+        <p className="text-gray-600">Welcome back, {userName}</p>
+      </div>
+
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 bg-gray-200 rounded w-48" />
+                  <div className="h-4 bg-gray-200 rounded w-72" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+          <ErrorState error={error} onRetry={() => window.location.reload()} />
+        </div>
+      ) : inquiries.length === 0 ? (
+        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+          <EmptyState
+            icon={Mail}
+            title="No inquiries yet"
+            description="Your project inquiries will appear here once submitted"
+          />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Your Inquiries</h3>
+          {inquiries.map((inquiry) => {
+            const config = CLIENT_STATUS_CONFIG[inquiry.status] || CLIENT_STATUS_CONFIG.new;
+            const StatusIcon = config.icon;
+            const isProposalReady = inquiry.status === 'proposal_sent' && inquiry.proposalId;
+            const cardContent = (
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ring-1 ${STATUS_BG_COLORS[config.color]}`}>
+                  <StatusIcon className={`w-6 h-6 ${STATUS_TEXT_COLORS[config.color]}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="font-semibold text-gray-900">{inquiry.inquiryNumber}</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_BG_COLORS[config.color]} ${STATUS_TEXT_COLORS[config.color]}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[config.color]}`} />
+                      {config.label}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">{config.description}</p>
+                  {inquiry.recommendedVideoType && (
+                    <p className="text-xs text-gray-400">
+                      Video type: {inquiry.recommendedVideoType}
+                    </p>
+                  )}
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-300 flex-shrink-0 mt-1" />
+              </div>
+            );
+            // Proposal links go to the Next.js app (outside HashRouter), so use <a> instead of <Link>
+            if (isProposalReady) {
+              return (
+                <a
+                  key={inquiry.id}
+                  href={`/proposal/${inquiry.proposalId}`}
+                  className="block bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all"
+                >
+                  {cardContent}
+                </a>
+              );
+            }
+            return (
+              <Link
+                key={inquiry.id}
+                to={`/inquiry-status/${inquiry.inquiryNumber}`}
+                className="block bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all"
+              >
+                {cardContent}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const Dashboard = () => {
   const { user } = useAuthContext();
+  const isClientUser = isClient(user);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
@@ -179,8 +342,12 @@ export const Dashboard = () => {
   const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
   const [errorActivities, setErrorActivities] = useState<string | null>(null);
 
-  // Fetch dashboard metrics
+  // Fetch dashboard metrics (admin only)
   const fetchMetrics = async () => {
+    if (isClientUser) {
+      setLoadingMetrics(false);
+      return;
+    }
     setLoadingMetrics(true);
     setErrorMetrics(null);
 
@@ -224,8 +391,12 @@ export const Dashboard = () => {
     }
   };
 
-  // Fetch recent activities
+  // Fetch recent activities (admin only)
   const fetchActivities = async () => {
+    if (isClientUser) {
+      setLoadingActivities(false);
+      return;
+    }
     setLoadingActivities(true);
     setErrorActivities(null);
 
@@ -251,7 +422,7 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchMetrics();
     fetchActivities();
-  }, []);
+  }, [isClientUser]);
 
   // Get context link for activity
   function getActivityContextLink(activity: Activity): { to: string; label: string } | null {
@@ -269,6 +440,11 @@ export const Dashboard = () => {
 
   const isLoading = loadingMetrics || loadingActivities;
   const hasError = errorMetrics || errorActivities;
+
+  // Client Dashboard - show their inquiries with status
+  if (isClientUser) {
+    return <ClientDashboard userName={user?.name || 'there'} userId={user?.id} />;
+  }
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
