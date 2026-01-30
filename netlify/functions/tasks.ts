@@ -443,20 +443,15 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const taskData = validation.data;
 
-      // Permission check: Only Motionify team can create tasks (not clients)
-      // Get role from authenticated JWT token (not from request body which can be spoofed)
+      // Permission check: Clients can create tasks but with restricted fields
       const userRole = auth?.user?.role;
       const clientRoles = ['client', 'client_primary', 'client_team'];
+      const isClientUser = userRole && clientRoles.includes(userRole);
 
-      if (userRole && clientRoles.includes(userRole)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Only Motionify team can create tasks',
-            code: 'PERMISSION_DENIED'
-          }),
-        };
+      // For client users: strip restricted fields and force visible_to_client = true
+      if (isClientUser) {
+        taskData.assignedTo = undefined;
+        taskData.priority = undefined;
       }
 
       const rawBody = JSON.parse(event.body || '{}');
@@ -472,6 +467,11 @@ export const handler = compose(
         createdBy = userResult.rows[0]?.id;
       }
 
+      // Clients: force visible_to_client = true; others: use provided value or default false
+      const visibleToClient = isClientUser
+        ? true
+        : (rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false);
+
       const result = await client.query(
         `INSERT INTO tasks (
           project_id, title, description, stage,
@@ -484,8 +484,8 @@ export const handler = compose(
           taskData.title,
           taskData.description,
           taskData.status || 'pending',
-          rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false,
-          taskData.assignedTo || null,
+          visibleToClient,
+          isClientUser ? null : (taskData.assignedTo || null),
           taskData.dueDate || null,
           0, // position - default to 0
           createdBy
@@ -799,6 +799,21 @@ export const handler = compose(
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Task ID is required' }),
+        };
+      }
+
+      // Permission check: Only Admin and PM can delete tasks
+      const deleteUserRole = auth?.user?.role;
+      const deleteAllowedRoles = ['super_admin', 'project_manager'];
+
+      if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Only admins and project managers can delete tasks',
+            code: 'PERMISSION_DENIED'
+          }),
         };
       }
 
