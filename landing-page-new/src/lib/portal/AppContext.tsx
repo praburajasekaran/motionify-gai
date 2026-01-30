@@ -30,6 +30,7 @@ import {
   addTaskComment
 } from './api/tasks.api';
 import { fetchProjects } from './api/projects.api';
+import { createActivity } from './api/activities.api';
 
 type AddTaskData = {
   title: string;
@@ -146,25 +147,28 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.PROJECT_MANAGER);
   }, [projectsData]);
 
-  // Load tasks from API when project is selected
+  // Load tasks and activities from API when project is selected
   useEffect(() => {
     if (!projectId) return;
 
-    const loadProjectTasks = async () => {
+    const loadProjectData = async () => {
       try {
-        const tasks = await fetchTasksForProject(projectId, true);
+        const [tasks, activities] = await Promise.all([
+          fetchTasksForProject(projectId, true),
+          fetchActivities({ projectId, limit: 50 }),
+        ]);
 
         setProjectsData(prevData =>
           prevData.map(p =>
-            p.id === projectId ? { ...p, tasks } : p
+            p.id === projectId ? { ...p, tasks, activities } : p
           )
         );
       } catch (error) {
-        console.error('Failed to load tasks:', error);
+        console.error('Failed to load project data:', error);
       }
     };
 
-    loadProjectTasks();
+    loadProjectData();
   }, [projectId]);
 
   // Fetch projects from API when user is authenticated
@@ -273,6 +277,17 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       })
     );
 
+    // Persist activity to database
+    if (oldStatus && updatedTask) {
+      createActivity({
+        type: 'TASK_STATUS_CHANGED',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        projectId,
+        details: { taskId: updatedTask.id, taskTitle: updatedTask.title, oldStatus, newStatus: status },
+      }).catch(err => console.error('Failed to log activity:', err));
+    }
+
     if (updatedProject && updatedTask && status === TaskStatus.AWAITING_APPROVAL) {
       const primaryContact = updatedProject.clientTeam.find(u => u.role === UserRole.PRIMARY_CONTACT);
       if (primaryContact) {
@@ -358,6 +373,15 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
           removedUser.email
         );
 
+        // Persist activity to database
+        createActivity({
+          type: 'TEAM_MEMBER_REMOVED',
+          userId: currentUser.id,
+          userName: currentUser.name,
+          projectId,
+          details: { removedMemberName: removedUser.name, removedMemberEmail: removedUser.email },
+        }).catch(err => console.error('Failed to log activity:', err));
+
         return {
           ...p,
           clientTeam: newClientTeam,
@@ -395,6 +419,15 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
         };
         return projectForNotification;
       }));
+
+      // Persist activity to database
+      createActivity({
+        type: 'TASK_CREATED',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        projectId,
+        details: { taskId: newTask.id, taskTitle: newTask.title },
+      }).catch(err => console.error('Failed to log activity:', err));
 
       if (newTask.assigneeId && projectForNotification) {
         const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
@@ -458,6 +491,25 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
           return { ...p, tasks: newTasks, activities };
         })
       );
+
+      // Persist activity to database if there were changes
+      if (originalTask && updatedTask) {
+        const dbChanges: string[] = [];
+        if (originalTask.title !== updatedTask.title) dbChanges.push('title');
+        if (originalTask.description !== updatedTask.description) dbChanges.push('description');
+        if (originalTask.assigneeId !== updatedTask.assigneeId) dbChanges.push('assignee');
+        if (originalTask.deadline !== updatedTask.deadline) dbChanges.push('deadline');
+        if (originalTask.deliverableId !== updatedTask.deliverableId) dbChanges.push('deliverable');
+        if (dbChanges.length > 0) {
+          createActivity({
+            type: 'TASK_UPDATED',
+            userId: currentUser.id,
+            userName: currentUser.name,
+            projectId,
+            details: { taskId: updatedTask.id, taskTitle: updatedTask.title, changes: dbChanges.join(', ') },
+          }).catch(err => console.error('Failed to log activity:', err));
+        }
+      }
 
       if (originalTask && updatedTask && originalTask.assigneeId !== updatedTask.assigneeId && updatedTask.assigneeId && projectForNotification) {
         const allUsers = [...projectForNotification.clientTeam, ...projectForNotification.motionifyTeam];
@@ -668,6 +720,15 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       const activity = createFileRenamedActivity(currentUser, oldName, finalName);
       return { ...p, files: newFiles, activities: [activity, ...p.activities] };
     }));
+
+    // Persist activity to database
+    createActivity({
+      type: 'FILE_RENAMED',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      projectId,
+      details: { oldName, newName: finalName },
+    }).catch(err => console.error('Failed to log activity:', err));
 
     return { success: true };
   }, [projectId, currentUser, projectsData]);
