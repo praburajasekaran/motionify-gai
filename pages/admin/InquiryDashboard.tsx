@@ -36,6 +36,20 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
   archived: 'Archived',
 };
 
+const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
+  new: 'Submitted',
+  reviewing: 'Under Review',
+  proposal_sent: 'Proposal Received',
+  negotiating: 'In Discussion',
+  accepted: 'Accepted',
+  project_setup: 'Project Starting',
+  payment_pending: 'Payment Due',
+  paid: 'Paid',
+  converted: 'Project Started',
+  rejected: 'Declined',
+  archived: 'Archived',
+};
+
 interface StatCardProps {
   label: string;
   value: number;
@@ -283,13 +297,12 @@ export function InquiryDashboard() {
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
-                <option value="new">New</option>
-                <option value="reviewing">Reviewing</option>
-                <option value="proposal_sent">Proposal Sent</option>
-                <option value="negotiating">Negotiating</option>
-                <option value="accepted">Accepted</option>
-                <option value="converted">Converted</option>
-                <option value="rejected">Rejected</option>
+                {Object.entries(isClient(user) ? CLIENT_STATUS_LABELS : STATUS_LABELS)
+                  .filter(([key]) => !['archived', 'project_setup', 'payment_pending', 'paid'].includes(key))
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))
+                }
               </select>
             </div>
           </div>
@@ -336,7 +349,7 @@ export function InquiryDashboard() {
                             {inquiry.inquiryNumber}
                           </code>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                            {STATUS_LABELS[inquiry.status]}
+                            {isClient(user) ? CLIENT_STATUS_LABELS[inquiry.status] : STATUS_LABELS[inquiry.status]}
                           </span>
                         </div>
                     
