@@ -9,6 +9,7 @@ interface TaskEditModalProps {
   task: Task | null;
   onSave: (taskId: string, updatedTask: Partial<Task>) => void;
   teamMembers: User[];
+  userId?: string;
   isLoading?: boolean;
 }
 
@@ -18,18 +19,23 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   task,
   onSave,
   teamMembers,
+  userId,
   isLoading = false,
 }) => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'pending' | 'in_progress' | 'awaiting_approval' | 'completed' | 'revision_requested'>('pending');
   const [assigneeId, setAssigneeId] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [visibleToClient, setVisibleToClient] = useState(false);
 
   useEffect(() => {
     if (task) {
       setTitle(task.title);
-      setStatus(task.status);
-      setAssigneeId(task.assignee?.id || '');
+      setDescription(task.description || '');
+      setStatus(task.status as any);
+      setAssigneeId(task.assignee?.id || task.assigneeId || '');
+      setDeadline(task.deadline ? task.deadline.split('T')[0] : '');
       setVisibleToClient(task.visibleToClient ?? false);
     }
   }, [task, isOpen]);
@@ -43,8 +49,10 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
     onSave(task.id, {
       title: title.trim(),
+      description: description.trim() || undefined,
       status,
       assignee,
+      deadline: deadline || undefined,
       visibleToClient,
     });
 
@@ -58,6 +66,13 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     { value: 'completed', label: 'Completed' },
     { value: 'revision_requested', label: 'Revision Requested' },
   ];
+
+  const selectStyle = {
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat' as const,
+    backgroundPosition: 'right 1rem center',
+    paddingRight: '2.5rem',
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Task" size="md">
@@ -77,18 +92,27 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
           <div>
             <label className="block text-sm font-semibold text-zinc-900 mb-2.5">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description..."
+              rows={3}
+              maxLength={5000}
+              className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-zinc-900 mb-2.5">
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                paddingRight: '2.5rem'
-              }}
+              style={selectStyle}
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -98,28 +122,44 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-zinc-900 mb-2.5">
-              Assign To
-            </label>
-            <select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                paddingRight: '2.5rem'
-              }}
-            >
-              <option value="">Unassigned</option>
-              {teamMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-zinc-900 mb-2.5">
+                Assign To
+              </label>
+              <select
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
+                style={selectStyle}
+              >
+                <option value="">Unassigned</option>
+                {userId && teamMembers.some(m => m.id === userId) && (
+                  <option value={userId}>
+                    {teamMembers.find(m => m.id === userId)!.name} (me)
+                  </option>
+                )}
+                {teamMembers
+                  .filter(m => m.id !== userId)
+                  .map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-zinc-900 mb-2.5">
+                Due Date
+              </label>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all"
+              />
+            </div>
           </div>
 
           {/* Visible to Client Toggle */}

@@ -106,9 +106,9 @@ export const handler = compose(
 
         // Check if client is trying to access an internal-only task
         // Return 404 (not 403) to prevent enumeration attacks
-        const userRole = event.headers['x-user-role'] || event.queryStringParameters?.userRole;
-        const clientRoles = ['Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'];
-        if (userRole && clientRoles.includes(userRole) && !task.visibleToClient) {
+        const authenticatedRole = auth?.user?.role;
+        const clientRoles = ['client', 'client_primary', 'client_team'];
+        if (authenticatedRole && clientRoles.includes(authenticatedRole) && !task.visibleToClient) {
           return {
             statusCode: 404,
             headers,
@@ -160,9 +160,9 @@ export const handler = compose(
       let tasks = tasksResult.rows.map(mapTaskFromDB);
 
       // Filter out internal-only tasks for clients
-      const userRole = event.headers['x-user-role'] || event.queryStringParameters?.userRole;
-      const clientRoles = ['Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'];
-      if (userRole && clientRoles.includes(userRole)) {
+      const authenticatedRole = auth?.user?.role;
+      const clientRoles = ['client', 'client_primary', 'client_team'];
+      if (authenticatedRole && clientRoles.includes(authenticatedRole)) {
         tasks = tasks.filter(task => task.visibleToClient);
       }
 
@@ -580,7 +580,7 @@ export const handler = compose(
         'status', // maps to 'stage' in DB
         'visibleToClient', // maps to 'is_client_visible' in DB
         'assignedTo', // maps to 'assigned_to' in DB
-        'deadline', // maps to 'due_date' in DB
+        'dueDate', // maps to 'due_date' in DB
       ];
 
       // Validate status transition if status is being updated
@@ -694,7 +694,7 @@ export const handler = compose(
           // Convert camelCase to snake_case for DB
           const dbKey = key === 'visibleToClient' ? 'is_client_visible' :
             key === 'assignedTo' ? 'assigned_to' :
-              key === 'deadline' ? 'due_date' :
+              key === 'dueDate' ? 'due_date' :
                 key === 'status' ? 'stage' :
                   key;
 
