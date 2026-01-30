@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, S
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { logProposalSent } from '../../services/activityApi';
+import { encodeBase64 } from '../../utils/encoding';
 
 interface DeliverableInput {
   id: string;
@@ -232,7 +233,7 @@ export function ProposalBuilder() {
       };
       
       // Encode data for URL
-      const encodedData = btoa(JSON.stringify(proposalData));
+      const encodedData = encodeBase64(JSON.stringify(proposalData));
       const proposalLink = `http://localhost:5174/proposal/${proposal.id}?data=${encodedData}`;
 
       // Console log "email sent" with proposal link

@@ -8,6 +8,7 @@ import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { decodeBase64 } from '@/lib/encoding';
 import ProposalReview from '@/components/proposal/ProposalReview';
 import ProposalActions from '@/components/proposal/ProposalActions';
 import { CommentThread } from '@/components/CommentThread';
@@ -29,7 +30,7 @@ export default function ProposalPage() {
 
     const loadFromUrlData = async (encodedData: string) => {
       try {
-        const decodedData = JSON.parse(atob(encodedData));
+        const decodedData = JSON.parse(decodeBase64(encodedData));
         if (decodedData.proposal && decodedData.inquiry) {
           // Normalize numeric fields that might be strings in the encoded data
           const proposalData = {

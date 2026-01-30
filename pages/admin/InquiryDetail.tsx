@@ -5,6 +5,7 @@ import { getProposalById, type Proposal } from '../../lib/proposals';
 import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, CheckCircle2, Clock, Send, Eye, Copy, Edit2, X } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
+import { encodeBase64 } from '../../utils/encoding';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -119,7 +120,7 @@ export function InquiryDetail() {
       }
     };
 
-    const encodedData = btoa(JSON.stringify(proposalData));
+    const encodedData = encodeBase64(JSON.stringify(proposalData));
     const link = `http://localhost:5174/proposal/${inquiry.proposalId}?data=${encodedData}`;
 
     navigator.clipboard.writeText(link);
