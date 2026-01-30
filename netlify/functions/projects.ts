@@ -337,8 +337,8 @@ export const handler = compose(
       }
 
       await client.query(
-        `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-        [inquiryId]
+        `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW() WHERE id = $1`,
+        [inquiryId, project.id]
       );
 
       // Auto-populate project team: add client as primary contact
