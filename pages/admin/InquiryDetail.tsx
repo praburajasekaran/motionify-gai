@@ -35,6 +35,20 @@ const STATUS_LABELS: Record<InquiryStatus, string> = {
   archived: 'Archived',
 };
 
+const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
+  new: 'Submitted',
+  reviewing: 'Under Review',
+  proposal_sent: 'Proposal Received',
+  negotiating: 'In Discussion',
+  accepted: 'Accepted',
+  project_setup: 'Project Starting',
+  payment_pending: 'Payment Due',
+  paid: 'Paid',
+  converted: 'Project Started',
+  rejected: 'Declined',
+  archived: 'Archived',
+};
+
 export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -213,7 +227,7 @@ export function InquiryDetail() {
                 {inquiry.inquiryNumber}
               </code>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                {STATUS_LABELS[inquiry.status]}
+                {isClient ? CLIENT_STATUS_LABELS[inquiry.status] : STATUS_LABELS[inquiry.status]}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -388,7 +402,7 @@ export function InquiryDetail() {
                     <div className="w-px h-full bg-border mt-2" />
                   </div>
                   <div className="pb-6">
-                    <p className="text-card-foreground font-medium mb-1">Proposal Sent</p>
+                    <p className="text-card-foreground font-medium mb-1">{isClient ? 'Proposal Received' : 'Proposal Sent'}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(inquiry.updatedAt)}</p>
                   </div>
                 </div>
@@ -416,7 +430,7 @@ export function InquiryDetail() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-card-foreground font-medium mb-1">Converted to Project</p>
+                    <p className="text-card-foreground font-medium mb-1">{isClient ? 'Project Started' : 'Converted to Project'}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(inquiry.convertedAt)}</p>
                   </div>
                 </div>
