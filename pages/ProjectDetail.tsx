@@ -24,7 +24,7 @@ import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { ProjectFile } from '../types';
 import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, followTask, unfollowTask, addComment } from '../services/taskApi';
-import { fetchActivities, Activity as ApiActivity } from '../services/activityApi';
+import { fetchActivities, createActivity, Activity as ApiActivity } from '../services/activityApi';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
@@ -190,6 +190,7 @@ export const ProjectDetail = () => {
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
+    const [activityRefreshKey, setActivityRefreshKey] = useState(0);
     const { addToast } = useToast();
 
     // Check if current user is Primary Contact for this project
@@ -297,7 +298,7 @@ export const ProjectDetail = () => {
         };
 
         loadActivities();
-    }, [project?.id, user?.id]);
+    }, [project?.id, user?.id, activityRefreshKey]);
 
     // Load deliverables from API (for Overview tab consistency with Deliverables tab)
     useEffect(() => {
@@ -409,6 +410,18 @@ export const ProjectDetail = () => {
             setTasks([...tasks, newTask]);
             setNewTaskInput('');
 
+            // Persist activity to database
+            if (user) {
+                createActivity({
+                    type: 'TASK_CREATED',
+                    userId: user.id,
+                    userName: user.name,
+                    projectId: project.id,
+                    details: { taskId: newTask.id, taskTitle: newTask.title },
+                }).then(() => setActivityRefreshKey(k => k + 1))
+                  .catch(err => console.error('Failed to log activity:', err));
+            }
+
             addToast({
                 title: 'Task Created',
                 description: 'Task has been created successfully',
@@ -462,6 +475,23 @@ export const ProjectDetail = () => {
             );
             setEditingTask(null);
             setIsEditModalOpen(false);
+
+            // Persist activity to database
+            if (user && project) {
+                const activityType = updates.status ? 'TASK_STATUS_CHANGED' : 'TASK_UPDATED';
+                createActivity({
+                    type: activityType,
+                    userId: user.id,
+                    userName: user.name,
+                    projectId: project.id,
+                    details: {
+                        taskId,
+                        taskTitle: updatedTask.title || updates.title || '',
+                        ...(updates.status && { newStatus: updates.status }),
+                    },
+                }).then(() => setActivityRefreshKey(k => k + 1))
+                  .catch(err => console.error('Failed to log activity:', err));
+            }
 
             addToast({
                 title: 'Task Updated',
@@ -569,6 +599,19 @@ export const ProjectDetail = () => {
 
             // Clear input
             setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
+
+            // Persist activity to database
+            if (project) {
+                const task = tasks.find(t => t.id === taskId);
+                createActivity({
+                    type: 'COMMENT_ADDED',
+                    userId: user.id,
+                    userName: user.name,
+                    projectId: project.id,
+                    details: { taskId, taskTitle: task?.title || '' },
+                }).then(() => setActivityRefreshKey(k => k + 1))
+                  .catch(err => console.error('Failed to log activity:', err));
+            }
 
             addToast({
                 title: 'Comment Added',
