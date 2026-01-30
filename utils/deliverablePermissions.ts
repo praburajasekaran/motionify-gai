@@ -312,6 +312,22 @@ export function canDeleteDeliverable(
 }
 
 /**
+ * Check if user can delete a task
+ * Only Admin and PM can delete tasks
+ */
+export function canDeleteTask(user: User): boolean {
+  return user.role === 'super_admin' || user.role === 'project_manager';
+}
+
+/**
+ * Check if user can create a task
+ * All authenticated users can create tasks (clients with restricted fields)
+ */
+export function canCreateTask(user: User): boolean {
+  return true;
+}
+
+/**
  * Check if user can view beta files
  * Beta files are watermarked versions shown to clients for approval
  */
@@ -378,7 +394,7 @@ export function canEditTask(user: User, task?: Task): boolean {
  * Get user-friendly reason why action is not permitted
  */
 export function getPermissionDeniedReason(
-  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task',
+  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task',
   user: User,
   deliverable?: Deliverable,
   project?: Project
@@ -450,6 +466,15 @@ export function getPermissionDeniedReason(
         return 'You can only edit tasks assigned to you';
       }
       return 'Clients cannot edit tasks';
+
+    case 'delete_task':
+      if (user.role === 'super_admin' || user.role === 'project_manager') {
+        return 'You have permission to delete this task';
+      }
+      return 'Only admins and project managers can delete tasks';
+
+    case 'create_task':
+      return 'All authenticated users can create tasks';
 
     default:
       return 'Permission denied';

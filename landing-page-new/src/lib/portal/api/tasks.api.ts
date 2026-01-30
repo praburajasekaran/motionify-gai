@@ -1,4 +1,5 @@
 import { Task, Comment } from '../types';
+import { apiFetch } from '../../api-client';
 
 const API_BASE = '/.netlify/functions';
 
@@ -47,18 +48,28 @@ export async function createTask(taskData: {
   project_id: string;
   title: string;
   description: string;
-  visible_to_client: boolean;
+  visible_to_client?: boolean;
   deliverable_id?: string;
   assignee_id?: string;
   deadline?: string;
   delivery?: string;
   status?: string;
 }): Promise<Task> {
-  const response = await fetch(`${API_BASE}/tasks`, {
+  // Transform snake_case to camelCase for API schema
+  const apiPayload: Record<string, unknown> = {
+    projectId: taskData.project_id,
+    title: taskData.title,
+  };
+
+  if (taskData.description) apiPayload.description = taskData.description;
+  if (taskData.assignee_id) apiPayload.assignedTo = taskData.assignee_id;
+  if (taskData.deadline) apiPayload.dueDate = taskData.deadline;
+  if (taskData.status) apiPayload.status = taskData.status;
+  if (taskData.visible_to_client !== undefined) apiPayload.visible_to_client = taskData.visible_to_client;
+
+  const response = await apiFetch('/tasks', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(taskData),
+    body: JSON.stringify(apiPayload),
   });
 
   if (!response.ok) {

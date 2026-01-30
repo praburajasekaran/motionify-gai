@@ -4,7 +4,7 @@ import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
     Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
-    Bell, BellOff, Settings, Share2, CreditCard
+    Bell, BellOff, Settings, Share2, CreditCard, Trash2
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
@@ -16,14 +16,14 @@ import { analyzeProjectRisk } from '../services/geminiService';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
-import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
+import { canEditTask, canDeleteTask, canCreateTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
 import { InviteModal } from '../components/team/InviteModal';
 import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { ProjectFile } from '../types';
-import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
 import { fetchActivities, createActivity, Activity as ApiActivity } from '../services/activityApi';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
@@ -391,17 +391,19 @@ export const ProjectDetail = () => {
     const handleAddTask = async () => {
         if (!newTaskInput.trim() || !project) return;
 
+        const userIsClient = user && isClient(user);
+
         try {
-            // Parse natural language input
-            const parsed = parseTaskInput(newTaskInput, project.team);
+            // Parse natural language input (clients don't get assignee parsing)
+            const parsed = parseTaskInput(newTaskInput, userIsClient ? [] : project.team);
 
             const newTask = await createTask({
                 project_id: project.id,
                 title: parsed.title,
                 description: parsed.title, // Use title as description for now
-                visible_to_client: false,
+                visible_to_client: userIsClient ? true : false,
                 status: 'pending',
-                assignee_id: parsed.assigneeId,
+                assignee_id: userIsClient ? undefined : parsed.assigneeId,
                 deadline: parsed.deadline
             });
 
@@ -507,6 +509,29 @@ export const ProjectDetail = () => {
             addToast({
                 title: 'Error',
                 description: 'Failed to update task. Please try again.',
+                variant: 'destructive'
+            });
+        }
+    };
+
+    const handleDeleteTask = async (taskId: string) => {
+        if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await deleteTask(taskId);
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+            addToast({
+                title: 'Task Deleted',
+                description: 'Task has been deleted successfully',
+                variant: 'success'
+            });
+        } catch (err) {
+            console.error('Failed to delete task:', err);
+            addToast({
+                title: 'Error',
+                description: 'Failed to delete task. Please try again.',
                 variant: 'destructive'
             });
         }
@@ -1155,6 +1180,18 @@ export const ProjectDetail = () => {
                                                             <Edit2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                     )}
+
+                                                    {user && canDeleteTask(user) && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleDeleteTask(task.id)}
+                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                            title="Delete task"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                             {/* Meta row: assignee, time, creator, deadline */}
@@ -1244,8 +1281,8 @@ export const ProjectDetail = () => {
                             )}
                         </div>
 
-                        {/* Add Task Form - Only visible to Motionify team (not clients) */}
-                        {user && !isClient(user) && project && (
+                        {/* Add Task Form - Visible to users with create permission */}
+                        {user && canCreateTask(user) && project && (
                             <TaskCreateForm
                                 projectId={project.id}
                                 teamMembers={project.team || []}
