@@ -280,6 +280,7 @@ function ClientDashboard({ userName, userId }: { userName: string; userId?: stri
             const config = CLIENT_STATUS_CONFIG[inquiry.status] || CLIENT_STATUS_CONFIG.new;
             const StatusIcon = config.icon;
             const isProposalReady = inquiry.status === 'proposal_sent' && inquiry.proposalId;
+            const isProjectStarted = inquiry.status === 'converted' && inquiry.convertedToProjectId;
             const cardContent = (
               <div className="flex items-start gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ring-1 ${STATUS_BG_COLORS[config.color]}`}>
@@ -313,6 +314,18 @@ function ClientDashboard({ userName, userId }: { userName: string; userId?: stri
                 >
                   {cardContent}
                 </a>
+              );
+            }
+            // Project detail is within the React Router SPA, so use <Link>
+            if (isProjectStarted) {
+              return (
+                <Link
+                  key={inquiry.id}
+                  to={`/projects/${inquiry.convertedToProjectId}/1`}
+                  className="block bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all"
+                >
+                  {cardContent}
+                </Link>
               );
             }
             return (
