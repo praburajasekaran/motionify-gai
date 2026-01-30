@@ -33,6 +33,7 @@ export interface Proposal {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded: number;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -59,9 +60,10 @@ export async function getProposals(): Promise<Proposal[]> {
       balanceAmount: proposal.balance_amount,
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
+      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
       editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string' 
-        ? JSON.parse(proposal.deliverables) 
+      deliverables: typeof proposal.deliverables === 'string'
+        ? JSON.parse(proposal.deliverables)
         : proposal.deliverables,
     }));
   } catch (error) {
@@ -91,9 +93,10 @@ export async function getProposalById(id: string): Promise<Proposal | null> {
       balanceAmount: proposal.balance_amount,
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
+      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
       editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string' 
-        ? JSON.parse(proposal.deliverables) 
+      deliverables: typeof proposal.deliverables === 'string'
+        ? JSON.parse(proposal.deliverables)
         : proposal.deliverables,
     };
   } catch (error) {
@@ -122,9 +125,10 @@ export async function getProposalsByInquiryId(inquiryId: string): Promise<Propos
       balanceAmount: proposal.balance_amount,
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
+      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
       editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string' 
-        ? JSON.parse(proposal.deliverables) 
+      deliverables: typeof proposal.deliverables === 'string'
+        ? JSON.parse(proposal.deliverables)
         : proposal.deliverables,
     }));
   } catch (error) {
@@ -142,6 +146,7 @@ export async function createProposal(data: {
   advancePercentage: number;
   advanceAmount: number;
   balanceAmount: number;
+  revisionsIncluded?: number;
 }): Promise<Proposal> {
   if (!data.inquiryId || data.inquiryId.trim() === '') {
     throw new Error('Inquiry ID is required');
@@ -190,9 +195,10 @@ export async function createProposal(data: {
     balanceAmount: result.balance_amount,
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
+    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
     editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string' 
-      ? JSON.parse(result.deliverables) 
+    deliverables: typeof result.deliverables === 'string'
+      ? JSON.parse(result.deliverables)
       : result.deliverables,
   };
 }
@@ -209,6 +215,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
   if (updates.balanceAmount !== undefined) snakeCaseUpdates.balance_amount = updates.balanceAmount;
   if (updates.status !== undefined) snakeCaseUpdates.status = updates.status;
   if (updates.feedback !== undefined) snakeCaseUpdates.feedback = updates.feedback;
+  if (updates.revisionsIncluded !== undefined) snakeCaseUpdates.revisions_included = updates.revisionsIncluded;
 
   const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
     method: 'PUT',
@@ -234,9 +241,10 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
     balanceAmount: result.balance_amount,
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
+    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
     editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string' 
-      ? JSON.parse(result.deliverables) 
+    deliverables: typeof result.deliverables === 'string'
+      ? JSON.parse(result.deliverables)
       : result.deliverables,
   };
 }
@@ -272,9 +280,10 @@ export async function updateProposalStatus(
     balanceAmount: result.balance_amount,
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
+    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
     editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string' 
-      ? JSON.parse(result.deliverables) 
+    deliverables: typeof result.deliverables === 'string'
+      ? JSON.parse(result.deliverables)
       : result.deliverables,
   };
 }
