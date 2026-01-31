@@ -1183,7 +1183,7 @@ export const ProjectDetail = () => {
                                                         </Button>
                                                     )}
 
-                                                    {user && canDeleteTask(user) && (
+                                                    {user && canDeleteTask(user, task) && (
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
