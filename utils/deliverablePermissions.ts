@@ -315,8 +315,17 @@ export function canDeleteDeliverable(
  * Check if user can delete a task
  * Only Admin and PM can delete tasks
  */
-export function canDeleteTask(user: User): boolean {
-  return user.role === 'super_admin' || user.role === 'project_manager';
+export function canDeleteTask(user: User, task?: Task): boolean {
+  if (user.role === 'super_admin' || user.role === 'project_manager') {
+    return true;
+  }
+
+  // Any user can delete tasks they created
+  if (task?.createdBy && task.createdBy === user.id) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
