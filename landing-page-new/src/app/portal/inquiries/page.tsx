@@ -44,7 +44,7 @@ const clientFriendlyStatusLabels: Record<string, string> = {
   project_setup: 'Project Starting',
   payment_pending: 'Payment Due',
   paid: 'Paid',
-  converted: 'Active Project',
+  converted: 'Project Started',
   rejected: 'Declined',
   archived: 'Archived',
   // Proposal statuses

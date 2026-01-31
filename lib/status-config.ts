@@ -1,4 +1,5 @@
 import { Clock, CheckCircle2, XCircle, MessageSquare, type LucideIcon } from 'lucide-react';
+import type { InquiryStatus } from './inquiries';
 
 export type ProposalStatus = 'sent' | 'accepted' | 'rejected' | 'changes_requested';
 
@@ -59,3 +60,24 @@ export function getStatusLabel(status: ProposalStatus, role: 'admin' | 'client')
 export function getStatusConfig(status: ProposalStatus): StatusConfig {
   return STATUS_CONFIG[status];
 }
+
+// --- Inquiry Status Config ---
+
+interface InquiryStatusConfig {
+  adminLabel: string;
+  clientLabel: string;
+}
+
+export const INQUIRY_STATUS_CONFIG: Record<InquiryStatus, InquiryStatusConfig> = {
+  new:             { adminLabel: 'New',              clientLabel: 'Submitted' },
+  reviewing:       { adminLabel: 'Reviewing',        clientLabel: 'Under Review' },
+  proposal_sent:   { adminLabel: 'Proposal Sent',    clientLabel: 'Proposal Received' },
+  negotiating:     { adminLabel: 'Negotiating',      clientLabel: 'In Discussion' },
+  accepted:        { adminLabel: 'Accepted',         clientLabel: 'Accepted' },
+  project_setup:   { adminLabel: 'Setting Up',       clientLabel: 'Project Starting' },
+  payment_pending: { adminLabel: 'Payment Pending',  clientLabel: 'Payment Due' },
+  paid:            { adminLabel: 'Paid',             clientLabel: 'Paid' },
+  converted:       { adminLabel: 'Converted',        clientLabel: 'Project Started' },
+  rejected:        { adminLabel: 'Rejected',         clientLabel: 'Declined' },
+  archived:        { adminLabel: 'Archived',         clientLabel: 'Archived' },
+};

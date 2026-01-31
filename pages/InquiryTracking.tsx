@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInquiryByNumber, type Inquiry, type InquiryStatus } from '../lib/inquiries';
+import { INQUIRY_STATUS_CONFIG } from '../lib/status-config';
 import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, CheckCircle2, Clock, Send, Package } from 'lucide-react';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
@@ -17,19 +18,6 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Under Review',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'In Discussion',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up Your Project',
-  payment_pending: 'Payment Pending',
-  paid: 'Payment Received',
-  converted: 'Project Created',
-  rejected: 'Declined',
-  archived: 'Archived',
-};
 
 const STATUS_DESCRIPTIONS: Record<InquiryStatus, string> = {
   new: 'Your inquiry has been received and is awaiting review by our team.',
@@ -148,7 +136,7 @@ export function InquiryTracking() {
               {inquiry.inquiryNumber}
             </code>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-              {STATUS_LABELS[inquiry.status]}
+              {INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel}
             </span>
           </div>
           <p className="text-white/60">
@@ -169,7 +157,7 @@ export function InquiryTracking() {
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">{STATUS_LABELS[inquiry.status]}</h3>
+              <h3 className="text-lg font-semibold mb-2">{INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel}</h3>
               <p className="text-white/70 text-sm">{STATUS_DESCRIPTIONS[inquiry.status]}</p>
               <p className="text-white/40 text-xs mt-2">
                 Last updated: {formatDate(inquiry.updatedAt)}

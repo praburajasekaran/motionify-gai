@@ -34,13 +34,13 @@ import { TermsBanner } from '../components/project/TermsBanner';
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
 // This enables first-person ("you sent") vs third-person ("Alice sent") phrasing
-function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean): string {
+function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean, isClientUser?: boolean): string {
     const me = !!isCurrentUser;
     switch (type) {
         // Proposal lifecycle
         case 'PROPOSAL_SENT':              return me ? 'sent a proposal'              : 'sent a proposal';
         case 'PROPOSAL_ACCEPTED':          return me ? 'accepted the proposal'        : 'accepted the proposal';
-        case 'PROPOSAL_REJECTED':          return me ? 'rejected the proposal'        : 'rejected the proposal';
+        case 'PROPOSAL_REJECTED':          return isClientUser ? 'declined the proposal' : 'rejected the proposal';
         case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on'         : 'requested changes on';
         // Tasks
         case 'TASK_CREATED':        return me ? 'created task'                          : 'created task';
@@ -283,7 +283,7 @@ export const ProjectDetail = () => {
                         id: a.id,
                         userId: a.userId,
                         userName: a.userName,
-                        action: formatActivityAction(a.type, a.details, isCurrentUser),
+                        action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
                         target: formatActivityTarget(a.type, a.details, a.targetUserName),
                         timestamp: new Date(a.timestamp).toISOString(),
                     };

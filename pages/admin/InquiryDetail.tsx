@@ -6,6 +6,7 @@ import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, Chec
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { encodeBase64 } from '../../utils/encoding';
+import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -21,19 +22,6 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Reviewing',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'Negotiating',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up',
-  payment_pending: 'Payment Pending',
-  paid: 'Paid',
-  converted: 'Converted',
-  rejected: 'Rejected',
-  archived: 'Archived',
-};
 
 export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -213,7 +201,7 @@ export function InquiryDetail() {
                 {inquiry.inquiryNumber}
               </code>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                {STATUS_LABELS[inquiry.status]}
+                {isClient ? INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel : INQUIRY_STATUS_CONFIG[inquiry.status].adminLabel}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -388,7 +376,7 @@ export function InquiryDetail() {
                     <div className="w-px h-full bg-border mt-2" />
                   </div>
                   <div className="pb-6">
-                    <p className="text-card-foreground font-medium mb-1">Proposal Sent</p>
+                    <p className="text-card-foreground font-medium mb-1">{isClient ? 'Proposal Received' : 'Proposal Sent'}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(inquiry.updatedAt)}</p>
                   </div>
                 </div>
@@ -416,7 +404,7 @@ export function InquiryDetail() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-card-foreground font-medium mb-1">Converted to Project</p>
+                    <p className="text-card-foreground font-medium mb-1">{isClient ? 'Project Started' : 'Converted to Project'}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(inquiry.convertedAt)}</p>
                   </div>
                 </div>

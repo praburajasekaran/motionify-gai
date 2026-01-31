@@ -4,6 +4,7 @@ import { getInquiries, getInquiriesByClientUserId, getInquiryStats, type Inquiry
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
+import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { NewInquiryModal } from '../../components/admin/NewInquiryModal';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -22,33 +23,6 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Reviewing',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'Negotiating',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up',
-  payment_pending: 'Payment Pending',
-  paid: 'Paid',
-  converted: 'Converted',
-  rejected: 'Rejected',
-  archived: 'Archived',
-};
-
-const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'Submitted',
-  reviewing: 'Under Review',
-  proposal_sent: 'Proposal Received',
-  negotiating: 'In Discussion',
-  accepted: 'Accepted',
-  project_setup: 'Project Starting',
-  payment_pending: 'Payment Due',
-  paid: 'Paid',
-  converted: 'Project Started',
-  rejected: 'Declined',
-  archived: 'Archived',
-};
 
 interface StatCardProps {
   label: string;
@@ -297,10 +271,10 @@ export function InquiryDashboard() {
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
-                {Object.entries(isClient(user) ? CLIENT_STATUS_LABELS : STATUS_LABELS)
+                {Object.entries(INQUIRY_STATUS_CONFIG)
                   .filter(([key]) => !['archived', 'project_setup', 'payment_pending', 'paid'].includes(key))
-                  .map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  .map(([value, config]) => (
+                    <option key={value} value={value}>{isClient(user) ? config.clientLabel : config.adminLabel}</option>
                   ))
                 }
               </select>
@@ -349,7 +323,7 @@ export function InquiryDashboard() {
                             {inquiry.inquiryNumber}
                           </code>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                            {isClient(user) ? CLIENT_STATUS_LABELS[inquiry.status] : STATUS_LABELS[inquiry.status]}
+                            {isClient(user) ? INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel : INQUIRY_STATUS_CONFIG[inquiry.status].adminLabel}
                           </span>
                         </div>
                     
