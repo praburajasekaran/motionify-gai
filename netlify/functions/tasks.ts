@@ -558,33 +558,44 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Only Motionify team can edit tasks (not clients)
+      // Permission check: Clients can only edit tasks they created
       const userRole = auth?.user?.role;
       const clientRoles = ['client', 'client_primary', 'client_team'];
+      const isClientRole = userRole && clientRoles.includes(userRole);
 
-      if (userRole && clientRoles.includes(userRole)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Only Motionify team can edit tasks',
-            code: 'PERMISSION_DENIED'
-          }),
-        };
+      if (isClientRole) {
+        const taskCreatorCheck = await client.query(
+          'SELECT created_by FROM tasks WHERE id = $1',
+          [taskId]
+        );
+        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth.user.id) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({
+              error: 'You can only edit tasks you created',
+              code: 'PERMISSION_DENIED'
+            }),
+          };
+        }
       }
 
       const validation = validateRequest(event.body, SCHEMAS.task.update, origin);
       if (!validation.success) return validation.response;
       const updates = validation.data;
 
-      const allowedFields = [
-        'title',
-        'description',
-        'status', // maps to 'stage' in DB
-        'visibleToClient', // maps to 'is_client_visible' in DB
-        'assignedTo', // maps to 'assigned_to' in DB
-        'dueDate', // maps to 'due_date' in DB
-      ];
+      // Clients can only update a subset of fields on their own tasks
+      const clientAllowedFields = ['title', 'description', 'status', 'dueDate'];
+      const allowedFields = isClientRole
+        ? clientAllowedFields
+        : [
+            'title',
+            'description',
+            'status', // maps to 'stage' in DB
+            'visibleToClient', // maps to 'is_client_visible' in DB
+            'assignedTo', // maps to 'assigned_to' in DB
+            'dueDate', // maps to 'due_date' in DB
+          ];
 
       // Validate status transition if status is being updated
       if (updates.status) {

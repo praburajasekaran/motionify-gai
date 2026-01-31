@@ -366,8 +366,8 @@ export function canCommentOnDeliverable(
 /**
  * Check if user can edit a task
  * Super Admin and Project Manager can edit any task
- * Team Member can only edit tasks assigned to them
- * Client cannot edit tasks
+ * Team Member can edit tasks assigned to them or tasks they created
+ * Any user can edit tasks they created
  */
 export function canEditTask(user: User, task?: Task): boolean {
   // Admin and PM can always edit
@@ -375,17 +375,19 @@ export function canEditTask(user: User, task?: Task): boolean {
     return true;
   }
 
-  // Team member can only edit if assigned
+  // Team member can edit if assigned
   if (user.role === 'team_member') {
     if (!task) return false;
-    // Check single assignee
     if (task.assignee?.id === user.id) return true;
-    // Check multiple assignees
     if (task.assignees?.some(assignee => assignee.id === user.id)) return true;
-    return false;
+    // Fall through to creator check below
   }
 
-  // Clients cannot edit tasks
+  // Any user can edit tasks they created
+  if (task?.createdBy && task.createdBy === user.id) {
+    return true;
+  }
+
   return false;
 }
 

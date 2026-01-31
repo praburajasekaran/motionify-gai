@@ -48,6 +48,7 @@ function TaskFormFields({
   handleTitleKeyDown,
   showStatusField,
   showVisibilityField,
+  showAssigneeField = true,
 }: {
   title: string;
   setTitle: (v: string) => void;
@@ -72,6 +73,7 @@ function TaskFormFields({
   handleTitleKeyDown: (e: React.KeyboardEvent) => void;
   showStatusField: boolean;
   showVisibilityField: boolean;
+  showAssigneeField?: boolean;
 }) {
   const isClientRole = userRole === 'client';
   const selectStyle = {
@@ -152,30 +154,32 @@ function TaskFormFields({
 
       {/* Assignee & Due Date row */}
       <div className="flex gap-4">
-        <div className="flex-1">
-          <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
-            Assignee
-          </label>
-          <select
-            value={assigneeId}
-            onChange={(e) => setAssigneeId(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
-            style={selectStyle}
-          >
-            <option value="">Unassigned</option>
-            <option value={userId}>
-              {teamMembers.find(m => m.id === userId)?.name || userName} (me)
-            </option>
-            {!isClientRole && teamMembers
-              .filter(m => m.id !== userId)
-              .map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-          </select>
-        </div>
+        {showAssigneeField && (
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+              Assignee
+            </label>
+            <select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
+              style={selectStyle}
+            >
+              <option value="">Unassigned</option>
+              <option value={userId}>
+                {teamMembers.find(m => m.id === userId)?.name || userName} (me)
+              </option>
+              {!isClientRole && teamMembers
+                .filter(m => m.id !== userId)
+                .map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex-1">
           <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
@@ -383,6 +387,7 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
   userName,
   userRole,
 }) => {
+  const isClientEditor = userRole === 'client';
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [status, setStatus] = useState(task.status as string);
@@ -465,7 +470,8 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
           handleKeyDown={handleKeyDown}
           handleTitleKeyDown={handleTitleKeyDown}
           showStatusField={true}
-          showVisibilityField={true}
+          showVisibilityField={!isClientEditor}
+          showAssigneeField={!isClientEditor}
         />
 
         {/* Actions */}
