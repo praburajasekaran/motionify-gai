@@ -939,7 +939,7 @@ export function ProposalDetail() {
               {proposal.rejectedAt && (
                 <div className="flex items-center gap-2 text-sm text-red-600">
                   <XCircle className="w-4 h-4" />
-                  <span>Rejected on {formatDate(proposal.rejectedAt)}</span>
+                  <span>{isClient ? 'Declined' : 'Rejected'} on {formatDate(proposal.rejectedAt)}</span>
                 </div>
               )}
               {proposal.feedback && (

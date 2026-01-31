@@ -179,7 +179,7 @@ function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, on
 const CLIENT_STATUS_CONFIG: Record<InquiryStatus, { label: string; color: string; icon: typeof Send; description: string }> = {
   new: { label: 'Submitted', color: 'blue', icon: Send, description: 'Your inquiry has been received. Our team will review it shortly.' },
   reviewing: { label: 'Under Review', color: 'amber', icon: Clock, description: 'Our team is reviewing your requirements and preparing a proposal.' },
-  proposal_sent: { label: 'Proposal Ready', color: 'purple', icon: FileText, description: 'We\'ve prepared a proposal for you. Click to view it.' },
+  proposal_sent: { label: 'Proposal Received', color: 'purple', icon: FileText, description: 'We\'ve prepared a proposal for you. Click to view it.' },
   negotiating: { label: 'In Discussion', color: 'amber', icon: MessageSquare, description: 'We\'re discussing the details of your project.' },
   accepted: { label: 'Accepted', color: 'green', icon: CheckCircle, description: 'Your proposal has been accepted. We\'re preparing your project.' },
   project_setup: { label: 'Setting Up', color: 'blue', icon: FolderPlus, description: 'Your project is being set up. You\'ll have access soon.' },
