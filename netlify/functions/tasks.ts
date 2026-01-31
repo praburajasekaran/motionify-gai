@@ -449,8 +449,11 @@ export const handler = compose(
       const isClientUser = userRole && clientRoles.includes(userRole);
 
       // For client users: strip restricted fields and force visible_to_client = true
+      // Clients can only assign tasks to themselves (self-assignment)
       if (isClientUser) {
-        taskData.assignedTo = undefined;
+        if (taskData.assignedTo && taskData.assignedTo !== auth?.user?.id) {
+          taskData.assignedTo = undefined;
+        }
         taskData.priority = undefined;
       }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Task } from '@/types';
+import { User, Task, UserRole } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Button, Input } from '@/components/ui/design-system';
 
@@ -10,6 +10,8 @@ interface TaskEditModalProps {
   onSave: (taskId: string, updatedTask: Partial<Task>) => void;
   teamMembers: User[];
   userId?: string;
+  userName?: string;
+  userRole?: UserRole;
   isLoading?: boolean;
 }
 
@@ -20,6 +22,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onSave,
   teamMembers,
   userId,
+  userName,
+  userRole,
   isLoading = false,
 }) => {
   const [title, setTitle] = useState('');
@@ -134,12 +138,12 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 style={selectStyle}
               >
                 <option value="">Unassigned</option>
-                {userId && teamMembers.some(m => m.id === userId) && (
+                {userId && (
                   <option value={userId}>
-                    {teamMembers.find(m => m.id === userId)!.name} (me)
+                    {teamMembers.find(m => m.id === userId)?.name || userName || 'Me'} (me)
                   </option>
                 )}
-                {teamMembers
+                {userRole !== 'client' && teamMembers
                   .filter(m => m.id !== userId)
                   .map((member) => (
                     <option key={member.id} value={member.id}>

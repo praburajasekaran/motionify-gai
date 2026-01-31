@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PlusCircle, X } from 'lucide-react';
-import { User, Task } from '@/types';
-import { Button, Input } from '@/components/ui/design-system';
+import { User, Task, UserRole } from '@/types';
+import { Button, Input, Textarea } from '@/components/ui/design-system';
 import { createTask } from '@/services/taskApi';
 
 interface TaskCreateFormProps {
@@ -9,6 +9,8 @@ interface TaskCreateFormProps {
   teamMembers: User[];
   onTaskCreated: (task: Task) => void;
   userId: string;
+  userName: string;
+  userRole: UserRole;
 }
 
 interface TaskEditFormProps {
@@ -17,6 +19,8 @@ interface TaskEditFormProps {
   onSave: (taskId: string, updates: Partial<Task>) => void;
   onCancel: () => void;
   userId: string;
+  userName: string;
+  userRole: UserRole;
 }
 
 // Shared form fields rendered by both create and edit
@@ -35,6 +39,8 @@ function TaskFormFields({
   setVisibleToClient,
   teamMembers,
   userId,
+  userName,
+  userRole,
   error,
   setError,
   titleRef,
@@ -57,6 +63,8 @@ function TaskFormFields({
   setVisibleToClient?: (v: boolean) => void;
   teamMembers: User[];
   userId: string;
+  userName: string;
+  userRole: UserRole;
   error: string;
   setError: (v: string) => void;
   titleRef: React.RefObject<HTMLInputElement | null>;
@@ -65,6 +73,7 @@ function TaskFormFields({
   showStatusField: boolean;
   showVisibilityField: boolean;
 }) {
+  const isClientRole = userRole === 'client';
   const selectStyle = {
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat' as const,
@@ -108,14 +117,14 @@ function TaskFormFields({
         <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
           Description
         </label>
-        <textarea
+        <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Optional description..."
           rows={2}
           maxLength={5000}
-          className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all resize-none"
+          className="resize-none"
         />
       </div>
 
@@ -151,19 +160,14 @@ function TaskFormFields({
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={!teamMembers.length}
-            className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
             style={selectStyle}
           >
-            <option value="">
-              {teamMembers.length ? 'Unassigned' : 'No team members'}
+            <option value="">Unassigned</option>
+            <option value={userId}>
+              {teamMembers.find(m => m.id === userId)?.name || userName} (me)
             </option>
-            {teamMembers.some(m => m.id === userId) && (
-              <option value={userId}>
-                {teamMembers.find(m => m.id === userId)!.name} (me)
-              </option>
-            )}
-            {teamMembers
+            {!isClientRole && teamMembers
               .filter(m => m.id !== userId)
               .map((member) => (
                 <option key={member.id} value={member.id}>
@@ -230,6 +234,8 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
   teamMembers,
   onTaskCreated,
   userId,
+  userName,
+  userRole,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
@@ -333,6 +339,8 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           setDueDate={setDueDate}
           teamMembers={teamMembers}
           userId={userId}
+          userName={userName}
+          userRole={userRole}
           error={error}
           setError={setError}
           titleRef={titleRef}
@@ -372,6 +380,8 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
   onSave,
   onCancel,
   userId,
+  userName,
+  userRole,
 }) => {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -447,6 +457,8 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
           setVisibleToClient={setVisibleToClient}
           teamMembers={teamMembers}
           userId={userId}
+          userName={userName}
+          userRole={userRole}
           error={error}
           setError={setError}
           titleRef={titleRef}

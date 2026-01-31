@@ -1101,6 +1101,8 @@ export const ProjectDetail = () => {
                                                 onSave={handleSaveTask}
                                                 onCancel={() => setEditingTask(null)}
                                                 userId={user.id}
+                                                userName={user.name}
+                                                userRole={user.role}
                                             />
                                         );
                                     }
@@ -1295,6 +1297,8 @@ export const ProjectDetail = () => {
                                     });
                                 }}
                                 userId={user.id}
+                                userName={user.name}
+                                userRole={user.role}
                             />
                         )}
 

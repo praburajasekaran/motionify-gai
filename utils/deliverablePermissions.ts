@@ -389,6 +389,15 @@ export function canEditTask(user: User, task?: Task): boolean {
   return false;
 }
 
+/**
+ * Check if user can assign a task to a specific target user
+ * All roles can assign to self. Only admin/PM can assign to others.
+ */
+export function canAssignTask(user: User, targetUserId: string): boolean {
+  if (targetUserId === user.id) return true;
+  return user.role === 'super_admin' || user.role === 'project_manager';
+}
+
 
 /**
  * Get user-friendly reason why action is not permitted
