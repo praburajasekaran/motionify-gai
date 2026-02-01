@@ -8,6 +8,26 @@ import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  projectId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, project_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [params.type, params.userId, params.userName,
+       params.projectId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -225,6 +245,29 @@ export const handler = compose(
 
 
         const newComment = mapCommentFromDB(result.rows[0]);
+
+        // Log comment activity
+        try {
+          const taskForComment = await client.query(
+            'SELECT title, project_id FROM tasks WHERE id = $1',
+            [taskId]
+          );
+          if (taskForComment.rows.length > 0) {
+            await logActivity(client, {
+              type: 'COMMENT_ADDED',
+              userId: commentData.user_id,
+              userName: commentData.user_name,
+              projectId: taskForComment.rows[0].project_id,
+              details: {
+                taskId,
+                taskTitle: taskForComment.rows[0].title,
+                commentPreview: commentData.content.substring(0, 100),
+              },
+            });
+          }
+        } catch (err) {
+          console.error('Failed to log comment activity:', err);
+        }
 
         // --------------------------------------------------------------------
         // Handle @mentions and send notifications
@@ -497,6 +540,15 @@ export const handler = compose(
       const newTask = mapTaskFromDB(result.rows[0]);
       newTask.comments = [];
 
+      // Log activity
+      await logActivity(client, {
+        type: 'TASK_CREATED',
+        userId: auth?.user?.userId || createdBy,
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: taskData.projectId,
+        details: { taskId: newTask.id, taskTitle: newTask.title },
+      });
+
       // Send email notification if assigned
       if (taskData.assignedTo) {
         try {
@@ -597,6 +649,7 @@ export const handler = compose(
           ];
 
       // Validate status transition if status is being updated
+      let previousStatus: string | null = null;
       if (updates.status) {
         const currentTaskResult = await client.query(
           `SELECT stage, project_id, title FROM tasks WHERE id = $1`,
@@ -612,6 +665,7 @@ export const handler = compose(
         }
 
         const oldStatus = currentTaskResult.rows[0].stage;
+        previousStatus = oldStatus;
 
         // Skip validation if status isn't actually changing
         if (oldStatus !== updates.status && !isValidTransition(oldStatus, updates.status)) {
@@ -748,6 +802,26 @@ export const handler = compose(
 
       const updatedTask = mapTaskFromDB(result.rows[0]);
 
+      // Log activity for task update
+      if (updates.status && previousStatus !== updates.status) {
+        const activityType = updates.status === 'revision_requested' ? 'REVISION_REQUESTED' : 'TASK_STATUS_CHANGED';
+        await logActivity(client, {
+          type: activityType,
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: updatedTask.projectId,
+          details: { taskId: updatedTask.id, taskTitle: updatedTask.title, oldStatus: previousStatus || '', newStatus: updates.status },
+        });
+      } else if (!updates.status) {
+        await logActivity(client, {
+          type: 'TASK_UPDATED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: updatedTask.projectId,
+          details: { taskId: updatedTask.id, taskTitle: updatedTask.title },
+        });
+      }
+
       // Check for assignment change and send email
       if (updates.assignedTo) {
         try {
@@ -843,6 +917,13 @@ export const handler = compose(
         }
       }
 
+      // Pre-fetch task info for activity logging
+      const taskInfoResult = await client.query(
+        'SELECT title, project_id FROM tasks WHERE id = $1',
+        [taskId]
+      );
+      const taskInfo = taskInfoResult.rows[0];
+
       const result = await client.query(
         `DELETE FROM tasks WHERE id = $1 RETURNING id`,
         [taskId]
@@ -854,6 +935,17 @@ export const handler = compose(
           headers,
           body: JSON.stringify({ error: 'Task not found' }),
         };
+      }
+
+      // Log activity
+      if (taskInfo) {
+        await logActivity(client, {
+          type: 'TASK_DELETED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: taskInfo.project_id,
+          details: { taskId, taskTitle: taskInfo.title },
+        });
       }
 
       return {

@@ -6,6 +6,26 @@ import { z } from 'zod';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  projectId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, project_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [params.type, params.userId, params.userName,
+       params.projectId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -142,6 +162,15 @@ export const handler = compose(
         ]
       );
 
+      // Log activity
+      await logActivity(client, {
+        type: 'FILE_UPLOADED',
+        userId: userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: data.projectId,
+        details: { fileName: data.fileName, fileType: data.fileType || '', fileSize: data.fileSize || 0 },
+      });
+
       return {
         statusCode: 201,
         headers,
@@ -166,7 +195,7 @@ export const handler = compose(
 
       // Only allow the uploader, admins, or PMs to delete
       const fileResult = await client.query(
-        `SELECT uploaded_by FROM project_files WHERE id = $1`,
+        `SELECT uploaded_by, file_name, project_id FROM project_files WHERE id = $1`,
         [fileId]
       );
 
@@ -188,7 +217,17 @@ export const handler = compose(
         };
       }
 
+      const deletedFile = fileResult.rows[0];
       await client.query(`DELETE FROM project_files WHERE id = $1`, [fileId]);
+
+      // Log activity
+      await logActivity(client, {
+        type: 'FILE_DELETED',
+        userId: userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: deletedFile.project_id,
+        details: { fileName: deletedFile.file_name },
+      });
 
       return {
         statusCode: 200,

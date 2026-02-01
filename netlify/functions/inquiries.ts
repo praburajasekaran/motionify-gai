@@ -8,6 +8,26 @@ import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  inquiryId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, inquiry_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [params.type, params.userId, params.userName,
+       params.inquiryId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 interface QuizSelections {
   niche?: string | null;
   audience?: string | null;
@@ -212,6 +232,20 @@ export const handler = compose(
           ]
         );
 
+        // Log activity - try to get admin auth context
+        let adminAuth: CookieAuthResult | null = null;
+        try {
+          adminAuth = await requireAuthFromCookie(event);
+        } catch { /* public form, no auth */ }
+
+        await logActivity(client, {
+          type: 'INQUIRY_CREATED',
+          userId: adminAuth?.user?.userId || '',
+          userName: adminAuth?.user?.fullName || payload.contactName,
+          inquiryId: result.rows[0].id,
+          details: { inquiryNumber, source: 'admin' },
+        });
+
         return {
           statusCode: 201,
           headers,
@@ -252,6 +286,15 @@ export const handler = compose(
           ]
         );
 
+        // Log activity for public form
+        await logActivity(client, {
+          type: 'INQUIRY_CREATED',
+          userId: '',
+          userName: payload.name,
+          inquiryId: result.rows[0].id,
+          details: { inquiryNumber, source: 'public' },
+        });
+
         return {
           statusCode: 201,
           headers,
@@ -274,6 +317,17 @@ export const handler = compose(
       }
 
       const updates = JSON.parse(event.body || '{}');
+
+      // Pre-fetch old status for activity logging
+      const isInquiryNumberLookup = id.startsWith('INQ-');
+      const lookupCol = isInquiryNumberLookup ? 'inquiry_number' : 'id';
+      const oldInquiryResult = await client.query(
+        `SELECT status, inquiry_number, id FROM inquiries WHERE ${lookupCol} = $1`,
+        [id]
+      );
+      const oldInquiryStatus = oldInquiryResult.rows[0]?.status;
+      const inquiryNumber = oldInquiryResult.rows[0]?.inquiry_number;
+      const inquiryUuid = oldInquiryResult.rows[0]?.id;
 
       const allowedFields = [
         'status', 'contact_name', 'contact_email', 'company_name',
@@ -323,6 +377,17 @@ export const handler = compose(
           headers,
           body: JSON.stringify({ error: 'Inquiry not found' }),
         };
+      }
+
+      // Log activity if status changed
+      if (updates.status && oldInquiryStatus !== updates.status) {
+        await logActivity(client, {
+          type: 'INQUIRY_STATUS_CHANGED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: inquiryUuid || result.rows[0].id,
+          details: { oldStatus: oldInquiryStatus || '', newStatus: updates.status, inquiryNumber: inquiryNumber || '' },
+        });
       }
 
       return {

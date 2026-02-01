@@ -7,6 +7,27 @@ import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  projectId?: string;
+  inquiryId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, project_id, inquiry_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [params.type, params.userId, params.userName,
+       params.projectId || null, params.inquiryId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -350,6 +371,16 @@ export const handler = compose(
           [assignedClientUserId, project.id, auth?.user?.userId || null]
         );
       }
+
+      // Log activity
+      await logActivity(client, {
+        type: 'PROJECT_CREATED',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: project.id,
+        inquiryId: inquiryId,
+        details: { projectNumber },
+      });
 
       // Auto-populate project team: add creator (the authenticated user)
       if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
