@@ -89,6 +89,15 @@ function formatActivityTarget(type: string, details: Record<string, string | num
     return '';
 }
 
+function getActivityTargetTab(type: string): TabName | null {
+    if (type.startsWith('TASK_') || type === 'COMMENT_ADDED' || type === 'REVISION_REQUESTED') return 'tasks';
+    if (type.startsWith('FILE_')) return 'files';
+    if (type.startsWith('DELIVERABLE_')) return 'deliverables';
+    if (type.startsWith('TEAM_')) return 'team';
+    if (type.startsWith('PAYMENT_')) return 'payments';
+    return null;
+}
+
 // --- Battery Component ---
 const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
     const remaining = Math.max(0, max - used);
@@ -276,6 +285,7 @@ export const ProjectDetail = () => {
             const isCurrentUser = !!(user && a.userId === user.id);
             return {
                 id: a.id,
+                type: a.type,
                 userId: a.userId,
                 userName: a.userName,
                 action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
@@ -940,8 +950,13 @@ export const ProjectDetail = () => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                             const isCurrentUser = user && log.userId === user.id;
                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                            const targetTab = getActivityTargetTab(log.type);
                                             return (
-                                                <div key={log.id} className="flex gap-3 pb-6 relative last:pb-0 group">
+                                                <div
+                                                    key={log.id}
+                                                    className={cn("flex gap-3 pb-6 relative last:pb-0 group", targetTab && "cursor-pointer")}
+                                                    onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                >
                                                     {i !== project.activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
                                                     )}
@@ -1309,8 +1324,13 @@ export const ProjectDetail = () => {
                                                         const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                         const isCurrentUser = user && log.userId === user.id;
                                                         const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                                        const targetTab = getActivityTargetTab(log.type);
                                                         return (
-                                                            <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+                                                            <div
+                                                                key={log.id}
+                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", targetTab && "cursor-pointer")}
+                                                                onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                            >
                                                                 {i !== 2 && (
                                                                     <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                 )}
@@ -1343,8 +1363,13 @@ export const ProjectDetail = () => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                                            const targetTab = getActivityTargetTab(log.type);
                                                             return (
-                                                                <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+                                                                <div
+                                                                    key={log.id}
+                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", targetTab && "cursor-pointer")}
+                                                                    onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                                >
                                                                     {i !== arr.length - 1 && (
                                                                         <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                     )}

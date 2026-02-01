@@ -94,6 +94,7 @@ export interface Deliverable {
 
 export interface ActivityLog {
   id: string;
+  type: string;
   userId: string;
   userName?: string;
   action: string;
