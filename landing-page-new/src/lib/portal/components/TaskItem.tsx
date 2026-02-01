@@ -13,6 +13,7 @@ import { filterUsersByMentionQuery, renderMentionedText } from '@/lib/portal/uti
 interface TaskItemProps {
   task: Task;
   onEdit: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 const usePrevious = <T,>(value: T): T | undefined => {
@@ -45,7 +46,7 @@ const statusBorderColors: Record<TaskStatus, string> = {
   [TaskStatus.COMPLETED]: 'border-l-[var(--todoist-green)]',
 };
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
+const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
   const { project, currentUser, updateTaskStatus, addComment, editComment } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
@@ -211,11 +212,19 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
     : null;
 
   const renderActions = () => {
+    const isTaskCreator = currentUser?.id === task.createdBy;
+
     if (isPrimaryContact && task.status === TaskStatus.AWAITING_APPROVAL) {
       return (
         <div className="flex space-x-2">
           <Button onClick={handleApprove} variant="primary">Approve</Button>
           <Button onClick={handleRequestRevision} variant="secondary">Request Revision</Button>
+          {isTaskCreator && (
+            <>
+              <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
+              {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
+            </>
+          )}
         </div>
       );
     }
@@ -224,6 +233,16 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit }) => {
       return (
         <div className="flex space-x-2">
           <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
+          {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
+        </div>
+      );
+    }
+
+    if (isTaskCreator) {
+      return (
+        <div className="flex space-x-2">
+          <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
+          {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
         </div>
       );
     }

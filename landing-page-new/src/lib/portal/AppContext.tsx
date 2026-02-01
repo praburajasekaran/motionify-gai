@@ -27,7 +27,8 @@ import {
   fetchTasksForProject,
   createTask,
   updateTaskAPI,
-  addTaskComment
+  addTaskComment,
+  deleteTaskAPI
 } from './api/tasks.api';
 import { fetchProjects } from './api/projects.api';
 import { createActivity } from './api/activities.api';
@@ -62,6 +63,7 @@ export const AppContext = React.createContext<{
   addTeamMember: (name: string, email: string) => void;
   removeClientTeamMember: (userId: string) => void;
   addTask: (taskData: AddTaskData) => void;
+  deleteTask: (taskId: string) => void;
   updateTask: (taskId: string, taskData: UpdateTaskData) => void;
   addRevision: (projectId: string) => void;
   markNotificationsAsRead: () => void;
@@ -89,6 +91,7 @@ export const AppContext = React.createContext<{
   addTeamMember: () => { },
   removeClientTeamMember: () => { },
   addTask: () => { },
+  deleteTask: () => { },
   updateTask: () => { },
   addRevision: () => { },
   markNotificationsAsRead: () => { },
@@ -438,6 +441,23 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       }
     } catch (error) {
       console.error('Failed to add task:', error);
+    }
+  }, [projectId, currentUser]);
+
+  const deleteTask = useCallback(async (taskId: string) => {
+    if (!projectId || !currentUser) return;
+
+    try {
+      await deleteTaskAPI(taskId);
+
+      setProjectsData(prevData =>
+        prevData.map(p => {
+          if (p.id !== projectId) return p;
+          return { ...p, tasks: p.tasks.filter(t => t.id !== taskId) };
+        })
+      );
+    } catch (error) {
+      console.error('Failed to delete task:', error);
     }
   }, [projectId, currentUser]);
 
@@ -836,6 +856,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     addTeamMember,
     removeClientTeamMember,
     addTask,
+    deleteTask,
     updateTask,
     addRevision,
     markNotificationsAsRead,
@@ -852,7 +873,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     addFiles,
     isLoading: isAuthLoading,
     logout: authLogout,
-  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, deleteFile, addFiles, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
+  }), [selectedProject, projectsData, currentUser, notifications, allMotionifyUsers, updateTaskStatus, requestRevision, addTeamMember, removeClientTeamMember, addTask, deleteTask, updateTask, addRevision, markNotificationsAsRead, markNotificationAsRead, addComment, editComment, addFile, updateMotionifyTeam, renameFile, deleteFile, addFiles, addFileComment, updateProjectStatus, addProject, isAuthLoading, authLogout]);
 
 
   return (

@@ -459,12 +459,11 @@ export const handler = compose(
 
       const rawBody = JSON.parse(event.body || '{}');
 
-      // Get a user ID for created_by (use first user or create a default)
-      let createdBy = rawBody.created_by;
+      // Use the authenticated user as the task creator, fall back to request body or first DB user
+      let createdBy = auth?.user?.userId || rawBody.created_by;
       if (createdBy && !isValidUUID(createdBy)) {
         createdBy = null;
       }
-
       if (!createdBy) {
         const userResult = await client.query('SELECT id FROM users LIMIT 1');
         createdBy = userResult.rows[0]?.id;
@@ -568,7 +567,7 @@ export const handler = compose(
           'SELECT created_by FROM tasks WHERE id = $1',
           [taskId]
         );
-        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth.user.id) {
+        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth?.user?.userId) {
           return {
             statusCode: 403,
             headers,
@@ -816,19 +815,32 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Only Admin and PM can delete tasks
+      // Permission check: Admin/PM can delete any task; creators can delete their own
       const deleteUserRole = auth?.user?.role;
       const deleteAllowedRoles = ['super_admin', 'project_manager'];
 
       if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Only admins and project managers can delete tasks',
-            code: 'PERMISSION_DENIED'
-          }),
-        };
+        const taskOwnerCheck = await client.query(
+          'SELECT created_by FROM tasks WHERE id = $1',
+          [taskId]
+        );
+        if (!taskOwnerCheck.rows.length) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Task not found' }),
+          };
+        }
+        if (taskOwnerCheck.rows[0].created_by !== auth?.user?.userId) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({
+              error: 'You can only delete tasks you created',
+              code: 'PERMISSION_DENIED'
+            }),
+          };
+        }
       }
 
       const result = await client.query(
@@ -845,9 +857,9 @@ export const handler = compose(
       }
 
       return {
-        statusCode: 204,
+        statusCode: 200,
         headers,
-        body: '',
+        body: JSON.stringify({ success: true }),
       };
     }
 

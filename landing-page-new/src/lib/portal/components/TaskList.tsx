@@ -23,7 +23,7 @@ const statusOrder: TaskStatus[] = [
 ];
 
 const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListProps) => {
-  const { project, currentUser, addTask } = useContext(AppContext);
+  const { project, currentUser, addTask, deleteTask } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterMyTasks, setFilterMyTasks] = useState(false);
@@ -125,6 +125,13 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      return;
+    }
+    deleteTask(taskId);
   };
 
   const handleCloseModal = () => {
@@ -235,7 +242,7 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
                   <h3 className="text-xl font-semibold text-white mb-4 px-2">{group.name}</h3>
                   <div className="space-y-4">
                     {sortedTasks.map(task => (
-                      <TaskItem key={task.id} task={task} onEdit={handleEditTask} />
+                      <TaskItem key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} />
                     ))}
                   </div>
                 </div>
