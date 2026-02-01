@@ -1,7 +1,7 @@
 
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { isClient } from './lib/permissions';
@@ -96,7 +96,7 @@ function App() {
           <ErrorBoundary onReset={reset}>
             <AuthProvider>
               <NotificationProvider>
-                <HashRouter>
+                <BrowserRouter>
                   <Routes>
                     {/* Public routes - no layout */}
                     <Route path="/landing" element={<LandingPage />} />
@@ -130,7 +130,7 @@ function App() {
                     {/* Catch-all redirect */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
-                </HashRouter>
+                </BrowserRouter>
               </NotificationProvider>
             </AuthProvider>
           </ErrorBoundary>
