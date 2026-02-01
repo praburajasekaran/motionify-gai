@@ -7,7 +7,7 @@ import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useAuthContext } from '../contexts/AuthContext';
-import { isSuperAdmin, getRoleLabel } from '../lib/permissions';
+import { isSuperAdmin, isClient, getRoleLabel } from '../lib/permissions';
 import { NotificationBell } from './notifications';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
@@ -89,7 +89,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [commandOpen, setCommandOpen] = useState(false);
 
   const commandItems = [
-    { label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' },
+    ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' }] : []),
     { label: 'Go to Projects', icon: FolderKanban, action: () => navigate('/projects'), group: 'Navigation' },
     { label: 'Go to Settings', icon: Settings, action: () => navigate('/settings'), group: 'Navigation' },
     { label: 'Create New Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
@@ -108,13 +108,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       category: 'ui',
     },
     // Navigation - Go to pages (g + letter)
-    {
+    ...(!isClient(user) ? [{
       key: 'd',
       sequence: 'g d',
       description: 'Go to Dashboard',
       action: () => navigate('/'),
-      category: 'navigation',
-    },
+      category: 'navigation' as const,
+    }] : []),
     {
       key: 'p',
       sequence: 'g p',
@@ -234,12 +234,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 Workspace
               </div>
               <div className="space-y-1">
-                <SidebarItem
-                  icon={LayoutDashboard}
-                  label="Dashboard"
-                  path="/"
-                  active={location.pathname === '/'}
-                />
+                {!isClient(user) && (
+                  <SidebarItem
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    path="/"
+                    active={location.pathname === '/'}
+                  />
+                )}
                 <SidebarItem
                   icon={FolderKanban}
                   label="Projects"
