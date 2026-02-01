@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { fetchActivities } from '../../services/activityApi';
 
 const POLL_INTERVAL = 30_000; // 30 seconds
@@ -13,6 +13,7 @@ export function useActivities(projectId: string | undefined) {
     queryKey: activityKeys.list(projectId!),
     queryFn: () => fetchActivities({ projectId: projectId!, limit: 50 }),
     enabled: !!projectId,
+    placeholderData: keepPreviousData,
     refetchInterval: POLL_INTERVAL,
     refetchIntervalInBackground: false,
     throwOnError: false,

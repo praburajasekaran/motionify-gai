@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
@@ -277,11 +277,9 @@ export const ProjectDetail = () => {
     }, [id]);
 
 
-    // Transform activities from hook into activityLog shape and merge into project
-    useEffect(() => {
-        if (!project?.id || activities.length === 0) return;
-
-        const activityLog = activities.map((a: ApiActivity) => {
+    // Derive activityLog directly from the query data (avoids flash on refetch)
+    const activityLog = useMemo(() => {
+        return activities.map((a: ApiActivity) => {
             const isCurrentUser = !!(user && a.userId === user.id);
             return {
                 id: a.id,
@@ -293,8 +291,6 @@ export const ProjectDetail = () => {
                 timestamp: new Date(a.timestamp).toISOString(),
             };
         });
-
-        setProject(prev => prev ? { ...prev, activityLog } : prev);
     }, [activities, user?.id]);
 
     // Load deliverables from API (for Overview tab consistency with Deliverables tab)
@@ -946,7 +942,7 @@ export const ProjectDetail = () => {
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     <div className="space-y-0">
-                                        {project.activityLog.length > 0 ? project.activityLog.map((log, i) => {
+                                        {activityLog.length > 0 ? activityLog.map((log, i) => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                             const isCurrentUser = user && log.userId === user.id;
                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
@@ -957,7 +953,7 @@ export const ProjectDetail = () => {
                                                     className={cn("flex gap-3 pb-6 relative last:pb-0 group", targetTab && "cursor-pointer")}
                                                     onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
                                                 >
-                                                    {i !== project.activityLog.length - 1 && (
+                                                    {i !== activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
                                                     )}
                                                     <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
@@ -1308,7 +1304,7 @@ export const ProjectDetail = () => {
                         {/* Activity Stream */}
                         <Card className="border-zinc-200/60 shadow-sm">
                             <CardContent className="p-6">
-                                {project.activityLog.length > 0 ? (
+                                {activityLog.length > 0 ? (
                                     <>
                                         {/* Group by date */}
                                         <div className="space-y-8">
@@ -1320,7 +1316,7 @@ export const ProjectDetail = () => {
                                                     <div className="h-px flex-1 bg-zinc-200" />
                                                 </h4>
                                                 <div className="space-y-0">
-                                                    {project.activityLog.slice(0, 3).map((log, i) => {
+                                                    {activityLog.slice(0, 3).map((log, i) => {
                                                         const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                         const isCurrentUser = user && log.userId === user.id;
                                                         const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
@@ -1351,7 +1347,7 @@ export const ProjectDetail = () => {
                                             </div>
 
                                             {/* Earlier Section */}
-                                            {project.activityLog.length > 3 && (
+                                            {activityLog.length > 3 && (
                                                 <div>
                                                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
                                                         <div className="h-px flex-1 bg-zinc-200" />
@@ -1359,7 +1355,7 @@ export const ProjectDetail = () => {
                                                         <div className="h-px flex-1 bg-zinc-200" />
                                                     </h4>
                                                     <div className="space-y-0">
-                                                        {project.activityLog.slice(3).map((log, i, arr) => {
+                                                        {activityLog.slice(3).map((log, i, arr) => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
