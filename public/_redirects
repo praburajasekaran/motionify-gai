@@ -1,3 +1,2 @@
-# Netlify redirects for Next.js app
-# The @netlify/plugin-nextjs handles all routing automatically
-# This file is kept for any custom redirects you may want to add in the future
+# Handle React Client-Side Routing
+/*  /index.html  200
