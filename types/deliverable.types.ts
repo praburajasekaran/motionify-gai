@@ -43,7 +43,7 @@ export type IssueCategory = 'color' | 'audio' | 'timing' | 'editing' | 'content'
 /**
  * Deliverable types
  */
-export type DeliverableType = 'Video' | 'Image' | 'Document';
+export type DeliverableType = 'Video' | 'Image' | 'Document' | null;
 
 // ============================================================================
 // FEEDBACK & COMMENTS

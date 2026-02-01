@@ -27,6 +27,26 @@ const DEFAULT_REVISION_QUOTA: RevisionQuota = {
   used: 0,
   remaining: 3,
 };
+
+// Map deliverable status to progress percentage
+const STATUS_PROGRESS_MAP: Record<string, number> = {
+  pending: 0,
+  in_progress: 25,
+  beta_ready: 50,
+  awaiting_approval: 60,
+  revision_requested: 40,
+  approved: 75,
+  payment_pending: 85,
+  final_delivered: 100,
+};
+
+// Derive deliverable type from dominant file category
+function deriveTypeFromFileCategory(category: string | null | undefined): 'Video' | 'Image' | 'Document' | null {
+  if (category === 'video') return 'Video';
+  if (category === 'image') return 'Image';
+  if (category === 'document' || category === 'script') return 'Document';
+  return null;
+}
 import { Project, User } from '@/types';
 import {
   canApproveDeliverable,
@@ -422,8 +442,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
           projectId: d.project_id,
           title: d.name || d.title || 'Untitled',
           description: d.description || '',
-          type: d.type || 'Video', // Default to Video if missing
+          type: deriveTypeFromFileCategory(d.dominant_file_category),
           status: d.status || 'pending',
+          progress: STATUS_PROGRESS_MAP[d.status] ?? 0,
           dueDate: d.estimated_completion_week
             ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
             : new Date().toISOString(),
@@ -655,8 +676,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         projectId: d.project_id,
         title: d.name || d.title || 'Untitled',
         description: d.description || '',
-        type: d.type || 'Video', // Default to Video if missing
+        type: deriveTypeFromFileCategory(d.dominant_file_category),
         status: d.status || 'pending',
+        progress: STATUS_PROGRESS_MAP[d.status] ?? 0,
         dueDate: d.estimated_completion_week
           ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
           : new Date().toISOString(),
