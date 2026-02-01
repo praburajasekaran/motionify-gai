@@ -459,12 +459,11 @@ export const handler = compose(
 
       const rawBody = JSON.parse(event.body || '{}');
 
-      // Get a user ID for created_by (use first user or create a default)
-      let createdBy = rawBody.created_by;
+      // Use the authenticated user as the task creator, fall back to request body or first DB user
+      let createdBy = auth?.user?.userId || rawBody.created_by;
       if (createdBy && !isValidUUID(createdBy)) {
         createdBy = null;
       }
-
       if (!createdBy) {
         const userResult = await client.query('SELECT id FROM users LIMIT 1');
         createdBy = userResult.rows[0]?.id;
@@ -568,7 +567,7 @@ export const handler = compose(
           'SELECT created_by FROM tasks WHERE id = $1',
           [taskId]
         );
-        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth.user.id) {
+        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth?.user?.userId) {
           return {
             statusCode: 403,
             headers,
@@ -832,7 +831,7 @@ export const handler = compose(
             body: JSON.stringify({ error: 'Task not found' }),
           };
         }
-        if (taskOwnerCheck.rows[0].created_by !== auth.user.id) {
+        if (taskOwnerCheck.rows[0].created_by !== auth?.user?.userId) {
           return {
             statusCode: 403,
             headers,
@@ -858,9 +857,9 @@ export const handler = compose(
       }
 
       return {
-        statusCode: 204,
+        statusCode: 200,
         headers,
-        body: '',
+        body: JSON.stringify({ success: true }),
       };
     }
 
