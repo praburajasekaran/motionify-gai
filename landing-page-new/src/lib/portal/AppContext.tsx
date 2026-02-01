@@ -31,6 +31,7 @@ import {
   deleteTaskAPI
 } from './api/tasks.api';
 import { fetchProjects } from './api/projects.api';
+import { fetchActivities } from './api/activities.api';
 
 type AddTaskData = {
   title: string;
