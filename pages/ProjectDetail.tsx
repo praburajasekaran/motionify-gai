@@ -22,10 +22,10 @@ import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
-import { ProjectFile } from '../types';
 import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
 import { createActivity, Activity as ApiActivity } from '../services/activityApi';
-import { useTasks, useActivities, useInvalidateActivities, taskKeys } from '../shared/hooks';
+import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
+import { createProjectFile } from '../services/projectFileApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
@@ -172,7 +172,6 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
     const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
     // Real deliverables from API (not mock data)
     const [deliverables, setDeliverables] = useState<Array<{
@@ -195,6 +194,8 @@ export const ProjectDetail = () => {
     const queryClient = useQueryClient();
     const { data: tasks = [] } = useTasks(project?.id);
     const { data: activities = [] } = useActivities(project?.id);
+    const { data: projectFiles = [] } = useProjectFiles(project?.id);
+    const deleteProjectFileMutation = useDeleteProjectFile(project?.id);
     const invalidateActivities = useInvalidateActivities();
     const invalidateTasks = () => {
         if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
@@ -258,11 +259,6 @@ export const ProjectDetail = () => {
         fetchProject();
     }, [id]);
 
-    // Set project files when project loads (no files API endpoint)
-    useEffect(() => {
-        if (!project?.id) return;
-        setProjectFiles(project.files || []);
-    }, [project?.id]);
 
     // Transform activities from hook into activityLog shape and merge into project
     useEffect(() => {
@@ -638,32 +634,47 @@ export const ProjectDetail = () => {
         // navigate to tasks tab? No, let's just show toast.
     };
 
-    // File Upload Handler
-    const handleFileUploadComplete = (key: string, file: File) => {
-        const newFile: ProjectFile = {
-            id: `file-${Date.now()}`,
-            projectId: project.id,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            key: key,
-            uploadedBy: user || TEAM_MEMBERS[0],
-            uploadedAt: new Date().toISOString()
-        };
+    // File Upload Handler — persist metadata to DB, then invalidate cache
+    const handleFileUploadComplete = async (key: string, file: File) => {
+        try {
+            await createProjectFile({
+                projectId: project.id,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                r2Key: key,
+            });
 
-        setProjectFiles(prev => [newFile, ...prev]);
+            // Invalidate to trigger refetch
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', 'list', project.id] });
 
-        addToast({
-            title: "File Uploaded",
-            description: `${file.name} has been uploaded successfully.`,
-            variant: "success"
-        });
+            addToast({
+                title: "File Uploaded",
+                description: `${file.name} has been uploaded successfully.`,
+                variant: "success"
+            });
+        } catch (error) {
+            console.error('Failed to save file record:', error);
+            addToast({
+                title: "Error",
+                description: "File uploaded to storage but failed to save record.",
+                variant: "destructive"
+            });
+        }
     };
 
-    // File Delete Handler (confirmation handled in FileList)
-    const handleFileDelete = (fileId: string) => {
-        // In a real app, calls storageService.deleteFile(key)
-        setProjectFiles(prev => prev.filter(f => f.id !== fileId));
+    // File Delete Handler
+    const handleFileDelete = async (fileId: string) => {
+        try {
+            await deleteProjectFileMutation.mutateAsync(fileId);
+        } catch (error) {
+            console.error('Failed to delete file:', error);
+            addToast({
+                title: "Error",
+                description: "Failed to delete file.",
+                variant: "destructive"
+            });
+        }
     };
 
 

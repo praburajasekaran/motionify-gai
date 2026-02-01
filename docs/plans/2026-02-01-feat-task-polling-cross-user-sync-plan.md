@@ -56,7 +56,7 @@ Similarly, create a `useProjectFiles` hook for file polling and refetch activiti
 - [x] New tasks created by one user appear for other users within ~10 seconds
 - [x] Deleted tasks disappear from other users' views within ~10 seconds
 - [x] Task status/field updates reflect for other users within ~10 seconds
-- [ ] File uploads appear for other users within ~10 seconds (skipped — no files API endpoint; files are local state)
+- [x] File uploads appear for other users within ~10 seconds
 - [x] Activity log refreshes for other users within ~30 seconds
 - [x] Polling pauses when browser tab is hidden (performance)
 - [x] Polling resumes immediately when tab regains focus (with instant refetch)

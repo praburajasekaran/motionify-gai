@@ -241,11 +241,13 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
   userName,
   userRole,
 }) => {
+  const isClientRole = userRole === 'client';
   const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [visibleToClient, setVisibleToClient] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -261,6 +263,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
     setDescription('');
     setAssigneeId('');
     setDueDate('');
+    setVisibleToClient(false);
     setError('');
   };
 
@@ -284,7 +287,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
         project_id: projectId,
         title: trimmedTitle,
         description: description.trim() || undefined,
-        visible_to_client: false,
+        visible_to_client: isClientRole ? true : visibleToClient,
         status: 'pending',
         assignee_id: assigneeId || undefined,
         deadline: dueDate || undefined,
@@ -341,6 +344,8 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           setAssigneeId={setAssigneeId}
           dueDate={dueDate}
           setDueDate={setDueDate}
+          visibleToClient={visibleToClient}
+          setVisibleToClient={setVisibleToClient}
           teamMembers={teamMembers}
           userId={userId}
           userName={userName}
@@ -351,7 +356,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           handleKeyDown={handleKeyDown}
           handleTitleKeyDown={handleTitleKeyDown}
           showStatusField={false}
-          showVisibilityField={false}
+          showVisibilityField={!isClientRole}
         />
 
         {/* Actions */}
