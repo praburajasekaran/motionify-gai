@@ -23,7 +23,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
-import { createActivity, Activity as ApiActivity } from '../services/activityApi';
+import { Activity as ApiActivity } from '../services/activityApi';
 import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -399,17 +399,8 @@ export const ProjectDetail = () => {
             invalidateTasks();
             setNewTaskInput('');
 
-            // Persist activity to database
-            if (user) {
-                createActivity({
-                    type: 'TASK_CREATED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId: newTask.id, taskTitle: newTask.title },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Created',
@@ -463,22 +454,8 @@ export const ProjectDetail = () => {
             invalidateTasks();
             setEditingTask(null);
 
-            // Persist activity to database
-            if (user && project) {
-                const activityType = updates.status ? 'TASK_STATUS_CHANGED' : 'TASK_UPDATED';
-                createActivity({
-                    type: activityType,
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: {
-                        taskId,
-                        taskTitle: updatedTask.title || updates.title || '',
-                        ...(updates.status && { newStatus: updates.status }),
-                    },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Updated',
@@ -503,6 +480,7 @@ export const ProjectDetail = () => {
         try {
             await deleteTask(taskId);
             invalidateTasks();
+            if (project) invalidateActivities(project.id);
             addToast({
                 title: 'Task Deleted',
                 description: 'Task has been deleted successfully',
@@ -582,18 +560,8 @@ export const ProjectDetail = () => {
             // Clear input
             setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
 
-            // Persist activity to database
-            if (project) {
-                const task = tasks.find(t => t.id === taskId);
-                createActivity({
-                    type: 'COMMENT_ADDED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId, taskTitle: task?.title || '' },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Comment Added',
@@ -655,6 +623,7 @@ export const ProjectDetail = () => {
 
             // Invalidate to trigger refetch
             queryClient.invalidateQueries({ queryKey: ['projectFiles', 'list', project.id] });
+            invalidateActivities(project.id);
 
             addToast({
                 title: "File Uploaded",
@@ -675,6 +644,7 @@ export const ProjectDetail = () => {
     const handleFileDelete = async (fileId: string) => {
         try {
             await deleteProjectFileMutation.mutateAsync(fileId);
+            if (project) invalidateActivities(project.id);
         } catch (error) {
             console.error('Failed to delete file:', error);
             addToast({
