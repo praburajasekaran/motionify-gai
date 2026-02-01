@@ -22,9 +22,11 @@ import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
-import { ProjectFile } from '../types';
-import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
-import { fetchActivities, createActivity, Activity as ApiActivity } from '../services/activityApi';
+import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { createActivity, Activity as ApiActivity } from '../services/activityApi';
+import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
+import { createProjectFile } from '../services/projectFileApi';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
@@ -170,8 +172,6 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
-    const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
     const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
     // Real deliverables from API (not mock data)
     const [deliverables, setDeliverables] = useState<Array<{
@@ -188,8 +188,18 @@ export const ProjectDetail = () => {
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
-    const [activityRefreshKey, setActivityRefreshKey] = useState(0);
     const { addToast } = useToast();
+
+    // Polling hooks for cross-user sync
+    const queryClient = useQueryClient();
+    const { data: tasks = [] } = useTasks(project?.id);
+    const { data: activities = [] } = useActivities(project?.id);
+    const { data: projectFiles = [] } = useProjectFiles(project?.id);
+    const deleteProjectFileMutation = useDeleteProjectFile(project?.id);
+    const invalidateActivities = useInvalidateActivities();
+    const invalidateTasks = () => {
+        if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
+    };
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
@@ -249,54 +259,25 @@ export const ProjectDetail = () => {
         fetchProject();
     }, [id]);
 
-    // Load tasks from backend when project loads
+
+    // Transform activities from hook into activityLog shape and merge into project
     useEffect(() => {
-        if (!project?.id) return;
+        if (!project?.id || activities.length === 0) return;
 
-        const loadTasks = async () => {
-            try {
-                const backendTasks = await fetchTasksForProject(project.id, true);
-                setTasks(backendTasks);
-            } catch (error) {
-                console.error('Failed to load tasks:', error);
-                // Fallback to mock data if API fails
-                setTasks(project.tasks || []);
-            }
-        };
+        const activityLog = activities.map((a: ApiActivity) => {
+            const isCurrentUser = !!(user && a.userId === user.id);
+            return {
+                id: a.id,
+                userId: a.userId,
+                userName: a.userName,
+                action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
+                target: formatActivityTarget(a.type, a.details, a.targetUserName),
+                timestamp: new Date(a.timestamp).toISOString(),
+            };
+        });
 
-        loadTasks();
-        setProjectFiles(project.files || []);
-    }, [project?.id]);
-
-    // Load activities from API when project loads
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadActivities = async () => {
-            try {
-                const activities = await fetchActivities({ projectId: project.id, limit: 50 });
-
-                // Map API Activity to ActivityLog shape used by the template
-                const activityLog = activities.map((a: ApiActivity) => {
-                    const isCurrentUser = !!(user && a.userId === user.id);
-                    return {
-                        id: a.id,
-                        userId: a.userId,
-                        userName: a.userName,
-                        action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
-                        target: formatActivityTarget(a.type, a.details, a.targetUserName),
-                        timestamp: new Date(a.timestamp).toISOString(),
-                    };
-                });
-
-                setProject(prev => prev ? { ...prev, activityLog } : prev);
-            } catch (error) {
-                console.error('Failed to load activities:', error);
-            }
-        };
-
-        loadActivities();
-    }, [project?.id, user?.id, activityRefreshKey]);
+        setProject(prev => prev ? { ...prev, activityLog } : prev);
+    }, [activities, user?.id]);
 
     // Load deliverables from API (for Overview tab consistency with Deliverables tab)
     useEffect(() => {
@@ -407,7 +388,7 @@ export const ProjectDetail = () => {
                 deadline: parsed.deadline
             });
 
-            setTasks([...tasks, newTask]);
+            invalidateTasks();
             setNewTaskInput('');
 
             // Persist activity to database
@@ -418,7 +399,7 @@ export const ProjectDetail = () => {
                     userName: user.name,
                     projectId: project.id,
                     details: { taskId: newTask.id, taskTitle: newTask.title },
-                }).then(() => setActivityRefreshKey(k => k + 1))
+                }).then(() => invalidateActivities(project.id))
                   .catch(err => console.error('Failed to log activity:', err));
             }
 
@@ -471,15 +452,7 @@ export const ProjectDetail = () => {
                 visibleToClient: updates.visibleToClient
             });
 
-            // Merge API response with local assignee data (API returns assignedTo UUID, not User object)
-            setTasks(prevTasks =>
-                prevTasks.map(t => t.id === taskId ? {
-                    ...t,
-                    ...updatedTask,
-                    assignee: updates.assignee,
-                    assigneeId: updates.assigneeId ?? updates.assignee?.id,
-                } : t)
-            );
+            invalidateTasks();
             setEditingTask(null);
 
             // Persist activity to database
@@ -495,7 +468,7 @@ export const ProjectDetail = () => {
                         taskTitle: updatedTask.title || updates.title || '',
                         ...(updates.status && { newStatus: updates.status }),
                     },
-                }).then(() => setActivityRefreshKey(k => k + 1))
+                }).then(() => invalidateActivities(project.id))
                   .catch(err => console.error('Failed to log activity:', err));
             }
 
@@ -521,7 +494,7 @@ export const ProjectDetail = () => {
 
         try {
             await deleteTask(taskId);
-            setTasks(prev => prev.filter(t => t.id !== taskId));
+            invalidateTasks();
             addToast({
                 title: 'Task Deleted',
                 description: 'Task has been deleted successfully',
@@ -541,18 +514,6 @@ export const ProjectDetail = () => {
         if (!user) return;
 
         const isFollowing = task.followers?.includes(user.id);
-        const originalTasks = [...tasks];
-
-        // Optimistic update
-        setTasks(prev => prev.map(t => {
-            if (t.id !== task.id) return t;
-
-            const newFollowers = isFollowing
-                ? (t.followers || []).filter(id => id !== user.id)
-                : [...(t.followers || []), user.id];
-
-            return { ...t, followers: newFollowers };
-        }));
 
         try {
             if (isFollowing) {
@@ -571,10 +532,9 @@ export const ProjectDetail = () => {
                     icon: <Bell className="h-4 w-4 text-emerald-500" />
                 });
             }
+            invalidateTasks();
         } catch (error) {
             console.error('Failed to toggle follow state:', error);
-            // Revert on error
-            setTasks(originalTasks);
             addToast({
                 title: "Error",
                 description: "Failed to update follow status",
@@ -609,22 +569,7 @@ export const ProjectDetail = () => {
                 content: commentText
             });
 
-            // Optimistic update
-            const newComment = {
-                id: `comment-${Date.now()}`,
-                userId: user.id,
-                userName: user.name,
-                content: commentText,
-                timestamp: Date.now()
-            };
-
-            setTasks(prevTasks =>
-                prevTasks.map(t =>
-                    t.id === taskId
-                        ? { ...t, comments: [...(t.comments || []), newComment] }
-                        : t
-                )
-            );
+            invalidateTasks();
 
             // Clear input
             setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
@@ -638,7 +583,7 @@ export const ProjectDetail = () => {
                     userName: user.name,
                     projectId: project.id,
                     details: { taskId, taskTitle: task?.title || '' },
-                }).then(() => setActivityRefreshKey(k => k + 1))
+                }).then(() => invalidateActivities(project.id))
                   .catch(err => console.error('Failed to log activity:', err));
             }
 
@@ -659,14 +604,7 @@ export const ProjectDetail = () => {
 
     // Delete a comment
     const handleDeleteComment = async (taskId: string, commentId: string) => {
-        setTasks(prevTasks =>
-            prevTasks.map(t =>
-                t.id === taskId
-                    ? { ...t, comments: (t.comments || []).filter(c => c.id !== commentId) }
-                    : t
-            )
-        );
-
+        invalidateTasks();
         addToast({
             title: 'Comment Deleted',
             description: 'The comment has been removed.',
@@ -684,7 +622,7 @@ export const ProjectDetail = () => {
             assignee: assignee
         };
 
-        setTasks(prev => [...prev, newTask]);
+        invalidateTasks();
 
         addToast({
             title: "Task Created",
@@ -696,32 +634,47 @@ export const ProjectDetail = () => {
         // navigate to tasks tab? No, let's just show toast.
     };
 
-    // File Upload Handler
-    const handleFileUploadComplete = (key: string, file: File) => {
-        const newFile: ProjectFile = {
-            id: `file-${Date.now()}`,
-            projectId: project.id,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            key: key,
-            uploadedBy: user || TEAM_MEMBERS[0],
-            uploadedAt: new Date().toISOString()
-        };
+    // File Upload Handler — persist metadata to DB, then invalidate cache
+    const handleFileUploadComplete = async (key: string, file: File) => {
+        try {
+            await createProjectFile({
+                projectId: project.id,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                r2Key: key,
+            });
 
-        setProjectFiles(prev => [newFile, ...prev]);
+            // Invalidate to trigger refetch
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', 'list', project.id] });
 
-        addToast({
-            title: "File Uploaded",
-            description: `${file.name} has been uploaded successfully.`,
-            variant: "success"
-        });
+            addToast({
+                title: "File Uploaded",
+                description: `${file.name} has been uploaded successfully.`,
+                variant: "success"
+            });
+        } catch (error) {
+            console.error('Failed to save file record:', error);
+            addToast({
+                title: "Error",
+                description: "File uploaded to storage but failed to save record.",
+                variant: "destructive"
+            });
+        }
     };
 
-    // File Delete Handler (confirmation handled in FileList)
-    const handleFileDelete = (fileId: string) => {
-        // In a real app, calls storageService.deleteFile(key)
-        setProjectFiles(prev => prev.filter(f => f.id !== fileId));
+    // File Delete Handler
+    const handleFileDelete = async (fileId: string) => {
+        try {
+            await deleteProjectFileMutation.mutateAsync(fileId);
+        } catch (error) {
+            console.error('Failed to delete file:', error);
+            addToast({
+                title: "Error",
+                description: "Failed to delete file.",
+                variant: "destructive"
+            });
+        }
     };
 
 
@@ -1288,8 +1241,8 @@ export const ProjectDetail = () => {
                             <TaskCreateForm
                                 projectId={project.id}
                                 teamMembers={project.team || []}
-                                onTaskCreated={(task) => {
-                                    setTasks(prev => [...prev, task]);
+                                onTaskCreated={() => {
+                                    invalidateTasks();
                                     addToast({
                                         title: 'Task Created',
                                         description: 'Task has been created successfully',
