@@ -10,7 +10,6 @@ import Card from '@/lib/portal/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FileText } from 'lucide-react';
-import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 const statusColors: Record<string, string> = {
   new: 'bg-blue-100 text-blue-800',
@@ -136,40 +135,6 @@ export default function InquiriesPage() {
     try {
       setActionLoading(prev => ({ ...prev, [`${inquiryId}-${action}`]: true }));
       await updateProposalStatus(proposalId, action, feedback);
-
-      // Log activity based on action
-      const inquiry = inquiries.find(i => i.id === inquiryId);
-      if (inquiry && currentUser) {
-        const activityParams = {
-          inquiryId,
-          proposalId,
-          proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-          senderId: 'motionify-admin',
-          senderName: 'Motionify',
-        };
-
-        if (action === 'accepted') {
-          logProposalAccepted({
-            ...activityParams,
-            accepterId: currentUser.id,
-            accepterName: currentUser.name,
-          }).catch((err) => console.error('Failed to log activity:', err));
-        } else if (action === 'rejected') {
-          logProposalRejected({
-            ...activityParams,
-            rejecterId: currentUser.id,
-            rejecterName: currentUser.name,
-            reason: feedback,
-          }).catch((err) => console.error('Failed to log activity:', err));
-        } else if (action === 'changes_requested') {
-          logProposalChangesRequested({
-            ...activityParams,
-            requesterId: currentUser.id,
-            requesterName: currentUser.name,
-            feedback,
-          }).catch((err) => console.error('Failed to log activity:', err));
-        }
-      }
 
       await loadInquiries();
       setShowFeedbackModal(null);

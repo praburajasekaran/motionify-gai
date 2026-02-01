@@ -33,7 +33,10 @@ import {
   Loader,
   Eye,
   Clock,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  Trash2,
+  Inbox,
+  ArrowRightLeft
 } from 'lucide-react';
 import { timeAgo } from '@/lib/portal/utils/dateUtils';
 
@@ -397,6 +400,71 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       message = (
         <p>
           <span className={nameClass}>{actorName}</span> accepted the project terms.
+        </p>
+      );
+      break;
+
+    case ActivityType.TASK_DELETED:
+      icon = <Trash2 className="h-5 w-5 text-red-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> deleted task "{details.taskTitle}".
+        </p>
+      );
+      break;
+
+    case ActivityType.FILE_DELETED:
+      icon = <Trash2 className="h-5 w-5 text-red-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> deleted file "{details.fileName}".
+        </p>
+      );
+      break;
+
+    case ActivityType.DELIVERABLE_CREATED:
+      icon = <PlusCircle className="h-5 w-5 text-purple-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> created deliverable "{details.deliverableName}".
+        </p>
+      );
+      break;
+
+    case ActivityType.DELIVERABLE_DELETED:
+      icon = <Trash2 className="h-5 w-5 text-red-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> deleted deliverable "{details.deliverableName}".
+        </p>
+      );
+      break;
+
+    case ActivityType.DELIVERABLE_STATUS_CHANGED:
+      icon = <ArrowRightLeft className="h-5 w-5 text-amber-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> changed deliverable "{details.deliverableName}" status to{' '}
+          <span className={highlightClass}>{details.newStatus}</span>.
+        </p>
+      );
+      break;
+
+    case ActivityType.INQUIRY_CREATED:
+      icon = <Inbox className="h-5 w-5 text-blue-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> submitted an inquiry.
+        </p>
+      );
+      break;
+
+    case ActivityType.INQUIRY_STATUS_CHANGED:
+      icon = <ArrowRightLeft className="h-5 w-5 text-amber-400" />;
+      message = (
+        <p>
+          <span className={nameClass}>{actorName}</span> changed inquiry status to{' '}
+          <span className={highlightClass}>{details.newStatus}</span>.
         </p>
       );
       break;

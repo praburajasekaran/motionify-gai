@@ -12,10 +12,12 @@ export type ActivityType =
   | 'TASK_STATUS_CHANGED'
   | 'TASK_CREATED'
   | 'TASK_UPDATED'
+  | 'TASK_DELETED'
   | 'REVISION_REQUESTED'
   | 'COMMENT_ADDED'
   // File activities
   | 'FILE_UPLOADED'
+  | 'FILE_DELETED'
   | 'FILE_RENAMED'
   | 'FILE_DOWNLOADED'
   // Team activities
@@ -28,9 +30,15 @@ export type ActivityType =
   | 'PROPOSAL_REJECTED'
   | 'PROPOSAL_CHANGES_REQUESTED'
   // Deliverable activities
+  | 'DELIVERABLE_CREATED'
   | 'DELIVERABLE_APPROVED'
   | 'DELIVERABLE_REJECTED'
   | 'DELIVERABLE_UPLOADED'
+  | 'DELIVERABLE_DELETED'
+  | 'DELIVERABLE_STATUS_CHANGED'
+  // Inquiry activities
+  | 'INQUIRY_CREATED'
+  | 'INQUIRY_STATUS_CHANGED'
   // Payment activities
   | 'PAYMENT_RECEIVED'
   | 'PAYMENT_REMINDER_SENT'

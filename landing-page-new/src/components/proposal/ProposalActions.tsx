@@ -7,7 +7,6 @@ import { updateInquiryStatus } from '@/lib/inquiries';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { Check, X, MessageSquare, AlertTriangle, Loader2 } from 'lucide-react';
-import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 interface ProposalActionsProps {
   proposal: Proposal;
@@ -61,17 +60,6 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Advance Due:', advance.primary);
       console.log('========================================');
 
-      // Log activity: Proposal Accepted
-      logProposalAccepted({
-        accepterId: inquiry.contactEmail, // Use email as identifier since we don't have user ID on client side
-        accepterName: inquiry.contactName,
-        senderId: 'motionify-admin', // Admin who sent the proposal (we don't have this info on client side)
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-      }).catch((err) => console.error('Failed to log activity:', err));
-
       // Redirect to payment page
       router.push(`/payment/${proposal.id}`);
     } catch (error) {
@@ -114,18 +102,6 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Feedback:');
       console.log(feedback.trim());
       console.log('========================================');
-
-      // Log activity: Proposal Changes Requested
-      logProposalChangesRequested({
-        requesterId: inquiry.contactEmail,
-        requesterName: inquiry.contactName,
-        senderId: 'motionify-admin',
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-        feedback: feedback.trim(),
-      }).catch((err) => console.error('Failed to log activity:', err));
 
       // Close modal and refresh
       setShowChangesModal(false);
@@ -171,18 +147,6 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Proposal Version:', proposal.version || 1);
       console.log('Reason:', rejectReason.trim() || 'Not provided');
       console.log('========================================');
-
-      // Log activity: Proposal Rejected
-      logProposalRejected({
-        rejecterId: inquiry.contactEmail,
-        rejecterName: inquiry.contactName,
-        senderId: 'motionify-admin',
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-        reason: rejectReason.trim() || undefined,
-      }).catch((err) => console.error('Failed to log activity:', err));
 
       // Close modal and refresh
       setShowRejectModal(false);

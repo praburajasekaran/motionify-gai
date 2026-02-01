@@ -49,21 +49,29 @@ function formatActivityAction(type: string, details: Record<string, string | num
         case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
         case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
         case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
+        case 'TASK_DELETED':        return 'deleted task';
         case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
         // Files
         case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
+        case 'FILE_DELETED':   return 'deleted file';
         case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
         // Team
         case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
         case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
         // Deliverables
-        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable'  : 'uploaded deliverable';
-        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable'  : 'approved deliverable';
+        case 'DELIVERABLE_CREATED':        return 'created deliverable';
+        case 'DELIVERABLE_UPLOADED':       return me ? 'uploaded deliverable'  : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED':       return me ? 'approved deliverable'  : 'approved deliverable';
+        case 'DELIVERABLE_DELETED':        return 'deleted deliverable';
+        case 'DELIVERABLE_STATUS_CHANGED': return `changed deliverable status to ${details.newStatus || 'updated'}`;
         // Payments — the userId is the client who paid
         case 'PAYMENT_RECEIVED': {
             const label = details.paymentLabel || 'payment';
             return me ? `made ${label} of` : `received ${label} of`;
         }
+        // Inquiry
+        case 'INQUIRY_CREATED':        return 'submitted an inquiry';
+        case 'INQUIRY_STATUS_CHANGED': return `changed inquiry status to ${details.newStatus || 'updated'}`;
         // Project
         case 'PROJECT_CREATED': return 'created the project';
         case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
