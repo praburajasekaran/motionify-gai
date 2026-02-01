@@ -300,7 +300,7 @@ export const handler = compose(
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
         projectId: project_id,
-        details: { deliverableName: name },
+        details: { deliverableId, deliverableName: name },
       });
 
       return {
@@ -408,6 +408,7 @@ export const handler = compose(
           userName: auth?.user?.fullName || 'Unknown',
           projectId: deliverableProjectId,
           details: {
+            deliverableId: id,
             deliverableName: deliverableName || '',
             oldStatus: oldDeliverableStatus || '',
             newStatus: updates.status,
@@ -584,7 +585,7 @@ export const handler = compose(
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
         projectId: deliverable.project_id,
-        details: { deliverableName: deliverable.name },
+        details: { deliverableId: id, deliverableName: deliverable.name },
       });
 
       // Delete deliverable (CASCADE handles deliverable_files and revision_requests)

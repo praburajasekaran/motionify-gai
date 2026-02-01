@@ -89,12 +89,15 @@ function formatActivityTarget(type: string, details: Record<string, string | num
     return '';
 }
 
-function getActivityTargetTab(type: string): TabName | null {
-    if (type.startsWith('TASK_') || type === 'COMMENT_ADDED' || type === 'REVISION_REQUESTED') return 'tasks';
-    if (type.startsWith('FILE_')) return 'files';
-    if (type.startsWith('DELIVERABLE_')) return 'deliverables';
-    if (type.startsWith('TEAM_')) return 'team';
-    if (type.startsWith('PAYMENT_')) return 'payments';
+function getActivityLink(projectId: string, type: string, details?: Record<string, string | number>): string | null {
+    if (type.startsWith('DELIVERABLE_') && details?.deliverableId && type !== 'DELIVERABLE_DELETED') {
+        return `/projects/${projectId}/deliverables/${details.deliverableId}`;
+    }
+    if (type.startsWith('TASK_') || type === 'COMMENT_ADDED' || type === 'REVISION_REQUESTED') return `/projects/${projectId}/${TAB_INDEX_MAP.tasks}`;
+    if (type.startsWith('FILE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.files}`;
+    if (type.startsWith('DELIVERABLE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.deliverables}`;
+    if (type.startsWith('TEAM_')) return `/projects/${projectId}/${TAB_INDEX_MAP.team}`;
+    if (type.startsWith('PAYMENT_')) return `/projects/${projectId}/${TAB_INDEX_MAP.payments}`;
     return null;
 }
 
@@ -289,6 +292,7 @@ export const ProjectDetail = () => {
                 action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
                 target: formatActivityTarget(a.type, a.details, a.targetUserName),
                 timestamp: new Date(a.timestamp).toISOString(),
+                details: a.details,
             };
         });
     }, [activities, user?.id]);
@@ -946,12 +950,12 @@ export const ProjectDetail = () => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                             const isCurrentUser = user && log.userId === user.id;
                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
-                                            const targetTab = getActivityTargetTab(log.type);
+                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                             return (
                                                 <div
                                                     key={log.id}
-                                                    className={cn("flex gap-3 pb-6 relative last:pb-0 group", targetTab && "cursor-pointer")}
-                                                    onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                    className={cn("flex gap-3 pb-6 relative last:pb-0 group", activityLink && "cursor-pointer")}
+                                                    onClick={() => activityLink && navigate(activityLink)}
                                                 >
                                                     {i !== activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
@@ -1320,12 +1324,12 @@ export const ProjectDetail = () => {
                                                         const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                         const isCurrentUser = user && log.userId === user.id;
                                                         const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
-                                                        const targetTab = getActivityTargetTab(log.type);
+                                                        const activityLink = getActivityLink(project.id, log.type, log.details);
                                                         return (
                                                             <div
                                                                 key={log.id}
-                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", targetTab && "cursor-pointer")}
-                                                                onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                onClick={() => activityLink && navigate(activityLink)}
                                                             >
                                                                 {i !== 2 && (
                                                                     <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
@@ -1359,12 +1363,12 @@ export const ProjectDetail = () => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
-                                                            const targetTab = getActivityTargetTab(log.type);
+                                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                                             return (
                                                                 <div
                                                                     key={log.id}
-                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", targetTab && "cursor-pointer")}
-                                                                    onClick={() => targetTab && navigate(`/projects/${id}/${TAB_INDEX_MAP[targetTab]}`)}
+                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                    onClick={() => activityLink && navigate(activityLink)}
                                                                 >
                                                                     {i !== arr.length - 1 && (
                                                                         <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />

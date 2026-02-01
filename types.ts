@@ -100,6 +100,7 @@ export interface ActivityLog {
   action: string;
   target: string;
   timestamp: string; // ISO date string
+  details?: Record<string, string | number>;
 }
 
 export interface ProjectFile {
