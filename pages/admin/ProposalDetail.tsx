@@ -845,7 +845,7 @@ export function ProposalDetail() {
 
           {/* Pricing Breakdown */}
           {pricing && (
-            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-lg border border-violet-200`}>
+            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/40 dark:to-fuchsia-950/40 rounded-lg border border-violet-200 dark:border-violet-800/50`}>
               <h3 className="text-sm font-medium text-foreground mb-3">Payment Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
