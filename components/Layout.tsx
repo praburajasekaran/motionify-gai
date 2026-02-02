@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
@@ -17,7 +18,7 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
         "group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent",
         active
           ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-primary/50"
-          : "text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground hover:pl-5"
       )}
     >
       <div className="flex items-center gap-3">
@@ -25,7 +26,7 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
         {label}
       </div>
       {count !== undefined && (
-        <span className={cn("text-xs px-2 py-0.5 rounded-full transition-colors font-semibold", active ? "bg-primary/20 text-primary" : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200")}>
+        <span className={cn("text-xs px-2 py-0.5 rounded-full transition-colors font-semibold", active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground group-hover:bg-accent")}>
           {count}
         </span>
       )}
@@ -50,9 +51,9 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
   }
 
   return (
-    <div className="flex items-center gap-3 bg-white border border-zinc-200/80 px-3 py-1.5 rounded-lg shadow-sm">
+    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg shadow-sm">
       {/* Label */}
-      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         Revisions
       </span>
 
@@ -63,14 +64,14 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
 
       {/* Battery Icon */}
       <div className="relative flex items-center">
-        <div className="h-4 w-7 rounded-[3px] border-2 border-zinc-300 p-0.5 relative flex items-center bg-white">
+        <div className="h-4 w-7 rounded-[3px] border-2 border-border p-0.5 relative flex items-center bg-card">
           <div
             className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
             style={{ width: `${percentage}%` }}
           />
         </div>
         {/* Battery Nub */}
-        <div className="h-1.5 w-0.5 bg-zinc-300 rounded-r-[1px] absolute -right-0.5" />
+        <div className="h-1.5 w-0.5 bg-border rounded-r-[1px] absolute -right-0.5" />
 
         {/* Charging Bolt */}
         {percentage > 0 && (
@@ -85,8 +86,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthContext();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const commandItems = [
     ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' }] : []),
@@ -196,7 +201,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Accessibility: Skip to content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
       >
         Skip to content
       </a>
@@ -204,7 +209,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
       <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
 
-      <div className="h-screen w-full flex overflow-hidden bg-zinc-50 font-sans text-foreground">
+      <div className="h-screen w-full flex overflow-hidden bg-background font-sans text-foreground">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
@@ -215,13 +220,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         {/* Sidebar */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-zinc-200 transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-lg",
+          "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-card border-r border-border transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-lg",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="h-20 flex items-center px-6 shrink-0">
             <Link to="/" className="flex items-center group cursor-pointer">
               <img
-                src="/motionify-studio-dark.png"
+                src={mounted && resolvedTheme === 'dark' ? '/motionify-dark-logo.png' : '/motionify-studio-dark.png'}
                 alt="Motionify Studio"
                 className="h-16 w-auto object-contain"
               />
@@ -284,7 +289,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 )}
                 <div
                   onClick={logout}
-                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5 cursor-pointer"
+                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground hover:pl-5 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <LogOut className="h-4.5 w-4.5 transition-colors text-muted-foreground group-hover:text-foreground" />
@@ -295,19 +300,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           </div>
 
-          <div className="p-4 border-t border-zinc-100 shrink-0">
+          <div className="p-4 border-t border-border shrink-0">
             <div
               id="logout-btn"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-white to-zinc-50 border border-zinc-200/60 hover:border-zinc-300 transition-colors cursor-pointer group shadow-sm hover:shadow-md"
+              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-card to-muted border border-border hover:border-border transition-colors cursor-pointer group shadow-sm hover:shadow-md"
               onClick={logout}
               title="Logout"
             >
-              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-9 w-9 ring-2 ring-white" />
+              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-9 w-9 ring-2 ring-card" />
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-semibold truncate text-foreground">{user?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
               </div>
-              <LogOut className="h-4 w-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
+              <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
           </div>
         </aside>
@@ -316,10 +321,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 h-full relative focus:outline-none"
+          className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-background via-card to-background h-full relative focus:outline-none"
         >
           {/* Top Header */}
-          <header className="h-16 bg-white border-b border-zinc-200 z-30 shrink-0 sticky top-0 shadow-sm">
+          <header className="h-16 bg-card border-b border-border z-30 shrink-0 sticky top-0 shadow-sm">
             <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6 lg:px-10">
               <div className="flex items-center">
                 <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
@@ -328,7 +333,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
                 <nav className="hidden md:flex items-center text-sm text-muted-foreground">
                   <span className="hover:text-foreground cursor-pointer transition-colors font-medium">Workspace</span>
-                  <ChevronRight className="h-4 w-4 mx-2 text-zinc-300" />
+                  <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
                   <span className={cn("font-semibold text-foreground animate-in fade-in slide-in-from-left-2")}>
                     {location.pathname === '/' ? 'Dashboard' :
                       location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
@@ -338,21 +343,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
               <div className="flex items-center gap-3 md:gap-5">
                 <div className="hidden md:flex items-center relative group">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input
                     type="text"
                     placeholder="Search..."
-                    className="h-9 w-40 rounded-full border border-zinc-200 bg-white/50 pl-10 pr-4 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-zinc-400 shadow-sm"
+                    className="h-9 w-40 rounded-full border border-border bg-card/50 pl-10 pr-4 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground shadow-sm"
                     onClick={() => setCommandOpen(true)}
                     readOnly
                   />
                   <div className="absolute right-3 top-2.5 hidden lg:flex items-center gap-1">
-                    <kbd className="hidden sm:inline-block rounded bg-zinc-100 border border-zinc-200 px-1.5 text-[10px] font-bold text-zinc-500 shadow-sm">⌘</kbd>
-                    <kbd className="hidden sm:inline-block rounded bg-zinc-100 border border-zinc-200 px-1.5 text-[10px] font-bold text-zinc-500 shadow-sm">K</kbd>
+                    <kbd className="hidden sm:inline-block rounded bg-muted border border-border px-1.5 text-[10px] font-bold text-muted-foreground shadow-sm">⌘</kbd>
+                    <kbd className="hidden sm:inline-block rounded bg-muted border border-border px-1.5 text-[10px] font-bold text-muted-foreground shadow-sm">K</kbd>
                   </div>
                 </div>
 
                 <NotificationBell />
+
+                {mounted && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
+                    title={`Theme: ${theme} (click to change)`}
+                  >
+                    {resolvedTheme === 'dark' ? (
+                      <Moon className="h-4.5 w-4.5" />
+                    ) : (
+                      <Sun className="h-4.5 w-4.5" />
+                    )}
+                    {theme === 'system' && (
+                      <Monitor className="h-2.5 w-2.5 absolute bottom-1 right-1" />
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </header>

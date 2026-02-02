@@ -1,6 +1,7 @@
 
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import React from 'react';
+import { ThemeProvider } from 'next-themes';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
@@ -90,53 +91,55 @@ function ClientHomeRedirect() {
 
 function App() {
   return (
-    <QueryProvider>
-      <QueryErrorResetBoundary>
-        {({ reset }) => (
-          <ErrorBoundary onReset={reset}>
-            <AuthProvider>
-              <NotificationProvider>
-                <BrowserRouter>
-                  <Routes>
-                    {/* Public routes - no layout */}
-                    <Route path="/landing" element={<LandingPage />} />
-                    <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
-                    <Route path="/login" element={<Login />} />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryProvider>
+        <QueryErrorResetBoundary>
+          {({ reset }) => (
+            <ErrorBoundary onReset={reset}>
+              <AuthProvider>
+                <NotificationProvider>
+                  <BrowserRouter>
+                    <Routes>
+                      {/* Public routes - no layout */}
+                      <Route path="/landing" element={<LandingPage />} />
+                      <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
+                      <Route path="/login" element={<Login />} />
 
-                    {/* Protected routes - with layout */}
-                    <Route path="/" element={<ProtectedRoute><ClientHomeRedirect /></ProtectedRoute>} />
-                    <Route path="/projects" element={<ProtectedRoute><ProjectList /></ProtectedRoute>} />
-                    <Route path="/projects/new" element={<ProtectedRoute><NewProjectRouter /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                    <Route path="/projects/:id/settings" element={<ProtectedRoute><ProjectSettings /></ProtectedRoute>} />
-                    <Route path="/projects/:id/deliverables/:deliverableId" element={<ProtectedRoute><DeliverableReview /></ProtectedRoute>} />
-                    <Route path="/projects/:id/:tab?" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
+                      {/* Protected routes - with layout */}
+                      <Route path="/" element={<ProtectedRoute><ClientHomeRedirect /></ProtectedRoute>} />
+                      <Route path="/projects" element={<ProtectedRoute><ProjectList /></ProtectedRoute>} />
+                      <Route path="/projects/new" element={<ProtectedRoute><NewProjectRouter /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                      <Route path="/projects/:id/settings" element={<ProtectedRoute><ProjectSettings /></ProtectedRoute>} />
+                      <Route path="/projects/:id/deliverables/:deliverableId" element={<ProtectedRoute><DeliverableReview /></ProtectedRoute>} />
+                      <Route path="/projects/:id/:tab?" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
 
-                    {/* Admin Routes */}
-                    <Route path="/admin/inquiries" element={<ProtectedRoute><InquiryDashboard /></ProtectedRoute>} />
-                    <Route path="/admin/inquiries/:inquiryId/proposal" element={<ProtectedRoute><ProposalBuilder /></ProtectedRoute>} />
-                    <Route path="/admin/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
-                    <Route path="/admin/proposals/:proposalId" element={<ProtectedRoute><ProposalDetail /></ProtectedRoute>} />
-                    <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                    <Route path="/admin/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-                    <Route path="/admin/activity-logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
+                      {/* Admin Routes */}
+                      <Route path="/admin/inquiries" element={<ProtectedRoute><InquiryDashboard /></ProtectedRoute>} />
+                      <Route path="/admin/inquiries/:inquiryId/proposal" element={<ProtectedRoute><ProposalBuilder /></ProtectedRoute>} />
+                      <Route path="/admin/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
+                      <Route path="/admin/proposals/:proposalId" element={<ProtectedRoute><ProposalDetail /></ProtectedRoute>} />
+                      <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                      <Route path="/admin/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+                      <Route path="/admin/activity-logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
 
-                    {/* Client Routes */}
-                    <Route path="/payment/:proposalId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+                      {/* Client Routes */}
+                      <Route path="/payment/:proposalId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
 
-                    {/* Permission Testing - Development Only */}
-                    <Route path="/test/permissions" element={<ProtectedRoute><PermissionTest /></ProtectedRoute>} />
+                      {/* Permission Testing - Development Only */}
+                      <Route path="/test/permissions" element={<ProtectedRoute><PermissionTest /></ProtectedRoute>} />
 
-                    {/* Catch-all redirect */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </BrowserRouter>
-              </NotificationProvider>
-            </AuthProvider>
-          </ErrorBoundary>
-        )}
-      </QueryErrorResetBoundary>
-    </QueryProvider>
+                      {/* Catch-all redirect */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </BrowserRouter>
+                </NotificationProvider>
+              </AuthProvider>
+            </ErrorBoundary>
+          )}
+        </QueryErrorResetBoundary>
+      </QueryProvider>
+    </ThemeProvider>
   );
 }
 
