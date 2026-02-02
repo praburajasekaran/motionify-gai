@@ -16,8 +16,11 @@ import {
   Calendar,
   Download,
   AlertCircle,
+  FileVideo,
+  FileImage,
+  FileText,
 } from 'lucide-react';
-import { Button, Badge, Separator } from '../ui/design-system';
+import { Button, Badge, Separator, Progress } from '../ui/design-system';
 import { Deliverable } from '../../types/deliverable.types';
 import { Project } from '@/types';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
@@ -58,9 +61,16 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
         <div className="space-y-3">
           <div>
             <p className="text-xs text-zinc-500 mb-1">Type</p>
-            <p className="text-sm font-semibold text-zinc-900">
-              {deliverable.type}
-            </p>
+            {deliverable.type ? (
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900">
+                {deliverable.type === 'Video' && <FileVideo className="h-4 w-4 text-zinc-500" />}
+                {deliverable.type === 'Image' && <FileImage className="h-4 w-4 text-zinc-500" />}
+                {deliverable.type === 'Document' && <FileText className="h-4 w-4 text-zinc-500" />}
+                {deliverable.type}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-400">No files yet</p>
+            )}
           </div>
 
           <div>
@@ -78,9 +88,21 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
 
           <div>
             <p className="text-xs text-zinc-500 mb-1">Progress</p>
-            <p className="text-sm font-semibold text-zinc-900">
-              {deliverable.progress}% Complete
-            </p>
+            <div className="flex items-center gap-2">
+              <Progress
+                value={deliverable.progress}
+                className="flex-1"
+                indicatorClassName={
+                  deliverable.progress === 0 ? 'bg-zinc-300'
+                  : deliverable.progress < 60 ? 'bg-blue-500'
+                  : deliverable.progress < 85 ? 'bg-amber-500'
+                  : 'bg-emerald-500'
+                }
+              />
+              <span className="text-xs font-semibold text-zinc-700 tabular-nums w-8 text-right">
+                {deliverable.progress}%
+              </span>
+            </div>
           </div>
 
           {isFinalDelivered && deliverable.expiresAt && (

@@ -10,6 +10,18 @@ import { deleteMultipleFromR2 } from './_shared/r2';
 
 const { Client } = pg;
 
+// Correlated subquery to determine dominant file category by priority (video > image > document > script)
+const DOMINANT_FILE_CATEGORY_SQL = `
+  (SELECT file_category FROM deliverable_files
+   WHERE deliverable_id = d.id
+   ORDER BY CASE file_category
+     WHEN 'video' THEN 1
+     WHEN 'image' THEN 2
+     WHEN 'document' THEN 3
+     WHEN 'script' THEN 4
+     ELSE 5 END
+   LIMIT 1) as dominant_file_category`;
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -41,7 +53,8 @@ export const handler = compose(
       if (id) {
         // Fetch deliverable with project info for permission check
         const result = await client.query(
-          `SELECT d.*, p.client_user_id
+          `SELECT d.*, p.client_user_id,
+            ${DOMINANT_FILE_CATEGORY_SQL}
            FROM deliverables d
            JOIN projects p ON d.project_id = p.id
            WHERE d.id = $1`,
@@ -189,7 +202,9 @@ export const handler = compose(
 
         // Fetch deliverables
         const result = await client.query(
-          `SELECT * FROM deliverables WHERE project_id = $1 ORDER BY estimated_completion_week`,
+          `SELECT d.*,
+            ${DOMINANT_FILE_CATEGORY_SQL}
+           FROM deliverables d WHERE d.project_id = $1 ORDER BY d.estimated_completion_week`,
           [projectId]
         );
 

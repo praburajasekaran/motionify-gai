@@ -34,7 +34,7 @@ export interface DeliverableCardProps {
 }
 
 // Icon mapping for deliverable types
-const TYPE_ICONS = {
+const TYPE_ICONS: Record<string, typeof FileVideo> = {
   Video: FileVideo,
   Image: FileImage,
   Document: FileText,
@@ -79,7 +79,7 @@ const STATUS_CONFIG: Record<
     label: 'Approved',
     color: 'text-emerald-500',
   },
-  rejected: {
+  revision_requested: {
     variant: 'destructive',
     label: 'Revision Requested',
     color: 'text-red-500',
@@ -107,7 +107,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
 
-  const Icon = TYPE_ICONS[deliverable.type] || FileVideo;
+  const Icon = (deliverable.type && TYPE_ICONS[deliverable.type]) || FileVideo;
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;

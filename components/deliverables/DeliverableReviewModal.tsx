@@ -231,7 +231,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                   <div>
                     <p className="text-xs text-zinc-500 mb-1">Type</p>
                     <p className="text-sm font-semibold text-zinc-900">
-                      {deliverable.type}
+                      {deliverable.type || 'No files yet'}
                     </p>
                   </div>
 
