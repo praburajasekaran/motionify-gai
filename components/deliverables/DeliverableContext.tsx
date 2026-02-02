@@ -124,6 +124,7 @@ interface DeliverableState {
 
 type DeliverableAction =
   | { type: 'SET_DELIVERABLES'; deliverables: Deliverable[] }
+  | { type: 'SET_QUOTA'; quota: RevisionQuota }
   | { type: 'DELETE_DELIVERABLE'; payload: string }
   | { type: 'APPROVE_DELIVERABLE'; id: string; userId: string; userName: string; userEmail: string }
   | { type: 'REJECT_DELIVERABLE'; id: string; approval: DeliverableApproval }
@@ -174,6 +175,12 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
       return {
         ...state,
         deliverables: action.deliverables,
+      };
+
+    case 'SET_QUOTA':
+      return {
+        ...state,
+        quota: action.quota,
       };
 
     case 'DELETE_DELIVERABLE':
@@ -491,6 +498,18 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
     fetchDeliverables();
   }, [currentProject?.id]);
+
+  // Sync revision quota from project data
+  useEffect(() => {
+    if (currentProject) {
+      const total = currentProject.maxRevisions ?? 2;
+      const used = currentProject.revisionCount ?? 0;
+      dispatch({
+        type: 'SET_QUOTA',
+        quota: { total, used, remaining: total - used },
+      });
+    }
+  }, [currentProject?.maxRevisions, currentProject?.revisionCount]);
 
   /**
    * Permission-aware approve action
