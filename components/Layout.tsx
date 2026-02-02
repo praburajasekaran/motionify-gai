@@ -18,12 +18,12 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
         "group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent",
         active
           ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-primary/50"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground hover:pl-5"
+          : "hover:bg-accent hover:text-foreground hover:pl-5"
       )}
     >
       <div className="flex items-center gap-3">
-        <Icon className={cn("h-4.5 w-4.5 transition-all", active ? "text-primary" : "text-muted-foreground opacity-60 group-hover:text-foreground group-hover:opacity-100")} />
-        {label}
+        <Icon className={cn("h-4.5 w-4.5 transition-all", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+        <span className={cn(active ? "" : "text-foreground/70 group-hover:text-foreground")}>{label}</span>
       </div>
       {count !== undefined && (
         <span className={cn("text-xs px-2 py-0.5 rounded-full transition-colors font-semibold", active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground group-hover:bg-accent")}>
@@ -289,11 +289,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 )}
                 <div
                   onClick={logout}
-                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground hover:pl-5 cursor-pointer"
+                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent hover:bg-accent hover:text-foreground hover:pl-5 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <LogOut className="h-4.5 w-4.5 transition-all text-muted-foreground opacity-60 group-hover:text-foreground group-hover:opacity-100" />
-                    Log Out
+                    <LogOut className="h-4.5 w-4.5 transition-all text-muted-foreground group-hover:text-foreground" />
+                    <span className="text-foreground/70 group-hover:text-foreground">Log Out</span>
                   </div>
                 </div>
               </div>
