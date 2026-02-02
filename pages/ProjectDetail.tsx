@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
@@ -23,7 +23,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
-import { createActivity, Activity as ApiActivity } from '../services/activityApi';
+import { Activity as ApiActivity } from '../services/activityApi';
 import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -49,21 +49,29 @@ function formatActivityAction(type: string, details: Record<string, string | num
         case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
         case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
         case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
+        case 'TASK_DELETED':        return 'deleted task';
         case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
         // Files
         case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
+        case 'FILE_DELETED':   return 'deleted file';
         case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
         // Team
         case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
         case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
         // Deliverables
-        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable'  : 'uploaded deliverable';
-        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable'  : 'approved deliverable';
+        case 'DELIVERABLE_CREATED':        return 'created deliverable';
+        case 'DELIVERABLE_UPLOADED':       return me ? 'uploaded deliverable'  : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED':       return me ? 'approved deliverable'  : 'approved deliverable';
+        case 'DELIVERABLE_DELETED':        return 'deleted deliverable';
+        case 'DELIVERABLE_STATUS_CHANGED': return `changed deliverable status to ${details.newStatus || 'updated'}`;
         // Payments — the userId is the client who paid
         case 'PAYMENT_RECEIVED': {
             const label = details.paymentLabel || 'payment';
             return me ? `made ${label} of` : `received ${label} of`;
         }
+        // Inquiry
+        case 'INQUIRY_CREATED':        return 'submitted an inquiry';
+        case 'INQUIRY_STATUS_CHANGED': return `changed inquiry status to ${details.newStatus || 'updated'}`;
         // Project
         case 'PROJECT_CREATED': return 'created the project';
         case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
@@ -79,6 +87,18 @@ function formatActivityTarget(type: string, details: Record<string, string | num
     if (details.deliverableName) return String(details.deliverableName);
     if (targetUserName) return targetUserName;
     return '';
+}
+
+function getActivityLink(projectId: string, type: string, details?: Record<string, string | number>): string | null {
+    if (type.startsWith('DELIVERABLE_') && details?.deliverableId && type !== 'DELIVERABLE_DELETED') {
+        return `/projects/${projectId}/deliverables/${details.deliverableId}`;
+    }
+    if (type.startsWith('TASK_') || type === 'COMMENT_ADDED' || type === 'REVISION_REQUESTED') return `/projects/${projectId}/${TAB_INDEX_MAP.tasks}`;
+    if (type.startsWith('FILE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.files}`;
+    if (type.startsWith('DELIVERABLE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.deliverables}`;
+    if (type.startsWith('TEAM_')) return `/projects/${projectId}/${TAB_INDEX_MAP.team}`;
+    if (type.startsWith('PAYMENT_')) return `/projects/${projectId}/${TAB_INDEX_MAP.payments}`;
+    return null;
 }
 
 // --- Battery Component ---
@@ -260,23 +280,21 @@ export const ProjectDetail = () => {
     }, [id]);
 
 
-    // Transform activities from hook into activityLog shape and merge into project
-    useEffect(() => {
-        if (!project?.id || activities.length === 0) return;
-
-        const activityLog = activities.map((a: ApiActivity) => {
+    // Derive activityLog directly from the query data (avoids flash on refetch)
+    const activityLog = useMemo(() => {
+        return activities.map((a: ApiActivity) => {
             const isCurrentUser = !!(user && a.userId === user.id);
             return {
                 id: a.id,
+                type: a.type,
                 userId: a.userId,
                 userName: a.userName,
                 action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
                 target: formatActivityTarget(a.type, a.details, a.targetUserName),
                 timestamp: new Date(a.timestamp).toISOString(),
+                details: a.details,
             };
         });
-
-        setProject(prev => prev ? { ...prev, activityLog } : prev);
     }, [activities, user?.id]);
 
     // Load deliverables from API (for Overview tab consistency with Deliverables tab)
@@ -391,17 +409,8 @@ export const ProjectDetail = () => {
             invalidateTasks();
             setNewTaskInput('');
 
-            // Persist activity to database
-            if (user) {
-                createActivity({
-                    type: 'TASK_CREATED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId: newTask.id, taskTitle: newTask.title },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Created',
@@ -455,22 +464,8 @@ export const ProjectDetail = () => {
             invalidateTasks();
             setEditingTask(null);
 
-            // Persist activity to database
-            if (user && project) {
-                const activityType = updates.status ? 'TASK_STATUS_CHANGED' : 'TASK_UPDATED';
-                createActivity({
-                    type: activityType,
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: {
-                        taskId,
-                        taskTitle: updatedTask.title || updates.title || '',
-                        ...(updates.status && { newStatus: updates.status }),
-                    },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Updated',
@@ -495,6 +490,7 @@ export const ProjectDetail = () => {
         try {
             await deleteTask(taskId);
             invalidateTasks();
+            if (project) invalidateActivities(project.id);
             addToast({
                 title: 'Task Deleted',
                 description: 'Task has been deleted successfully',
@@ -574,18 +570,8 @@ export const ProjectDetail = () => {
             // Clear input
             setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
 
-            // Persist activity to database
-            if (project) {
-                const task = tasks.find(t => t.id === taskId);
-                createActivity({
-                    type: 'COMMENT_ADDED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId, taskTitle: task?.title || '' },
-                }).then(() => invalidateActivities(project.id))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Comment Added',
@@ -647,6 +633,7 @@ export const ProjectDetail = () => {
 
             // Invalidate to trigger refetch
             queryClient.invalidateQueries({ queryKey: ['projectFiles', 'list', project.id] });
+            invalidateActivities(project.id);
 
             addToast({
                 title: "File Uploaded",
@@ -667,6 +654,7 @@ export const ProjectDetail = () => {
     const handleFileDelete = async (fileId: string) => {
         try {
             await deleteProjectFileMutation.mutateAsync(fileId);
+            if (project) invalidateActivities(project.id);
         } catch (error) {
             console.error('Failed to delete file:', error);
             addToast({
@@ -958,13 +946,18 @@ export const ProjectDetail = () => {
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     <div className="space-y-0">
-                                        {project.activityLog.length > 0 ? project.activityLog.map((log, i) => {
+                                        {activityLog.length > 0 ? activityLog.map((log, i) => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                             const isCurrentUser = user && log.userId === user.id;
                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                             return (
-                                                <div key={log.id} className="flex gap-3 pb-6 relative last:pb-0 group">
-                                                    {i !== project.activityLog.length - 1 && (
+                                                <div
+                                                    key={log.id}
+                                                    className={cn("flex gap-3 pb-6 relative last:pb-0 group", activityLink && "cursor-pointer")}
+                                                    onClick={() => activityLink && navigate(activityLink)}
+                                                >
+                                                    {i !== activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
                                                     )}
                                                     <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
@@ -1315,7 +1308,7 @@ export const ProjectDetail = () => {
                         {/* Activity Stream */}
                         <Card className="border-zinc-200/60 shadow-sm">
                             <CardContent className="p-6">
-                                {project.activityLog.length > 0 ? (
+                                {activityLog.length > 0 ? (
                                     <>
                                         {/* Group by date */}
                                         <div className="space-y-8">
@@ -1327,12 +1320,17 @@ export const ProjectDetail = () => {
                                                     <div className="h-px flex-1 bg-zinc-200" />
                                                 </h4>
                                                 <div className="space-y-0">
-                                                    {project.activityLog.slice(0, 3).map((log, i) => {
+                                                    {activityLog.slice(0, 3).map((log, i) => {
                                                         const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                         const isCurrentUser = user && log.userId === user.id;
                                                         const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                                        const activityLink = getActivityLink(project.id, log.type, log.details);
                                                         return (
-                                                            <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+                                                            <div
+                                                                key={log.id}
+                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                onClick={() => activityLink && navigate(activityLink)}
+                                                            >
                                                                 {i !== 2 && (
                                                                     <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                 )}
@@ -1353,7 +1351,7 @@ export const ProjectDetail = () => {
                                             </div>
 
                                             {/* Earlier Section */}
-                                            {project.activityLog.length > 3 && (
+                                            {activityLog.length > 3 && (
                                                 <div>
                                                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
                                                         <div className="h-px flex-1 bg-zinc-200" />
@@ -1361,12 +1359,17 @@ export const ProjectDetail = () => {
                                                         <div className="h-px flex-1 bg-zinc-200" />
                                                     </h4>
                                                     <div className="space-y-0">
-                                                        {project.activityLog.slice(3).map((log, i, arr) => {
+                                                        {activityLog.slice(3).map((log, i, arr) => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                                             return (
-                                                                <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+                                                                <div
+                                                                    key={log.id}
+                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                    onClick={() => activityLink && navigate(activityLink)}
+                                                                >
                                                                     {i !== arr.length - 1 && (
                                                                         <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                     )}

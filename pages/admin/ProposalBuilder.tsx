@@ -5,7 +5,6 @@ import { createProposal } from '../../lib/proposals';
 import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, Save } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { logProposalSent } from '../../services/activityApi';
 import { encodeBase64 } from '../../utils/encoding';
 
 interface DeliverableInput {
@@ -246,19 +245,6 @@ export function ProposalBuilder() {
       console.log('Total Amount:', formatCurrency(pricing.totalPrice));
       console.log('Advance Payment:', formatCurrency(pricing.advanceAmount));
       console.log('========================================');
-
-      // Log activity: Proposal Sent
-      if (user) {
-        logProposalSent({
-          senderId: user.id,
-          senderName: user.fullName || user.email || 'Admin',
-          ...(inquiry.clientUserId && { recipientId: inquiry.clientUserId }),
-          recipientName: inquiry.contactName,
-          inquiryId: inquiry.id,
-          proposalId: proposal.id,
-          proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-        }).catch((err) => console.error('Failed to log activity:', err));
-      }
 
       alert(`Proposal created successfully!
 

@@ -8,6 +8,30 @@ import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  inquiryId?: string;
+  proposalId?: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, target_user_id, target_user_name, inquiry_id, proposal_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [params.type, params.userId, params.userName,
+       params.targetUserId || null, params.targetUserName || null,
+       params.inquiryId || null, params.proposalId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 interface ProposalDeliverable {
   id: string;
   name: string;
@@ -292,6 +316,24 @@ export const handler = compose(
         );
       }
 
+      // Log activity for status change
+      if (updates.status) {
+        const statusTypeMap: Record<string, string> = {
+          accepted: 'PROPOSAL_ACCEPTED',
+          rejected: 'PROPOSAL_REJECTED',
+          changes_requested: 'PROPOSAL_CHANGES_REQUESTED',
+          sent: 'PROPOSAL_SENT',
+        };
+        await logActivity(client, {
+          type: statusTypeMap[updates.status] || 'PROPOSAL_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: result.rows[0].inquiry_id,
+          proposalId,
+          details: { ...(updates.feedback ? { feedback: String(updates.feedback).substring(0, 100) } : {}) },
+        });
+      }
+
       return {
         statusCode: 200,
         headers,
@@ -356,6 +398,24 @@ export const handler = compose(
           auth.user.userId,
           feedback as string | undefined
         );
+      }
+
+      // Log activity for status change
+      if (status) {
+        const statusTypeMap: Record<string, string> = {
+          accepted: 'PROPOSAL_ACCEPTED',
+          rejected: 'PROPOSAL_REJECTED',
+          changes_requested: 'PROPOSAL_CHANGES_REQUESTED',
+          sent: 'PROPOSAL_SENT',
+        };
+        await logActivity(client, {
+          type: statusTypeMap[status] || 'PROPOSAL_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: result.rows[0].inquiry_id,
+          proposalId,
+          details: { ...(feedback ? { feedback: String(feedback).substring(0, 100) } : {}) },
+        });
       }
 
       return {
@@ -495,6 +555,18 @@ export const handler = compose(
         console.error('❌ Failed to send proposal notification email:', emailError);
         // Don't fail the request if email fails
       }
+
+      // Log activity
+      await logActivity(client, {
+        type: 'PROPOSAL_SENT',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        inquiryId: payload.inquiryId,
+        proposalId: result.rows[0].id,
+        targetUserId: clientUserId || undefined,
+        targetUserName: contact_name,
+        details: { inquiryNumber: inquiry.inquiry_number },
+      });
 
       return {
         statusCode: 201,

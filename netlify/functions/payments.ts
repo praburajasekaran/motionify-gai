@@ -9,6 +9,28 @@ import { sendPaymentReminderEmail } from './send-email';
 
 const { Client } = pg;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  inquiryId?: string;
+  proposalId?: string;
+  projectId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, inquiry_id, proposal_id, project_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [params.type, params.userId, params.userName,
+       params.inquiryId || null, params.proposalId || null, params.projectId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -275,10 +297,30 @@ export const handler = compose(
                 [project.id, payment.id]
               );
 
+              // Log project created activity
+              await logActivity(client, {
+                type: 'PROJECT_CREATED',
+                userId: auth?.user?.userId || clientUserId || '',
+                userName: auth?.user?.fullName || inquiry.contact_name || 'System',
+                projectId: project.id,
+                inquiryId: inquiry.id,
+                details: { projectNumber },
+              });
+
               console.log(`✅ Project ${projectNumber} created from payment verification`);
             }
           }
         }
+
+        // Log payment received activity
+        await logActivity(client, {
+          type: 'PAYMENT_RECEIVED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: payment.proposal_id || null,
+          details: { amount: payment.amount, currency: payment.currency, paymentType: payment.payment_type },
+        });
 
         return {
           statusCode: 200,
@@ -424,10 +466,30 @@ export const handler = compose(
                 [project.id, payment.id]
               );
 
+              // Log project created activity
+              await logActivity(client, {
+                type: 'PROJECT_CREATED',
+                userId: auth?.user?.userId || clientUserId || '',
+                userName: auth?.user?.fullName || inquiry.contact_name || 'System',
+                projectId: project.id,
+                inquiryId: inquiry.id,
+                details: { projectNumber },
+              });
+
               console.log(`✅ Project ${projectNumber} created from manual payment completion`);
             }
           }
         }
+
+        // Log payment received activity
+        await logActivity(client, {
+          type: 'PAYMENT_RECEIVED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: payment.proposal_id || null,
+          details: { amount: payment.amount, paymentType: 'manual' },
+        });
 
         return {
           statusCode: 200,
@@ -533,6 +595,16 @@ export const handler = compose(
         }
 
         console.log(`[Payments API] Reminder sent to ${payment.client_email} for payment ${paymentId}`);
+
+        // Log activity
+        await logActivity(client, {
+          type: 'PAYMENT_REMINDER_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: null,
+          details: { clientEmail: payment.client_email },
+        });
 
         return {
           statusCode: 200,

@@ -94,11 +94,13 @@ export interface Deliverable {
 
 export interface ActivityLog {
   id: string;
+  type: string;
   userId: string;
   userName?: string;
   action: string;
   target: string;
   timestamp: string; // ISO date string
+  details?: Record<string, string | number>;
 }
 
 export interface ProjectFile {

@@ -109,16 +109,22 @@ export const handler = compose(
 
         const updatedProject = updateResult.rows[0];
 
-        // Log activity (if activity_logs table exists)
+        // Log activity
         try {
+            // Get user's full name for activity
+            const userNameResult = await client.query(
+                'SELECT full_name FROM users WHERE id = $1',
+                [userId]
+            );
+            const userName = userNameResult.rows[0]?.full_name || auth?.user?.fullName || 'Unknown';
+
             await client.query(
-                `INSERT INTO activity_logs (project_id, user_id, action, target, metadata)
-         VALUES ($1, $2, 'accepted', 'Project Terms', $3)`,
-                [projectId, userId, JSON.stringify({ ip: clientIp })]
+                `INSERT INTO activities (type, user_id, user_name, project_id, details)
+                 VALUES ('TERMS_ACCEPTED', $1, $2, $3, $4)`,
+                [userId, userName, projectId, JSON.stringify({ ip: clientIp })]
             );
         } catch (activityError) {
-            // Activity log is optional - don't fail if table doesn't exist
-            console.warn('Could not log activity:', activityError);
+            console.error('Failed to log activity:', activityError);
         }
 
         return {

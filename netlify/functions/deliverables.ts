@@ -22,6 +22,26 @@ const DOMINANT_FILE_CATEGORY_SQL = `
      ELSE 5 END
    LIMIT 1) as dominant_file_category`;
 
+async function logActivity(dbClient: pg.Client, params: {
+  type: string;
+  userId: string;
+  userName: string;
+  projectId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbClient.query(
+      `INSERT INTO activities (type, user_id, user_name, project_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [params.type, params.userId, params.userName,
+       params.projectId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
@@ -274,6 +294,15 @@ export const handler = compose(
         [deliverableId, project_id, name, description || '', 'pending', estimated_completion_week || 1]
       );
 
+      // Log activity
+      await logActivity(client, {
+        type: 'DELIVERABLE_CREATED',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: project_id,
+        details: { deliverableId, deliverableName: name },
+      });
+
       return {
         statusCode: 201,
         headers,
@@ -296,6 +325,15 @@ export const handler = compose(
       const validation = validateRequest(event.body, SCHEMAS.deliverable.update, origin);
       if (!validation.success) return validation.response;
       const updates = validation.data;
+
+      // Pre-fetch current status and name for activity logging
+      const currentDeliverable = await client.query(
+        'SELECT status, name, project_id FROM deliverables WHERE id = $1',
+        [id]
+      );
+      const oldDeliverableStatus = currentDeliverable.rows[0]?.status;
+      const deliverableName = currentDeliverable.rows[0]?.name;
+      const deliverableProjectId = currentDeliverable.rows[0]?.project_id;
 
       const allowedFields = [
         'status',
@@ -355,6 +393,29 @@ export const handler = compose(
       }
 
       const updatedDeliverable = result.rows[0];
+
+      // Log activity for status change
+      if (updates.status && oldDeliverableStatus !== updates.status) {
+        let activityType = 'DELIVERABLE_STATUS_CHANGED';
+        if (updates.status === 'awaiting_approval' || updates.status === 'final_delivered') {
+          activityType = 'DELIVERABLE_UPLOADED';
+        } else if (updates.status === 'approved') {
+          activityType = 'DELIVERABLE_APPROVED';
+        }
+        await logActivity(client, {
+          type: activityType,
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: deliverableProjectId,
+          details: {
+            deliverableId: id,
+            deliverableName: deliverableName || '',
+            oldStatus: oldDeliverableStatus || '',
+            newStatus: updates.status,
+            ...(updates.status === 'final_delivered' ? { stage: 'final' } : {}),
+          },
+        });
+      }
 
       if (updates.status === 'awaiting_approval') {
         try {
@@ -517,6 +578,15 @@ export const handler = compose(
           // Continue with database deletion even if R2 cleanup fails
         }
       }
+
+      // Log activity before delete
+      await logActivity(client, {
+        type: 'DELIVERABLE_DELETED',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: deliverable.project_id,
+        details: { deliverableId: id, deliverableName: deliverable.name },
+      });
 
       // Delete deliverable (CASCADE handles deliverable_files and revision_requests)
       await client.query('DELETE FROM deliverables WHERE id = $1', [id]);
