@@ -22,7 +22,7 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
       )}
     >
       <div className="flex items-center gap-3">
-        <Icon className={cn("h-4.5 w-4.5 transition-colors", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+        <Icon className={cn("h-4.5 w-4.5 transition-all", active ? "text-primary" : "text-muted-foreground opacity-60 group-hover:text-foreground group-hover:opacity-100")} />
         {label}
       </div>
       {count !== undefined && (
@@ -292,7 +292,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground hover:pl-5 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <LogOut className="h-4.5 w-4.5 transition-colors text-muted-foreground group-hover:text-foreground" />
+                    <LogOut className="h-4.5 w-4.5 transition-all text-muted-foreground opacity-60 group-hover:text-foreground group-hover:opacity-100" />
                     Log Out
                   </div>
                 </div>
