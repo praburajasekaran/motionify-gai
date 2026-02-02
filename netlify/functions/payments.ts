@@ -257,10 +257,10 @@ export const handler = compose(
               // Create project
               const projectResult = await client.query(
                 `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status
-                ) VALUES ($1, $2, $3, $4, 'active')
+                  project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
+                ) VALUES ($1, $2, $3, $4, 'active', $5)
                 RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId]
+                [projectNumber, inquiry.id, proposal.id, clientUserId, proposal.revisions_included ?? 2]
               );
 
               const project = projectResult.rows[0];
@@ -426,10 +426,10 @@ export const handler = compose(
               // Create project
               const projectResult = await client.query(
                 `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status
-                ) VALUES ($1, $2, $3, $4, 'active')
+                  project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
+                ) VALUES ($1, $2, $3, $4, 'active', $5)
                 RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId]
+                [projectNumber, inquiry.id, proposal.id, clientUserId, proposal.revisions_included ?? 2]
               );
 
               const project = projectResult.rows[0];
