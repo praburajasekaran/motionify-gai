@@ -1,5 +1,6 @@
 import pg from 'pg';
-import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
+import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
@@ -10,7 +11,7 @@ const getDbClient = () => {
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL not configured');
   }
-  
+
   return new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -19,9 +20,8 @@ const getDbClient = () => {
 
 export const handler = compose(
   withCORS(['GET', 'PUT', 'PATCH']),
-  withAuth(),
   withRateLimit(RATE_LIMITS.api, 'proposal_detail')
-)(async (event: NetlifyEvent, auth?: AuthResult) => {
+)(async (event: NetlifyEvent) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -34,6 +34,21 @@ export const handler = compose(
       headers,
       body: JSON.stringify({ error: 'Proposal ID is required' }),
     };
+  }
+
+  // Conditional auth: GET is public (clients view proposals via shared links),
+  // PUT and PATCH require authentication
+  if (event.httpMethod === 'PUT' || event.httpMethod === 'PATCH') {
+    const auth = await requireAuthFromCookie(event);
+    if (!auth.authorized) {
+      return {
+        statusCode: auth.statusCode || 401,
+        headers,
+        body: JSON.stringify({
+          error: { code: 'UNAUTHORIZED', message: auth.error || 'Authentication required' },
+        }),
+      };
+    }
   }
 
   const client = getDbClient();
