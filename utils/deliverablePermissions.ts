@@ -358,6 +358,33 @@ export function canViewBetaFiles(
 }
 
 /**
+ * Check if user can send a deliverable for client review
+ * Only Admin and PM can transition beta_ready → awaiting_approval
+ */
+export function canSendForReview(
+  user: User,
+  deliverable: Deliverable,
+  project: Project
+): boolean {
+  // Only admin and PM can send for review
+  if (user.role !== 'super_admin' && user.role !== 'project_manager') {
+    return false;
+  }
+
+  // Deliverable must be in beta_ready status
+  if (deliverable.status !== 'beta_ready') {
+    return false;
+  }
+
+  // Project must not be on hold or archived
+  if (project.status === 'On Hold' || project.status === 'Archived') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Check if user can submit feedback/comments on a deliverable
  * All users who can view can comment
  */
@@ -411,7 +438,7 @@ export function canAssignTask(user: User, targetUserId: string): boolean {
  * Get user-friendly reason why action is not permitted
  */
 export function getPermissionDeniedReason(
-  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task',
+  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task' | 'send_for_review',
   user: User,
   deliverable?: Deliverable,
   project?: Project
@@ -492,6 +519,13 @@ export function getPermissionDeniedReason(
 
     case 'create_task':
       return 'All authenticated users can create tasks';
+
+    case 'send_for_review':
+      if (isClient(user)) return 'Only the Motionify team can send deliverables for review';
+      if (user.role === 'team_member') return 'Only Admins and Project Managers can send deliverables for review';
+      if (deliverable?.status !== 'beta_ready') return 'Deliverable must be in beta ready status';
+      if (project.status === 'On Hold') return 'Project is on hold';
+      return 'Cannot send deliverable for review';
 
     default:
       return 'Permission denied';

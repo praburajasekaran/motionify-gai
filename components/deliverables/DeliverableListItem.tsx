@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Trash2,
 } from 'lucide-react';
-import { cn, Badge, Progress, Button } from '../ui/design-system';
+import { cn, Badge, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { useDeliverables } from './DeliverableContext';
@@ -47,7 +47,11 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   const navigate = useNavigate();
   const { currentUser, deleteDeliverable } = useDeliverables();
 
-  const statusConfig = STATUS_CONFIG[deliverable.status];
+  const rawStatusConfig = STATUS_CONFIG[deliverable.status];
+  // Clients see "In Progress" instead of "Beta Ready" — it's an internal team concept
+  const statusConfig = (currentUser?.role === 'client' && deliverable.status === 'beta_ready')
+    ? STATUS_CONFIG['in_progress']
+    : rawStatusConfig;
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
 
@@ -139,16 +143,6 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
         <span>{dueDate.toLocaleDateString()}</span>
         {isOverdue && <span className="font-semibold">(Overdue)</span>}
       </div>
-
-      {/* Progress */}
-      {deliverable.progress < 100 && deliverable.status !== 'final_delivered' && (
-        <div className="shrink-0 w-24">
-          <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
-            <span>{deliverable.progress}%</span>
-          </div>
-          <Progress value={deliverable.progress} className="h-1.5" />
-        </div>
-      )}
 
       {/* Actions */}
       <div className="shrink-0 flex items-center gap-2">

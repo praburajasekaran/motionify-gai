@@ -19,8 +19,11 @@ import {
   FileVideo,
   FileImage,
   FileText,
+  Send,
+  Loader2,
+  Clock,
 } from 'lucide-react';
-import { Button, Badge, Separator, Progress } from '../ui/design-system';
+import { Button, Badge, Separator } from '../ui/design-system';
 import { Deliverable } from '../../types/deliverable.types';
 import { Project } from '@/types';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
@@ -30,6 +33,8 @@ export interface DeliverableMetadataSidebarProps {
   project: Project;
   onApprove: () => void;
   onRequestRevision: () => void;
+  onSendForReview?: () => void;
+  isSendingForReview?: boolean;
 }
 
 export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProps> = ({
@@ -37,6 +42,8 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
   project,
   onApprove,
   onRequestRevision,
+  onSendForReview,
+  isSendingForReview,
 }) => {
   const permissions = useDeliverablePermissions({
     deliverable,
@@ -44,9 +51,11 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
   });
 
   const isFinalDelivered = deliverable.status === 'final_delivered';
+  const isBetaReady = deliverable.status === 'beta_ready';
   const canApprove = permissions.canApprove;
   const canReject = permissions.canReject;
   const canAccessFinal = permissions.canAccessFinal;
+  const canSendForReview = permissions.canSendForReview;
 
   return (
     <div className="space-y-6">
@@ -83,25 +92,6 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
                 month: 'long',
                 day: 'numeric',
               })}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-zinc-500 mb-1">Progress</p>
-            <div className="flex items-center gap-2">
-              <Progress
-                value={deliverable.progress}
-                className="flex-1"
-                indicatorClassName={
-                  deliverable.progress === 0 ? 'bg-zinc-300'
-                  : deliverable.progress < 60 ? 'bg-blue-500'
-                  : deliverable.progress < 85 ? 'bg-amber-500'
-                  : 'bg-emerald-500'
-                }
-              />
-              <span className="text-xs font-semibold text-zinc-700 tabular-nums w-8 text-right">
-                {deliverable.progress}%
-              </span>
             </div>
           </div>
 
@@ -178,6 +168,31 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
               </Button>
             )}
           </>
+        ) : canSendForReview ? (
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg"
+            onClick={onSendForReview}
+            disabled={isSendingForReview}
+          >
+            {isSendingForReview ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+            {isSendingForReview ? 'Sending...' : 'Send for Client Review'}
+          </Button>
+        ) : isBetaReady && permissions.isClientPM ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold mb-1">Pending Review</p>
+                <p>This deliverable is being prepared for your review. You'll be notified when it's ready for approval.</p>
+              </div>
+            </div>
+          </div>
         ) : !permissions.isClientPM ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
             <div className="flex items-start gap-2">

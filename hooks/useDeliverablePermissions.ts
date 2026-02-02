@@ -21,6 +21,7 @@ import {
   canDeleteDeliverable,
   canViewBetaFiles,
   canCommentOnDeliverable,
+  canSendForReview,
   canDeleteTask,
   canCreateTask,
   getPermissionDeniedReason,
@@ -50,6 +51,7 @@ export function useDeliverablePermissions({
         canUploadFinal: false,
         canApprove: false,
         canReject: false,
+        canSendForReview: false,
         canViewHistory: false,
         canAccessFinal: false,
         canEdit: false,
@@ -78,6 +80,7 @@ export function useDeliverablePermissions({
       // Approval permissions
       canApprove: deliverable ? canApproveDeliverable(user, deliverable, project) : false,
       canReject: deliverable ? canRequestRevisions(user, deliverable, project) : false,
+      canSendForReview: deliverable ? canSendForReview(user, deliverable, project) : false,
 
       // Access permissions
       canAccessFinal: deliverable ? canAccessFinalFiles(user, deliverable, project) : false,
@@ -100,7 +103,7 @@ export function useDeliverablePermissions({
 
       // Get reason for denied action
       getDeniedReason: (
-        action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task'
+        action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task' | 'send_for_review'
       ) => getPermissionDeniedReason(action, user, deliverable, project),
     };
   }, [user, deliverable, project, task]);
