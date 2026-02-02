@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Super Admin Complete Functional Test', () => {
   test.beforeEach(async ({ page }) => {
     // Login as Super Admin
-    await page.goto('/#/login');
+    await page.goto('/login');
     await expect(page.locator('h1:has-text("Welcome Back")')).toBeVisible();
     await page.locator('button:has-text("Super Admin")').click();
 

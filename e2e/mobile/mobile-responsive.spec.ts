@@ -23,14 +23,14 @@ for (const bp of breakpoints) {
 
     test.beforeEach(async ({ page }) => {
       // Login as Super Admin
-      await page.goto('/#/login');
+      await page.goto('/login');
       await expect(page.locator('h1:has-text("Welcome Back")')).toBeVisible({ timeout: 10000 });
       await page.locator('button:has-text("Super Admin")').click();
       await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
     });
 
     test('admin dashboard renders without horizontal overflow', async ({ page }) => {
-      await page.goto('/#/');
+      await page.goto('/');
       await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
 
       // Check for horizontal overflow

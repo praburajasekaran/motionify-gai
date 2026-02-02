@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Proposal Acceptance Flow', () => {
   test('should view and navigate proposals as client', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -13,12 +13,12 @@ test.describe('Proposal Acceptance Flow', () => {
     await page.locator('a:has-text("Projects"), button:has-text("Projects")').first().click();
 
     // Check if there are any projects/proposals listed
-    await expect(page).toHaveURL(/\/#\/(projects|dashboard)/);
+    await expect(page).toHaveURL(/\/(projects|dashboard)/);
   });
 
   test('should display proposal details correctly', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -36,7 +36,7 @@ test.describe('Proposal Acceptance Flow', () => {
 
   test('should show accept/reject actions for pending proposals', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -48,6 +48,6 @@ test.describe('Proposal Acceptance Flow', () => {
 
     // These might not be visible if there are no pending proposals
     // Just verify the page structure is correct
-    await expect(page).toHaveURL(/\/#\//);
+    await expect(page).toHaveURL(/\//);
   });
 });

@@ -37,8 +37,8 @@ interface ApiResponse<T = any> {
 function handleUnauthorized(): void {
     clearAuthSession();
     // Only redirect if not already on login page
-    if (!window.location.hash.includes('/login')) {
-        window.location.href = '/#/login?session=expired';
+    if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?session=expired';
     }
 }
 

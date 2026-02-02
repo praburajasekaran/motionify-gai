@@ -109,7 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setToken(null);
         setUserState(null);
         // Redirect to login page
-        window.location.href = '/#/login';
+        window.location.href = '/login';
     }, []);
 
     /**

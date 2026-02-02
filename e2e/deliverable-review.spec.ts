@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Deliverable Review Flow', () => {
   test('should access deliverables section', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -25,7 +25,7 @@ test.describe('Deliverable Review Flow', () => {
 
   test('should display deliverable card with actions', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -43,7 +43,7 @@ test.describe('Deliverable Review Flow', () => {
 
   test('should allow requesting revisions', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard
@@ -54,12 +54,12 @@ test.describe('Deliverable Review Flow', () => {
 
     // This functionality might be inside a deliverable detail view
     // Just verify the page loads correctly
-    await expect(page).toHaveURL(/\/#\//);
+    await expect(page).toHaveURL(/\//);
   });
 
   test('should support video commenting feature', async ({ page }) => {
     // Login as client
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Client (Primary Contact)")').click();
 
     // Wait for dashboard

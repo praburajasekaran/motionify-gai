@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Admin Smoke Test', () => {
   test('should login as admin and access admin features', async ({ page }) => {
     // Navigate to login page
-    await page.goto('/#/login');
+    await page.goto('/login');
 
     // Wait for login page to load
     await expect(page.locator('h1:has-text("Welcome Back")')).toBeVisible();
@@ -15,12 +15,12 @@ test.describe('Admin Smoke Test', () => {
     await expect(page.locator('text=Dashboard')).toBeVisible();
 
     // Admin should see dashboard
-    await expect(page).toHaveURL(/\/#\/(|dashboard)/);
+    await expect(page).toHaveURL(/\/(dashboard)?/);
   });
 
   test('should access inquiry management', async ({ page }) => {
     // Login as admin
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Super Admin")').click();
 
     // Wait for dashboard
@@ -36,7 +36,7 @@ test.describe('Admin Smoke Test', () => {
 
   test('should access user management', async ({ page }) => {
     // Login as admin
-    await page.goto('/#/login');
+    await page.goto('/login');
     await page.locator('button:has-text("Super Admin")').click();
 
     // Wait for dashboard
