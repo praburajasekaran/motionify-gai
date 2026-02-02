@@ -20,6 +20,12 @@ import {
   IssueCategory,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
+import { Project, User } from '@/types';
+import {
+  canApproveDeliverable,
+  canRequestRevisions,
+  getPermissionDeniedReason,
+} from '@/utils/deliverablePermissions';
 
 // Default revision quota - will be overwritten by project data from API
 const DEFAULT_REVISION_QUOTA: RevisionQuota = {
@@ -29,7 +35,7 @@ const DEFAULT_REVISION_QUOTA: RevisionQuota = {
 };
 
 // Map deliverable status to progress percentage
-const STATUS_PROGRESS_MAP: Record<string, number> = {
+const STATUS_PROGRESS_MAP: Record<DeliverableStatus, number> = {
   pending: 0,
   in_progress: 25,
   beta_ready: 50,
@@ -47,12 +53,47 @@ function deriveTypeFromFileCategory(category: string | null | undefined): 'Video
   if (category === 'document' || category === 'script') return 'Document';
   return null;
 }
-import { Project, User } from '@/types';
-import {
-  canApproveDeliverable,
-  canRequestRevisions,
-  getPermissionDeniedReason,
-} from '@/utils/deliverablePermissions';
+
+// Raw API response shape for deliverables
+interface RawDeliverableResponse {
+  id: string;
+  project_id: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  dominant_file_category?: string | null;
+  status?: string;
+  estimated_completion_week?: number;
+  beta_file_key?: string;
+  final_file_key?: string;
+  revision_count?: number;
+  approval_history?: DeliverableApproval[];
+  delivery_notes?: string;
+  version?: number;
+}
+
+// Transform API response to match Deliverable type
+function transformApiDeliverable(d: RawDeliverableResponse): Deliverable {
+  const status = (d.status || 'pending') as DeliverableStatus;
+  return {
+    id: d.id,
+    projectId: d.project_id,
+    title: d.name || d.title || 'Untitled',
+    description: d.description || '',
+    type: deriveTypeFromFileCategory(d.dominant_file_category),
+    status,
+    progress: STATUS_PROGRESS_MAP[status] ?? 0,
+    dueDate: d.estimated_completion_week
+      ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date().toISOString(),
+    betaFileUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+    betaFileKey: d.beta_file_key,
+    watermarked: !!d.beta_file_key && !d.final_file_key,
+    finalFileUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+    finalFileKey: d.final_file_key,
+    approvalHistory: d.approval_history || [],
+  };
+}
 
 // ============================================================================
 // STATE INTERFACE
@@ -435,29 +476,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         }
 
         const deliverables = await response.json();
-
-        // Transform API response to match Deliverable type
-        const transformedDeliverables = (deliverables || []).map((d: any) => ({
-          id: d.id,
-          projectId: d.project_id,
-          title: d.name || d.title || 'Untitled',
-          description: d.description || '',
-          type: deriveTypeFromFileCategory(d.dominant_file_category),
-          status: d.status || 'pending',
-          progress: STATUS_PROGRESS_MAP[d.status] ?? 0,
-          dueDate: d.estimated_completion_week
-            ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date().toISOString(),
-          betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
-          betaFileKey: d.beta_file_key,
-          finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
-          finalFileKey: d.final_file_key,
-          revisionCount: d.revision_count || 0,
-          approvalHistory: d.approval_history || [],
-          thumbnailUrl: undefined,
-          deliveryNotes: d.delivery_notes,
-          version: d.version || 1,
-        }));
+        const transformedDeliverables = (deliverables || []).map(transformApiDeliverable);
 
         dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
       } catch (err) {
@@ -671,30 +690,10 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         credentials: 'include',
       });
       const deliverables = await res.json();
-      const transformedDeliverables = (deliverables || []).map((d: any) => ({
-        id: d.id,
-        projectId: d.project_id,
-        title: d.name || d.title || 'Untitled',
-        description: d.description || '',
-        type: deriveTypeFromFileCategory(d.dominant_file_category),
-        status: d.status || 'pending',
-        progress: STATUS_PROGRESS_MAP[d.status] ?? 0,
-        dueDate: d.estimated_completion_week
-          ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-          : new Date().toISOString(),
-        betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
-        betaFileKey: d.beta_file_key,
-        finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
-        finalFileKey: d.final_file_key,
-        revisionCount: d.revision_count || 0,
-        approvalHistory: d.approval_history || [],
-        thumbnailUrl: undefined,
-        deliveryNotes: d.delivery_notes,
-        version: d.version || 1,
-      }));
+      const transformedDeliverables = (deliverables || []).map(transformApiDeliverable);
       dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load deliverables');
     } finally {
       setIsLoading(false);
     }
