@@ -298,11 +298,11 @@ These semantic tokens are already defined in `index.css` and `tailwind.config.js
 
 ## Success criteria
 
-- [ ] Theme toggle button visible in portal header, cycles between light/dark/system
-- [ ] User preference persists across page refreshes (localStorage via next-themes)
-- [ ] System theme preference is respected on first visit
-- [ ] All portal pages render correctly in both light and dark mode
-- [ ] No hardcoded `bg-white`, `text-gray-900`, or `border-zinc-200` classes remain in portal files
-- [ ] Sonner toasts automatically match the active theme
-- [ ] No FOUC (flash of incorrect theme) on page load
-- [ ] Sidebar logo swaps appropriately for each theme
+- [x] Theme toggle button visible in portal header, cycles between light/dark/system
+- [x] User preference persists across page refreshes (localStorage via next-themes)
+- [x] System theme preference is respected on first visit
+- [x] All portal pages render correctly in both light and dark mode
+- [x] No hardcoded `bg-white`, `text-gray-900`, or `border-zinc-200` classes remain in portal files
+- [x] Sonner toasts automatically match the active theme
+- [x] No FOUC (flash of incorrect theme) on page load
+- [x] Sidebar logo swaps appropriately for each theme
