@@ -333,10 +333,10 @@ export const handler = compose(
 
       const result = await client.query(
         `INSERT INTO projects (
-          project_number, inquiry_id, proposal_id, client_user_id, status
-        ) VALUES ($1, $2, $3, $4, 'active')
+          project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
+        ) VALUES ($1, $2, $3, $4, 'active', $5)
         RETURNING *`,
-        [projectNumber, inquiryId, proposalId, assignedClientUserId]
+        [projectNumber, inquiryId, proposalId, assignedClientUserId, proposal.revisions_included ?? 2]
       );
 
       const project = result.rows[0];

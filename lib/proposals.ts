@@ -216,6 +216,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
   if (updates.status !== undefined) snakeCaseUpdates.status = updates.status;
   if (updates.feedback !== undefined) snakeCaseUpdates.feedback = updates.feedback;
   if (updates.revisionsIncluded !== undefined) snakeCaseUpdates.revisions_included = updates.revisionsIncluded;
+  if (updates.version !== undefined) snakeCaseUpdates.version = updates.version;
 
   const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
     method: 'PUT',

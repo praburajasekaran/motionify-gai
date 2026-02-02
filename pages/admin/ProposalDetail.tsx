@@ -460,11 +460,19 @@ export function ProposalDetail() {
         }),
       });
 
-      // Update proposal status back to sent and increment version
+      // Update proposal status back to sent, increment version, and clear previous feedback
       const updatedProposal = await updateProposal(proposal.id, {
         status: 'sent',
         version: (proposal.version || 1) + 1,
+        feedback: '',
       });
+
+      // Update inquiry status back to proposal_sent
+      if (proposal.inquiryId) {
+        await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+          updateInquiryStatus(proposal.inquiryId, 'proposal_sent')
+        );
+      }
 
       setProposal(updatedProposal);
       alert('Proposal resent to client!');
@@ -837,7 +845,7 @@ export function ProposalDetail() {
 
           {/* Pricing Breakdown */}
           {pricing && (
-            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-lg border border-violet-200`}>
+            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/40 dark:to-fuchsia-950/40 rounded-lg border border-violet-200 dark:border-violet-800/50`}>
               <h3 className="text-sm font-medium text-foreground mb-3">Payment Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
