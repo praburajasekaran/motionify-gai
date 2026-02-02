@@ -460,11 +460,19 @@ export function ProposalDetail() {
         }),
       });
 
-      // Update proposal status back to sent and increment version
+      // Update proposal status back to sent, increment version, and clear previous feedback
       const updatedProposal = await updateProposal(proposal.id, {
         status: 'sent',
         version: (proposal.version || 1) + 1,
+        feedback: '',
       });
+
+      // Update inquiry status back to proposal_sent
+      if (proposal.inquiryId) {
+        await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+          updateInquiryStatus(proposal.inquiryId, 'proposal_sent')
+        );
+      }
 
       setProposal(updatedProposal);
       alert('Proposal resent to client!');
