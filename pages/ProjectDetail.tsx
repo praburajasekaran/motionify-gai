@@ -905,13 +905,6 @@ export const ProjectDetail = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-6">
-                                                    <div className="w-24 hidden sm:block">
-                                                        <div className="flex justify-between text-[10px] text-zinc-400 font-medium mb-1">
-                                                            <span>Progress</span>
-                                                            <span>{del.progress}%</span>
-                                                        </div>
-                                                        <Progress value={del.progress} className="h-1.5" />
-                                                    </div>
                                                     <Badge variant={
                                                         del.status === 'approved' || del.status === 'final_delivered' ? 'success' :
                                                         del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
@@ -919,7 +912,7 @@ export const ProjectDetail = () => {
                                                         del.status === 'revision_requested' ? 'destructive' :
                                                         'secondary'
                                                     }>
-                                                        {del.status.replace(/_/g, ' ')}
+                                                        {(user && isClient(user) && del.status === 'beta_ready' ? 'in_progress' : del.status).replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
                                             </div>

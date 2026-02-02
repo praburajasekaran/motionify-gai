@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock } from 'lucide-react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
+import { useDeliverables } from './DeliverableContext';
+import { isClient } from '@/utils/deliverablePermissions';
 
 export interface DeliverableFilesListProps {
     deliverable: Deliverable;
@@ -55,10 +57,14 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     onUpload,
     onFilesChange,
 }) => {
+    const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    // Clients cannot see files when deliverable is still in beta_ready (not yet sent for review)
+    const filesHiddenForClient = currentUser && isClient(currentUser) && deliverable.status === 'beta_ready';
 
     // Helper to open file
     const handleDownload = async (key: string | undefined, isFinal: boolean) => {
@@ -174,6 +180,22 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             delete (window as any).__refreshDeliverableFiles;
         };
     }, [deliverable.id]);
+
+    if (filesHiddenForClient) {
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-zinc-900">Files</h3>
+                <div className="text-center py-12 bg-zinc-50 rounded-lg border border-zinc-200">
+                    <div className="flex justify-center mb-3">
+                        <EyeOff className="h-10 w-10 text-zinc-300" />
+                    </div>
+                    <p className="text-sm text-zinc-500">
+                        Files will be available once this deliverable is sent for your review.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">

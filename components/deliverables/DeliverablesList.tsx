@@ -64,10 +64,12 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
     }
   });
 
-  // Filter and sort options
+  const isClientUser = currentUser?.role === 'client';
+
+  // Filter and sort options — hide "Beta Ready" from clients (internal team concept)
   const filterOptions = [
     { label: 'All Deliverables', value: 'all' },
-    { label: 'Beta Ready', value: 'beta_ready' },
+    ...(!isClientUser ? [{ label: 'Beta Ready', value: 'beta_ready' }] : []),
     { label: 'Awaiting Approval', value: 'awaiting_approval' },
     { label: 'In Progress', value: 'in_progress' },
     { label: 'Approved', value: 'approved' },

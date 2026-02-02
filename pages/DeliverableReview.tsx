@@ -370,10 +370,10 @@ const DeliverableReviewContent: React.FC = () => {
           <p className="text-sm text-zinc-600">{deliverable.description}</p>
         </div>
         <Badge
-          variant={statusColors[deliverable.status] as any}
+          variant={statusColors[currentUser?.role === 'client' && deliverable.status === 'beta_ready' ? 'in_progress' : deliverable.status] as any}
           className="shrink-0 text-sm px-3 py-1"
         >
-          {deliverable.status.replace('_', ' ').toUpperCase()}
+          {(currentUser?.role === 'client' && deliverable.status === 'beta_ready' ? 'in_progress' : deliverable.status).replace('_', ' ').toUpperCase()}
         </Badge>
       </div>
 

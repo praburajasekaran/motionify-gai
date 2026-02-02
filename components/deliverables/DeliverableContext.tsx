@@ -24,6 +24,7 @@ import { Project, User } from '@/types';
 import {
   canApproveDeliverable,
   canRequestRevisions,
+  canSendForReview,
   getPermissionDeniedReason,
 } from '@/utils/deliverablePermissions';
 
@@ -420,6 +421,7 @@ interface DeliverableContextType {
   approveDeliverable: (deliverableId: string) => Promise<void>;
   rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => Promise<void>;
   deleteDeliverable: (deliverableId: string) => Promise<void>;
+  sendForReview: (deliverableId: string) => Promise<void>;
 
   // Loading state
   isLoading: boolean;
@@ -677,6 +679,41 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
     dispatch({ type: 'DELETE_DELIVERABLE', payload: deliverableId });
   };
 
+  /**
+   * Permission-aware send for review action
+   * Transitions deliverable from beta_ready → awaiting_approval
+   * Only Admin and PM can perform this action
+   */
+  const sendForReview = async (deliverableId: string) => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to send deliverables for review');
+    }
+
+    const deliverable = state.deliverables.find(d => d.id === deliverableId);
+    if (!deliverable) {
+      throw new Error('Deliverable not found');
+    }
+
+    // Check permission
+    if (!canSendForReview(currentUser, deliverable, currentProject)) {
+      const reason = getPermissionDeniedReason('send_for_review', currentUser, deliverable, currentProject);
+      throw new Error(reason);
+    }
+
+    // Call backend API to transition status
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'awaiting_approval' }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to send for review');
+    }
+  };
+
   // Refresh function to reload deliverables
   const refreshDeliverables = async (): Promise<void> => {
     if (!currentProject?.id) return;
@@ -708,6 +745,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         approveDeliverable,
         rejectDeliverable,
         deleteDeliverable,
+        sendForReview,
         isLoading,
         error,
         refreshDeliverables,
