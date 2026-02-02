@@ -60,7 +60,7 @@ function getActivityTypeBadgeColor(type: string): string {
   }
 
   // Default
-  return 'bg-gray-100 text-gray-800';
+  return 'bg-muted text-foreground';
 }
 
 // Helper to get human-readable action description
@@ -222,20 +222,20 @@ export function ActivityLogs() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Activity Logs</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="text-3xl font-semibold text-foreground">Activity Logs</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Platform activity stream with navigation to projects and proposals
         </p>
       </div>
 
       {/* Toggle Bar */}
-      <div className="flex items-center gap-2 bg-white rounded-lg p-1 border w-fit">
+      <div className="flex items-center gap-2 bg-card rounded-lg p-1 border w-fit">
         <button
           onClick={() => handleToggle('all')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             viewMode === 'all'
               ? 'bg-purple-600 text-white'
-              : 'text-gray-700 hover:bg-gray-100'
+              : 'text-foreground hover:bg-muted'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export function ActivityLogs() {
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             viewMode === 'my'
               ? 'bg-purple-600 text-white'
-              : 'text-gray-700 hover:bg-gray-100'
+              : 'text-foreground hover:bg-muted'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -264,12 +264,12 @@ export function ActivityLogs() {
         {loading && (
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg p-4 border animate-pulse">
+              <div key={i} className="bg-card rounded-lg p-4 border animate-pulse">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200" />
+                  <div className="w-10 h-10 rounded-full bg-muted" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
                   </div>
                 </div>
               </div>
@@ -279,14 +279,14 @@ export function ActivityLogs() {
 
         {/* Error State */}
         {!loading && error && (
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-card rounded-lg border p-6">
             <ErrorState error={error} onRetry={() => fetchActivities(false)} />
           </div>
         )}
 
         {/* Empty State */}
         {!loading && !error && activities.length === 0 && (
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-card rounded-lg border p-6">
             <EmptyState
               icon={Activity}
               title={viewMode === 'all' ? 'No activities yet' : 'No activities from you yet'}
@@ -326,7 +326,7 @@ export function ActivityLogs() {
               return (
                 <div
                   key={activity.id}
-                  className="bg-white rounded-lg p-4 hover:bg-gray-50 transition-colors border"
+                  className="bg-card rounded-lg p-4 hover:bg-muted transition-colors border"
                 >
                   <div className="flex items-start gap-3">
                     {/* User Avatar */}
@@ -339,10 +339,10 @@ export function ActivityLogs() {
                     {/* Activity Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-foreground">
                           {activity.userName}
                         </span>
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           {getActionDescription(activity.type)}
                         </span>
                         <span
@@ -352,7 +352,7 @@ export function ActivityLogs() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                         <span>{getRelativeTime(activity.timestamp)}</span>
                         {contextLink && (
                           <>
@@ -378,7 +378,7 @@ export function ActivityLogs() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-3 bg-card border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingMore ? (
                     <>
@@ -394,7 +394,7 @@ export function ActivityLogs() {
 
             {/* No More Activities */}
             {!hasMore && activities.length > 0 && (
-              <div className="text-center py-4 text-sm text-gray-500">
+              <div className="text-center py-4 text-sm text-muted-foreground">
                 You've seen all activities
               </div>
             )}

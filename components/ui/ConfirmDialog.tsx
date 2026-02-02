@@ -49,16 +49,16 @@ export function ConfirmDialog({
 
       {/* Dialog */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+        <div className="relative transform overflow-hidden rounded-xl bg-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="absolute right-4 top-4 p-1 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-accent transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="bg-white px-6 py-6">
+          <div className="bg-card px-6 py-6">
             <div className="flex items-start gap-4">
               {/* Icon */}
               <div className={`flex-shrink-0 w-12 h-12 rounded-full ${styles.icon} flex items-center justify-center`}>
@@ -67,10 +67,10 @@ export function ConfirmDialog({
 
               {/* Content */}
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 pr-8">
+                <h3 className="text-lg font-semibold text-foreground pr-8">
                   {title}
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                   {message}
                 </p>
               </div>
@@ -78,7 +78,7 @@ export function ConfirmDialog({
           </div>
 
           {/* Actions */}
-          <div className="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3">
+          <div className="bg-muted px-6 py-4 flex flex-row-reverse gap-3">
             <button
               onClick={onConfirm}
               disabled={isLoading}
@@ -96,7 +96,7 @@ export function ConfirmDialog({
             <button
               onClick={onClose}
               disabled={isLoading}
-              className="inline-flex justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              className="inline-flex justify-center rounded-lg bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-muted disabled:opacity-50"
             >
               {cancelLabel}
             </button>

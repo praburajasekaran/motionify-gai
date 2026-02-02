@@ -274,7 +274,7 @@ const DeliverableReviewContent: React.FC = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="text-zinc-500">Loading deliverable...</p>
+          <p className="text-muted-foreground">Loading deliverable...</p>
         </div>
       </div>
     );
@@ -284,7 +284,7 @@ const DeliverableReviewContent: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
-          <p className="text-zinc-500">Deliverable not found</p>
+          <p className="text-muted-foreground">Deliverable not found</p>
           <Button variant="outline" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deliverables
@@ -359,15 +359,15 @@ const DeliverableReviewContent: React.FC = () => {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="mb-3 -ml-2 text-zinc-600 hover:text-zinc-900"
+            className="mb-3 -ml-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deliverables
           </Button>
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             {deliverable.title}
           </h1>
-          <p className="text-sm text-zinc-600">{deliverable.description}</p>
+          <p className="text-sm text-muted-foreground">{deliverable.description}</p>
         </div>
         <Badge
           variant={statusColors[currentUser?.role === 'client' && deliverable.status === 'beta_ready' ? 'in_progress' : deliverable.status] as any}
@@ -404,7 +404,7 @@ const DeliverableReviewContent: React.FC = () => {
           {/* Approval History */}
           {deliverable.approvalHistory.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-zinc-900">Review History</h3>
+              <h3 className="text-lg font-bold text-foreground">Review History</h3>
               <ApprovalTimeline approvalHistory={deliverable.approvalHistory} />
             </div>
           )}
@@ -483,7 +483,7 @@ export const DeliverableReview: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12 text-zinc-500">
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p>Loading...</p>
       </div>
     );
@@ -491,7 +491,7 @@ export const DeliverableReview: React.FC = () => {
 
   if (!user || !currentProject) {
     return (
-      <div className="flex items-center justify-center py-12 text-zinc-500">
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p>Project not found</p>
       </div>
     );

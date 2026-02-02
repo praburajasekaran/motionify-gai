@@ -142,27 +142,27 @@ function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, on
   return (
     <button
       onClick={onToggle}
-      className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-all text-left w-full"
+      className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm hover:shadow-md transition-all text-left w-full"
     >
       <div className="flex items-center justify-between mb-3">
         <div className={`w-12 h-12 rounded-lg ${colorClasses.bg} flex items-center justify-center ring-1 ${colorClasses.ring}`}>
           <Icon className={`w-6 h-6 ${colorClasses.icon}`} />
         </div>
         {breakdown && (
-          <div className="text-gray-400">
+          <div className="text-muted-foreground">
             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </div>
         )}
       </div>
-      <p className="text-sm text-gray-600 mb-1">{title}</p>
-      <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
+      <p className="text-sm text-muted-foreground mb-1">{title}</p>
+      <p className="text-3xl font-bold text-foreground">{value.toLocaleString()}</p>
 
       {breakdown && isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+        <div className="mt-4 pt-4 border-t border-border space-y-2">
           {breakdown.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">{item.label}:</span>
-              <span className="font-semibold text-gray-900">{item.value.toLocaleString()}</span>
+              <span className="text-muted-foreground">{item.label}:</span>
+              <span className="font-semibold text-foreground">{item.value.toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -276,8 +276,8 @@ export const Dashboard = () => {
     <div className="space-y-8 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col gap-1 animate-fade-in">
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h2>
-        <p className="text-gray-600">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
+        <p className="text-muted-foreground">
           {user?.name ? `Welcome back, ${user.name}` : 'Overview of platform metrics and activity'}
           {user?.role && ` · ${user.role === 'superadmin' ? 'Super Admin' : user.role}`}
         </p>
@@ -285,16 +285,16 @@ export const Dashboard = () => {
 
       {/* Metric Cards */}
       {errorMetrics ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
           <ErrorState error={errorMetrics} onRetry={fetchMetrics} />
         </div>
       ) : loadingMetrics ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm animate-pulse">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-24 mb-2" />
-              <div className="h-8 bg-gray-200 rounded w-16" />
+            <div key={i} className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm animate-pulse">
+              <div className="w-12 h-12 bg-muted rounded-lg mb-3" />
+              <div className="h-4 bg-muted rounded w-24 mb-2" />
+              <div className="h-8 bg-muted rounded w-16" />
             </div>
           ))}
         </div>
@@ -355,10 +355,10 @@ export const Dashboard = () => {
       ) : null}
 
       {/* Recent Activity Table */}
-      <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-          <p className="text-sm text-gray-500 mt-1">Latest platform actions and updates</p>
+      <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
+          <p className="text-sm text-muted-foreground mt-1">Latest platform actions and updates</p>
         </div>
 
         {errorActivities ? (
@@ -367,10 +367,10 @@ export const Dashboard = () => {
           <div className="p-6 space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="w-10 h-10 bg-gray-200 rounded-lg" />
+                <div className="w-10 h-10 bg-muted rounded-lg" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
                 </div>
               </div>
             ))}
@@ -384,31 +384,31 @@ export const Dashboard = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-muted border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Action
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Context
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {activities.map((activity) => {
                   const ActivityIcon = ACTIVITY_ICONS[activity.type] || FileText;
                   const activityLabel = ACTIVITY_LABELS[activity.type] || activity.type.replace(/_/g, ' ').toLowerCase();
                   const contextLink = getActivityContextLink(activity);
 
                   return (
-                    <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <tr key={activity.id} className="hover:bg-muted transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />
                           {formatRelativeTime(activity.timestamp)}
@@ -416,14 +416,14 @@ export const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium text-gray-900">{activity.userName}</span>
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium text-foreground">{activity.userName}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
-                          <ActivityIcon className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700">{activityLabel}</span>
+                          <ActivityIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground">{activityLabel}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -435,7 +435,7 @@ export const Dashboard = () => {
                             {contextLink.label}
                           </Link>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </td>
                     </tr>

@@ -162,7 +162,7 @@ export const DeliverablesTab: React.FC<DeliverablesTabProps> = ({ project, onCon
 
   if (!user || !project) {
     return (
-      <div className="flex items-center justify-center py-12 text-zinc-500">
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p>Loading deliverables...</p>
       </div>
     );

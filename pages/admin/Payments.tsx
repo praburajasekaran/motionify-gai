@@ -78,12 +78,12 @@ function StatCard({ label, value, icon: Icon, color, subtitle }: StatCardProps) 
     };
 
     return (
-        <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm text-gray-600">{label}</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-                    {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
+                    {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
                 </div>
                 <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
                     <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -234,8 +234,8 @@ export function Payments() {
                             <CreditCard className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-                            <p className="text-gray-600">Track and manage all payment transactions</p>
+                            <h1 className="text-3xl font-bold text-foreground">Payments</h1>
+                            <p className="text-muted-foreground">Track and manage all payment transactions</p>
                         </div>
                     </div>
                     <Button
@@ -283,19 +283,19 @@ export function Payments() {
             )}
 
             {/* Filters */}
-            <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm mb-6">
+            <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 items-end">
                     {/* Status Filter */}
                     <div className="w-full lg:w-40">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Status
                         </label>
                         <div className="relative">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <select
                                 value={filters.status || 'all'}
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
                             >
                                 <option value="all">All Status</option>
                                 <option value="pending">Pending</option>
@@ -307,66 +307,66 @@ export function Payments() {
 
                     {/* Date From */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             From Date
                         </label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="date"
                                 value={filters.dateFrom || ''}
                                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-3 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Date To */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             To Date
                         </label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="date"
                                 value={filters.dateTo || ''}
                                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-3 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Client Name */}
                     <div className="flex-1 min-w-0">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Client Name
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="Search by client name..."
                                 value={filters.clientName || ''}
                                 onChange={(e) => handleFilterChange('clientName', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Project Search */}
                     <div className="w-full lg:w-48">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Project #
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="PRJ-..."
                                 value={filters.projectSearch || ''}
                                 onChange={(e) => handleFilterChange('projectSearch', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
@@ -377,7 +377,7 @@ export function Payments() {
                             variant="ghost"
                             size="sm"
                             onClick={clearFilters}
-                            className="gap-1.5 text-gray-600 hover:text-gray-900"
+                            className="gap-1.5 text-muted-foreground hover:text-foreground"
                         >
                             <X className="w-4 h-4" />
                             Clear
@@ -388,16 +388,16 @@ export function Payments() {
 
             {/* Loading State */}
             {loading ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
                     <Spinner className="w-8 h-8 mx-auto mb-4" />
-                    <p className="text-gray-700">Loading payments...</p>
+                    <p className="text-foreground">Loading payments...</p>
                 </div>
             ) : error ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
                     <ErrorState error={error} onRetry={loadPayments} />
                 </div>
             ) : payments.length === 0 ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
                     <EmptyState
                         icon={CreditCard}
                         title="No payments found"
@@ -410,10 +410,10 @@ export function Payments() {
                 </div>
             ) : (
                 /* Payments Table */
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50">
+                            <TableRow className="bg-muted">
                                 <TableHead className="font-semibold">Date</TableHead>
                                 <TableHead className="font-semibold">Client</TableHead>
                                 <TableHead className="font-semibold">Project</TableHead>
@@ -429,13 +429,13 @@ export function Payments() {
                                 const StatusIcon = statusConfig.icon;
 
                                 return (
-                                    <TableRow key={payment.id} className="hover:bg-gray-50">
+                                    <TableRow key={payment.id} className="hover:bg-muted">
                                         <TableCell className="whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
+                                            <div className="text-sm font-medium text-foreground">
                                                 {formatDate(payment.createdAt)}
                                             </div>
                                             {payment.paidAt && (
-                                                <div className="text-xs text-gray-500">
+                                                <div className="text-xs text-muted-foreground">
                                                     Paid: {formatDateTime(payment.paidAt)}
                                                 </div>
                                             )}
@@ -443,15 +443,15 @@ export function Payments() {
                                         <TableCell>
                                             {payment.clientName ? (
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-900">
+                                                    <div className="text-sm font-medium text-foreground">
                                                         {payment.clientName}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
+                                                    <div className="text-xs text-muted-foreground">
                                                         {payment.clientEmail}
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <span className="text-gray-400 text-sm">-</span>
+                                                <span className="text-muted-foreground text-sm">-</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -463,7 +463,7 @@ export function Payments() {
                                                     {payment.projectNumber}
                                                 </button>
                                             ) : (
-                                                <span className="text-gray-400 text-sm">-</span>
+                                                <span className="text-muted-foreground text-sm">-</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -471,14 +471,14 @@ export function Payments() {
                                                 className={cn(
                                                     'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 capitalize',
                                                     PAYMENT_TYPE_COLORS[payment.paymentType] ||
-                                                        'bg-gray-50 text-gray-700 ring-gray-600/20'
+                                                        'bg-muted text-foreground ring-gray-600/20'
                                                 )}
                                             >
                                                 {payment.paymentType}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <span className="text-sm font-semibold text-gray-900">
+                                            <span className="text-sm font-semibold text-foreground">
                                                 {formatCurrency(payment.amount, payment.currency)}
                                             </span>
                                         </TableCell>
@@ -531,8 +531,8 @@ export function Payments() {
                     </Table>
 
                     {/* Results Count */}
-                    <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                        <p className="text-sm text-gray-600">
+                    <div className="px-4 py-3 border-t border-border bg-muted">
+                        <p className="text-sm text-muted-foreground">
                             Showing {payments.length} payment{payments.length !== 1 ? 's' : ''}
                         </p>
                     </div>

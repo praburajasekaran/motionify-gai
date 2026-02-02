@@ -51,10 +51,10 @@ export const RevisionSubmitConfirmation: React.FC<RevisionSubmitConfirmationProp
             <AlertCircle className="h-6 w-6 text-amber-600" />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-1">
+            <h3 className="text-xl font-bold text-foreground mb-1">
               Confirm Revision Request
             </h3>
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-muted-foreground">
               Please review your submission before proceeding
             </p>
           </div>
@@ -77,39 +77,39 @@ export const RevisionSubmitConfirmation: React.FC<RevisionSubmitConfirmationProp
 
         {/* Feedback Summary */}
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-zinc-700">
+          <h4 className="text-sm font-semibold text-foreground">
             What's being submitted:
           </h4>
 
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 space-y-3">
+          <div className="bg-muted border border-border rounded-lg p-4 space-y-3">
             {/* Timeline Comments */}
             <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-zinc-500" />
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-zinc-900">
+                <p className="text-sm font-medium text-foreground">
                   Timeline Comments
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {commentCount} {commentCount === 1 ? 'comment' : 'comments'} on video
                 </p>
               </div>
-              <span className="text-lg font-bold text-zinc-700">
+              <span className="text-lg font-bold text-foreground">
                 {commentCount}
               </span>
             </div>
 
             {/* Text Feedback */}
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-zinc-500" />
+              <FileText className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-zinc-900">
+                <p className="text-sm font-medium text-foreground">
                   Text Feedback
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {feedbackLength} characters of written feedback
                 </p>
               </div>
-              <span className="text-lg font-bold text-zinc-700">
+              <span className="text-lg font-bold text-foreground">
                 {feedbackLength}
               </span>
             </div>
@@ -117,16 +117,16 @@ export const RevisionSubmitConfirmation: React.FC<RevisionSubmitConfirmationProp
             {/* Attachments */}
             {attachmentCount > 0 && (
               <div className="flex items-center gap-3">
-                <Paperclip className="h-5 w-5 text-zinc-500" />
+                <Paperclip className="h-5 w-5 text-muted-foreground" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-zinc-900">
+                  <p className="text-sm font-medium text-foreground">
                     Attachments
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Reference {attachmentCount === 1 ? 'file' : 'files'}
                   </p>
                 </div>
-                <span className="text-lg font-bold text-zinc-700">
+                <span className="text-lg font-bold text-foreground">
                   {attachmentCount}
                 </span>
               </div>
@@ -155,7 +155,7 @@ export const RevisionSubmitConfirmation: React.FC<RevisionSubmitConfirmationProp
         </div>
 
         {/* Helper Text */}
-        <p className="text-xs text-zinc-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           You can cancel now to wait for more team feedback before submitting.
         </p>
       </div>

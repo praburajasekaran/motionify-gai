@@ -95,8 +95,8 @@ export function ErrorState({
       className={`flex flex-col items-center justify-center p-8 text-center ${className}`}
     >
       <Icon className={`w-12 h-12 ${ctx.iconColor}`} />
-      <h3 className="text-lg font-semibold text-zinc-900 mt-4">{title}</h3>
-      <p className="text-sm text-zinc-500 mt-1 max-w-md">{ctx.message}</p>
+      <h3 className="text-lg font-semibold text-foreground mt-4">{title}</h3>
+      <p className="text-sm text-muted-foreground mt-1 max-w-md">{ctx.message}</p>
 
       {onRetry && (
         <button
@@ -111,10 +111,10 @@ export function ErrorState({
 
       {import.meta.env.DEV && typeof rawError !== 'string' && rawError?.stack && (
         <details className="mt-6 w-full max-w-md text-left">
-          <summary className="text-xs text-zinc-400 cursor-pointer hover:text-zinc-600">
+          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-muted-foreground">
             Technical details
           </summary>
-          <pre className="mt-2 p-3 bg-zinc-100 rounded-lg text-xs text-zinc-600 overflow-auto max-h-48 whitespace-pre-wrap">
+          <pre className="mt-2 p-3 bg-muted rounded-lg text-xs text-muted-foreground overflow-auto max-h-48 whitespace-pre-wrap">
             {rawError.stack}
           </pre>
         </details>

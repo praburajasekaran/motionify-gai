@@ -70,7 +70,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
           {/* Text Feedback */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                 <MessageSquare className="h-3.5 w-3.5" />
                 General Feedback
               </div>
@@ -84,17 +84,17 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
               </span>
             </div>
             {feedbackText ? (
-              <p className="text-xs text-zinc-700 bg-white p-2 rounded border border-blue-100 line-clamp-3">
+              <p className="text-xs text-foreground bg-white p-2 rounded border border-blue-100 line-clamp-3">
                 {feedbackText}
               </p>
             ) : (
-              <p className="text-xs text-zinc-400 italic">No feedback provided yet</p>
+              <p className="text-xs text-muted-foreground italic">No feedback provided yet</p>
             )}
           </div>
 
           {/* Timestamped Comments */}
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
               <Clock className="h-3.5 w-3.5" />
               Timeline Comments
               <span className="ml-auto text-blue-600 font-bold">
@@ -112,12 +112,12 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                     <span className="font-mono font-bold text-amber-700 shrink-0 group-hover:text-amber-800">
                       {formatTime(comment.timestamp)}
                     </span>
-                    <span className="text-zinc-600 line-clamp-2 group-hover:text-zinc-900">{comment.comment}</span>
+                    <span className="text-muted-foreground line-clamp-2 group-hover:text-foreground">{comment.comment}</span>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 italic">
+              <p className="text-xs text-muted-foreground italic">
                 No timeline comments added
               </p>
             )}
@@ -125,7 +125,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
 
           {/* Issue Categories */}
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
               <AlertCircle className="h-3.5 w-3.5" />
               Categories
               <span className="ml-auto text-blue-600 font-bold">
@@ -144,13 +144,13 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 italic">No categories selected</p>
+              <p className="text-xs text-muted-foreground italic">No categories selected</p>
             )}
           </div>
 
           {/* Priority */}
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
               <AlertTriangle className="h-3.5 w-3.5" />
               Priority
             </div>
@@ -166,7 +166,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
 
           {/* Attachments */}
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
               <Paperclip className="h-3.5 w-3.5" />
               Attachments
               <span className="ml-auto text-blue-600 font-bold">
@@ -185,14 +185,14 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 italic">No files attached</p>
+              <p className="text-xs text-muted-foreground italic">No files attached</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Validation Checklist */}
-      <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
+      <div className="bg-muted border border-border rounded-lg p-4">
         <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-3">
           Checklist
         </h4>
@@ -206,7 +206,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             >
               {meetsMinimum && <CheckCircle2 className="h-3 w-3 text-white" />}
             </div>
-            <span className={meetsMinimum ? 'text-zinc-900' : 'text-zinc-500'}>
+            <span className={meetsMinimum ? 'text-foreground' : 'text-muted-foreground'}>
               Min {minCharacters} characters feedback
             </span>
           </div>
@@ -223,7 +223,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             </div>
             <span
               className={
-                issueCategories.length > 0 ? 'text-zinc-900' : 'text-zinc-500'
+                issueCategories.length > 0 ? 'text-foreground' : 'text-muted-foreground'
               }
             >
               At least 1 category selected
@@ -233,7 +233,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             <div className="w-4 h-4 rounded-full flex items-center justify-center bg-emerald-500">
               <CheckCircle2 className="h-3 w-3 text-white" />
             </div>
-            <span className="text-zinc-900">Priority level set</span>
+            <span className="text-foreground">Priority level set</span>
           </div>
         </div>
       </div>

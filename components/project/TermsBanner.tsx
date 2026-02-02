@@ -132,14 +132,14 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
 
                 {/* Expanded Details Section */}
                 {isExpanded && (
-                    <div className="border-t border-amber-200 bg-white/50 p-6 animate-in slide-in-from-top-2 duration-300">
+                    <div className="border-t border-amber-200 bg-card/50 p-6 animate-in slide-in-from-top-2 duration-300">
                         <div className="grid md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <h4 className="font-bold text-amber-900 flex items-center gap-2">
                                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                     Scope of Work
                                 </h4>
-                                <ul className="space-y-2 text-sm text-zinc-600 pl-6 list-disc marker:text-amber-400">
+                                <ul className="space-y-2 text-sm text-muted-foreground pl-6 list-disc marker:text-amber-400">
                                     <li>Production of {project.deliverables.length} deliverables</li>
                                     <li>Includes {project.description}</li>
                                     <li>Timeline: {new Date(project.startDate).toLocaleDateString()} - {new Date(project.dueDate).toLocaleDateString()}</li>
@@ -151,7 +151,7 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                     Terms & Conditions
                                 </h4>
-                                <ul className="space-y-2 text-sm text-zinc-600 pl-6 list-disc marker:text-amber-400">
+                                <ul className="space-y-2 text-sm text-muted-foreground pl-6 list-disc marker:text-amber-400">
                                     <li>{project.maxRevisions} rounds of revisions included</li>
                                     <li>Additional revisions charged separately</li>
                                     <li>Final files released upon full payment</li>
@@ -162,7 +162,7 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                         <div className="mt-6 flex justify-end">
                             <button
                                 onClick={() => setIsExpanded(false)}
-                                className="text-zinc-500 text-sm hover:text-zinc-900 underline"
+                                className="text-muted-foreground text-sm hover:text-foreground underline"
                             >
                                 Close Details
                             </button>

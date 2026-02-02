@@ -67,10 +67,10 @@ export const IssueCategorySelector: React.FC<IssueCategorySelectorProps> = ({
 }) => {
   return (
     <div className={cn('space-y-3', className)}>
-      <label className="text-sm font-semibold text-zinc-700">
+      <label className="text-sm font-semibold text-foreground">
         Issue Categories <span className="text-red-500">*</span>
       </label>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Select all that apply to help the team understand your feedback
       </p>
 
@@ -88,19 +88,19 @@ export const IssueCategorySelector: React.FC<IssueCategorySelectorProps> = ({
                 'flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left',
                 isSelected
                   ? 'bg-blue-50 border-blue-500 shadow-sm'
-                  : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                  : 'bg-card border-border hover:border-border hover:bg-muted'
               )}
             >
               <div
                 className={cn(
                   'p-2 rounded-lg',
-                  isSelected ? 'bg-white' : 'bg-zinc-100'
+                  isSelected ? 'bg-card' : 'bg-muted'
                 )}
               >
                 <Icon
                   className={cn(
                     'h-5 w-5',
-                    isSelected ? category.color : 'text-zinc-500'
+                    isSelected ? category.color : 'text-muted-foreground'
                   )}
                 />
               </div>
@@ -108,7 +108,7 @@ export const IssueCategorySelector: React.FC<IssueCategorySelectorProps> = ({
                 <p
                   className={cn(
                     'text-sm font-medium',
-                    isSelected ? 'text-blue-900' : 'text-zinc-900'
+                    isSelected ? 'text-blue-900' : 'text-foreground'
                   )}
                 >
                   {category.label}

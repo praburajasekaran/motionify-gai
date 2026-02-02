@@ -62,7 +62,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
     };
 
     if (loading) {
-        return <div className="p-8 text-center text-zinc-500">Loading payment history...</div>;
+        return <div className="p-8 text-center text-muted-foreground">Loading payment history...</div>;
     }
 
     if (error) {
@@ -77,30 +77,30 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-white border-zinc-200">
+                <Card className="bg-card border-border">
                     <CardContent className="p-6">
-                        <p className="text-sm text-zinc-500 mb-1">Total Budget</p>
-                        <p className="text-2xl font-bold text-zinc-900">${(project.budget || 0).toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Total Budget</p>
+                        <p className="text-2xl font-bold text-foreground">${(project.budget || 0).toLocaleString()}</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-white border-zinc-200">
+                <Card className="bg-card border-border">
                     <CardContent className="p-6">
-                        <p className="text-sm text-zinc-500 mb-1">Total Paid</p>
+                        <p className="text-sm text-muted-foreground mb-1">Total Paid</p>
                         <p className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-white border-zinc-200">
+                <Card className="bg-card border-border">
                     <CardContent className="p-6">
-                        <p className="text-sm text-zinc-500 mb-1">Outstanding Balance</p>
+                        <p className="text-sm text-muted-foreground mb-1">Outstanding Balance</p>
                         <p className="text-2xl font-bold text-amber-600">${Math.max(0, outstanding).toLocaleString()}</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <Card className="border-0 shadow-sm bg-white overflow-hidden">
-                <CardHeader className="border-b border-zinc-100 bg-zinc-50/50 pb-4">
+            <Card className="border-0 shadow-sm bg-card overflow-hidden">
+                <CardHeader className="border-b border-border bg-accent pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
-                        <CreditCard className="h-5 w-5 text-zinc-400" />
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
                         Transaction History
                     </CardTitle>
                 </CardHeader>
@@ -115,7 +115,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-zinc-50 text-zinc-500 font-medium">
+                                <thead className="bg-muted text-muted-foreground font-medium">
                                     <tr>
                                         <th className="px-6 py-3">Date</th>
                                         <th className="px-6 py-3">Description</th>
@@ -124,24 +124,24 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
                                         <th className="px-6 py-3 text-right">Invoice</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-zinc-100">
+                                <tbody className="divide-y divide-border">
                                     {payments.map((payment) => (
-                                        <tr key={payment.id} className="hover:bg-zinc-50/50 transition-colors">
-                                            <td className="px-6 py-4 text-zinc-600">
+                                        <tr key={payment.id} className="hover:bg-accent transition-colors">
+                                            <td className="px-6 py-4 text-muted-foreground">
                                                 <div className="flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-zinc-400" />
+                                                    <Calendar className="h-4 w-4 text-muted-foreground" />
                                                     {formatDate(payment.created_at)}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="font-medium text-zinc-900 capitalize">
+                                                <span className="font-medium text-foreground capitalize">
                                                     {payment.payment_type} Payment
                                                 </span>
-                                                <p className="text-xs text-zinc-500">
+                                                <p className="text-xs text-muted-foreground">
                                                     ID: {payment.razorpay_payment_id || payment.id.slice(0, 8)}
                                                 </p>
                                             </td>
-                                            <td className="px-6 py-4 font-mono font-medium text-zinc-900">
+                                            <td className="px-6 py-4 font-mono font-medium text-foreground">
                                                 ${Number(payment.amount).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4">
@@ -149,11 +149,11 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 {payment.invoice_url ? (
-                                                    <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-primary" onClick={() => window.open(payment.invoice_url, '_blank')}>
+                                                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-primary" onClick={() => window.open(payment.invoice_url, '_blank')}>
                                                         <Download className="h-4 w-4 mr-1" /> PDF
                                                     </Button>
                                                 ) : (
-                                                    <span className="text-zinc-400 text-xs">-</span>
+                                                    <span className="text-muted-foreground text-xs">-</span>
                                                 )}
                                             </td>
                                         </tr>

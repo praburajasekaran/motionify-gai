@@ -12,7 +12,7 @@ export const Skeleton = ({
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-zinc-200/60",
+        "animate-pulse rounded-md bg-accent",
         className
       )}
       {...props}
@@ -31,7 +31,7 @@ export const ShimmerSkeleton = ({
   return (
     <div
       className={cn(
-        "rounded-md bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200",
+        "rounded-md bg-gradient-to-r from-muted via-muted to-muted",
         "bg-[length:200%_100%] animate-shimmer",
         className
       )}
@@ -46,7 +46,7 @@ export const ShimmerSkeleton = ({
  */
 export const ProjectCardSkeleton = () => {
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 space-y-4">
+    <div className="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
       {/* Header with logo and title */}
       <div className="flex items-start gap-4">
         <ShimmerSkeleton className="h-14 w-14 rounded-xl flex-shrink-0" />
@@ -63,7 +63,7 @@ export const ProjectCardSkeleton = () => {
       </div>
 
       {/* Footer with badges and metrics */}
-      <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         <div className="flex gap-2">
           <ShimmerSkeleton className="h-6 w-16 rounded-full" />
           <ShimmerSkeleton className="h-6 w-20 rounded-full" />
@@ -88,7 +88,7 @@ export const StatCardSkeleton = ({
 }) => {
   return (
     <div
-      className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6"
+      className="bg-card rounded-xl border border-border shadow-sm p-6"
       style={{ animationDelay: delay }}
     >
       <div className="flex items-center justify-between space-y-0 pb-2">
@@ -145,7 +145,7 @@ export const StatGridSkeleton = () => {
       {[0, 100, 200, 300].map((delay) => (
         <div
           key={delay}
-          className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5"
+          className="bg-card rounded-xl border border-border shadow-sm p-5"
           style={{ animationDelay: `${delay}ms` }}
         >
           <div className="flex items-center justify-between">
@@ -167,7 +167,7 @@ export const StatGridSkeleton = () => {
  */
 export const TabNavigationSkeleton = () => {
   return (
-    <div className="border-b border-zinc-200">
+    <div className="border-b border-border">
       <div className="flex gap-6">
         {[80, 100, 90].map((width, i) => (
           <ShimmerSkeleton
@@ -218,7 +218,7 @@ export const TableRowSkeleton = ({
   columns?: number
 }) => {
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-zinc-100">
+    <div className="flex items-center gap-4 p-4 border-b border-border">
       {Array.from({ length: columns }).map((_, i) => (
         <ShimmerSkeleton
           key={i}
@@ -262,7 +262,7 @@ export const ActivityFeedSkeleton = ({
  */
 export const ChartSkeleton = () => {
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6">
+    <div className="bg-card rounded-xl border border-border shadow-sm p-6">
       <div className="space-y-4">
         <ShimmerSkeleton className="h-6 w-48" />
         <div className="h-[300px] flex items-end gap-2">
@@ -343,7 +343,7 @@ export const CardGridSkeleton = ({
   return (
     <div className={cn('grid gap-6', gridCols[columns])}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 space-y-4">
+        <div key={i} className="bg-card rounded-xl border border-border shadow-sm p-6 space-y-4">
           <ShimmerSkeleton className="h-6 w-3/4" />
           <div className="space-y-2">
             <ShimmerSkeleton className="h-4 w-full" />

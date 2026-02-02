@@ -70,7 +70,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
       <div className="px-6 pb-6">
         {/* Header */}
         <p className="text-sm text-muted-foreground mb-6">
-          Master these shortcuts to navigate and work faster. Press <kbd className="px-2 py-1 text-xs font-semibold bg-zinc-100 border border-zinc-200 rounded">?</kbd> anytime to see this help.
+          Master these shortcuts to navigate and work faster. Press <kbd className="px-2 py-1 text-xs font-semibold bg-muted border border-border rounded">?</kbd> anytime to see this help.
         </p>
 
         {/* Shortcuts by Category */}
@@ -94,7 +94,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
                   {(categoryShortcuts as KeyboardShortcut[]).map((shortcut, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-zinc-50 transition-colors group"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted transition-colors group"
                     >
                       <span className="text-sm text-foreground group-hover:text-primary transition-colors">
                         {shortcut.description}
@@ -102,7 +102,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
                       <kbd
                         className={cn(
                           "px-3 py-1.5 text-xs font-semibold rounded-md border shadow-sm transition-all",
-                          "bg-white border-zinc-200 text-zinc-700",
+                          "bg-card border-border text-foreground",
                           "group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary"
                         )}
                       >

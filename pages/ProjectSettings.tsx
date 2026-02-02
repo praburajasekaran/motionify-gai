@@ -37,16 +37,16 @@ const SettingsNav = ({ active, onClick, icon: Icon, children, description, varia
             active
                 ? variant === 'destructive'
                     ? "bg-red-50 text-red-700 border-red-100 shadow-sm"
-                    : "bg-white text-primary border-zinc-200 shadow-sm"
+                    : "bg-card text-primary border-border shadow-sm"
                 : variant === 'destructive'
                     ? "text-muted-foreground hover:bg-red-50/50 hover:text-red-600"
-                    : "text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
     >
         <div className={cn("mt-0.5 p-1.5 rounded-lg transition-colors",
             active
                 ? variant === 'destructive' ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
-                : "bg-transparent text-muted-foreground group-hover:text-foreground group-hover:bg-zinc-200/50"
+                : "bg-transparent text-muted-foreground group-hover:text-foreground group-hover:bg-muted/50"
         )}>
             <Icon className="h-4 w-4" />
         </div>
@@ -433,9 +433,9 @@ export const ProjectSettings = () => {
                 <div className="flex items-center gap-4 bg-card p-2 pr-2.5 rounded-2xl border border-border shadow-sm">
                     <div className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-                        isDirty ? "bg-amber-50 text-amber-700" : "bg-zinc-50 text-zinc-500"
+                        isDirty ? "bg-amber-50 text-amber-700" : "bg-muted text-muted-foreground"
                     )}>
-                        <div className={cn("h-1.5 w-1.5 rounded-full", isDirty ? "bg-amber-500 animate-pulse" : "bg-zinc-300")} />
+                        <div className={cn("h-1.5 w-1.5 rounded-full", isDirty ? "bg-amber-500 animate-pulse" : "bg-border")} />
                         {isDirty ? 'Unsaved Changes' : 'Up to date'}
                     </div>
                     <Button
@@ -597,7 +597,7 @@ export const ProjectSettings = () => {
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                             {/* Stats Bar */}
                             <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-white p-4 rounded-xl border border-border shadow-sm flex flex-col">
+                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col">
                                     <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Total Items</span>
                                     <span className="text-2xl font-bold">{project.deliverables.length}</span>
                                 </div>
@@ -624,7 +624,7 @@ export const ProjectSettings = () => {
                                 <CardContent className="p-0">
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm text-left">
-                                            <thead className="bg-zinc-50 font-medium text-muted-foreground border-b border-border">
+                                            <thead className="bg-muted font-medium text-muted-foreground border-b border-border">
                                                 <tr>
                                                     <th className="px-6 py-4 w-[40%] text-left align-middle text-xs uppercase tracking-wider">Title</th>
                                                     <th className="px-6 py-4 w-[25%] text-left align-middle text-xs uppercase tracking-wider">Type</th>
@@ -632,15 +632,15 @@ export const ProjectSettings = () => {
                                                     <th className="px-6 py-4 w-[10%] text-right align-middle text-xs uppercase tracking-wider">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-border/60 bg-white">
+                                            <tbody className="divide-y divide-border/60 bg-card">
                                                 {project.deliverables.map((del) => (
-                                                    <tr key={del.id} className="group hover:bg-zinc-50 transition-colors">
+                                                    <tr key={del.id} className="group hover:bg-muted transition-colors">
                                                         <td className="px-6 py-3 align-middle">
                                                             <Input
                                                                 aria-label="Deliverable Title"
                                                                 value={del.title}
                                                                 onChange={(e) => updateDeliverable(del.id, 'title', e.target.value)}
-                                                                className="border-transparent shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-white bg-transparent hover:bg-white/50 transition-all h-9 px-2 -ml-2 font-medium text-foreground rounded-md"
+                                                                className="border-transparent shadow-none focus-visible:ring-0 focus-visible:border-primary focus-visible:bg-card bg-transparent hover:bg-card/50 transition-all h-9 px-2 -ml-2 font-medium text-foreground rounded-md"
                                                                 placeholder="Deliverable Title"
                                                             />
                                                         </td>
@@ -653,7 +653,7 @@ export const ProjectSettings = () => {
                                                                     { label: 'Image', value: 'Image' },
                                                                     { label: 'Document', value: 'Document' }
                                                                 ]}
-                                                                triggerClassName="border-transparent shadow-none bg-transparent hover:bg-white/80 focus:ring-1 h-9 font-normal px-2 -ml-2"
+                                                                triggerClassName="border-transparent shadow-none bg-transparent hover:bg-card/80 focus:ring-1 h-9 font-normal px-2 -ml-2"
                                                             />
                                                         </td>
                                                         <td className="px-6 py-3 align-middle relative z-10">
@@ -669,7 +669,7 @@ export const ProjectSettings = () => {
                                                                     "h-7 border-none shadow-none text-xs w-auto px-3 rounded-full font-medium transition-colors inline-flex",
                                                                     del.status === 'Approved' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 ring-1 ring-emerald-500/20" :
                                                                         del.status === 'In Review' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 ring-1 ring-amber-500/20" :
-                                                                            "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 ring-1 ring-zinc-500/20"
+                                                                            "bg-muted text-foreground hover:bg-muted ring-1 ring-border"
                                                                 )}
                                                             />
                                                         </td>
@@ -687,7 +687,7 @@ export const ProjectSettings = () => {
                                                                     <Button
                                                                         variant="outline"
                                                                         size="icon"
-                                                                        className="h-8 w-8 bg-white"
+                                                                        className="h-8 w-8 bg-card"
                                                                         onClick={() => setDeleteConfirm(null)}
                                                                     >
                                                                         <X className="h-4 w-4" />
@@ -703,7 +703,7 @@ export const ProjectSettings = () => {
                                                                         e.stopPropagation();
                                                                         setDeleteConfirm({ type: 'deliverable', id: del.id });
                                                                     }}
-                                                                    className="h-8 w-8 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                                                                     title="Delete Deliverable"
                                                                     aria-label="Delete Deliverable"
                                                                 >
@@ -749,7 +749,7 @@ export const ProjectSettings = () => {
                                                 placeholder="Search team..."
                                                 value={teamFilter}
                                                 onChange={(e) => setTeamFilter(e.target.value)}
-                                                className="pl-9 h-9 bg-white"
+                                                className="pl-9 h-9 bg-card"
                                             />
                                         </div>
                                         <Button size="sm" className="gap-2 shrink-0 h-9 shadow-sm" onClick={addTeamMember} aria-label="Add Member">
@@ -760,14 +760,14 @@ export const ProjectSettings = () => {
                                 <CardContent className="p-0">
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm text-left">
-                                            <thead className="bg-zinc-50 font-medium text-muted-foreground border-b border-border">
+                                            <thead className="bg-muted font-medium text-muted-foreground border-b border-border">
                                                 <tr>
-                                                    <th scope="col" className="px-6 py-4 cursor-pointer hover:bg-zinc-100 transition-colors" onClick={() => handleSort('name')}>
+                                                    <th scope="col" className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('name')}>
                                                         <div className="flex items-center gap-1 text-xs uppercase tracking-wider">
                                                             Member {teamSort.key === 'name' && <ArrowUpDown className="h-3 w-3" />}
                                                         </div>
                                                     </th>
-                                                    <th scope="col" className="px-6 py-4 cursor-pointer hover:bg-zinc-100 transition-colors" onClick={() => handleSort('role')}>
+                                                    <th scope="col" className="px-6 py-4 cursor-pointer hover:bg-muted transition-colors" onClick={() => handleSort('role')}>
                                                         <div className="flex items-center gap-1 text-xs uppercase tracking-wider">
                                                             Role {teamSort.key === 'role' && <ArrowUpDown className="h-3 w-3" />}
                                                         </div>
@@ -776,12 +776,12 @@ export const ProjectSettings = () => {
                                                     <th scope="col" className="px-6 py-4 text-right text-xs uppercase tracking-wider">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-border/60 bg-white">
+                                            <tbody className="divide-y divide-border/60 bg-card">
                                                 {sortedTeam.map((user) => (
-                                                    <tr key={user.id} className="group hover:bg-zinc-50 transition-colors">
+                                                    <tr key={user.id} className="group hover:bg-muted transition-colors">
                                                         <td className="px-6 py-3 align-middle">
                                                             <div className="flex items-center gap-3">
-                                                                <Avatar src={user.avatar} fallback={user.name[0]} className="h-9 w-9 ring-2 ring-white shadow-sm" />
+                                                                <Avatar src={user.avatar} fallback={user.name[0]} className="h-9 w-9 ring-2 ring-card shadow-sm" />
                                                                 <div>
                                                                     <div className="font-medium flex items-center gap-2 text-foreground">
                                                                         {user.name}
@@ -806,7 +806,7 @@ export const ProjectSettings = () => {
                                                                     { label: 'Client', value: 'client' },
                                                                 ]}
                                                                 className="w-40"
-                                                                triggerClassName="h-8 text-xs w-40 bg-white border-zinc-200"
+                                                                triggerClassName="h-8 text-xs w-40 bg-card border-border"
                                                             />
                                                         </td>
                                                         <td className="px-6 py-3 align-middle text-muted-foreground hidden sm:table-cell font-mono text-xs">
@@ -826,7 +826,7 @@ export const ProjectSettings = () => {
                                                                     <Button
                                                                         variant="outline"
                                                                         size="icon"
-                                                                        className="h-8 w-8 bg-white"
+                                                                        className="h-8 w-8 bg-card"
                                                                         onClick={() => setDeleteConfirm(null)}
                                                                     >
                                                                         <X className="h-4 w-4" />
@@ -842,7 +842,7 @@ export const ProjectSettings = () => {
                                                                         e.stopPropagation();
                                                                         setDeleteConfirm({ type: 'team', id: user.id });
                                                                     }}
-                                                                    className="h-8 w-8 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                                                                     aria-label="Remove Team Member"
                                                                 >
                                                                     <X className="h-4 w-4" />
@@ -876,7 +876,7 @@ export const ProjectSettings = () => {
                         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                             {/* Usage Stats - Visual */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <Card className="bg-gradient-to-br from-white to-zinc-50 border-border/60 shadow-sm relative overflow-hidden">
+                                <Card className="bg-gradient-to-br from-card to-muted border-border/60 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-3 opacity-10">
                                         <FileBox className="w-16 h-16" />
                                     </div>
@@ -885,7 +885,7 @@ export const ProjectSettings = () => {
                                         <span className="text-sm text-muted-foreground font-medium mt-1 uppercase tracking-wider text-xs">Revisions Used</span>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-gradient-to-br from-white to-zinc-50 border-border/60 shadow-sm relative overflow-hidden">
+                                <Card className="bg-gradient-to-br from-card to-muted border-border/60 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-3 opacity-10">
                                         <Layers className="w-16 h-16" />
                                     </div>
@@ -969,9 +969,9 @@ export const ProjectSettings = () => {
                                             { action: 'Limit Increased (+1)', user: 'Alex Rivera', date: '2 hours ago', icon: PlusCircle, color: 'text-emerald-600 bg-emerald-50' },
                                             { action: 'Revision Used (Deliverable #2)', user: 'Mike Ross', date: '1 day ago', icon: CheckCircle2, color: 'text-blue-600 bg-blue-50' },
                                             { action: 'Revision Used (Deliverable #1)', user: 'Sarah Chen', date: '3 days ago', icon: CheckCircle2, color: 'text-blue-600 bg-blue-50' },
-                                            { action: 'Initial Limit Set (3)', user: 'System', date: '1 week ago', icon: Layout, color: 'text-zinc-600 bg-zinc-50' },
+                                            { action: 'Initial Limit Set (3)', user: 'System', date: '1 week ago', icon: Layout, color: 'text-muted-foreground bg-muted' },
                                         ].map((log, i) => (
-                                            <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                                            <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-muted transition-colors">
                                                 <div className="flex items-center gap-4">
                                                     <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", log.color)}>
                                                         <log.icon className="h-4 w-4" />
@@ -983,7 +983,7 @@ export const ProjectSettings = () => {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs font-mono text-muted-foreground bg-zinc-100 px-2 py-1 rounded">{log.date}</span>
+                                                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">{log.date}</span>
                                             </div>
                                         ))}
                                     </div>

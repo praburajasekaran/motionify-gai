@@ -63,7 +63,7 @@ export const RevisionQuotaIndicator: React.FC<RevisionQuotaIndicatorProps> = ({
               `${quota.remaining} Revisions Remaining`
             )}
           </p>
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-muted-foreground">
             {quota.used} of {quota.total} included revisions used
           </p>
         </div>

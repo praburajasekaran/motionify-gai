@@ -49,9 +49,9 @@ export function NotificationDropdown({
     };
 
     return (
-        <div className="w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-zinc-200 overflow-hidden">
+        <div className="w-96 max-w-[calc(100vw-2rem)] bg-card rounded-xl shadow-xl border border-border overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">
                     Notifications
                 </h3>
@@ -82,7 +82,7 @@ export function NotificationDropdown({
                         {/* Unread Section */}
                         {displayedUnread.length > 0 && (
                             <div>
-                                <div className="px-4 py-2 bg-zinc-50/50">
+                                <div className="px-4 py-2 bg-muted/50">
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                         New ({unread.length})
                                     </p>
@@ -101,7 +101,7 @@ export function NotificationDropdown({
                         {/* Read Section */}
                         {displayedRead.length > 0 && (
                             <div>
-                                <div className="px-4 py-2 bg-zinc-50/50">
+                                <div className="px-4 py-2 bg-muted/50">
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                         Earlier
                                     </p>
@@ -122,7 +122,7 @@ export function NotificationDropdown({
 
             {/* Footer */}
             {notifications.length > 0 && (
-                <div className="px-4 py-3 border-t border-zinc-100 text-center">
+                <div className="px-4 py-3 border-t border-border text-center">
                     <button
                         className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                         onClick={() => {

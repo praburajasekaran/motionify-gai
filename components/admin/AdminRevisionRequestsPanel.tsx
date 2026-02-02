@@ -87,45 +87,45 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
     };
 
     return (
-        <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white">
+        <div className="border border-border rounded-lg overflow-hidden bg-card">
             {/* Header Row */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-zinc-50 transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted transition-colors"
             >
                 <div className="flex items-center gap-4">
                     {getStatusBadge(request.status)}
                     <div className="text-left">
-                        <p className="font-semibold text-zinc-900 text-sm">
+                        <p className="font-semibold text-foreground text-sm">
                             {request.requestedCount} Additional Revision{request.requestedCount !== 1 ? 's' : ''} Requested
                         </p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                             by {request.requestedByName} • {formatDate(request.createdAt)}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-muted-foreground">
                         Quota: {request.quotaSnapshotUsed}/{request.quotaSnapshotTotal}
                     </span>
                     {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-zinc-500" />
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                        <ChevronDown className="h-4 w-4 text-zinc-500" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     )}
                 </div>
             </button>
 
             {/* Expanded Details */}
             {isExpanded && (
-                <div className="border-t border-zinc-200 p-4 space-y-4 bg-zinc-50">
+                <div className="border-t border-border p-4 space-y-4 bg-muted">
                     {/* Request Details */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-zinc-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                             <User className="h-4 w-4" />
-                            <span>Client: <strong className="text-zinc-900">{request.requestedByName}</strong></span>
+                            <span>Client: <strong className="text-foreground">{request.requestedByName}</strong></span>
                         </div>
-                        <div className="flex items-center gap-2 text-zinc-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-4 w-4" />
                             <span>Requested: {formatDate(request.createdAt)}</span>
                         </div>
@@ -133,11 +133,11 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
 
                     {/* Reason */}
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                             <MessageSquare className="h-4 w-4" />
                             <span>Reason</span>
                         </div>
-                        <div className="bg-white border border-zinc-200 rounded-lg p-3 text-sm text-zinc-700">
+                        <div className="bg-card border border-border rounded-lg p-3 text-sm text-foreground">
                             {request.reason}
                         </div>
                     </div>
@@ -146,12 +146,12 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                     {request.status === 'pending' && !showDeclineForm && (
                         <div className="space-y-4 pt-2">
                             {/* Approve Section */}
-                            <div className="bg-white border border-zinc-200 rounded-lg p-4 space-y-3">
-                                <h4 className="font-semibold text-zinc-900 text-sm">Approve Request</h4>
+                            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+                                <h4 className="font-semibold text-foreground text-sm">Approve Request</h4>
 
                                 {/* Count Selector */}
                                 <div className="space-y-2">
-                                    <label className="text-xs font-medium text-zinc-600">
+                                    <label className="text-xs font-medium text-muted-foreground">
                                         Approved revisions (client requested {request.requestedCount})
                                     </label>
                                     <div className="flex gap-2">
@@ -165,7 +165,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                           w-10 h-10 rounded-lg border-2 font-bold transition-all
                           ${approvedCount === num
                                                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                                        : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
+                                                        : 'border-border bg-card text-muted-foreground hover:border-border'
                                                     }
                           ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                         `}
@@ -178,7 +178,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
 
                                 {/* Internal Notes */}
                                 <div className="space-y-2">
-                                    <label className="text-xs font-medium text-zinc-600">
+                                    <label className="text-xs font-medium text-muted-foreground">
                                         Internal notes (optional)
                                     </label>
                                     <Textarea
@@ -230,7 +230,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                                     value={declineReason}
                                     onChange={(e) => setDeclineReason(e.target.value)}
                                     placeholder="Explain why this request is being declined..."
-                                    className="min-h-[80px] text-sm bg-white"
+                                    className="min-h-[80px] text-sm bg-card"
                                     disabled={isProcessing}
                                 />
                                 <p className="text-xs text-red-700">
@@ -308,9 +308,9 @@ export const AdminRevisionRequestsPanel: React.FC<AdminRevisionRequestsPanelProp
 
     if (requests.length === 0) {
         return (
-            <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-6 text-center">
-                <FolderOpen className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
-                <p className="text-sm text-zinc-600">No additional revision requests</p>
+            <div className="bg-muted border border-border rounded-lg p-6 text-center">
+                <FolderOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No additional revision requests</p>
             </div>
         );
     }
@@ -320,7 +320,7 @@ export const AdminRevisionRequestsPanel: React.FC<AdminRevisionRequestsPanelProp
             {/* Pending Requests */}
             {pendingRequests.length > 0 && (
                 <div className="space-y-3">
-                    <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                    <h3 className="font-bold text-foreground flex items-center gap-2">
                         <Clock className="h-5 w-5 text-amber-500" />
                         Pending Requests ({pendingRequests.length})
                     </h3>
@@ -340,8 +340,8 @@ export const AdminRevisionRequestsPanel: React.FC<AdminRevisionRequestsPanelProp
             {/* Processed Requests */}
             {processedRequests.length > 0 && (
                 <div className="space-y-3">
-                    <h3 className="font-bold text-zinc-900 flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-zinc-400" />
+                    <h3 className="font-bold text-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                         Processed Requests ({processedRequests.length})
                     </h3>
                     <div className="space-y-2">

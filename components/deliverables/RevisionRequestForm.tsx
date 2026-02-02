@@ -90,11 +90,11 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
         showCloseButton={true}
         className="max-w-3xl max-h-[90vh]"
       >
-        <div className="px-6 py-4 border-b border-zinc-200">
-          <h2 className="text-xl font-bold text-zinc-900">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">
             Request Revision: {deliverable.title}
           </h2>
-          <p className="text-sm text-zinc-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Provide feedback for the team. Issue categories will be automatically detected.
           </p>
         </div>
@@ -135,7 +135,7 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
 
           {/* General Text Feedback */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-zinc-700">
+            <label className="text-sm font-semibold text-foreground">
               Describe the changes needed <span className="text-red-500">*</span>
             </label>
             <Textarea
@@ -149,12 +149,12 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
             <div className="flex items-center justify-between text-xs">
               <span
                 className={
-                  isTextValid ? 'text-emerald-600' : 'text-zinc-500'
+                  isTextValid ? 'text-emerald-600' : 'text-muted-foreground'
                 }
               >
                 {isTextValid ? '✓ Meets minimum length' : `Minimum ${minCharacters} characters`}
               </span>
-              <span className="text-zinc-500 font-mono">
+              <span className="text-muted-foreground font-mono">
                 {revisionFeedback.text.length} chars
               </span>
             </div>
@@ -173,9 +173,9 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
         </div>
 
         {/* Footer with Quota Warning and Submit */}
-        <div className="border-t border-zinc-200 px-6 py-4 bg-zinc-50 flex items-center justify-between gap-4">
+        <div className="border-t border-border px-6 py-4 bg-muted flex items-center justify-between gap-4">
           {/* Simplified Quota Warning */}
-          <div className="flex items-center gap-2 text-sm text-zinc-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle
               className={`h-4 w-4 ${quota.remaining === 0 ? 'text-red-500' : 'text-amber-500'}`}
             />
@@ -217,12 +217,12 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
               <div className="p-3 bg-amber-100 rounded-full">
                 <AlertTriangle className="h-6 w-6 text-amber-600" />
               </div>
-              <h3 className="text-lg font-bold text-zinc-900">
+              <h3 className="text-lg font-bold text-foreground">
                 Confirm Revision Request
               </h3>
             </div>
 
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-muted-foreground">
               You're about to submit a revision request for "{deliverable.title}".
               This will consume <strong>1 revision</strong> from your project quota.
             </p>

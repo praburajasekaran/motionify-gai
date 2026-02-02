@@ -188,7 +188,7 @@ export const ProjectList = () => {
                     <div>
                         <div className="flex items-center gap-3">
                             <h2 className="text-3xl font-bold tracking-tight text-foreground">Productions in Motion</h2>
-                            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-zinc-500 bg-zinc-100 px-2.5 py-1 rounded-full">
+                            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
                                 <kbd className="text-[10px] font-semibold">J</kbd>
                                 <kbd className="text-[10px] font-semibold">K</kbd>
                                 to navigate • Press <kbd className="text-[10px] font-semibold">?</kbd> for all shortcuts
@@ -205,18 +205,18 @@ export const ProjectList = () => {
                 </div>
 
                 {/* Toolbar - Sticky */}
-                <div className="sticky top-2 z-40 flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-2xl border border-zinc-200 shadow-md transition-all">
+                <div className="sticky top-2 z-40 flex flex-col md:flex-row gap-4 items-center justify-between bg-card p-2 rounded-2xl border border-border shadow-md transition-all">
                     <div className="flex items-center gap-2 w-full md:w-auto px-1 flex-col md:flex-row">
                         <div className="relative w-full md:w-72 group">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <Input
                                 placeholder="Search projects..."
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
-                                className="pl-9 bg-white/50 border-zinc-200 focus:bg-white focus:border-primary rounded-full transition-all shadow-sm"
+                                className="pl-9 bg-card/50 border-border focus:bg-card focus:border-primary rounded-full transition-all shadow-sm"
                             />
                         </div>
-                        <div className="h-6 w-px bg-zinc-200 mx-2 hidden md:block" />
+                        <div className="h-6 w-px bg-border mx-2 hidden md:block" />
                         <Select
                             placeholder="Status"
                             options={[
@@ -230,22 +230,22 @@ export const ProjectList = () => {
                             value={statusFilter}
                             onValueChange={setStatusFilter}
                             className="w-full md:w-48"
-                            triggerClassName="rounded-full bg-white/50 border-zinc-200"
+                            triggerClassName="rounded-full bg-card/50 border-border"
                         />
                     </div>
 
                     <div className="flex items-center gap-2 w-full md:w-auto px-2 justify-end">
-                        <div className="flex items-center bg-zinc-100/80 rounded-full p-1 border border-zinc-200">
+                        <div className="flex items-center bg-muted rounded-full p-1 border border-border">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'grid' ? "bg-white shadow-sm text-foreground scale-105" : "text-zinc-400 hover:text-foreground")}
+                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'grid' ? "bg-card shadow-sm text-foreground scale-105" : "text-muted-foreground hover:text-foreground")}
                                 aria-label="Grid View"
                             >
                                 <LayoutGrid className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'list' ? "bg-white shadow-sm text-foreground scale-105" : "text-zinc-400 hover:text-foreground")}
+                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'list' ? "bg-card shadow-sm text-foreground scale-105" : "text-muted-foreground hover:text-foreground")}
                                 aria-label="List View"
                             >
                                 <List className="h-4 w-4" />
@@ -307,10 +307,10 @@ export const ProjectList = () => {
 
                     {/* List View */}
                     {viewMode === 'list' && (
-                        <div className="rounded-2xl border border-zinc-200/60 bg-white overflow-hidden shadow-sm animate-fade-in-up">
+                        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm animate-fade-in-up">
                             <div className="w-full overflow-x-auto">
                                 <table className="w-full text-sm text-left">
-                                    <thead className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 font-medium">
+                                    <thead className="bg-muted border-b border-border text-muted-foreground font-medium">
                                         <tr>
                                             <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Project Name</th>
                                             <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Status</th>
@@ -320,13 +320,13 @@ export const ProjectList = () => {
                                             <th scope="col" className="h-12 px-6 align-middle font-medium text-right"></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-100">
+                                    <tbody className="divide-y divide-border">
                                         {filteredProjects.map((project, idx) => (
                                             <tr
                                                 key={project.id}
                                                 ref={selectedIndex === idx ? selectedRef : null}
                                                 className={cn(
-                                                    "hover:bg-zinc-50/80 transition-all group",
+                                                    "hover:bg-muted transition-all group",
                                                     selectedIndex === idx && "bg-primary/5 ring-2 ring-inset ring-primary/20"
                                                 )}
                                             >
@@ -335,13 +335,13 @@ export const ProjectList = () => {
                                                         <ClientLogo
                                                             clientName={project.client}
                                                             website={project.website}
-                                                            className="h-10 w-10 rounded-xl shadow-sm border border-zinc-100"
+                                                            className="h-10 w-10 rounded-xl shadow-sm border border-border"
                                                         />
                                                         <div>
-                                                            <Link to={`/projects/${project.id}`} className="font-semibold text-zinc-900 hover:text-primary transition-colors block">
+                                                            <Link to={`/projects/${project.id}`} className="font-semibold text-foreground hover:text-primary transition-colors block">
                                                                 {project.title}
                                                             </Link>
-                                                            <span className="text-xs text-zinc-500">{project.client}</span>
+                                                            <span className="text-xs text-muted-foreground">{project.client}</span>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -351,10 +351,10 @@ export const ProjectList = () => {
                                                 <td className="p-6 align-middle">
                                                     <div className="flex -space-x-2">
                                                         {project.team.slice(0, 3).map((user) => (
-                                                            <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-8 w-8 border-2 border-white ring-1 ring-zinc-200 transition-transform hover:scale-110 hover:z-10" />
+                                                            <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-8 w-8 border-2 border-card ring-1 ring-border transition-transform hover:scale-110 hover:z-10" />
                                                         ))}
                                                         {project.team.length > 3 && (
-                                                            <div className="h-8 w-8 rounded-full bg-zinc-100 border-2 border-white flex items-center justify-center text-xs font-medium text-zinc-500">
+                                                            <div className="h-8 w-8 rounded-full bg-muted border-2 border-card flex items-center justify-center text-xs font-medium text-muted-foreground">
                                                                 +{project.team.length - 3}
                                                             </div>
                                                         )}
@@ -362,13 +362,13 @@ export const ProjectList = () => {
                                                 </td>
                                                 <td className="p-6 align-middle">
                                                     <div className="flex flex-col gap-1 w-24">
-                                                        <div className="flex justify-between text-xs text-zinc-500 mb-0.5">
+                                                        <div className="flex justify-between text-xs text-muted-foreground mb-0.5">
                                                             <span>{project.progress}%</span>
                                                         </div>
                                                         <Progress value={project.progress} className="h-1.5" />
                                                     </div>
                                                 </td>
-                                                <td className="p-6 align-middle text-zinc-500">
+                                                <td className="p-6 align-middle text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <Calendar className="h-4 w-4" />
                                                         {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -407,7 +407,7 @@ const Calendar = ({ className }: { className?: string }) => (
 )
 
 const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navigate: any }> = ({ project, getStatusVariant, navigate }) => (
-    <Card hoverable className="group relative overflow-hidden bg-white border-zinc-200 transform-gpu">
+    <Card hoverable className="group relative overflow-hidden bg-card border-border transform-gpu">
         {/* Top Decoration */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
@@ -429,7 +429,7 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
                     </div>
                     <DropdownMenu
                         trigger={
-                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-zinc-400 hover:text-zinc-900" aria-label="Project Options">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground" aria-label="Project Options">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         }
@@ -441,11 +441,11 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
 
                 <div className="space-y-1.5 mb-5">
                     <Link to={`/projects/${project.id}`}>
-                        <h3 className="font-bold text-lg text-zinc-900 group-hover:text-primary transition-colors line-clamp-1">
+                        <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
                             {project.title}
                         </h3>
                     </Link>
-                    <p className="text-sm text-zinc-500 font-medium">{project.client}</p>
+                    <p className="text-sm text-muted-foreground font-medium">{project.client}</p>
                 </div>
 
                 <div className="flex items-center gap-2 mb-6">
@@ -459,18 +459,18 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
                 </div>
 
                 <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-semibold text-zinc-500">
+                    <div className="flex justify-between text-xs font-semibold text-muted-foreground">
                         <span>Progress</span>
-                        <span className="text-zinc-900">{project.progress}%</span>
+                        <span className="text-foreground">{project.progress}%</span>
                     </div>
                     <Progress value={project.progress} indicatorClassName="bg-gradient-to-r from-primary to-blue-400" />
                 </div>
             </div>
 
-            <Separator className="bg-zinc-100" />
+            <Separator className="bg-muted" />
 
-            <div className="px-7 py-4 bg-zinc-50/50 flex items-center justify-between group-hover:bg-zinc-50/80 transition-colors">
-                <div className="flex items-center gap-5 text-xs text-zinc-500 font-medium">
+            <div className="px-7 py-4 bg-muted/50 flex items-center justify-between group-hover:bg-muted/80 transition-colors">
+                <div className="flex items-center gap-5 text-xs text-muted-foreground font-medium">
                     <div className="flex items-center gap-1.5" title="Deliverables">
                         <FileBox className="h-3.5 w-3.5" />
                         {project.deliverablesCount}
@@ -483,10 +483,10 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
 
                 <div className="flex -space-x-2">
                     {project.team.slice(0, 3).map((user) => (
-                        <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-6 w-6 border-2 border-white ring-1 ring-zinc-200 transition-transform hover:scale-110 hover:z-10" />
+                        <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-6 w-6 border-2 border-card ring-1 ring-border transition-transform hover:scale-110 hover:z-10" />
                     ))}
                     {project.team.length > 3 && (
-                        <div className="h-6 w-6 rounded-full bg-zinc-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                        <div className="h-6 w-6 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold text-muted-foreground">
                             +{project.team.length - 3}
                         </div>
                     )}

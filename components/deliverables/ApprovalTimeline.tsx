@@ -62,7 +62,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
   if (approvalHistory.length === 0) {
     return (
       <div className={cn('text-center py-8', className)}>
-        <p className="text-sm text-zinc-500">No approval history yet</p>
+        <p className="text-sm text-muted-foreground">No approval history yet</p>
       </div>
     );
   }
@@ -90,12 +90,12 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
       {approvalHistory.map((approval, idx) => (
         <div
           key={approval.id}
-          className="relative pl-8 pb-6 last:pb-0 border-l-2 border-zinc-200 last:border-l-0"
+          className="relative pl-8 pb-6 last:pb-0 border-l-2 border-border last:border-l-0"
         >
           {/* Timeline Dot */}
           <div
             className={cn(
-              'absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white shadow-sm',
+              'absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-card shadow-sm',
               approval.action === 'approved'
                 ? 'bg-emerald-500'
                 : 'bg-red-500'
@@ -103,7 +103,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
           />
 
           {/* Card */}
-          <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {/* Header */}
             <div
               className={cn(
@@ -120,10 +120,10 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
                   <XCircle className="h-5 w-5 text-red-600" />
                 )}
                 <div>
-                  <p className="font-semibold text-sm text-zinc-900">
+                  <p className="font-semibold text-sm text-foreground">
                     {approval.action === 'approved' ? 'Approved' : 'Revision Requested'}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     by {approval.userName} • {formatTimestamp(approval.timestamp)}
                   </p>
                 </div>
@@ -140,11 +140,11 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
               {/* General Feedback */}
               {approval.feedback && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <MessageSquare className="h-3.5 w-3.5" />
                     Feedback
                   </div>
-                  <p className="text-sm text-zinc-700 leading-relaxed bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+                  <p className="text-sm text-foreground leading-relaxed bg-muted p-3 rounded-lg border border-border">
                     {approval.feedback}
                   </p>
                 </div>
@@ -153,7 +153,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
               {/* Timestamped Comments */}
               {approval.timestampedComments && approval.timestampedComments.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <Clock className="h-3.5 w-3.5" />
                     Timeline Comments ({approval.timestampedComments.length})
                   </div>
@@ -173,12 +173,12 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <CategoryIcon className="h-3.5 w-3.5 text-zinc-500" />
-                              <span className="text-xs font-medium text-zinc-600">
+                              <CategoryIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-medium text-muted-foreground">
                                 {ISSUE_LABELS[comment.category]}
                               </span>
                             </div>
-                            <p className="text-sm text-zinc-700">{comment.comment}</p>
+                            <p className="text-sm text-foreground">{comment.comment}</p>
                           </div>
                         </div>
                       );
@@ -190,7 +190,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
               {/* Issue Categories */}
               {approval.issueCategories && approval.issueCategories.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <AlertCircle className="h-3.5 w-3.5" />
                     Issue Categories
                   </div>
@@ -214,7 +214,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
               {/* Attachments */}
               {approval.attachments && approval.attachments.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <Paperclip className="h-3.5 w-3.5" />
                     Attachments ({approval.attachments.length})
                   </div>
@@ -222,14 +222,14 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
                     {approval.attachments.map((attachment) => (
                       <div
                         key={attachment.id}
-                        className="flex items-center gap-3 p-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm"
+                        className="flex items-center gap-3 p-2 bg-muted border border-border rounded-lg text-sm"
                       >
-                        <Paperclip className="h-4 w-4 text-zinc-400" />
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-zinc-900 truncate">
+                          <p className="font-medium text-foreground truncate">
                             {attachment.fileName}
                           </p>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-muted-foreground">
                             {(attachment.fileSize / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>

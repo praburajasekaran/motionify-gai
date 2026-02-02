@@ -61,19 +61,19 @@ export function NotificationBell() {
                 ref={buttonRef}
                 variant="ghost"
                 size="icon"
-                className="relative hover:bg-zinc-100 rounded-full"
+                className="relative hover:bg-accent rounded-full"
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
             >
-                <Bell className="h-5 w-5 text-zinc-500" />
+                <Bell className="h-5 w-5 text-muted-foreground" />
 
                 {/* Badge with animated ping effect */}
                 {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 flex">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
+                        <span className="relative inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-card">
                             {formatUnreadCount(unreadCount)}
                         </span>
                     </span>

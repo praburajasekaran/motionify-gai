@@ -178,10 +178,10 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <div className="flex flex-col h-[80vh] w-[95vw] md:w-full max-w-3xl overflow-hidden">
                 {/* Header */}
-                <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+                <div className="p-6 border-b border-border flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-semibold text-zinc-900">Batch Upload</h2>
-                        <p className="text-sm text-zinc-500">Drag and drop files to match them with deliverables</p>
+                        <h2 className="text-lg font-semibold text-foreground">Batch Upload</h2>
+                        <p className="text-sm text-muted-foreground">Drag and drop files to match them with deliverables</p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={onClose}><X className="h-5 w-5" /></Button>
                 </div>
@@ -192,19 +192,19 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                     <div
                         className={cn(
                             "border-2 border-dashed rounded-xl p-8 text-center transition-colors",
-                            isDragging ? "border-indigo-500 bg-indigo-50" : "border-zinc-200 hover:border-zinc-300 bg-zinc-50"
+                            isDragging ? "border-indigo-500 bg-indigo-50" : "border-border hover:border-border bg-muted"
                         )}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                     >
                         <div className="flex flex-col items-center gap-3">
-                            <div className="h-12 w-12 bg-white rounded-full shadow-sm flex items-center justify-center">
-                                <Upload className="h-6 w-6 text-zinc-400" />
+                            <div className="h-12 w-12 bg-card rounded-full shadow-sm flex items-center justify-center">
+                                <Upload className="h-6 w-6 text-muted-foreground" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-zinc-900">Click to upload or drag and drop</p>
-                                <p className="text-xs text-zinc-500">Video, Image, Documents (max 5GB)</p>
+                                <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
+                                <p className="text-xs text-muted-foreground">Video, Image, Documents (max 5GB)</p>
                             </div>
                             <input
                                 type="file"
@@ -222,30 +222,30 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                     {/* Matches List */}
                     {matches.length > 0 && (
                         <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-zinc-900">Files ({matches.length})</h3>
+                            <h3 className="text-sm font-medium text-foreground">Files ({matches.length})</h3>
                             <div className="space-y-2">
                                 {matches.map((match, index) => (
-                                    <div key={index} className="bg-white border border-zinc-200 rounded-lg p-3 flex items-center gap-4">
-                                        <div className="h-10 w-10 bg-zinc-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <div key={index} className="bg-card border border-border rounded-lg p-3 flex items-center gap-4">
+                                        <div className="h-10 w-10 bg-muted rounded-lg flex items-center justify-center shrink-0">
                                             {match.status === 'success' ? (
                                                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                                             ) : match.status === 'error' ? (
                                                 <AlertCircle className="h-5 w-5 text-red-500" />
                                             ) : (
-                                                <FileIcon className="h-5 w-5 text-zinc-400" />
+                                                <FileIcon className="h-5 w-5 text-muted-foreground" />
                                             )}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-1">
-                                                <p className="text-sm font-medium text-zinc-900 truncate">{match.file.name}</p>
-                                                <span className="text-xs text-zinc-500">{(match.file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                                                <p className="text-sm font-medium text-foreground truncate">{match.file.name}</p>
+                                                <span className="text-xs text-muted-foreground">{(match.file.size / (1024 * 1024)).toFixed(1)} MB</span>
                                             </div>
 
                                             {/* Match Selector */}
                                             {match.status !== 'success' && match.status !== 'uploading' ? (
                                                 <select
-                                                    className="w-full text-xs p-1.5 rounded border border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-indigo-100 outline-none"
+                                                    className="w-full text-xs p-1.5 rounded border border-border bg-muted focus:ring-2 focus:ring-indigo-100 outline-none"
                                                     value={match.deliverableId || ''}
                                                     onChange={(e) => handleMatchChange(index, e.target.value)}
                                                 >
@@ -255,7 +255,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                                <div className="text-xs text-muted-foreground flex items-center gap-2">
                                                     {pendingDeliverables.find(d => d.id === match.deliverableId)?.title}
                                                     {match.status === 'uploading' && <span className="text-indigo-600">({match.progress}%)</span>}
                                                 </div>
@@ -271,7 +271,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0 text-zinc-400 hover:text-red-500"
+                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
                                                 onClick={() => removeFile(index)}
                                             >
                                                 <X className="h-4 w-4" />
@@ -285,7 +285,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-zinc-100 flex justify-end gap-3 bg-zinc-50">
+                <div className="p-6 border-t border-border flex justify-end gap-3 bg-muted">
                     <Button variant="ghost" onClick={onClose} disabled={isUploading}>Cancel</Button>
                     <Button
                         variant="primary"

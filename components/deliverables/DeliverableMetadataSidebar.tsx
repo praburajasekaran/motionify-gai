@@ -60,8 +60,8 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
   return (
     <div className="space-y-6">
       {/* Deliverable Details */}
-      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-4">
-        <h3 className="font-bold text-sm text-zinc-700 uppercase tracking-wider">
+      <div className="bg-muted border border-border rounded-xl p-4 space-y-4">
+        <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">
           Deliverable Details
         </h3>
 
@@ -69,22 +69,22 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
 
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-zinc-500 mb-1">Type</p>
+            <p className="text-xs text-muted-foreground mb-1">Type</p>
             {deliverable.type ? (
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900">
-                {deliverable.type === 'Video' && <FileVideo className="h-4 w-4 text-zinc-500" />}
-                {deliverable.type === 'Image' && <FileImage className="h-4 w-4 text-zinc-500" />}
-                {deliverable.type === 'Document' && <FileText className="h-4 w-4 text-zinc-500" />}
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                {deliverable.type === 'Video' && <FileVideo className="h-4 w-4 text-muted-foreground" />}
+                {deliverable.type === 'Image' && <FileImage className="h-4 w-4 text-muted-foreground" />}
+                {deliverable.type === 'Document' && <FileText className="h-4 w-4 text-muted-foreground" />}
                 {deliverable.type}
               </div>
             ) : (
-              <p className="text-sm text-zinc-400">No files yet</p>
+              <p className="text-sm text-muted-foreground">No files yet</p>
             )}
           </div>
 
           <div>
-            <p className="text-xs text-zinc-500 mb-1">Due Date</p>
-            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+            <p className="text-xs text-muted-foreground mb-1">Due Date</p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Calendar className="h-4 w-4" />
               {new Date(deliverable.dueDate).toLocaleDateString(undefined, {
                 weekday: 'long',
@@ -97,10 +97,10 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
 
           {isFinalDelivered && deliverable.expiresAt && (
             <div>
-              <p className="text-xs text-zinc-500 mb-1">Download Expiry</p>
+              <p className="text-xs text-muted-foreground mb-1">Download Expiry</p>
               <p className="text-sm font-semibold text-amber-700">
                 {new Date(deliverable.expiresAt).toLocaleDateString()}
-                <span className="text-xs text-zinc-500 ml-2">
+                <span className="text-xs text-muted-foreground ml-2">
                   (
                   {Math.ceil(
                     (new Date(deliverable.expiresAt).getTime() - Date.now()) /

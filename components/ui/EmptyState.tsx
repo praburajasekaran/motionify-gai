@@ -20,12 +20,12 @@ export function EmptyState({
     <div
       className={`flex flex-col items-center justify-center py-12 text-center ${className}`}
     >
-      <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center">
-        <Icon className="w-8 h-8 text-zinc-400" />
+      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+        <Icon className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold text-zinc-900 mt-4">{title}</h3>
+      <h3 className="text-lg font-semibold text-foreground mt-4">{title}</h3>
       {description && (
-        <p className="text-sm text-zinc-500 mt-1 max-w-sm">{description}</p>
+        <p className="text-sm text-muted-foreground mt-1 max-w-sm">{description}</p>
       )}
       {action && (
         <button

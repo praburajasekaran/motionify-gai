@@ -118,23 +118,23 @@ export const MentionInput: React.FC<MentionInputProps> = ({
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     disabled={disabled}
-                    className="h-10 text-sm pl-3 pr-8 rounded-full border-zinc-200 bg-zinc-50 focus:bg-white transition-colors w-full"
+                    className="h-10 text-sm pl-3 pr-8 rounded-full border-border bg-muted focus:bg-card transition-colors w-full"
                 />
 
                 {showSuggestions && filteredUsers.length > 0 && (
-                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-zinc-200 overflow-hidden z-50">
+                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-card rounded-lg shadow-lg border border-border overflow-hidden z-50">
                         <div className="py-1">
-                            <div className="px-3 py-1.5 text-xs font-semibold text-zinc-400 bg-zinc-50 border-b border-zinc-100">
+                            <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted border-b border-border">
                                 Mention Team Member
                             </div>
                             {filteredUsers.map(user => (
                                 <button
                                     key={user.id}
                                     onClick={() => handleSelectUser(user)}
-                                    className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 transition-colors"
+                                    className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 transition-colors"
                                 >
                                     <Avatar src={user.avatar} fallback={user.name[0]} className="h-6 w-6" />
-                                    <span className="text-sm text-zinc-700">{user.name}</span>
+                                    <span className="text-sm text-foreground">{user.name}</span>
                                 </button>
                             ))}
                         </div>

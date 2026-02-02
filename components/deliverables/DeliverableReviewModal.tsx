@@ -120,13 +120,13 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
         className="max-w-[95vw] max-h-[95vh] flex flex-col"
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-zinc-200">
+        <div className="px-6 py-4 border-b border-border">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 {deliverable.title}
               </h2>
-              <p className="text-sm text-zinc-600">{deliverable.description}</p>
+              <p className="text-sm text-muted-foreground">{deliverable.description}</p>
             </div>
             <Badge
               variant={
@@ -158,48 +158,48 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                   onConvertToTask={onConvertToTask}
                 />
               ) : (
-                <div className="w-full aspect-video bg-zinc-100 rounded-lg flex items-center justify-center">
-                  <FileVideo className="h-16 w-16 text-zinc-400" />
+                <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
+                  <FileVideo className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
 
               {/* Video Metadata */}
               <div className="grid grid-cols-3 gap-4">
                 {deliverable.duration && (
-                  <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-zinc-500 mb-2">
+                  <div className="bg-muted border border-border rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <Clock className="h-4 w-4" />
                       <span className="text-xs font-medium uppercase tracking-wider">
                         Duration
                       </span>
                     </div>
-                    <p className="text-lg font-bold text-zinc-900">
+                    <p className="text-lg font-bold text-foreground">
                       {deliverable.duration}
                     </p>
                   </div>
                 )}
                 {deliverable.format && (
-                  <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-zinc-500 mb-2">
+                  <div className="bg-muted border border-border rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <FileVideo className="h-4 w-4" />
                       <span className="text-xs font-medium uppercase tracking-wider">
                         Format
                       </span>
                     </div>
-                    <p className="text-lg font-bold text-zinc-900">
+                    <p className="text-lg font-bold text-foreground">
                       {deliverable.format}
                     </p>
                   </div>
                 )}
                 {deliverable.resolution && (
-                  <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-zinc-500 mb-2">
+                  <div className="bg-muted border border-border rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <Maximize2 className="h-4 w-4" />
                       <span className="text-xs font-medium uppercase tracking-wider">
                         Resolution
                       </span>
                     </div>
-                    <p className="text-lg font-bold text-zinc-900 font-mono">
+                    <p className="text-lg font-bold text-foreground font-mono">
                       {deliverable.resolution}
                     </p>
                   </div>
@@ -209,7 +209,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
               {/* Approval Timeline */}
               {deliverable.approvalHistory.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-zinc-900">
+                  <h3 className="text-lg font-bold text-foreground">
                     Review History
                   </h3>
                   <ApprovalTimeline approvalHistory={deliverable.approvalHistory} />
@@ -220,8 +220,8 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
             {/* Right Column - Sidebar Info & Actions (1/3 width on desktop) */}
             <div className="space-y-6">
               {/* Deliverable Details */}
-              <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-4">
-                <h3 className="font-bold text-sm text-zinc-700 uppercase tracking-wider">
+              <div className="bg-muted border border-border rounded-xl p-4 space-y-4">
+                <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">
                   Deliverable Details
                 </h3>
 
@@ -229,15 +229,15 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-zinc-500 mb-1">Type</p>
-                    <p className="text-sm font-semibold text-zinc-900">
+                    <p className="text-xs text-muted-foreground mb-1">Type</p>
+                    <p className="text-sm font-semibold text-foreground">
                       {deliverable.type || 'No files yet'}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-zinc-500 mb-1">Due Date</p>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                    <p className="text-xs text-muted-foreground mb-1">Due Date</p>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <Calendar className="h-4 w-4" />
                       {new Date(deliverable.dueDate).toLocaleDateString(undefined, {
                         weekday: 'long',
@@ -249,18 +249,18 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                   </div>
 
                   <div>
-                    <p className="text-xs text-zinc-500 mb-1">Progress</p>
-                    <p className="text-sm font-semibold text-zinc-900">
+                    <p className="text-xs text-muted-foreground mb-1">Progress</p>
+                    <p className="text-sm font-semibold text-foreground">
                       {deliverable.progress}% Complete
                     </p>
                   </div>
 
                   {isFinalDelivered && deliverable.expiresAt && (
                     <div>
-                      <p className="text-xs text-zinc-500 mb-1">Download Expiry</p>
+                      <p className="text-xs text-muted-foreground mb-1">Download Expiry</p>
                       <p className="text-sm font-semibold text-amber-700">
                         {new Date(deliverable.expiresAt).toLocaleDateString()}
-                        <span className="text-xs text-zinc-500 ml-2">
+                        <span className="text-xs text-muted-foreground ml-2">
                           (
                           {Math.ceil(
                             (new Date(deliverable.expiresAt).getTime() - Date.now()) /

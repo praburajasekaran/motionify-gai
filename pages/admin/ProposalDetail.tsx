@@ -85,7 +85,7 @@ export function ProposalDetail() {
   if (authLoading || isDataLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -108,11 +108,11 @@ export function ProposalDetail() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Proposal Not Found</h2>
-          <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Proposal Not Found</h2>
+          <p className="text-muted-foreground mb-6">The proposal you're looking for doesn't exist.</p>
           <button
             onClick={() => navigate('/admin/inquiries')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Inquiries
@@ -499,7 +499,7 @@ export function ProposalDetail() {
       <div className="mb-6">
         <button
           onClick={() => navigate(isClient ? (inquiry ? `/admin/inquiries/${inquiry.id}` : '/') : (inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries'))}
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Inquiry
@@ -508,18 +508,18 @@ export function ProposalDetail() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Proposal</h1>
+              <h1 className="text-3xl font-bold text-foreground">Proposal</h1>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
                 <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
                 {statusInfo.adminLabel}
               </span>
             </div>
             {inquiry && (
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 For inquiry <code className="text-violet-600 font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
               </p>
             )}
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Created {formatDate(proposal.createdAt)}
               {proposal.updatedAt !== proposal.createdAt && ` • Updated ${formatDate(proposal.updatedAt)}`}
             </p>
@@ -587,34 +587,34 @@ export function ProposalDetail() {
 
       <div className="space-y-6">
         {/* Project Description */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Project Description {isEditMode && <span className="text-red-600">*</span>}
           </label>
           {isEditMode ? (
             <>
-              <p className="text-xs text-gray-600 mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
                 Describe the scope of work, objectives, and what the client can expect
               </p>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={6}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
                 placeholder="Enter detailed project description..."
               />
             </>
           ) : (
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
           )}
         </div>
 
         {/* Deliverables */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Deliverables</h2>
-              <p className="text-xs text-gray-600 mt-1">
+              <h2 className="text-lg font-semibold text-foreground">Deliverables</h2>
+              <p className="text-xs text-muted-foreground mt-1">
                 {isEditMode ? 'Define what will be delivered to the client' : `${proposal.deliverables.length} deliverable${proposal.deliverables.length !== 1 ? 's' : ''}`}
               </p>
             </div>
@@ -634,12 +634,12 @@ export function ProposalDetail() {
               deliverables.map((deliverable, index) => (
                 <div
                   key={deliverable.id}
-                  className="bg-gray-50 border border-gray-300 rounded-lg p-4"
+                  className="bg-muted border border-border rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex items-center gap-2 mt-2">
-                      <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
-                      <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
+                      <GripVertical className="w-5 h-5 text-muted-foreground cursor-move" />
+                      <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
                     </div>
 
                     <div className="flex-1 space-y-3">
@@ -650,7 +650,7 @@ export function ProposalDetail() {
                           handleDeliverableChange(deliverable.id, 'name', e.target.value)
                         }
                         placeholder="Deliverable name (e.g., 'Product Demo Video')"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
                       />
 
                       <textarea
@@ -660,11 +660,11 @@ export function ProposalDetail() {
                         }
                         placeholder="Describe what's included in this deliverable..."
                         rows={3}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none text-sm"
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none text-sm"
                       />
 
                       <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-600">Estimated completion:</label>
+                        <label className="text-xs text-muted-foreground">Estimated completion:</label>
                         <input
                           type="number"
                           min="1"
@@ -676,9 +676,9 @@ export function ProposalDetail() {
                               parseInt(e.target.value) || 1
                             )
                           }
-                          className="w-20 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                          className="w-20 px-3 py-1.5 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                         />
-                        <span className="text-xs text-gray-600">
+                        <span className="text-xs text-muted-foreground">
                           week{deliverable.estimatedCompletionWeek !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -698,16 +698,16 @@ export function ProposalDetail() {
               proposal.deliverables.map((deliverable, index) => (
                 <div
                   key={deliverable.id}
-                  className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                  className="bg-muted border border-border rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex items-center justify-center w-8 h-8 bg-violet-100 text-violet-700 rounded-full font-semibold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{deliverable.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{deliverable.description}</p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <h3 className="font-semibold text-foreground mb-1">{deliverable.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">{deliverable.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span>
                           Estimated completion: Week {deliverable.estimatedCompletionWeek}
@@ -722,14 +722,14 @@ export function ProposalDetail() {
         </div>
 
         {/* Project Terms */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Terms</h2>
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Project Terms</h2>
           {isEditMode ? (
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Revisions Included
               </label>
-              <p className="text-xs text-gray-600 mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
                 Number of revision rounds included in this project
               </p>
               <input
@@ -738,7 +738,7 @@ export function ProposalDetail() {
                 max="20"
                 value={revisionsIncluded}
                 onChange={(e) => setRevisionsIncluded(parseInt(e.target.value) || 0)}
-                className="w-24 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-24 px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
               />
             </div>
           ) : (
@@ -747,8 +747,8 @@ export function ProposalDetail() {
                 <span className="text-sm font-semibold">{proposal.revisionsIncluded ?? 2}</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Revisions Included</p>
-                <p className="text-gray-900 font-medium">
+                <p className="text-sm text-muted-foreground">Revisions Included</p>
+                <p className="text-foreground font-medium">
                   {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -757,15 +757,15 @@ export function ProposalDetail() {
         </div>
 
         {/* Pricing */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Pricing</h2>
 
           {isEditMode ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Total Price */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Total Project Cost ({currency}) <span className="text-red-600">*</span>
                   </label>
 
@@ -776,7 +776,7 @@ export function ProposalDetail() {
                       onClick={() => setCurrency('INR')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'INR'
                         ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-muted text-foreground hover:bg-muted'
                         }`}
                     >
                       INR (₹)
@@ -786,7 +786,7 @@ export function ProposalDetail() {
                       onClick={() => setCurrency('USD')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'USD'
                         ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-muted text-foreground hover:bg-muted'
                         }`}
                     >
                       USD ($)
@@ -795,9 +795,9 @@ export function ProposalDetail() {
 
                   <div className="relative">
                     {currency === 'INR' ? (
-                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     )}
                     <input
                       type="number"
@@ -806,14 +806,14 @@ export function ProposalDetail() {
                       value={totalPrice}
                       onChange={(e) => setTotalPrice(e.target.value)}
                       placeholder="80000"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                     />
                   </div>
                 </div>
 
                 {/* Advance Percentage */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Advance Payment Percentage
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -823,7 +823,7 @@ export function ProposalDetail() {
                         onClick={() => setAdvancePercentage(percentage as 40 | 50 | 60)}
                         className={`px-4 py-3 rounded-lg font-medium transition-all ${advancePercentage === percentage
                           ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-muted text-foreground hover:bg-muted'
                           }`}
                       >
                         {percentage}%
@@ -838,20 +838,20 @@ export function ProposalDetail() {
           {/* Pricing Breakdown */}
           {pricing && (
             <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-lg border border-violet-200`}>
-              <h3 className="text-sm font-medium text-gray-800 mb-3">Payment Breakdown</h3>
+              <h3 className="text-sm font-medium text-foreground mb-3">Payment Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Advance Payment ({isEditMode ? advancePercentage : proposal.advancePercentage}%)</span>
-                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.advanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-muted-foreground">Advance Payment ({isEditMode ? advancePercentage : proposal.advancePercentage}%)</span>
+                  <span className="text-foreground font-semibold">{formatCurrency(pricing.advanceAmount, isEditMode ? currency : proposal.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Balance Payment ({isEditMode ? 100 - advancePercentage : 100 - proposal.advancePercentage}%)</span>
-                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.balanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-muted-foreground">Balance Payment ({isEditMode ? 100 - advancePercentage : 100 - proposal.advancePercentage}%)</span>
+                  <span className="text-foreground font-semibold">{formatCurrency(pricing.balanceAmount, isEditMode ? currency : proposal.currency)}</span>
                 </div>
-                <div className="h-px bg-gray-300 my-2" />
+                <div className="h-px bg-border my-2" />
                 <div className="flex justify-between">
-                  <span className="text-gray-900 font-medium">Total Project Cost</span>
-                  <span className="text-gray-900 font-bold text-lg">{formatCurrency(pricing.totalPrice, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-foreground font-medium">Total Project Cost</span>
+                  <span className="text-foreground font-bold text-lg">{formatCurrency(pricing.totalPrice, isEditMode ? currency : proposal.currency)}</span>
                 </div>
               </div>
             </div>
@@ -860,32 +860,32 @@ export function ProposalDetail() {
 
         {/* Payments Section (Admin Only) */}
         {isAdmin && (
-          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Payments</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Payments</h2>
             {payments.length === 0 ? (
-              <p className="text-gray-500 text-sm">No payments found for this proposal.</p>
+              <p className="text-muted-foreground text-sm">No payments found for this proposal.</p>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-lg border border-border">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {payments.map((payment) => (
                       <tr key={payment.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                           {formatDate(payment.created_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">
                           {payment.payment_type}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           {formatCurrency(payment.amount, payment.currency as 'INR' | 'USD')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -927,8 +927,8 @@ export function ProposalDetail() {
 
         {/* Response Tracking */}
         {(proposal.acceptedAt || proposal.rejectedAt || proposal.feedback) && (
-          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Client Response</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Client Response</h2>
             <div className="space-y-3">
               {proposal.acceptedAt && (
                 <div className="flex items-center gap-2 text-sm text-emerald-600">
@@ -943,9 +943,9 @@ export function ProposalDetail() {
                 </div>
               )}
               {proposal.feedback && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-900 mb-1">Feedback:</p>
-                  <p className="text-sm text-gray-700">{proposal.feedback}</p>
+                <div className="mt-2 p-3 bg-muted rounded-lg border border-border">
+                  <p className="text-sm font-medium text-foreground mb-1">Feedback:</p>
+                  <p className="text-sm text-foreground">{proposal.feedback}</p>
                 </div>
               )}
             </div>
@@ -954,10 +954,10 @@ export function ProposalDetail() {
 
         {/* Action Buttons */}
         {isEditMode && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <button
               onClick={handleCancelEdit}
-              className="px-4 py-2.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+              className="px-4 py-2.5 rounded-lg bg-muted text-foreground hover:bg-muted transition-colors font-medium border border-border"
               disabled={isSaving}
             >
               <X className="w-4 h-4 inline mr-2" />
@@ -986,7 +986,7 @@ export function ProposalDetail() {
 
         {/* Client Action Buttons */}
         {isClient && proposal.status === 'sent' && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <button
               onClick={() => {
                 const feedback = prompt('Please provide a reason for rejecting the proposal:');
@@ -1031,8 +1031,8 @@ export function ProposalDetail() {
 
         {/* Payment Button for Accepted Proposals */}
         {isClient && proposal.status === 'accepted' && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
-            <div className="mr-auto text-sm text-gray-600">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
+            <div className="mr-auto text-sm text-muted-foreground">
               <span className="font-medium text-emerald-600">Proposal Accepted!</span> Please proceed to payment to start the project.
             </div>
             <button

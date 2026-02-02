@@ -23,11 +23,11 @@ export interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, icon: Icon = FileQuestion, action, className }) => (
   <div className={cn("flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95 duration-500", className)}>
-    <div className="bg-gradient-to-br from-zinc-50 to-zinc-100 p-5 rounded-2xl mb-5 ring-1 ring-black/5 shadow-md">
-      <Icon className="h-8 w-8 text-zinc-400" />
+    <div className="bg-gradient-to-br from-muted to-muted p-5 rounded-2xl mb-5 ring-1 ring-black/5 shadow-md">
+      <Icon className="h-8 w-8 text-muted-foreground" />
     </div>
-    <h3 className="text-lg font-semibold text-zinc-900 mb-2">{title}</h3>
-    <p className="text-sm text-zinc-500 max-w-sm mb-6 leading-relaxed">{description}</p>
+    <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+    <p className="text-sm text-muted-foreground max-w-sm mb-6 leading-relaxed">{description}</p>
     {action}
   </div>
 );
@@ -52,8 +52,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     <div className="bg-red-50 p-4 rounded-full mb-4 ring-1 ring-red-100 shadow-sm">
       <AlertTriangle className="h-10 w-10 text-red-500" />
     </div>
-    <h2 className="text-xl font-bold text-zinc-900 mb-2">{title}</h2>
-    <p className="text-zinc-500 max-w-md mb-6">{description}</p>
+    <h2 className="text-xl font-bold text-foreground mb-2">{title}</h2>
+    <p className="text-muted-foreground max-w-md mb-6">{description}</p>
     {onRetry && (
       <Button onClick={onRetry} variant="outline" className="min-w-[120px]">
         {retryLabel}
@@ -80,13 +80,13 @@ export const ClientLogo: React.FC<{ clientName: string; website?: string; classN
     'from-emerald-100 to-teal-100 text-teal-700',
     'from-orange-100 to-amber-100 text-amber-700',
     'from-purple-100 to-pink-100 text-purple-700',
-    'from-zinc-100 to-zinc-200 text-zinc-700',
+    'from-zinc-100 to-zinc-200 text-foreground',
   ];
   const colorClass = colors[clientName.length % colors.length];
 
   if (logoUrl && !error) {
     return (
-      <div className={cn("relative overflow-hidden bg-white flex items-center justify-center transition-transform hover:scale-105 duration-300", className)}>
+      <div className={cn("relative overflow-hidden bg-card flex items-center justify-center transition-transform hover:scale-105 duration-300", className)}>
         <img
           src={logoUrl}
           alt={clientName}
@@ -176,7 +176,7 @@ Button.displayName = "Button";
 export const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLLabelElement>>(({ className, ...props }, ref) => (
   <label
     ref={ref}
-    className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-700", className)}
+    className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground", className)}
     {...props}
   />
 ));
@@ -189,7 +189,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-white/50 px-3 py-1 text-sm shadow-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-zinc-300",
+          "flex h-10 w-full rounded-md border border-input bg-card/50 px-3 py-1 text-sm shadow-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-border",
           className
         )}
         ref={ref}
@@ -206,7 +206,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-white/50 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-zinc-300 transition-all",
+          "flex min-h-[80px] w-full rounded-md border border-input bg-card/50 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-border transition-all",
           className
         )}
         ref={ref}
@@ -226,7 +226,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, ho
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border border-zinc-200 bg-white text-card-foreground shadow-sm transition-all duration-300",
+      "rounded-xl border border-border bg-card text-card-foreground shadow-sm transition-all duration-300",
       hoverable && "hover:shadow-lg hover:-translate-y-1 cursor-default",
       className
     )}
@@ -241,12 +241,12 @@ export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
 CardHeader.displayName = "CardHeader";
 
 export const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn("text-xl font-semibold leading-none tracking-tight text-zinc-900", className)} {...props} />
+  <h3 ref={ref} className={cn("text-xl font-semibold leading-none tracking-tight text-foreground", className)} {...props} />
 ));
 CardTitle.displayName = "CardTitle";
 
 export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-zinc-500", className)} {...props} />
+  <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
 ));
 CardDescription.displayName = "CardDescription";
 
@@ -267,9 +267,9 @@ export function Badge({ className, variant = 'default', ...props }: BadgeProps) 
       "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ring-1 ring-inset",
       {
         'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 ring-transparent shadow-sm': variant === 'default',
-        'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 ring-zinc-200': variant === 'secondary',
+        'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 ring-border': variant === 'secondary',
         'border-transparent bg-red-50 text-red-700 hover:bg-red-100 ring-red-600/10': variant === 'destructive',
-        'text-foreground ring-zinc-200': variant === 'outline',
+        'text-foreground ring-border': variant === 'outline',
         'border-transparent bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20': variant === 'success',
         'border-transparent bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20': variant === 'warning',
         'border-transparent bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-700/10': variant === 'info',
@@ -282,7 +282,7 @@ export function Badge({ className, variant = 'default', ...props }: BadgeProps) 
 // --- SEPARATOR ---
 export const Separator = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("shrink-0 bg-zinc-200/80 h-[1px] w-full", className)} {...props} />
+    <div ref={ref} className={cn("shrink-0 bg-border h-[1px] w-full", className)} {...props} />
   )
 );
 Separator.displayName = "Separator";
@@ -297,7 +297,7 @@ export const Switch: React.FC<{ checked: boolean; onCheckedChange: (c: boolean) 
     onClick={() => onCheckedChange(!checked)}
     className={cn(
       "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-      checked ? "bg-primary" : "bg-zinc-200",
+      checked ? "bg-primary" : "bg-muted",
       className
     )}
   >
@@ -338,7 +338,7 @@ export const Slider: React.FC<{ value: number[]; onValueChange: (v: number[]) =>
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <div className="relative h-2 w-full grow overflow-hidden rounded-full bg-zinc-100">
+      <div className="relative h-2 w-full grow overflow-hidden rounded-full bg-muted">
         <div className="absolute h-full bg-primary transition-all duration-100 ease-out" style={{ width: `${percentage}%` }} />
       </div>
       <div
@@ -356,7 +356,7 @@ export const Avatar: React.FC<{ src?: string; fallback: string; className?: stri
       {src ? (
         <img src={src} alt="Avatar" className="aspect-square h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center rounded-full bg-zinc-100 text-zinc-500 text-xs font-semibold">
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-semibold">
           {fallback}
         </div>
       )}
@@ -369,7 +369,7 @@ export const Progress = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
   ({ className, value, indicatorClassName, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-zinc-100", className)}
+      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-muted", className)}
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
@@ -409,7 +409,7 @@ export const CircularProgress: React.FC<{ value: number; size?: number; strokeWi
     >
       <svg className="transform -rotate-90 w-full h-full drop-shadow-sm">
         <circle
-          className="text-zinc-100"
+          className="text-muted"
           strokeWidth={strokeWidth}
           stroke="currentColor"
           fill="transparent"
@@ -438,7 +438,7 @@ export const CircularProgress: React.FC<{ value: number; size?: number; strokeWi
 // --- SKELETON ---
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("animate-pulse rounded-md bg-zinc-200/70", className)} {...props} />
+    <div className={cn("animate-pulse rounded-md bg-accent", className)} {...props} />
   )
 }
 
@@ -478,7 +478,7 @@ export const Tabs: React.FC<{
 };
 
 export const TabsList: React.FC<{ className?: string; children: React.ReactNode }> = ({ className, children }) => (
-  <div role="tablist" className={cn("inline-flex h-10 items-center justify-center rounded-lg bg-zinc-100 p-1 text-muted-foreground overflow-x-auto no-scrollbar max-w-full shadow-inner", className)}>
+  <div role="tablist" className={cn("inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar max-w-full shadow-inner", className)}>
     {children}
   </div>
 );
@@ -496,7 +496,7 @@ export const TabsTrigger: React.FC<{ value: string; className?: string; children
       data-state={isActive ? "active" : "inactive"}
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isActive ? "bg-white text-foreground shadow-sm" : "hover:bg-white/50 hover:text-foreground text-zinc-500",
+        isActive ? "bg-white text-foreground shadow-sm" : "hover:bg-white/50 hover:text-foreground text-muted-foreground",
         className
       )}
     >
@@ -558,7 +558,7 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50 transition-colors focus:ring-2 focus:ring-primary",
+          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-muted transition-colors focus:ring-2 focus:ring-primary",
           triggerClassName
         )}
         onClick={(e) => {
@@ -568,13 +568,13 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
         onKeyDown={handleKeyDown}
       >
         {selectedLabel}
-        <ChevronDown className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+        <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </button>
 
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-xl bg-card shadow-xl ring-1 ring-black/5 focus:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="py-1">
             {options.map((opt) => (
@@ -589,8 +589,8 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex items-center justify-between w-full px-4 py-2.5 text-sm text-left hover:bg-zinc-50 transition-colors",
-                  value === opt.value ? "bg-primary/5 text-primary font-medium" : "text-zinc-900"
+                  "flex items-center justify-between w-full px-4 py-2.5 text-sm text-left hover:bg-muted transition-colors",
+                  value === opt.value ? "bg-primary/5 text-primary font-medium" : "text-foreground"
                 )}
               >
                 {opt.label}
@@ -632,7 +632,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, a
       </div>
       {open && (
         <div className={cn(
-          "absolute z-50 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none py-1 border border-zinc-100 animate-in fade-in zoom-in-95 duration-100",
+          "absolute z-50 mt-2 w-56 origin-top-right rounded-xl bg-card shadow-xl ring-1 ring-black/5 focus:outline-none py-1 border border-border animate-in fade-in zoom-in-95 duration-100",
           align === 'right' ? 'right-0' : 'left-0'
         )}>
           {children}
@@ -645,7 +645,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, a
 export const DropdownMenuItem: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
     <div
-      className={cn("block px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 cursor-pointer transition-colors first:rounded-t-lg last:rounded-b-lg", className)}
+      className={cn("block px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors first:rounded-t-lg last:rounded-b-lg", className)}
       {...props}
     />
   )
@@ -669,11 +669,11 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
         onClick={() => onOpenChange(false)}
       />
       {/* Content */}
-      <div className="relative bg-white rounded-2xl border border-white/20 shadow-2xl w-[95vw] md:w-full md:max-w-lg p-8 animate-in scale-in-95 fade-in duration-300 z-50">
+      <div className="relative bg-card rounded-2xl border border-white/20 shadow-2xl w-[95vw] md:w-full md:max-w-lg p-8 animate-in scale-in-95 fade-in duration-300 z-50">
         {children}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 p-2 rounded-full opacity-70 transition-all hover:opacity-100 hover:bg-zinc-100"
+          className="absolute top-4 right-4 p-2 rounded-full opacity-70 transition-all hover:opacity-100 hover:bg-muted"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -715,22 +715,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] p-4">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => onOpenChange(false)} />
-      <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl border border-zinc-200 overflow-hidden animate-in scale-in fade-in duration-200 z-50 flex flex-col">
-        <div className="flex items-center border-b border-zinc-200 px-3">
+      <div className="relative w-full max-w-xl bg-card rounded-xl shadow-2xl border border-border overflow-hidden animate-in scale-in fade-in duration-200 z-50 flex flex-col">
+        <div className="flex items-center border-b border-border px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <input
             ref={inputRef}
-            className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="Type a command or search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-zinc-100 px-1.5 font-mono text-[10px] font-medium text-zinc-500 opacity-100">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
             <span className="text-xs">ESC</span>
           </kbd>
         </div>
         <div className="max-h-[300px] overflow-y-auto p-2">
-          {filteredItems.length === 0 && <p className="p-4 text-center text-sm text-zinc-500">No results found.</p>}
+          {filteredItems.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No results found.</p>}
           {filteredItems.map((item, i) => (
             <div
               key={i}
@@ -738,11 +738,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
                 item.action();
                 onOpenChange(false);
               }}
-              className="relative flex cursor-default select-none items-center rounded-lg px-2 py-2 text-sm outline-none hover:bg-zinc-100 hover:text-zinc-900 cursor-pointer transition-colors"
+              className="relative flex cursor-default select-none items-center rounded-lg px-2 py-2 text-sm outline-none hover:bg-muted hover:text-foreground cursor-pointer transition-colors"
             >
-              {item.icon && <item.icon className="mr-3 h-4 w-4 text-zinc-500" />}
+              {item.icon && <item.icon className="mr-3 h-4 w-4 text-muted-foreground" />}
               <span>{item.label}</span>
-              {item.group && <span className="ml-auto text-xs text-zinc-400">{item.group}</span>}
+              {item.group && <span className="ml-auto text-xs text-muted-foreground">{item.group}</span>}
             </div>
           ))}
         </div>
@@ -790,9 +790,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             key={toast.id}
             className={cn(
               "pointer-events-auto relative w-full rounded-xl border p-4 shadow-xl transition-all animate-in slide-in-right fade-in duration-300 ring-1 ring-black/5",
-              toast.variant === 'destructive' ? "bg-white text-red-600 border-red-100" :
-                toast.variant === 'success' ? "bg-white text-emerald-700 border-emerald-100" :
-                  "bg-white text-zinc-900 border-zinc-200"
+              toast.variant === 'destructive' ? "bg-card text-red-600 border-red-100" :
+                toast.variant === 'success' ? "bg-card text-emerald-700 border-emerald-100" :
+                  "bg-card text-foreground border-border"
             )}
           >
             <div className="flex justify-between items-start gap-2">
@@ -800,7 +800,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 <h5 className="text-sm font-bold">{toast.title}</h5>
                 {toast.description && <p className="text-xs text-muted-foreground opacity-90">{toast.description}</p>}
               </div>
-              <button onClick={() => removeToast(toast.id)} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-zinc-100">
+              <button onClick={() => removeToast(toast.id)} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted">
                 <X className="h-4 w-4" />
               </button>
             </div>

@@ -155,8 +155,8 @@ export function UserManagement() {
             case 'super_admin': return 'bg-purple-100 text-purple-800';
             case 'project_manager': return 'bg-blue-100 text-blue-800';
             case 'client': return 'bg-green-100 text-green-800';
-            case 'team_member': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'team_member': return 'bg-muted text-foreground';
+            default: return 'bg-muted text-foreground';
         }
     };
 
@@ -183,8 +183,8 @@ export function UserManagement() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-semibold text-gray-900">User Management</h1>
-                    <p className="mt-2 text-sm text-gray-600">Manage users, roles, and permissions</p>
+                    <h1 className="text-3xl font-semibold text-foreground">User Management</h1>
+                    <p className="mt-2 text-sm text-muted-foreground">Manage users, roles, and permissions</p>
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
@@ -208,7 +208,7 @@ export function UserManagement() {
             )}
 
             {/* Filters */}
-            <div className="bg-white rounded-lg border p-6 space-y-4">
+            <div className="bg-card rounded-lg border p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Search */}
                     <input
@@ -243,42 +243,42 @@ export function UserManagement() {
                         <option value="team_member">Team Member</option>
                     </select>
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                     Showing {users.length} users
                 </div>
             </div>
 
             {/* Users Table */}
-            <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-hidden">
                 {loading ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-muted-foreground">
                         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
                         Loading users...
                     </div>
                 ) : (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-border">
+                        <thead className="bg-muted">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">User</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Role</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Joined</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-border">
                             {users.map((user) => (
-                                <tr key={user.id} className="hover:bg-gray-50">
+                                <tr key={user.id} className="hover:bg-muted">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
-                                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                <span className="text-gray-600 font-medium">
+                                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                                <span className="text-muted-foreground font-medium">
                                                     {user.full_name.charAt(0).toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
-                                                <div className="text-sm text-gray-500">{user.email}</div>
+                                                <div className="text-sm font-medium text-foreground">{user.full_name}</div>
+                                                <div className="text-sm text-muted-foreground">{user.email}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -298,7 +298,7 @@ export function UserManagement() {
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                    <td className="px-6 py-4 text-sm text-muted-foreground">
                                         {new Date(user.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -307,7 +307,7 @@ export function UserManagement() {
 
                                             if (isOwnAccount) {
                                                 return (
-                                                    <span className="text-gray-500 text-sm font-medium">
+                                                    <span className="text-muted-foreground text-sm font-medium">
                                                         You
                                                     </span>
                                                 );
@@ -319,7 +319,7 @@ export function UserManagement() {
                                             if (isLastSuperAdmin) {
                                                 return (
                                                     <span
-                                                        className="text-gray-400 text-sm cursor-not-allowed"
+                                                        className="text-muted-foreground text-sm cursor-not-allowed"
                                                         title="Cannot deactivate the last Super Admin"
                                                     >
                                                         Deactivate
@@ -355,11 +355,11 @@ export function UserManagement() {
             {/* Create User Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
                         <h2 className="text-xl font-semibold mb-4">Add New User</h2>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                                <label className="block text-sm font-medium text-foreground">Email Address</label>
                                 <input
                                     type="email"
                                     value={formData.email}
@@ -369,7 +369,7 @@ export function UserManagement() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                                <label className="block text-sm font-medium text-foreground">Full Name</label>
                                 <input
                                     type="text"
                                     value={formData.full_name}
@@ -379,7 +379,7 @@ export function UserManagement() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Role</label>
+                                <label className="block text-sm font-medium text-foreground">Role</label>
                                 <select
                                     value={formData.role}
                                     onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
@@ -396,7 +396,7 @@ export function UserManagement() {
                                 <button
                                     type="button"
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+                                    className="px-4 py-2 text-foreground border rounded-lg hover:bg-muted"
                                 >
                                     Cancel
                                 </button>
@@ -415,20 +415,20 @@ export function UserManagement() {
             {/* Deactivate User Modal */}
             {isDeactivateModalOpen && userToDeactivate && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
                         <h2 className="text-xl font-semibold mb-2 text-red-700">Deactivate User</h2>
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-muted-foreground mb-4">
                             Are you sure you want to deactivate <strong>{userToDeactivate.full_name}</strong>?
                             This will:
                         </p>
-                        <ul className="text-sm text-gray-600 mb-4 list-disc list-inside space-y-1">
+                        <ul className="text-sm text-muted-foreground mb-4 list-disc list-inside space-y-1">
                             <li>Immediately revoke their access</li>
                             <li>Invalidate all active sessions</li>
                             <li>Send them a notification email</li>
                             <li>Preserve historical data</li>
                         </ul>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-foreground mb-1">
                                 Reason for deactivation <span className="text-red-500">*</span>
                             </label>
                             <textarea
@@ -438,7 +438,7 @@ export function UserManagement() {
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
                                 rows={3}
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 {deactivateReason.length}/10 characters minimum
                             </p>
                         </div>
@@ -451,7 +451,7 @@ export function UserManagement() {
                             <button
                                 type="button"
                                 onClick={closeDeactivateModal}
-                                className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+                                className="px-4 py-2 text-foreground border rounded-lg hover:bg-muted"
                                 disabled={deactivating}
                             >
                                 Cancel

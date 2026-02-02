@@ -135,19 +135,19 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
     };
 
     return (
-        <div className="flex gap-3 p-4 hover:bg-gray-50 rounded-lg transition-colors">
+        <div className="flex gap-3 p-4 hover:bg-muted rounded-lg transition-colors">
             <Avatar className="h-8 w-8">
                 <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(comment.userName)}&background=random`} />
                 <AvatarFallback className="text-xs">{comment.userName.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm text-gray-900">{comment.userName}</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-medium text-sm text-foreground">{comment.userName}</span>
+                    <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(comment.createdAt))}
                     </span>
                     {showEditedBadge && (
-                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Edit2 className="w-3 h-3" />
                             edited
                         </span>
@@ -155,7 +155,7 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
                     {isOwner && !hasSubsequentReplies && !isEditing && (
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
                             title="Edit comment"
                         >
                             <Edit2 className="w-3 h-3" />
@@ -183,7 +183,7 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
                             <button
                                 onClick={handleCancel}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-muted text-foreground rounded hover:bg-accent disabled:opacity-50"
                             >
                                 <X className="w-3 h-3" />
                                 Cancel
@@ -192,11 +192,11 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
                     </div>
                 ) : (
                     <>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.content}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">{comment.content}</p>
 
                         {/* Attachments section */}
                         {attachmentsLoading && (
-                            <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 Loading attachments...
                             </div>
@@ -211,27 +211,27 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
                                     return (
                                         <div
                                             key={attachment.id}
-                                            className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                            className="flex items-center gap-3 p-2 bg-muted rounded-lg hover:bg-muted transition-colors cursor-pointer"
                                             onClick={() => handleOpenFile(attachment)}
                                         >
-                                            <IconComponent className="w-5 h-5 text-gray-500 shrink-0" />
+                                            <IconComponent className="w-5 h-5 text-muted-foreground shrink-0" />
                                             <div className="flex-1 min-w-0">
-                                                <span className="text-sm text-gray-700 hover:text-gray-900 truncate block">
+                                                <span className="text-sm text-foreground hover:text-foreground truncate block">
                                                     {attachment.fileName}
                                                 </span>
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs text-muted-foreground">
                                                     {formatFileSize(attachment.fileSize)}
                                                 </p>
                                             </div>
                                             {isDownloading ? (
-                                                <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
                                             ) : (
                                                 <button
                                                     onClick={(e) => handleDownload(attachment, e)}
-                                                    className="p-1 hover:bg-gray-300 rounded transition-colors"
+                                                    className="p-1 hover:bg-accent rounded transition-colors"
                                                     title="Download file"
                                                 >
-                                                    <Download className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+                                                    <Download className="w-4 h-4 text-muted-foreground hover:text-foreground" />
                                                 </button>
                                             )}
                                         </div>

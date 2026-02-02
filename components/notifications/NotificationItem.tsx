@@ -30,7 +30,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
         <button
             className={cn(
                 "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors",
-                "hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none",
+                "hover:bg-muted focus:bg-muted focus:outline-none",
                 !notification.read && "bg-primary/5"
             )}
             onClick={() => onClick(notification)}

@@ -47,16 +47,16 @@ export const CommentItem: React.FC<CommentItemProps> = ({
 
     return (
         <div className="flex gap-3 text-sm group relative">
-            <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-medium ring-1 ring-zinc-100 shrink-0">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium ring-1 ring-border shrink-0">
                 {details.userName[0]}
             </div>
 
             <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-900 text-xs">{details.userName}</span>
-                    <span className="text-[10px] text-zinc-400">{formatTimeAgo(details.timestamp)}</span>
+                    <span className="font-semibold text-foreground text-xs">{details.userName}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTimeAgo(details.timestamp)}</span>
                 </div>
-                <p className="text-zinc-600 leading-relaxed text-sm bg-zinc-50/50 p-2 rounded-lg rounded-tl-none break-words">
+                <p className="text-muted-foreground leading-relaxed text-sm bg-muted/50 p-2 rounded-lg rounded-tl-none break-words">
                     {renderContent(content)}
                 </p>
             </div>
@@ -65,7 +65,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             {showDelete && onDelete && (
                 <button
                     onClick={() => onDelete(details.id)}
-                    className="absolute top-0 right-0 p-1 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-0 right-0 p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
                     title="Delete Comment"
                 >
                     <div className="h-3.5 w-3.5">

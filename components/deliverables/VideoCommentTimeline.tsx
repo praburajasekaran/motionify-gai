@@ -51,11 +51,11 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
   return (
     <div className={className}>
       <div className="space-y-2 mb-3">
-        <label className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+        <label className="text-sm font-semibold text-foreground flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Video with Timeline Comments
         </label>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Pause video to add comments. Click markers or list items to edit.
         </p>
       </div>
@@ -75,7 +75,7 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
       {/* Comments Sidebar List */}
       {comments.length > 0 && (
         <div className="mt-4 space-y-2">
-          <h4 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Timeline Comments ({comments.length})
           </h4>
@@ -94,7 +94,7 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-zinc-900">
+                      <span className="text-sm font-semibold text-foreground">
                         {comment.userName}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -104,7 +104,7 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-zinc-700 line-clamp-2">{comment.comment}</p>
+                    <p className="text-sm text-foreground line-clamp-2">{comment.comment}</p>
                   </div>
                 </div>
               </button>

@@ -81,7 +81,7 @@ export const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             {/* Header */}
-            <h2 className="text-lg font-semibold text-zinc-900 mb-6">Add New Deliverable</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-6">Add New Deliverable</h2>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">

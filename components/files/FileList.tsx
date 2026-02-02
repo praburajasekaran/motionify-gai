@@ -102,21 +102,21 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
 
     if (files.length === 0) {
         return (
-            <div className="col-span-full py-16 text-center bg-gradient-to-b from-zinc-50/80 to-white rounded-xl border border-dashed border-zinc-200">
-                <div className="h-16 w-16 rounded-2xl bg-zinc-100 flex items-center justify-center mx-auto mb-4 shadow-inner">
-                    <FolderOpen className="h-8 w-8 text-zinc-400" />
+            <div className="col-span-full py-16 text-center bg-gradient-to-b from-muted/80 to-card rounded-xl border border-dashed border-border">
+                <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <FolderOpen className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-sm font-semibold text-zinc-600">No files uploaded yet</p>
-                <p className="text-xs text-zinc-400 mt-1">Upload files to share with your team</p>
+                <p className="text-sm font-semibold text-muted-foreground">No files uploaded yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Upload files to share with your team</p>
             </div>
         );
     }
 
     return (
         <>
-            <div className="col-span-full border border-zinc-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            <div className="col-span-full border border-border rounded-lg overflow-hidden bg-card shadow-sm">
                 <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="bg-accent">
                         <TableRow>
                             <TableHead className="w-[40%]">Name</TableHead>
                             <TableHead className="w-[15%]">Size</TableHead>
@@ -131,21 +131,21 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                             const isDownloading = downloadingId === file.id;
 
                             return (
-                                <TableRow key={file.id} className="hover:bg-zinc-50/50 transition-colors">
+                                <TableRow key={file.id} className="hover:bg-accent transition-colors">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-500 shrink-0">
+                                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">
                                                 <Icon className="h-5 w-5" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="font-medium text-sm text-zinc-900 truncate max-w-[200px] sm:max-w-xs" title={file.name}>
+                                                <p className="font-medium text-sm text-foreground truncate max-w-[200px] sm:max-w-xs" title={file.name}>
                                                     {file.name}
                                                 </p>
                                             </div>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="text-sm text-zinc-500 font-mono text-xs">
+                                        <span className="text-sm text-muted-foreground font-mono text-xs">
                                             {formatBytes(file.size)}
                                         </span>
                                     </TableCell>
@@ -156,13 +156,13 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                                                 fallback={file.uploadedBy.name[0]}
                                                 className="h-6 w-6"
                                             />
-                                            <span className="text-sm text-zinc-700 truncate max-w-[120px]">
+                                            <span className="text-sm text-foreground truncate max-w-[120px]">
                                                 {file.uploadedBy.name}
                                             </span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex items-center gap-1.5 text-sm text-zinc-500">
+                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 
                                             <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
                                         </div>
@@ -172,7 +172,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 text-zinc-400 hover:text-primary"
+                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
                                                 onClick={() => handleDownload(file)}
                                                 disabled={isDownloading}
                                                 title="Download"
@@ -185,7 +185,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                                             </Button>
 
                                             <DropdownMenu trigger={
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 text-zinc-400 hover:text-zinc-700">
+                                                <Button variant="ghost" size="sm" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             }>
@@ -218,9 +218,9 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                             <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-zinc-900">Delete File</h3>
+                            <h3 className="text-lg font-bold text-foreground">Delete File</h3>
                         </div>
-                        <p className="text-sm text-zinc-600">
+                        <p className="text-sm text-muted-foreground">
                             Are you sure you want to delete <span className="font-semibold">{fileToDelete?.name}</span>?
                             This action cannot be undone.
                         </p>

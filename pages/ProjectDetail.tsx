@@ -40,29 +40,29 @@ function formatActivityAction(type: string, details: Record<string, string | num
     const me = !!isCurrentUser;
     switch (type) {
         // Proposal lifecycle
-        case 'PROPOSAL_SENT':              return me ? 'sent a proposal'              : 'sent a proposal';
-        case 'PROPOSAL_ACCEPTED':          return me ? 'accepted the proposal'        : 'accepted the proposal';
-        case 'PROPOSAL_REJECTED':          return isClientUser ? 'declined the proposal' : 'rejected the proposal';
-        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on'         : 'requested changes on';
+        case 'PROPOSAL_SENT': return me ? 'sent a proposal' : 'sent a proposal';
+        case 'PROPOSAL_ACCEPTED': return me ? 'accepted the proposal' : 'accepted the proposal';
+        case 'PROPOSAL_REJECTED': return isClientUser ? 'declined the proposal' : 'rejected the proposal';
+        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on' : 'requested changes on';
         // Tasks
-        case 'TASK_CREATED':        return me ? 'created task'                          : 'created task';
-        case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
+        case 'TASK_CREATED': return me ? 'created task' : 'created task';
+        case 'TASK_UPDATED': return me ? 'updated task' : 'updated task';
         case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
-        case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
-        case 'TASK_DELETED':        return 'deleted task';
-        case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
+        case 'COMMENT_ADDED': return me ? 'commented on' : 'commented on';
+        case 'TASK_DELETED': return 'deleted task';
+        case 'REVISION_REQUESTED': return me ? 'requested a revision on' : 'requested a revision on';
         // Files
-        case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
-        case 'FILE_DELETED':   return 'deleted file';
-        case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
+        case 'FILE_UPLOADED': return me ? 'uploaded' : 'uploaded';
+        case 'FILE_DELETED': return 'deleted file';
+        case 'FILE_RENAMED': return me ? 'renamed' : 'renamed';
         // Team
-        case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
-        case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
+        case 'TEAM_MEMBER_INVITED': return me ? 'invited' : 'invited';
+        case 'TEAM_MEMBER_REMOVED': return me ? 'removed' : 'removed';
         // Deliverables
-        case 'DELIVERABLE_CREATED':        return 'created deliverable';
-        case 'DELIVERABLE_UPLOADED':       return me ? 'uploaded deliverable'  : 'uploaded deliverable';
-        case 'DELIVERABLE_APPROVED':       return me ? 'approved deliverable'  : 'approved deliverable';
-        case 'DELIVERABLE_DELETED':        return 'deleted deliverable';
+        case 'DELIVERABLE_CREATED': return 'created deliverable';
+        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable' : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable' : 'approved deliverable';
+        case 'DELIVERABLE_DELETED': return 'deleted deliverable';
         case 'DELIVERABLE_STATUS_CHANGED': return `changed deliverable status to ${details.newStatus || 'updated'}`;
         // Payments — the userId is the client who paid
         case 'PAYMENT_RECEIVED': {
@@ -70,11 +70,11 @@ function formatActivityAction(type: string, details: Record<string, string | num
             return me ? `made ${label} of` : `received ${label} of`;
         }
         // Inquiry
-        case 'INQUIRY_CREATED':        return 'submitted an inquiry';
+        case 'INQUIRY_CREATED': return 'submitted an inquiry';
         case 'INQUIRY_STATUS_CHANGED': return `changed inquiry status to ${details.newStatus || 'updated'}`;
         // Project
         case 'PROJECT_CREATED': return 'created the project';
-        case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
+        case 'TERMS_ACCEPTED': return me ? 'accepted the terms' : 'accepted the terms';
         default: return type.toLowerCase().replace(/_/g, ' ');
     }
 }
@@ -118,9 +118,9 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
     }
 
     return (
-        <div className="flex items-center gap-3 bg-white border border-zinc-200/80 px-4 py-2 rounded-full shadow-sm" role="progressbar" aria-valuenow={remaining} aria-valuemax={max} aria-label={`${remaining} of ${max} revisions remaining`}>
+        <div className="flex items-center gap-3 bg-card border border-border px-4 py-2 rounded-full shadow-sm" role="progressbar" aria-valuenow={remaining} aria-valuemax={max} aria-label={`${remaining} of ${max} revisions remaining`}>
             {/* Label */}
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Revisions
             </span>
 
@@ -135,14 +135,14 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
             <div className="flex items-center gap-2">
                 {/* Battery Icon */}
                 <div className="relative flex items-center">
-                    <div className="h-5 w-9 rounded-[3px] border-2 border-zinc-300 p-0.5 relative flex items-center bg-white">
+                    <div className="h-5 w-9 rounded-[3px] border-2 border-border p-0.5 relative flex items-center bg-card">
                         <div
                             className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
                             style={{ width: `${percentage}%` }}
                         />
                     </div>
                     {/* Battery Nub */}
-                    <div className="h-2 w-0.5 bg-zinc-300 rounded-r-[1px] absolute -right-1" />
+                    <div className="h-2 w-0.5 bg-border rounded-r-[1px] absolute -right-1" />
 
                     {/* Charging Bolt */}
                     {percentage > 0 && (
@@ -151,7 +151,7 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
                 </div>
 
                 {/* Mini Progress Bar */}
-                <div className="w-16 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                         className={cn("h-full transition-all duration-500", colorClass)}
                         style={{ width: `${percentage}%` }}
@@ -709,7 +709,7 @@ export const ProjectDetail = () => {
             case 'revision_requested':
                 return 'bg-rose-100 text-rose-700 border-rose-200';
             default:
-                return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+                return 'bg-muted text-muted-foreground border-border';
         }
     };
 
@@ -757,11 +757,11 @@ export const ProjectDetail = () => {
 
                             {/* Title & Status */}
                             <div className="flex items-center gap-3 min-w-0">
-                                <h1 className="text-xl font-bold tracking-tight text-zinc-900 truncate">
+                                <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
                                     {project.title}
                                 </h1>
                                 <DropdownMenu trigger={
-                                    <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
+                                    <button className="text-muted-foreground hover:text-muted-foreground transition-colors">
                                         <ChevronDown className="h-4 w-4" />
                                     </button>
                                 }>
@@ -778,26 +778,26 @@ export const ProjectDetail = () => {
                             </div>
 
                             {/* Vertical Divider */}
-                            <div className="h-6 w-px bg-zinc-200 hidden md:block mx-2" />
+                            <div className="h-6 w-px bg-muted hidden md:block mx-2" />
 
                             {/* Team Avatars */}
                             <div className="flex items-center -space-x-2 hidden md:flex">
                                 {project.team.slice(0, 4).map((member, index) => (
                                     <div key={`${member.id}-${index}`} title={`${member.name}${member.email ? ` (${member.email})` : ''}`}>
-                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-card" />
                                     </div>
                                 ))}
                                 {project.team.length > 4 && (
                                     <button
                                         onClick={() => navigate(`/projects/${id}/5`)}
-                                        className="h-8 w-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-primary hover:border-primary transition-colors ring-2 ring-white z-10"
+                                        className="h-8 w-8 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-primary hover:border-primary transition-colors ring-2 ring-card z-10"
                                     >
                                         +{project.team.length - 4}
                                     </button>
                                 )}
                                 <button
                                     onClick={() => navigate(`/projects/${id}/5`)}
-                                    className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10"
+                                    className="h-8 w-8 rounded-full bg-muted border border-dashed border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-card z-10"
                                 >
                                     <Users className="h-4 w-4" />
                                 </button>
@@ -807,7 +807,7 @@ export const ProjectDetail = () => {
                         {/* Right Side: Actions */}
                         <div className="flex items-center gap-4 shrink-0">
                             <DropdownMenu trigger={
-                                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-900">
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             }>
@@ -831,13 +831,13 @@ export const ProjectDetail = () => {
                     </div>
 
                     {/* Bottom Row: Minimal Tabs */}
-                    <div className="border-b border-zinc-200 pb-1">
-                        <TabsList className="bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/60 inline-flex h-auto gap-1 justify-start overflow-x-auto no-scrollbar max-w-full">
+                    <div className="border-b border-border pb-1">
+                        <TabsList className="bg-muted/80 p-1 rounded-lg border border-border inline-flex h-auto gap-1 justify-start overflow-x-auto no-scrollbar max-w-full">
                             {tabConfig.map(({ name, index }) => (
                                 <TabsTrigger
                                     key={name}
                                     value={Object.keys(TAB_INDEX_MAP).find(key => TAB_INDEX_MAP[key as TabName] === index) || 'overview'}
-                                    className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm hover:bg-zinc-200/50 hover:text-zinc-900 text-zinc-500"
+                                    className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 hover:text-foreground text-muted-foreground"
                                 >
                                     {name}
                                 </TabsTrigger>
@@ -853,8 +853,8 @@ export const ProjectDetail = () => {
                         {/* Left Column (Main) */}
                         <div className="lg:col-span-2 space-y-8">
                             {/* Progress Section */}
-                            <Card className="overflow-hidden bg-white shadow-sm border-zinc-200/60">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
+                            <Card className="overflow-hidden bg-card shadow-sm border-border">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border bg-muted/30">
                                     <CardTitle className="text-lg">Project Health</CardTitle>
                                     <Badge variant={project.progress === 100 ? 'success' : 'outline'}>{project.progress}% Complete</Badge>
                                 </CardHeader>
@@ -864,13 +864,13 @@ export const ProjectDetail = () => {
                                             <CircularProgress value={project.progress} size={150} strokeWidth={12} color={project.progress > 80 ? 'text-emerald-500' : 'text-primary'} />
                                         </div>
                                         <div className="flex-1 space-y-5 w-full">
-                                            <p className="text-zinc-600 text-sm leading-relaxed">{project.description}</p>
+                                            <p className="text-muted-foreground text-sm leading-relaxed">{project.description}</p>
                                             <div className="bg-gradient-to-r from-purple-50 to-white p-4 rounded-xl border border-purple-100 shadow-sm">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <Sparkles className="h-4 w-4 text-purple-600" />
                                                     <h4 className="text-sm font-bold text-purple-900">AI Risk Analysis</h4>
                                                 </div>
-                                                <p className="text-sm text-zinc-600 italic">
+                                                <p className="text-sm text-muted-foreground italic">
                                                     "{riskAssessment || 'Analyzing...'}"
                                                 </p>
                                             </div>
@@ -880,37 +880,44 @@ export const ProjectDetail = () => {
                             </Card>
 
                             {/* Recent Deliverables Table - Now uses real API data */}
-                            <Card className="border-zinc-200/60 shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border bg-muted/30">
                                     <CardTitle className="text-lg">Active Deliverables</CardTitle>
-                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
+                                    <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <div className="divide-y divide-zinc-100">
+                                    <div className="divide-y divide-border">
                                         {deliverablesLoading ? (
-                                            <div className="p-8 text-center text-zinc-400 text-sm">Loading deliverables...</div>
+                                            <div className="p-8 text-center text-muted-foreground text-sm">Loading deliverables...</div>
                                         ) : deliverables.slice(0, 3).map(del => (
                                             <div
                                                 key={del.id}
-                                                className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                className="p-4 flex items-center justify-between hover:bg-muted transition-colors cursor-pointer"
                                                 onClick={() => navigate(`/projects/${id}/deliverables/${del.id}`)}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 shadow-inner">
+                                                    <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground shadow-inner">
                                                         {del.type === 'Video' ? <FileVideo className="h-5 w-5" /> : <FileBox className="h-5 w-5" />}
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-sm text-zinc-900">{del.title}</p>
-                                                        <p className="text-xs text-zinc-500">Due {new Date(del.dueDate).toLocaleDateString()}</p>
+                                                        <p className="font-semibold text-sm text-foreground">{del.title}</p>
+                                                        <p className="text-xs text-muted-foreground">Due {new Date(del.dueDate).toLocaleDateString()}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-6">
+                                                    <div className="w-24 hidden sm:block">
+                                                        <div className="flex justify-between text-[10px] text-muted-foreground font-medium mb-1">
+                                                            <span>Progress</span>
+                                                            <span>{del.progress}%</span>
+                                                        </div>
+                                                        <Progress value={del.progress} className="h-1.5" />
+                                                    </div>
                                                     <Badge variant={
                                                         del.status === 'approved' || del.status === 'final_delivered' ? 'success' :
-                                                        del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
-                                                        del.status === 'in_progress' || del.status === 'beta_ready' ? 'info' :
-                                                        del.status === 'revision_requested' ? 'destructive' :
-                                                        'secondary'
+                                                            del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
+                                                                del.status === 'in_progress' || del.status === 'beta_ready' ? 'info' :
+                                                                    del.status === 'revision_requested' ? 'destructive' :
+                                                                        'secondary'
                                                     }>
                                                         {(user && isClient(user) && del.status === 'beta_ready' ? 'in_progress' : del.status).replace(/_/g, ' ')}
                                                     </Badge>
@@ -933,9 +940,9 @@ export const ProjectDetail = () => {
                         {/* Right Column (Side) */}
                         <div className="space-y-6">
                             {/* Recent Activity */}
-                            <Card className="border-zinc-200/60 shadow-sm">
-                                <CardHeader className="border-b border-zinc-100 pb-3">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Activity</CardTitle>
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="border-b border-border pb-3">
+                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recent Activity</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     <div className="space-y-0">
@@ -951,14 +958,14 @@ export const ProjectDetail = () => {
                                                     onClick={() => activityLink && navigate(activityLink)}
                                                 >
                                                     {i !== activityLog.length - 1 && (
-                                                        <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
+                                                        <div className="absolute left-[15px] top-8 bottom-0 w-px bg-muted" />
                                                     )}
-                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
+                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-card shadow-sm" />
                                                     <div>
-                                                        <p className="text-xs text-zinc-500 mb-0.5 group-hover:text-zinc-700 transition-colors">
-                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                        <p className="text-xs text-muted-foreground mb-0.5 group-hover:text-foreground transition-colors">
+                                                            <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
                                                         </p>
-                                                        <p className="text-[10px] text-zinc-400 flex items-center gap-1 font-medium">
+                                                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
                                                             <Clock className="h-3 w-3" />
                                                             {formatTimeAgo(log.timestamp)}
                                                         </p>
@@ -966,7 +973,7 @@ export const ProjectDetail = () => {
                                                 </div>
                                             )
                                         }) : (
-                                            <p className="text-sm text-zinc-400 italic">No activity yet.</p>
+                                            <p className="text-sm text-muted-foreground italic">No activity yet.</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -976,20 +983,20 @@ export const ProjectDetail = () => {
                             <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white shadow-lg shadow-black/10 border-zinc-700">
                                 <CardContent className="p-6">
                                     <div className="flex items-center gap-2 mb-5">
-                                        <Calendar className="h-5 w-5 text-zinc-400" />
+                                        <Calendar className="h-5 w-5 text-muted-foreground" />
                                         <h3 className="font-bold tracking-tight">Upcoming Deadlines</h3>
                                     </div>
                                     <div className="space-y-4">
                                         {deliverablesLoading ? (
-                                            <p className="text-sm text-zinc-500 italic">Loading...</p>
+                                            <p className="text-sm text-muted-foreground italic">Loading...</p>
                                         ) : deliverables.slice(0, 2).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-4 py-1">
                                                 <span className="text-zinc-200 truncate w-32 font-medium">{d.title}</span>
-                                                <span className="font-mono text-zinc-400 text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                                <span className="font-mono text-muted-foreground text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
                                         {!deliverablesLoading && deliverables.length === 0 && (
-                                            <p className="text-sm text-zinc-500 italic">No upcoming deadlines.</p>
+                                            <p className="text-sm text-muted-foreground italic">No upcoming deadlines.</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -1016,8 +1023,8 @@ export const ProjectDetail = () => {
                     <div className="space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Tasks</h3>
-                                <p className="text-sm text-zinc-500">Manage your project tasks and track progress.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-foreground">Tasks</h3>
+                                <p className="text-sm text-muted-foreground">Manage your project tasks and track progress.</p>
                             </div>
                         </div>
 
@@ -1047,7 +1054,7 @@ export const ProjectDetail = () => {
                                     }
 
                                     return (
-                                        <div key={task.id} className="group flex flex-col gap-2 px-4 py-3 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition-colors">
+                                        <div key={task.id} className="group flex flex-col gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:border-border transition-colors">
                                             {/* Top row: checkbox + title + actions */}
                                             <div className="flex items-center gap-3">
                                                 <button
@@ -1059,14 +1066,14 @@ export const ProjectDetail = () => {
                                                         "h-5 w-5 shrink-0 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
                                                         task.status === 'Done' || task.status === 'completed'
                                                             ? "bg-primary border-primary text-white"
-                                                            : "border-zinc-300 hover:border-primary bg-white"
+                                                            : "border-border hover:border-primary bg-card"
                                                     )}
                                                 >
                                                     {(task.status === 'Done' || task.status === 'completed') && <CheckSquare className="h-3.5 w-3.5" />}
                                                 </button>
                                                 <span className={cn(
                                                     "text-sm font-medium flex-1 min-w-0 truncate",
-                                                    (task.status === 'Done' || task.status === 'completed') ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
+                                                    (task.status === 'Done' || task.status === 'completed') ? "text-muted-foreground line-through decoration-zinc-300" : "text-foreground"
                                                 )}>
                                                     {task.title}
                                                 </span>
@@ -1081,7 +1088,7 @@ export const ProjectDetail = () => {
                                                             "h-7 w-7 p-0 rounded-md transition-all",
                                                             expandedComments.has(task.id)
                                                                 ? "text-blue-600 bg-blue-50"
-                                                                : "text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
+                                                                : "text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
                                                         )}
                                                         title="Comments"
                                                     >
@@ -1103,7 +1110,7 @@ export const ProjectDetail = () => {
                                                             "h-7 w-7 p-0 rounded-md transition-all",
                                                             task.followers?.includes(user?.id || '')
                                                                 ? "text-emerald-500 hover:text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
-                                                                : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                                                                : "text-muted-foreground hover:text-muted-foreground hover:bg-muted"
                                                         )}
                                                         title={task.followers?.includes(user?.id || '') ? "Unfollow updates" : "Follow updates"}
                                                     >
@@ -1115,7 +1122,7 @@ export const ProjectDetail = () => {
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleEditTask(task)}
-                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all"
+                                                            className="h-7 w-7 p-0 rounded-md text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-all"
                                                             title="Edit task"
                                                         >
                                                             <Edit2 className="h-3.5 w-3.5" />
@@ -1127,7 +1134,7 @@ export const ProjectDetail = () => {
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleDeleteTask(task.id)}
-                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                            className="h-7 w-7 p-0 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-all"
                                                             title="Delete task"
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -1136,9 +1143,9 @@ export const ProjectDetail = () => {
                                                 </div>
                                             </div>
                                             {/* Meta row: assignee, time, creator, deadline */}
-                                            <div className="flex items-center gap-3 pl-8 text-xs text-zinc-400">
+                                            <div className="flex items-center gap-3 pl-8 text-xs text-muted-foreground">
                                                 {assignee && (
-                                                    <span className="flex items-center gap-1.5 text-zinc-600 font-medium" title={`Assigned to ${assignee.name}`}>
+                                                    <span className="flex items-center gap-1.5 text-muted-foreground font-medium" title={`Assigned to ${assignee.name}`}>
                                                         <Avatar src={assignee.avatar} fallback={assignee.name[0]} className="h-4 w-4" />
                                                         {assignee.name}
                                                     </span>
@@ -1167,7 +1174,7 @@ export const ProjectDetail = () => {
 
                                             {/* Expanded Comments Section */}
                                             {expandedComments.has(task.id) && (
-                                                <div className="mt-4 pt-4 border-t border-zinc-100 pl-9">
+                                                <div className="mt-4 pt-4 border-t border-border pl-9">
                                                     <div className="space-y-3">
                                                         {/* Existing Comments */}
                                                         <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
@@ -1190,7 +1197,7 @@ export const ProjectDetail = () => {
                                                                     />
                                                                 ))
                                                             ) : (
-                                                                <p className="text-sm text-zinc-400 italic py-2">No comments yet.</p>
+                                                                <p className="text-sm text-muted-foreground italic py-2">No comments yet.</p>
                                                             )}
                                                         </div>
 
@@ -1217,7 +1224,7 @@ export const ProjectDetail = () => {
                                     title="No tasks yet"
                                     description="Get started by adding a task."
                                     icon={ClipboardList}
-                                    className="py-16 bg-zinc-50/50 border-dashed"
+                                    className="py-16 bg-muted/50 border-dashed"
                                 />
                             )}
                         </div>
@@ -1254,8 +1261,8 @@ export const ProjectDetail = () => {
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Project Files</h3>
-                                <p className="text-sm text-zinc-500">Shared assets and documents for this project.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-foreground">Project Files</h3>
+                                <p className="text-sm text-muted-foreground">Shared assets and documents for this project.</p>
                             </div>
                         </div>
 
@@ -1288,7 +1295,7 @@ export const ProjectDetail = () => {
                         <div className="flex justify-between items-center">
                             <div>
                                 <h3 className="text-lg font-bold">Project Activity</h3>
-                                <p className="text-sm text-zinc-500">Complete timeline of all project events</p>
+                                <p className="text-sm text-muted-foreground">Complete timeline of all project events</p>
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="outline" size="sm" className="gap-2">
@@ -1299,7 +1306,7 @@ export const ProjectDetail = () => {
                         </div>
 
                         {/* Activity Stream */}
-                        <Card className="border-zinc-200/60 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-6">
                                 {activityLog.length > 0 ? (
                                     <>
@@ -1307,10 +1314,10 @@ export const ProjectDetail = () => {
                                         <div className="space-y-8">
                                             {/* Today Section */}
                                             <div>
-                                                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
-                                                    <div className="h-px flex-1 bg-zinc-200" />
+                                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                                                    <div className="h-px flex-1 bg-muted" />
                                                     <span>Today</span>
-                                                    <div className="h-px flex-1 bg-zinc-200" />
+                                                    <div className="h-px flex-1 bg-muted" />
                                                 </h4>
                                                 <div className="space-y-0">
                                                     {activityLog.slice(0, 3).map((log, i) => {
@@ -1321,18 +1328,18 @@ export const ProjectDetail = () => {
                                                         return (
                                                             <div
                                                                 key={log.id}
-                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-muted -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
                                                                 onClick={() => activityLink && navigate(activityLink)}
                                                             >
                                                                 {i !== 2 && (
-                                                                    <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
+                                                                    <div className="absolute left-[23px] top-12 bottom-0 w-px bg-muted" />
                                                                 )}
-                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-card shadow-sm shrink-0" />
                                                                 <div className="flex-1 pt-1">
-                                                                    <p className="text-sm text-zinc-600 mb-1">
-                                                                        <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                    <p className="text-sm text-muted-foreground mb-1">
+                                                                        <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
                                                                     </p>
-                                                                    <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
+                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
                                                                         <Clock className="h-3 w-3" />
                                                                         {new Date(log.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                                                                     </p>
@@ -1346,10 +1353,10 @@ export const ProjectDetail = () => {
                                             {/* Earlier Section */}
                                             {activityLog.length > 3 && (
                                                 <div>
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
-                                                        <div className="h-px flex-1 bg-zinc-200" />
+                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                                                        <div className="h-px flex-1 bg-muted" />
                                                         <span>Earlier</span>
-                                                        <div className="h-px flex-1 bg-zinc-200" />
+                                                        <div className="h-px flex-1 bg-muted" />
                                                     </h4>
                                                     <div className="space-y-0">
                                                         {activityLog.slice(3).map((log, i, arr) => {
@@ -1360,18 +1367,18 @@ export const ProjectDetail = () => {
                                                             return (
                                                                 <div
                                                                     key={log.id}
-                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-muted -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
                                                                     onClick={() => activityLink && navigate(activityLink)}
                                                                 >
                                                                     {i !== arr.length - 1 && (
-                                                                        <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
+                                                                        <div className="absolute left-[23px] top-12 bottom-0 w-px bg-muted" />
                                                                     )}
-                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-card shadow-sm shrink-0" />
                                                                     <div className="flex-1 pt-1">
-                                                                        <p className="text-sm text-zinc-600 mb-1">
-                                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                        <p className="text-sm text-muted-foreground mb-1">
+                                                                            <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
                                                                         </p>
-                                                                        <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
+                                                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
                                                                             <Clock className="h-3 w-3" />
                                                                             {new Date(log.timestamp).toLocaleDateString()}
                                                                         </p>
@@ -1385,7 +1392,7 @@ export const ProjectDetail = () => {
                                         </div>
 
                                         {/* Load More */}
-                                        <div className="pt-6 border-t border-zinc-100 mt-6">
+                                        <div className="pt-6 border-t border-border mt-6">
                                             <Button variant="outline" className="w-full">
                                                 Load More Activity
                                             </Button>

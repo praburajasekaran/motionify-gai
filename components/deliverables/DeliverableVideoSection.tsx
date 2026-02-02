@@ -139,7 +139,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
         )
       ) : fileUrl && detectedMediaType === 'image' ? (
         // Image preview
-        <div className="relative w-full rounded-lg overflow-hidden bg-zinc-100 border border-zinc-200">
+        <div className="relative w-full rounded-lg overflow-hidden bg-muted border border-border">
           <img
             src={fileUrl}
             alt={deliverable.title}
@@ -152,16 +152,16 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
           )}
         </div>
       ) : (
-        <div className="w-full aspect-video bg-zinc-100 rounded-lg flex flex-col items-center justify-center gap-4 border-2 border-dashed border-zinc-200">
+        <div className="w-full aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4 border-2 border-dashed border-border">
           {detectedMediaType === 'image' ? (
-            <FileImage className="h-16 w-16 text-zinc-300" />
+            <FileImage className="h-16 w-16 text-muted-foreground" />
           ) : (
-            <FileVideo className="h-16 w-16 text-zinc-300" />
+            <FileVideo className="h-16 w-16 text-muted-foreground" />
           )}
 
           {canUploadBeta && onUpload ? (
             <div className="text-center">
-              <p className="text-sm text-zinc-500 mb-3">No file uploaded yet</p>
+              <p className="text-sm text-muted-foreground mb-3">No file uploaded yet</p>
               <button
                 onClick={handleUploadClick}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors flex items-center gap-2 mx-auto"
@@ -177,7 +177,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
               />
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">No content available</p>
+            <p className="text-sm text-muted-foreground">No content available</p>
           )}
         </div>
       )}
@@ -185,40 +185,40 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       {/* Video Metadata Cards */}
       <div className="grid grid-cols-3 gap-4">
         {deliverable.duration && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Clock className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Duration
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900">
+            <p className="text-lg font-bold text-foreground">
               {deliverable.duration}
             </p>
           </div>
         )}
         {deliverable.format && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <FileVideo className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Format
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900">
+            <p className="text-lg font-bold text-foreground">
               {deliverable.format}
             </p>
           </div>
         )}
         {deliverable.resolution && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Maximize2 className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Resolution
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900 font-mono">
+            <p className="text-lg font-bold text-foreground font-mono">
               {deliverable.resolution}
             </p>
           </div>

@@ -48,11 +48,11 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
+    <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
         </div>
         <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
           <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -135,7 +135,7 @@ export function InquiryDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -165,7 +165,7 @@ export function InquiryDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
+          <h1 className="text-3xl font-bold text-foreground">Inquiries</h1>
           {isClient(user) && (
             <button
               onClick={() => setIsModalOpen(true)}
@@ -176,7 +176,7 @@ export function InquiryDashboard() {
             </button>
           )}
         </div>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           {isClient(user) 
             ? 'View your inquiries and track proposals' 
             : 'Manage customer inquiries and create proposals'}
@@ -245,18 +245,18 @@ export function InquiryDashboard() {
       )}
   
       {/* Filters */}
-      <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm mb-6">
+      <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search by inquiry #, name, email, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
               />
             </div>
           </div>
@@ -264,11 +264,11 @@ export function InquiryDashboard() {
           {/* Status Filter */}
           <div className="sm:w-48">
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | 'all')}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
                 {Object.entries(INQUIRY_STATUS_CONFIG)
@@ -285,18 +285,18 @@ export function InquiryDashboard() {
   
       {/* Loading State */}
       {loading ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
           <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-700">Loading inquiries...</p>
+          <p className="text-foreground">Loading inquiries...</p>
         </div>
       ) : error ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
           <ErrorState error={error} onRetry={loadInquiries} />
         </div>
       ) : (
         <>
           {/* Inquiries List */}
-          <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
             {filteredInquiries.length === 0 ? (
               <EmptyState
                 icon={FileText}
@@ -308,18 +308,18 @@ export function InquiryDashboard() {
                 }
               />
             ) : (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-border">
                 {filteredInquiries.map((inquiry) => (
                   <Link
                     key={inquiry.id}
                     to={`/admin/inquiries/${inquiry.id}`}
-                    className="block p-4 hover:bg-gray-50 transition-colors group"
+                    className="block p-4 hover:bg-muted transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         {/* Inquiry Number & Status */}
                         <div className="flex items-center gap-3 mb-2">
-                          <code className="text-base font-semibold text-gray-900 font-mono">
+                          <code className="text-base font-semibold text-foreground font-mono">
                             {inquiry.inquiryNumber}
                           </code>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
@@ -329,30 +329,30 @@ export function InquiryDashboard() {
                     
                         {/* Contact Info */}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-1">
-                          <div className="flex items-center gap-1.5 text-gray-900">
-                            <User className="w-4 h-4 text-gray-500" />
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <User className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{inquiry.contactName}</span>
                           </div>
                           {inquiry.companyName && (
-                            <span className="text-gray-700">{inquiry.companyName}</span>
+                            <span className="text-foreground">{inquiry.companyName}</span>
                           )}
                         </div>
                     
-                        <div className="flex items-center gap-1.5 text-sm text-gray-700 mb-2">
+                        <div className="flex items-center gap-1.5 text-sm text-foreground mb-2">
                           <Mail className="w-4 h-4" />
                           <span>{inquiry.contactEmail}</span>
                         </div>
                     
                         {/* Video Type */}
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-600">Recommended:</span>
+                          <span className="text-muted-foreground">Recommended:</span>
                           <span className="text-violet-600">{inquiry.recommendedVideoType}</span>
                         </div>
                       </div>
                     
                     {/* Right Side: Date & Action */}
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Calendar className="w-3.5 h-3.5" />
                         {formatDate(inquiry.createdAt)}
                       </div>
@@ -380,7 +380,7 @@ export function InquiryDashboard() {
           
           {/* Results Count */}
           {filteredInquiries.length > 0 && (
-            <div className="mt-4 text-center text-sm text-gray-500">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               Showing {filteredInquiries.length} of {inquiries.length} inquiries
             </div>
           )}

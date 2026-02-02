@@ -122,18 +122,18 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             />
 
             {/* Modal */}
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white">
                             <UserPlus className="h-5 w-5" />
                         </div>
-                        <h2 className="text-lg font-bold text-zinc-900">Invite Team Member</h2>
+                        <h2 className="text-lg font-bold text-foreground">Invite Team Member</h2>
                     </div>
                     <button
                         onClick={handleClose}
-                        className="p-2 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-accent transition-colors"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -141,7 +141,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
                 {/* Body */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <p className="text-sm text-zinc-600">
+                    <p className="text-sm text-muted-foreground">
                         Send an email invitation to add a new member to this project.
                         They will receive a link to accept the invitation.
                     </p>
@@ -163,7 +163,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
                     {/* Email Input */}
                     <div>
-                        <label htmlFor="invite-email" className="block text-sm font-medium text-zinc-700 mb-2">
+                        <label htmlFor="invite-email" className="block text-sm font-medium text-foreground mb-2">
                             <Mail className="h-4 w-4 inline mr-2" />
                             Email Address
                         </label>
@@ -177,7 +177,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                                 "w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors",
                                 emailError
                                     ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                    : "border-zinc-300 focus:ring-primary focus:border-primary"
+                                    : "border-border focus:ring-primary focus:border-primary"
                             )}
                             placeholder="colleague@example.com"
                             required
@@ -189,7 +189,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
                     {/* Role Selection */}
                     <div>
-                        <label htmlFor="invite-role" className="block text-sm font-medium text-zinc-700 mb-2">
+                        <label htmlFor="invite-role" className="block text-sm font-medium text-foreground mb-2">
                             <Shield className="h-4 w-4 inline mr-2" />
                             Role
                         </label>
@@ -198,12 +198,12 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                             value={role}
                             onChange={(e) => setRole(e.target.value as 'client' | 'team')}
                             disabled={isSending}
-                            className="w-full px-4 py-2.5 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors bg-white"
+                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors bg-card"
                         >
                             <option value="client">Client Team Member</option>
                             {canInviteTeam && <option value="team">Motionify Team</option>}
                         </select>
-                        <p className="mt-1.5 text-xs text-zinc-500">
+                        <p className="mt-1.5 text-xs text-muted-foreground">
                             {role === 'client'
                                 ? 'Clients can view deliverables, provide feedback, and track project progress'
                                 : 'Team members can manage tasks, upload files, and collaborate on the project'

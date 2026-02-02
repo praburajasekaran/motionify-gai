@@ -83,13 +83,13 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
 
   return (
     <>
-      <div className="space-y-6 bg-white border border-zinc-200 rounded-lg p-6">
+      <div className="space-y-6 bg-card border border-border rounded-lg p-6">
         {/* Form Header */}
-        <div className="border-b border-zinc-200 pb-4">
-          <h3 className="text-lg font-bold text-zinc-900">
+        <div className="border-b border-border pb-4">
+          <h3 className="text-lg font-bold text-foreground">
             Revision Request Feedback
           </h3>
-          <p className="text-sm text-zinc-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Provide detailed feedback for the changes you need. Timeline comments from all
             team members will be included.
           </p>
@@ -97,7 +97,7 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
 
         {/* General Text Feedback */}
         <div className="space-y-3">
-          <label className="text-sm font-semibold text-zinc-700">
+          <label className="text-sm font-semibold text-foreground">
             Describe the changes needed <span className="text-red-500">*</span>
           </label>
           <Textarea
@@ -111,14 +111,14 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span
               className={
-                isTextValid ? 'text-emerald-600' : 'text-zinc-500'
+                isTextValid ? 'text-emerald-600' : 'text-muted-foreground'
               }
             >
               {isTextValid
                 ? '✓ Meets minimum length'
                 : `Minimum ${minCharacters} characters`}
             </span>
-            <span className="text-zinc-500 font-mono">
+            <span className="text-muted-foreground font-mono">
               {revisionFeedback.text.length} chars
             </span>
           </div>
@@ -136,9 +136,9 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
         />
 
         {/* Footer with Quota Warning and Submit */}
-        <div className="border-t border-zinc-200 pt-4 flex items-center justify-between gap-4">
+        <div className="border-t border-border pt-4 flex items-center justify-between gap-4">
           {/* Quota Warning */}
-          <div className="flex items-center gap-2 text-sm text-zinc-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle
               className={`h-4 w-4 ${
                 quota.remaining === 0 ? 'text-red-500' : 'text-amber-500'

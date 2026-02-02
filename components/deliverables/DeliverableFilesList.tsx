@@ -200,7 +200,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-zinc-900">Files ({fileItems.length})</h3>
+                <h3 className="text-lg font-semibold text-foreground">Files ({fileItems.length})</h3>
                 {canUploadBeta && (
                     <div>
                         <Button size="sm" onClick={handleUploadClick} className="gap-2">
@@ -219,19 +219,19 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             </div>
 
             {isLoading ? (
-                <div className="text-center py-12 bg-zinc-50 rounded-lg border border-zinc-200">
-                    <p className="text-zinc-500 text-sm">Loading files...</p>
+                <div className="text-center py-12 bg-muted rounded-lg border border-border">
+                    <p className="text-muted-foreground text-sm">Loading files...</p>
                 </div>
             ) : fileItems.length === 0 ? (
-                <div className="text-center py-12 bg-zinc-50 rounded-lg border-2 border-dashed border-zinc-200">
+                <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed border-border">
                     <div className="flex justify-center mb-3">
                         {deliverable.status === 'pending' || deliverable.status === 'in_progress' ? (
-                            <Clock className="h-10 w-10 text-zinc-300" />
+                            <Clock className="h-10 w-10 text-muted-foreground" />
                         ) : (
-                            <FileVideo className="h-10 w-10 text-zinc-300" />
+                            <FileVideo className="h-10 w-10 text-muted-foreground" />
                         )}
                     </div>
-                    <p className="text-zinc-500 text-sm">
+                    <p className="text-muted-foreground text-sm">
                         {deliverable.status === 'pending'
                             ? 'This deliverable has not been started yet. Files will appear here once work begins.'
                             : deliverable.status === 'in_progress'
@@ -245,12 +245,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                     )}
                 </div>
             ) : (
-                <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden divide-y divide-zinc-100">
+                <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-border">
                     {fileItems.map((file) => {
                         const config = getFileTypeConfig(file.category);
                         const Icon = config.icon;
                         return (
-                            <div key={file.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                            <div key={file.id} className="p-4 flex items-center justify-between hover:bg-muted transition-colors">
                                 <div className="flex items-center gap-4">
                                     {/* File Type Icon */}
                                     <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${config.bgColor}`}>
@@ -258,8 +258,8 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                     </div>
 
                                     <div>
-                                        <h4 className="text-sm font-medium text-zinc-900">{file.name}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
+                                        <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                             <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
                                                 {file.isFinal ? 'Final' : file.category}
                                             </Badge>

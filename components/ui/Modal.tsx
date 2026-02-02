@@ -129,7 +129,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         className={cn(
-          'relative z-10 w-full rounded-2xl bg-white shadow-2xl',
+          'relative z-10 w-full rounded-2xl bg-card shadow-2xl',
           // Entrance animations - spring timing for natural feel
           !isClosing && isMobile
             ? 'animate-in slide-in-from-bottom-full duration-300 ease-spring'
@@ -150,14 +150,14 @@ export const Modal: React.FC<ModalProps> = ({
         {(title || showCloseButton) && (
           <div
             className={cn(
-              "flex items-center justify-between border-b border-zinc-200 px-6 py-4",
+              "flex items-center justify-between border-b border-border px-6 py-4",
               !isClosing && "animate-in slide-in-from-top-2 fade-in duration-300 animation-delay-[100ms]"
             )}
           >
             {title && (
               <h2
                 id="modal-title"
-                className="text-xl font-bold text-zinc-900"
+                className="text-xl font-bold text-foreground"
               >
                 {title}
               </h2>
@@ -166,9 +166,9 @@ export const Modal: React.FC<ModalProps> = ({
               <button
                 onClick={onClose}
                 className={cn(
-                  "ml-auto rounded-full p-2 text-zinc-400",
+                  "ml-auto rounded-full p-2 text-muted-foreground",
                   "transition-all duration-200",
-                  "hover:bg-zinc-100 hover:text-zinc-900 hover:scale-110",
+                  "hover:bg-accent hover:text-foreground hover:scale-110",
                   "active:scale-95",
                   "focus:outline-none focus:ring-2 focus:ring-primary/20"
                 )}

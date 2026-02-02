@@ -183,7 +183,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
     };
 
     const renderMemberCard = (member: User & { isPrimaryContact?: boolean }) => (
-        <Card key={member.id} hoverable className="group relative border-zinc-200/60">
+        <Card key={member.id} hoverable className="group relative border-border">
             {member.isPrimaryContact && (
                 <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
                     <Crown className="h-3.5 w-3.5" />
@@ -191,29 +191,29 @@ export const TeamTab: React.FC<TeamTabProps> = ({
             )}
             <CardContent className="p-8 flex flex-col items-center text-center">
                 <div className="relative mb-5">
-                    <Avatar src={member.avatar} fallback={member.name?.[0] || '?'} className="h-20 w-20 ring-4 ring-zinc-50 shadow-md group-hover:ring-primary/10 transition-all" />
-                    <div className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 border-4 border-white rounded-full"></div>
+                    <Avatar src={member.avatar} fallback={member.name?.[0] || '?'} className="h-20 w-20 ring-4 ring-muted shadow-md group-hover:ring-primary/10 transition-all" />
+                    <div className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 border-4 border-card rounded-full"></div>
                 </div>
-                <h4 className="font-bold text-lg text-zinc-900">
+                <h4 className="font-bold text-lg text-foreground">
                     {member.name}
                     {member.id === user?.id && (
-                        <span className="text-xs font-normal text-zinc-400 ml-2">(You)</span>
+                        <span className="text-xs font-normal text-muted-foreground ml-2">(You)</span>
                     )}
                 </h4>
-                <p className="text-sm text-zinc-500 font-medium mb-1">
+                <p className="text-sm text-muted-foreground font-medium mb-1">
                     {getRoleLabel(member.role)}
                     {member.isPrimaryContact && (
                         <Badge variant="outline" className="ml-2 text-amber-600 border-amber-200 text-[10px]">Primary</Badge>
                     )}
                 </p>
-                <p className="text-xs text-zinc-400 mb-6 font-mono">{member.email}</p>
+                <p className="text-xs text-muted-foreground mb-6 font-mono">{member.email}</p>
 
                 <div className="flex gap-2 w-full">
                     {member.email && (
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent"
                             onClick={() => window.open(`mailto:${member.email}`, '_blank')}
                         >
                             <Mail className="h-4 w-4" />
@@ -221,7 +221,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                     )}
                     {canRemoveMember(member) && (
                         <DropdownMenu trigger={
-                            <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         }>
@@ -242,8 +242,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
         <>
             <div className="flex justify-between items-center mb-6">
                 <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-zinc-900">Project Team</h3>
-                    <p className="text-sm text-zinc-500">
+                    <h3 className="text-lg font-bold text-foreground">Project Team</h3>
+                    <p className="text-sm text-muted-foreground">
                         {project.team.length} member{project.team.length !== 1 ? 's' : ''}
                         {pendingInvitations.length > 0 && ` · ${pendingInvitations.length} pending`}
                     </p>
@@ -267,7 +267,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                         : "Team members will appear here once they are added to the project."
                     }
                     icon={Users}
-                    className="py-16 bg-zinc-50/50 border-dashed border rounded-lg"
+                    className="py-16 bg-muted/50 border-dashed border rounded-lg"
                     action={canManageTeam ? {
                         label: 'Invite First Member',
                         onClick: () => setIsInviteModalOpen(true),
@@ -278,7 +278,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                     {/* Motionify Team */}
                     {motionifyTeam.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                                 Motionify Team ({motionifyTeam.length})
                             </h4>
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -290,7 +290,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                     {/* Client Team */}
                     {clientTeam.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                                 Client Team ({clientTeam.length})
                             </h4>
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -302,19 +302,19 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                     {/* Pending Invitations */}
                     {pendingInvitations.length > 0 && (
                         <div>
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                                 Pending Invitations ({pendingInvitations.length})
                             </h4>
                             <div className="space-y-3">
                                 {pendingInvitations.map((inv) => (
-                                    <div key={inv.id} className="flex items-center justify-between p-4 bg-zinc-50 rounded-lg border border-zinc-200/60">
+                                    <div key={inv.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-400">
+                                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                                                 <Mail className="h-5 w-5" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium text-zinc-900">{inv.email}</p>
-                                                <p className="text-xs text-zinc-400 flex items-center gap-1">
+                                                <p className="text-sm font-medium text-foreground">{inv.email}</p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                     <Clock className="h-3 w-3" />
                                                     Expires {new Date(inv.expiresAt).toLocaleDateString()}
                                                     <span className="mx-1">·</span>
@@ -327,7 +327,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="text-xs text-zinc-500 hover:text-zinc-900 gap-1"
+                                                    className="text-xs text-muted-foreground hover:text-foreground gap-1"
                                                     onClick={() => handleResendInvitation(inv.id)}
                                                 >
                                                     <RefreshCw className="h-3 w-3" /> Resend
@@ -354,17 +354,17 @@ export const TeamTab: React.FC<TeamTabProps> = ({
             {confirmRemove && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmRemove(null)} />
-                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                    <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
                                 <AlertTriangle className="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-zinc-900">Remove Member</h3>
-                                <p className="text-sm text-zinc-500">This action cannot be undone.</p>
+                                <h3 className="font-bold text-foreground">Remove Member</h3>
+                                <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
                             </div>
                         </div>
-                        <p className="text-sm text-zinc-600 mb-6">
+                        <p className="text-sm text-muted-foreground mb-6">
                             Are you sure you want to remove <strong>{confirmRemove.name}</strong> from this project?
                             Their existing contributions will be preserved.
                         </p>

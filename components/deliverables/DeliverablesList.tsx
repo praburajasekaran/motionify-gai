@@ -90,8 +90,8 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 max-w-xs">
           <div className="flex items-center gap-2 mb-2">
-            <Filter className="h-4 w-4 text-zinc-500" />
-            <span className="text-sm font-medium text-zinc-700">Filter</span>
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Filter</span>
           </div>
           <Select
             value={filter}
@@ -103,8 +103,8 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
 
         <div className="flex-1 max-w-xs">
           <div className="flex items-center gap-2 mb-2">
-            <ArrowUpDown className="h-4 w-4 text-zinc-500" />
-            <span className="text-sm font-medium text-zinc-700">Sort By</span>
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Sort By</span>
           </div>
           <Select
             value={sortBy}
@@ -116,9 +116,9 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
 
         {/* Result Count */}
         <div className="flex items-end">
-          <p className="text-sm text-zinc-500">
-            Showing <span className="font-semibold text-zinc-900">{sortedDeliverables.length}</span>{' '}
-            of <span className="font-semibold text-zinc-900">{deliverables.length}</span>{' '}
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="font-semibold text-foreground">{sortedDeliverables.length}</span>{' '}
+            of <span className="font-semibold text-foreground">{deliverables.length}</span>{' '}
             deliverable{deliverables.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -161,7 +161,7 @@ export const DeliverablesList: React.FC<DeliverablesListProps> = ({
           {canCreate && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-zinc-300 rounded-lg text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
+              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors"
             >
               <Plus className="h-5 w-5" />
               <span className="font-medium">Add New Deliverable</span>

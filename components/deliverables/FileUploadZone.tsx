@@ -79,10 +79,10 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
   return (
     <div className={cn('space-y-3', className)}>
-      <label className="text-sm font-semibold text-zinc-700">
+      <label className="text-sm font-semibold text-foreground">
         Reference Attachments (Optional)
       </label>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Upload images, documents, or videos to provide context (max 5 files, 10MB total)
       </p>
 
@@ -97,14 +97,14 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all',
             isDragging
               ? 'border-primary bg-primary/5'
-              : 'border-zinc-300 hover:border-primary hover:bg-zinc-50'
+              : 'border-border hover:border-primary hover:bg-muted'
           )}
         >
-          <Upload className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
-          <p className="text-sm font-medium text-zinc-900 mb-1">
+          <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground mb-1">
             Drop files here or click to browse
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Images, PDFs, videos up to {formatFileSize(maxTotalSize - totalSize)} remaining
           </p>
           <input
@@ -126,7 +126,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             return (
               <div
                 key={file.id}
-                className="flex items-center gap-3 p-3 bg-white border border-zinc-200 rounded-lg group hover:border-zinc-300"
+                className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg group hover:border-border"
               >
                 {/* Thumbnail or Icon */}
                 {file.thumbnailUrl ? (
@@ -136,17 +136,17 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
                     className="w-12 h-12 object-cover rounded"
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-zinc-100 rounded flex items-center justify-center">
-                    <FileIcon className="h-6 w-6 text-zinc-500" />
+                  <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                    <FileIcon className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
 
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {file.fileName}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     {formatFileSize(file.fileSize)}
                   </p>
                 </div>
@@ -168,7 +168,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             );
           })}
 
-          <div className="flex items-center justify-between text-xs text-zinc-500 pt-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
             <span>
               {attachments.length} file{attachments.length !== 1 ? 's' : ''} uploaded
             </span>

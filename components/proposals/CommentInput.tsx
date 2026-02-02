@@ -190,16 +190,16 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                     {uploadingFiles.map((uploadingFile) => (
                         <div
                             key={uploadingFile.id}
-                            className="flex items-center gap-2 p-2 bg-gray-100 rounded-md"
+                            className="flex items-center gap-2 p-2 bg-muted rounded-md"
                         >
-                            <File className="w-4 h-4 text-gray-500" />
+                            <File className="w-4 h-4 text-muted-foreground" />
                             <span className="flex-1 text-sm truncate max-w-[150px]">
                                 {uploadingFile.file.name}
                             </span>
                             {uploadingFile.error ? (
                                 <span className="text-xs text-red-500">{uploadingFile.error}</span>
                             ) : uploadingFile.progress < 100 ? (
-                                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500 transition-all duration-300"
                                         style={{ width: `${uploadingFile.progress}%` }}
@@ -210,7 +210,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                             )}
                             <button
                                 onClick={() => removeUploadingFile(uploadingFile.id)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted-foreground hover:text-muted-foreground"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -250,7 +250,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="shrink-0 p-2 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                     title="Attach files"
                 >
                     <Paperclip className="w-5 h-5" />
@@ -260,7 +260,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                     onChange={(e) => setContent(e.target.value)}
                     placeholder={placeholder}
                     disabled={disabled || isSubmitting}
-                    className="flex-1 min-h-[40px] max-h-[120px] px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="flex-1 min-h-[40px] max-h-[120px] px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-muted disabled:cursor-not-allowed"
                     rows={1}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {

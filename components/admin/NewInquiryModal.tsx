@@ -165,18 +165,18 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Create New Inquiry</h2>
-            <p className="text-sm text-gray-600 mt-1">Submit a new project inquiry</p>
+            <h2 className="text-2xl font-bold text-foreground">Create New Inquiry</h2>
+            <p className="text-sm text-muted-foreground mt-1">Submit a new project inquiry</p>
           </div>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
-            className="p-2 rounded-lg hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -202,10 +202,10 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
 
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Information</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Project Information</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="videoType" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="videoType" className="block text-sm font-medium text-foreground mb-2">
                   Video Type <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -213,9 +213,9 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                   value={formData.videoType}
                   onChange={(e) => handleChange('videoType', e.target.value)}
                   disabled={isSubmitting}
-                  className={`w-full px-4 py-2.5 rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.videoType
+                  className={`w-full px-4 py-2.5 rounded-lg border bg-card text-foreground focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.videoType
                     ? 'border-red-300 focus:ring-red-500/50'
-                    : 'border-gray-300 focus:ring-violet-500/50'
+                    : 'border-border focus:ring-violet-500/50'
                     }`}
                 >
                   <option value="">Select video type...</option>
@@ -229,7 +229,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
               </div>
 
               <div>
-                <label htmlFor="niche" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="niche" className="block text-sm font-medium text-foreground mb-2">
                   Industry/Niche <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -237,9 +237,9 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                   value={formData.niche}
                   onChange={(e) => handleChange('niche', e.target.value)}
                   disabled={isSubmitting}
-                  className={`w-full px-4 py-2.5 rounded-lg border bg-white text-gray-900 focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.niche
+                  className={`w-full px-4 py-2.5 rounded-lg border bg-card text-foreground focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.niche
                     ? 'border-red-300 focus:ring-red-500/50'
-                    : 'border-gray-300 focus:ring-violet-500/50'
+                    : 'border-border focus:ring-violet-500/50'
                     }`}
                 >
                   <option value="">Select industry...</option>
@@ -253,11 +253,11 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
               </div>
 
               <div>
-                <label htmlFor="projectNotes" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="projectNotes" className="block text-sm font-medium text-foreground mb-2">
                   Project Description <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <FileText className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <FileText className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
                   <textarea
                     id="projectNotes"
                     value={formData.projectNotes}
@@ -265,9 +265,9 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                     disabled={isSubmitting}
                     placeholder="Describe your video project, goals, timeline, and any specific requirements..."
                     rows={5}
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg border bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${errors.projectNotes
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${errors.projectNotes
                       ? 'border-red-300 focus:ring-red-500/50'
-                      : 'border-gray-300 focus:ring-violet-500/50'
+                      : 'border-border focus:ring-violet-500/50'
                       }`}
                   />
                 </div>
@@ -275,7 +275,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                   <p className="text-xs text-red-600 mt-1">{errors.projectNotes}</p>
                 )}
                 {formData.projectNotes && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {formData.projectNotes.length} characters
                   </p>
                 )}
@@ -283,12 +283,12 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-foreground bg-card border border-border hover:bg-muted transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

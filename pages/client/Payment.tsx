@@ -165,7 +165,7 @@ export function Payment() {
 
     if (authLoading || isLoading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-gray-50">
+            <div className="flex items-center justify-center h-screen bg-muted">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
             </div>
         );
@@ -180,13 +180,13 @@ export function Payment() {
 
     if (paymentComplete) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+            <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+                <div className="bg-card rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
                     <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
-                    <p className="text-gray-600 mb-8">
+                    <h1 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h1>
+                    <p className="text-muted-foreground mb-8">
                         Thank you for your payment. Your project has been moved to the setup phase.
                     </p>
                     <button
@@ -208,11 +208,11 @@ export function Payment() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-muted py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center text-gray-600 hover:text-gray-900 mb-8 transition-colors"
+                    className="flex items-center text-muted-foreground hover:text-foreground mb-8 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
@@ -221,28 +221,28 @@ export function Payment() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Order Summary */}
                     <div className="md:col-span-2 space-y-6">
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="p-6 border-b border-gray-100">
-                                <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
-                                <p className="text-sm text-gray-500 mt-1">Proposal for Inquiry {inquiryNumber}</p>
+                        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+                            <div className="p-6 border-b border-border">
+                                <h2 className="text-xl font-bold text-foreground">Payment Details</h2>
+                                <p className="text-sm text-muted-foreground mt-1">Proposal for Inquiry {inquiryNumber}</p>
                             </div>
                             <div className="p-6 space-y-4">
-                                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                                    <span className="text-gray-600">Total Project Value</span>
-                                    <span className="font-semibold text-gray-900">{formatCurrency(proposal.totalPrice, proposal.currency)}</span>
+                                <div className="flex justify-between items-center py-2 border-b border-border">
+                                    <span className="text-muted-foreground">Total Project Value</span>
+                                    <span className="font-semibold text-foreground">{formatCurrency(proposal.totalPrice, proposal.currency)}</span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                                    <span className="text-gray-600">Advance Percentage</span>
-                                    <span className="font-medium text-gray-900">{proposal.advancePercentage}%</span>
+                                <div className="flex justify-between items-center py-2 border-b border-border">
+                                    <span className="text-muted-foreground">Advance Percentage</span>
+                                    <span className="font-medium text-foreground">{proposal.advancePercentage}%</span>
                                 </div>
                                 <div className="flex justify-between items-center py-3">
-                                    <span className="text-lg font-medium text-gray-900">Amount Due Now</span>
+                                    <span className="text-lg font-medium text-foreground">Amount Due Now</span>
                                     <span className="text-2xl font-bold text-violet-600">{formatCurrency(proposal.advanceAmount, proposal.currency)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 text-sm text-gray-500 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground bg-blue-50 p-4 rounded-xl border border-blue-100">
                             <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
                             <p>Your payment is secure. We use 256-bit encryption to protect your financial information.</p>
                         </div>
@@ -250,19 +250,19 @@ export function Payment() {
 
                     {/* Payment Method */}
                     <div className="md:col-span-1">
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
-                            <h3 className="font-semibold text-gray-900 mb-4">Pay with Card</h3>
+                        <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sticky top-6">
+                            <h3 className="font-semibold text-foreground mb-4">Pay with Card</h3>
 
                             <div className="space-y-4">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <CreditCard className="h-4 w-4 text-gray-400" />
+                                        <CreditCard className="h-4 w-4 text-muted-foreground" />
                                     </div>
                                     <input
                                         type="text"
                                         disabled
                                         value="•••• •••• •••• 4242"
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm"
+                                        className="block w-full pl-10 pr-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm"
                                     />
                                 </div>
 
@@ -271,17 +271,17 @@ export function Payment() {
                                         type="text"
                                         disabled
                                         value="12/28"
-                                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm text-center"
+                                        className="block w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm text-center"
                                     />
                                     <input
                                         type="text"
                                         disabled
                                         value="•••"
-                                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm text-center"
+                                        className="block w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm text-center"
                                     />
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-100">
+                                <div className="pt-4 border-t border-border">
                                     <button
                                         onClick={handlePayment}
                                         disabled={isProcessing}
@@ -299,7 +299,7 @@ export function Payment() {
                                             </>
                                         )}
                                     </button>
-                                    <p className="text-xs text-center text-gray-400 mt-3">
+                                    <p className="text-xs text-center text-muted-foreground mt-3">
                                         This is a secure 256-bit SSL encrypted payment.
                                     </p>
                                 </div>
