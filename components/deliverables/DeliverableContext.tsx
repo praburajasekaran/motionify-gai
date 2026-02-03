@@ -92,7 +92,10 @@ function transformApiDeliverable(d: RawDeliverableResponse): Deliverable {
     watermarked: !!d.beta_file_key && !d.final_file_key,
     finalFileUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
     finalFileKey: d.final_file_key,
+    finalDeliveredAt: d.final_delivered_at ? new Date(d.final_delivered_at) : undefined,
     approvalHistory: d.approval_history || [],
+    createdAt: d.created_at,
+    updatedAt: d.updated_at,
   };
 }
 

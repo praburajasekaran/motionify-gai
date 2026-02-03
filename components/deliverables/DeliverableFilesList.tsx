@@ -5,6 +5,7 @@ import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
 import { useDeliverables } from './DeliverableContext';
 import { isClient } from '@/utils/deliverablePermissions';
+import { formatTimestamp, formatDateTime } from '@/utils/dateFormatting';
 
 export interface DeliverableFilesListProps {
     deliverable: Deliverable;
@@ -140,7 +141,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 name: f.label || f.file_name,
                 category: f.file_category,
                 isFinal: f.is_final,
-                date: new Date(f.uploaded_at).toLocaleDateString(),
+                date: f.uploaded_at,
                 size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
             }));
 
@@ -264,7 +265,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 {file.isFinal ? 'Final' : file.category}
                                             </Badge>
                                             <span>• {file.size}</span>
-                                            {file.date !== 'Invalid Date' && <span>• {file.date}</span>}
+                                            {file.date && <span title={formatDateTime(file.date) || undefined}>• {formatTimestamp(file.date) || new Date(file.date).toLocaleDateString()}</span>}
                                         </div>
                                     </div>
                                 </div>
