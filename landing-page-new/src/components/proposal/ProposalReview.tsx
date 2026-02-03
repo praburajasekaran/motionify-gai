@@ -85,9 +85,9 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
       {/* Project Description */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Description</h2>
-        <div className="prose prose-sm max-w-none">
+        <div className="max-w-none">
           {/<[^>]+>/.test(proposal.description) ? (
-            <div className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: proposal.description }} />
+            <div className="tiptap text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: proposal.description }} />
           ) : (
             <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
               {proposal.description}

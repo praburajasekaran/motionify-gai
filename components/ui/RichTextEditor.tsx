@@ -57,6 +57,7 @@ export function RichTextEditor({
   editable = true,
 }: RichTextEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -76,7 +77,13 @@ export function RichTextEditor({
     },
   });
 
-  if (!editor) return null;
+  if (!editor) {
+    return (
+      <div className="bg-muted border border-border rounded-lg px-4 py-3 min-h-[9rem] text-muted-foreground">
+        Loading editor...
+      </div>
+    );
+  }
 
   return (
     <div

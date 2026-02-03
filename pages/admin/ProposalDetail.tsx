@@ -613,7 +613,7 @@ export function ProposalDetail() {
             </>
           ) : (
             /<[^>]+>/.test(proposal.description) ? (
-              <div className="prose prose-sm prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: proposal.description }} />
+              <div className="tiptap text-foreground" dangerouslySetInnerHTML={{ __html: proposal.description }} />
             ) : (
               <p className="text-foreground leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
             )
