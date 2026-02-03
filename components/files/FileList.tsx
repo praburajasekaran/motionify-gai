@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/design-system';
 import { ProjectFile } from '@/types';
 import { storageService } from '@/services/storage';
+import { formatTimestamp, formatDateTime } from '@/utils/dateFormatting';
 
 interface FileListProps {
     files: ProjectFile[];
@@ -163,8 +164,9 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-
-                                            <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                            <span title={formatDateTime(file.uploadedAt) || undefined}>
+                                                {formatTimestamp(file.uploadedAt) || new Date(file.uploadedAt).toLocaleDateString()}
+                                            </span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">

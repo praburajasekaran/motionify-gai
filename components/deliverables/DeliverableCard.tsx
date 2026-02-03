@@ -27,6 +27,7 @@ import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { Upload, Loader2, Play, CreditCard } from 'lucide-react';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface DeliverableCardProps {
   deliverable: Deliverable;
@@ -544,6 +545,16 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           Due {dueDate.toLocaleDateString()}
           {isOverdue && <span className="text-red-600 font-bold">(Overdue)</span>}
         </div>
+
+        {/* Created Date */}
+        {deliverable.createdAt && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span title={formatDateTime(deliverable.createdAt) || undefined}>
+              Created {formatTimestamp(deliverable.createdAt)}
+            </span>
+          </div>
+        )}
 
         {/* Progress Bar (for non-completed) */}
         {deliverable.progress < 100 && deliverable.status !== 'beta_ready' && (

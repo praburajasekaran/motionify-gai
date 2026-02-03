@@ -4,7 +4,7 @@ import React, { useState, useContext } from 'react';
 import { ProjectFile, UserRole } from '@/lib/portal/types';
 import Button from './ui/Button';
 import { AppContext } from '@/lib/portal/AppContext';
-import { timeAgo, formatDate } from '@/lib/portal/utils/dateUtils';
+import { timeAgo, formatDate, formatTimestamp, formatDateTime } from '@/lib/portal/utils/dateUtils';
 
 interface FileItemProps {
   file: ProjectFile;
@@ -35,8 +35,9 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
   const [isCommentsVisible, setIsCommentsVisible] = useState(false);
   const [newComment, setNewComment] = useState('');
 
-  // Fix Bug #3: Use timezone-safe date formatting
-  const uploadDate = formatDate(file.uploadedAt);
+  // Fix Bug #3: Use timezone-safe date formatting — now with contextual format
+  const uploadDate = formatTimestamp(file.uploadedAt) || formatDate(file.uploadedAt);
+  const uploadDateFull = formatDateTime(file.uploadedAt);
 
   const handleDownload = () => {
     const fileContent = `This is a mock file for: ${file.name}\nSize: ${file.size} bytes\nType: ${file.type}`;
@@ -127,7 +128,7 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
                 </button>
               </div>
             )}
-            <p className="text-xs text-white/60">
+            <p className="text-xs text-white/60" title={uploadDateFull || undefined}>
               {formatBytes(file.size)} &bull; Uploaded {uploadDate}
             </p>
             {file.description && (

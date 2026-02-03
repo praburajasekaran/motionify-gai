@@ -7,6 +7,7 @@ import {
 import { InviteModal } from './InviteModal';
 import { USER_ROLE_LABELS } from '../../types';
 import type { Project, User } from '../../types';
+import { formatTimestamp } from '../../utils/dateFormatting';
 
 interface PendingInvitation {
     id: string;
@@ -316,6 +317,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                                                 <p className="text-sm font-medium text-foreground">{inv.email}</p>
                                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                     <Clock className="h-3 w-3" />
+                                                    Invited {formatTimestamp(inv.createdAt)}
+                                                    <span className="mx-1">·</span>
                                                     Expires {new Date(inv.expiresAt).toLocaleDateString()}
                                                     <span className="mx-1">·</span>
                                                     {getRoleLabel(inv.role)}

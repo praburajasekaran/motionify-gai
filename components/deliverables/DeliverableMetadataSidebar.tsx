@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Separator } from '../ui/design-system';
 import { Deliverable } from '../../types/deliverable.types';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 import { Project } from '@/types';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 
@@ -108,6 +109,42 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
                   )}{' '}
                   days remaining)
                 </span>
+              </p>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Timestamps */}
+          {deliverable.createdAt && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Created</p>
+              <p className="text-sm font-semibold text-foreground" title={formatDateTime(deliverable.createdAt) || undefined}>
+                {formatTimestamp(deliverable.createdAt)}
+              </p>
+            </div>
+          )}
+          {deliverable.updatedAt && deliverable.updatedAt !== deliverable.createdAt && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Updated</p>
+              <p className="text-sm font-semibold text-foreground" title={formatDateTime(deliverable.updatedAt) || undefined}>
+                {formatTimestamp(deliverable.updatedAt)}
+              </p>
+            </div>
+          )}
+          {deliverable.approvalHistory.length > 0 && deliverable.approvalHistory[deliverable.approvalHistory.length - 1].action === 'approved' && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Approved</p>
+              <p className="text-sm font-semibold text-emerald-700" title={formatDateTime(deliverable.approvalHistory[deliverable.approvalHistory.length - 1].timestamp) || undefined}>
+                {formatTimestamp(deliverable.approvalHistory[deliverable.approvalHistory.length - 1].timestamp)}
+              </p>
+            </div>
+          )}
+          {isFinalDelivered && deliverable.finalDeliveredAt && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Delivered</p>
+              <p className="text-sm font-semibold text-emerald-700" title={formatDateTime(deliverable.finalDeliveredAt) || undefined}>
+                {formatTimestamp(deliverable.finalDeliveredAt)}
               </p>
             </div>
           )}

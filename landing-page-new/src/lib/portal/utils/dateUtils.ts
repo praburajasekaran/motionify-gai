@@ -216,3 +216,24 @@ export function toInputDateFormat(date: string | Date): string {
     return '';
   }
 }
+
+/**
+ * Contextual timestamp: relative for recent (<7 days), absolute for older.
+ * Returns null for falsy input (handles optional timestamps).
+ */
+export function formatTimestamp(date: string | number | Date | null | undefined): string | null {
+  if (!date) return null;
+  const dateObj = typeof date === 'string' ? new Date(date)
+    : typeof date === 'number' ? new Date(date)
+    : date;
+  if (isNaN(dateObj.getTime())) return null;
+
+  const now = Date.now();
+  const diffMs = now - dateObj.getTime();
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+  if (diffMs < SEVEN_DAYS && diffMs >= 0) {
+    return timeAgo(dateObj.getTime());
+  }
+  return formatDate(dateObj);
+}

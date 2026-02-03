@@ -4,6 +4,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '@/lib/portal/AppContext';
 import { UserRole } from '@/lib/portal/types';
 import { Clock, Mail, XCircle, RefreshCw, UserMinus } from 'lucide-react';
+import { formatTimestamp } from '@/lib/portal/utils/dateUtils';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import InviteModal from './InviteModal';
@@ -96,7 +97,8 @@ const TeamManagement = () => {
                       {invitation.invited_by_name && ` • Invited by ${invitation.invited_by_name}`}
                     </p>
                     <p className="text-xs text-[var(--todoist-gray-400)] mt-1">
-                      Expires: {new Date(invitation.expires_at).toLocaleDateString()}
+                      Invited {formatTimestamp(invitation.created_at) || new Date(invitation.created_at).toLocaleDateString()}
+                      {' · '}Expires: {new Date(invitation.expires_at).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

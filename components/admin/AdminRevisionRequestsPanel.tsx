@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Textarea } from '../ui/design-system';
 import { AdditionalRevisionRequest, AdditionalRevisionRequestStatus } from '../../types/deliverable.types';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface AdminRevisionRequestsPanelProps {
     requests: AdditionalRevisionRequest[];
@@ -65,13 +66,11 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
         }, 500);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString(undefined, {
+    const formatDateLocal = (dateString: string) => {
+        return formatTimestamp(dateString) || new Date(dateString).toLocaleDateString(undefined, {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
         });
     };
 
@@ -100,7 +99,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                             {request.requestedCount} Additional Revision{request.requestedCount !== 1 ? 's' : ''} Requested
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            by {request.requestedByName} • {formatDate(request.createdAt)}
+                            by {request.requestedByName} • {formatDateLocal(request.createdAt)}
                         </p>
                     </div>
                 </div>
@@ -127,7 +126,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            <span>Requested: {formatDate(request.createdAt)}</span>
+                            <span>Requested: {formatDateLocal(request.createdAt)}</span>
                         </div>
                     </div>
 
@@ -267,7 +266,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">
                             <p className="text-emerald-800">
                                 <strong>Approved:</strong> {request.approvedCount} revision{request.approvedCount !== 1 ? 's' : ''}
-                                {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
+                                {request.reviewedAt && ` on ${formatDateLocal(request.reviewedAt)}`}
                                 {request.reviewerName && ` by ${request.reviewerName}`}
                             </p>
                             {request.internalNotes && (
@@ -282,7 +281,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ request, onApprove, onDecline
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
                             <p className="text-red-800">
                                 <strong>Declined:</strong>
-                                {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
+                                {request.reviewedAt && ` on ${formatDateLocal(request.reviewedAt)}`}
                                 {request.reviewerName && ` by ${request.reviewerName}`}
                             </p>
                             {request.declineReason && (

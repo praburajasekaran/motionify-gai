@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Calendar,
+  Clock,
   Download,
   Eye,
   ChevronRight,
@@ -19,6 +20,7 @@ import { cn, Badge, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { useDeliverables } from './DeliverableContext';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface DeliverableListItemProps {
   deliverable: Deliverable;
@@ -143,6 +145,16 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
         <span>{dueDate.toLocaleDateString()}</span>
         {isOverdue && <span className="font-semibold">(Overdue)</span>}
       </div>
+
+      {/* Created Date */}
+      {deliverable.createdAt && (
+        <div className="shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span title={formatDateTime(deliverable.createdAt) || undefined}>
+            {formatTimestamp(deliverable.createdAt)}
+          </span>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="shrink-0 flex items-center gap-2">

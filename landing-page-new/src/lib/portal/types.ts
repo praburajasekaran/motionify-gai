@@ -56,6 +56,8 @@ export interface Task {
   assigneeId?: string; // ID of the user assigned to this task
   comments: Comment[];
   createdBy?: string;
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 export interface Client {

@@ -189,6 +189,10 @@ export interface Deliverable {
   // Approval History
   approvalHistory: DeliverableApproval[]; // Full history of approvals/rejections
 
+  // Timestamps
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
+
   // Final Delivery
   finalFileUrl?: string; // URL to final file (no watermark)
   finalFileKey?: string; // R2 storage key

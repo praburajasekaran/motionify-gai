@@ -7,7 +7,7 @@ import Badge from './ui/Badge';
 import Button from './ui/Button';
 import RevisionModal from './RevisionModal';
 import CompletionAnimation from './ui/CompletionAnimation';
-import { timeAgo, formatDeadline } from '@/lib/portal/utils/dateUtils';
+import { timeAgo, formatDeadline, formatTimestamp, formatDateTime } from '@/lib/portal/utils/dateUtils';
 import { filterUsersByMentionQuery, renderMentionedText } from '@/lib/portal/utils/mention-utils';
 
 interface TaskItemProps {
@@ -321,6 +321,14 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   <span className="text-xs">By {creator.name.split(' ')[0]}</span>
+                </div>
+              )}
+              {task.updatedAt && task.updatedAt !== task.createdAt && (
+                <div className="flex items-center font-medium text-[var(--todoist-gray-500)]" title={formatDateTime(task.updatedAt) || undefined}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-xs">Updated {formatTimestamp(task.updatedAt)}</span>
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@ import { Download, CreditCard, Calendar, CheckCircle2, XCircle, Clock, AlertTria
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, EmptyState } from '../ui/design-system';
 import { Payment, Project } from '../../types';
 import { fetchPaymentsForProject } from '../../services/paymentApi';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 interface PaymentHistoryProps {
     project: Project;
@@ -128,9 +129,17 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
                                     {payments.map((payment) => (
                                         <tr key={payment.id} className="hover:bg-accent transition-colors">
                                             <td className="px-6 py-4 text-muted-foreground">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                    {formatDate(payment.created_at)}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-2" title={formatDateTime(payment.created_at) || undefined}>
+                                                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                                                        {formatTimestamp(payment.created_at) || formatDate(payment.created_at)}
+                                                    </div>
+                                                    {payment.paid_at && (
+                                                        <div className="flex items-center gap-2 text-xs text-emerald-600" title={formatDateTime(payment.paid_at) || undefined}>
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            Paid {formatTimestamp(payment.paid_at)}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

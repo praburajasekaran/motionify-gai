@@ -55,6 +55,7 @@ export interface Task {
   assignees?: User[]; // Support for multiple assignees (team members can upload beta files only to assigned tasks)
   createdBy?: string; // User ID of task creator
   createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
   deadline?: string; // ISO date string
   assigneeId?: string; // Used by backend API
   followers?: string[]; // Array of user IDs following this task
