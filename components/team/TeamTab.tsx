@@ -269,10 +269,11 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                     }
                     icon={Users}
                     className="py-16 bg-muted/50 border-dashed border rounded-lg"
-                    action={canManageTeam ? {
-                        label: 'Invite First Member',
-                        onClick: () => setIsInviteModalOpen(true),
-                    } : undefined}
+                    action={canManageTeam ? (
+                        <Button className="gap-2" onClick={() => setIsInviteModalOpen(true)}>
+                            <UserPlus className="h-4 w-4" /> Invite First Member
+                        </Button>
+                    ) : undefined}
                 />
             ) : (
                 <div className="space-y-8">
