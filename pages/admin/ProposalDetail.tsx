@@ -10,6 +10,7 @@ import { Permissions } from '../../lib/permissions';
 import { CommentThread } from '../../components/proposals';
 import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { RichTextEditor } from '../../components/ui/RichTextEditor';
 
 interface DeliverableInput {
   id: string;
@@ -604,16 +605,18 @@ export function ProposalDetail() {
               <p className="text-xs text-muted-foreground mb-3">
                 Describe the scope of work, objectives, and what the client can expect
               </p>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
+              <RichTextEditor
+                content={description}
+                onChange={setDescription}
                 placeholder="Enter detailed project description..."
               />
             </>
           ) : (
-            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+            /<[^>]+>/.test(proposal.description) ? (
+              <div className="prose prose-sm prose-invert max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: proposal.description }} />
+            ) : (
+              <p className="text-foreground leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+            )
           )}
         </div>
 

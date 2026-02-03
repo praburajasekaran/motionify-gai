@@ -38,7 +38,7 @@ export const proposalDeliverableSchema = z.object({
 
 export const createProposalSchema = z.object({
     inquiryId: uuidSchema,
-    description: z.string().min(10).max(10000),
+    description: z.string().min(10).max(50000),
     deliverables: z.array(proposalDeliverableSchema).min(1),
     currency: z.enum(['INR', 'USD']),
     totalPrice: z.number().positive(),
@@ -48,7 +48,7 @@ export const createProposalSchema = z.object({
 });
 
 export const updateProposalSchema = z.object({
-    description: z.string().min(10).max(10000).optional(),
+    description: z.string().min(10).max(50000).optional(),
     deliverables: z.array(proposalDeliverableSchema).optional(),
     currency: z.enum(['INR', 'USD']).optional(),
     totalPrice: z.number().positive().optional(),
