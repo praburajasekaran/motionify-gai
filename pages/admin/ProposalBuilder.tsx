@@ -3,6 +3,7 @@ import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { getInquiryById, updateInquiryStatus, type Inquiry } from '../../lib/inquiries';
 import { createProposal } from '../../lib/proposals';
 import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, Save } from 'lucide-react';
+import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { encodeBase64 } from '../../utils/encoding';
@@ -144,7 +145,7 @@ export function ProposalBuilder() {
   };
 
   const validateForm = (): string | null => {
-    if (!description.trim()) {
+    if (!description.replace(/<[^>]*>/g, '').trim()) {
       return 'Please enter a project description';
     }
 
@@ -294,11 +295,9 @@ ${proposalLink}
           <p className="text-xs text-muted-foreground mb-3">
             Describe the scope of work, objectives, and what the client can expect
           </p>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={6}
-            className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
+          <RichTextEditor
+            content={description}
+            onChange={setDescription}
             placeholder="Enter detailed project description..."
           />
         </div>
