@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { LogOut, Edit2, Folder, Clock, CheckCircle2, AlertCircle, Mail, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { UserRole } from '@/lib/portal/types/auth.types';
+import { formatTimestamp } from '@/lib/portal/utils/dateUtils';
 
 export default function ProfilePage() {
     const { user, updateProfile, isLoading } = useAuth();
@@ -80,7 +81,7 @@ export default function ProfilePage() {
                                         {user.role.replace('_', ' ')}
                                     </Badge>
                                     <Badge variant="outline">
-                                        Member since {new Date(user.createdAt).toLocaleDateString()}
+                                        Member since {formatTimestamp(user.createdAt)}
                                     </Badge>
                                 </div>
                             </div>

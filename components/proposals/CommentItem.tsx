@@ -2,22 +2,7 @@ import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar';
 import { Edit2, X, Check, File, FileText, FileImage, Download, Loader2 } from 'lucide-react';
 import { getAttachments, getAttachmentDownloadUrl, formatFileSize, type Attachment } from '@/lib/attachments';
-
-function formatDistanceToNow(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffSecs < 60) return 'just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-
-    return date.toLocaleDateString();
-}
+import { formatTimestamp } from '@/utils/dateFormatting';
 
 function getFileIcon(fileType: string) {
     if (fileType.startsWith('image/')) {
@@ -144,7 +129,7 @@ export function CommentItem({ comment, currentUserId, hasSubsequentReplies = fal
                 <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-sm text-foreground">{comment.userName}</span>
                     <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.createdAt))}
+                        {formatTimestamp(comment.createdAt)}
                     </span>
                     {showEditedBadge && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">

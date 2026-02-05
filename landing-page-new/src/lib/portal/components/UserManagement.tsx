@@ -6,6 +6,7 @@ import Modal from './ui/Modal';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import { listUsers, createUser, updateUser, deactivateUser, type User } from '../api/users.api';
+import { formatTimestamp, formatDateTime } from '../utils/dateUtils';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -308,8 +309,8 @@ const UserManagement: React.FC = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--todoist-gray-500)]">
-                    {new Date(user.created_at).toLocaleDateString()}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--todoist-gray-500)]" title={formatDateTime(user.created_at) || undefined}>
+                    {formatTimestamp(user.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">

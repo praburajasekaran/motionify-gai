@@ -19,6 +19,7 @@ import {
 import { useAuthContext } from '../contexts/AuthContext';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
+import { formatTimestamp, formatDateTime } from '../utils/dateFormatting';
 
 // Dashboard metrics type
 interface DashboardMetrics {
@@ -99,24 +100,6 @@ const ACTIVITY_ICONS: Record<string, typeof Send> = {
   TERMS_ACCEPTED: CheckCircle,
   INQUIRY_SUBMITTED: Mail,
 };
-
-// Relative time formatting helper
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diffMs = now - timestamp;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 // Metric card component
 interface MetricCardProps {
@@ -409,9 +392,9 @@ export const Dashboard = () => {
                   return (
                     <tr key={activity.id} className="hover:bg-muted transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2" title={formatDateTime(activity.timestamp) || undefined}>
                           <Clock className="w-4 h-4" />
-                          {formatRelativeTime(activity.timestamp)}
+                          {formatTimestamp(activity.timestamp)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">

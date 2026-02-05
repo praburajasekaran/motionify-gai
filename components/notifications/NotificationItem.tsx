@@ -7,21 +7,7 @@
 import React from 'react';
 import { cn } from '../ui/design-system';
 import { AppNotification, NOTIFICATION_ICONS } from '../../contexts/NotificationContext';
-
-interface NotificationItemProps {
-    notification: AppNotification;
-    onClick: (notification: AppNotification) => void;
-}
-
-function formatTimeAgo(timestamp: number): string {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return new Date(timestamp).toLocaleDateString();
-}
+import { formatTimestamp } from '../../utils/dateFormatting';
 
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
     const icon = NOTIFICATION_ICONS[notification.type] || '📢';
@@ -63,7 +49,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
                         </span>
                     )}
                     <span className="text-xs text-muted-foreground/50">
-                        {formatTimeAgo(notification.timestamp)}
+                        {formatTimestamp(notification.timestamp)}
                     </span>
                 </div>
             </div>

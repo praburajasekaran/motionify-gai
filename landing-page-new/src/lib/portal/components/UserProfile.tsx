@@ -5,6 +5,7 @@ import { User, Mail, Shield, Calendar, Save, Camera } from 'lucide-react';
 import Button from './ui/Button';
 import { AppContext } from '@/lib/portal/AppContext';
 import { updateMyProfile } from '../api/users.api';
+import { formatTimestamp } from '../utils/dateUtils';
 
 const UserProfile: React.FC = () => {
   const { user, setUser } = useContext(AppContext);
@@ -223,11 +224,7 @@ const UserProfile: React.FC = () => {
                   Member Since
                 </label>
                 <div className="px-4 py-2 bg-[var(--todoist-gray-50)] rounded-lg text-[var(--todoist-gray-700)]">
-                  {new Date(user.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {formatTimestamp(user.created_at)}
                 </div>
               </div>
             </div>

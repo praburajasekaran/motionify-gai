@@ -3,6 +3,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Activity, Users, Loader2 } from 'lucide-react';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 interface ActivityEntry {
   id: string;
@@ -87,24 +88,6 @@ function getActionDescription(type: string): string {
 
   // Humanize by replacing underscores and lowercasing
   return type.replace(/_/g, ' ').toLowerCase();
-}
-
-// Helper to format relative time
-function getRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (seconds < 60) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  if (days === 1) return 'yesterday';
-  if (days < 7) return `${days} days ago`;
-
-  return new Date(timestamp).toLocaleDateString();
 }
 
 /**
@@ -353,7 +336,7 @@ export function ActivityLogs() {
                       </div>
 
                       <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <span>{getRelativeTime(activity.timestamp)}</span>
+                        <span title={formatDateTime(activity.timestamp) || undefined}>{formatTimestamp(activity.timestamp)}</span>
                         {contextLink && (
                           <>
                             <span>·</span>

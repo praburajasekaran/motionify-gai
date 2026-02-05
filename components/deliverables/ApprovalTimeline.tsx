@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn, Badge } from '../ui/design-system';
 import { DeliverableApproval, IssueCategory, Priority } from '../../types/deliverable.types';
+import { formatTimestamp as formatContextualTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface ApprovalTimelineProps {
   approvalHistory: DeliverableApproval[];
@@ -67,19 +68,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
     );
   }
 
-  const formatTimestamp = (date: Date): string => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return d.toLocaleDateString();
-  };
-
-  const formatVideoTimestamp = (seconds: number): string => {
+const formatVideoTimestamp = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -124,7 +113,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
                     {approval.action === 'approved' ? 'Approved' : 'Revision Requested'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    by {approval.userName} • {formatTimestamp(approval.timestamp)}
+                    by {approval.userName} • {formatContextualTimestamp(approval.timestamp)}
                   </p>
                 </div>
               </div>

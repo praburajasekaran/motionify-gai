@@ -3,6 +3,7 @@ import { Users } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 interface User {
     id: string;
@@ -298,8 +299,8 @@ export function UserManagement() {
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                                        {new Date(user.created_at).toLocaleDateString()}
+                                    <td className="px-6 py-4 text-sm text-muted-foreground" title={formatDateTime(user.created_at) || undefined}>
+                                        {formatTimestamp(user.created_at)}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         {user.is_active && (() => {
