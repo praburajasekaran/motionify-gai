@@ -241,7 +241,7 @@ export const Dashboard = () => {
   // Get context link for activity
   function getActivityContextLink(activity: Activity): { to: string; label: string } | null {
     if (activity.projectId && activity.projectName) {
-      return { to: `/project/${activity.projectId}`, label: activity.projectName };
+      return { to: `/projects/${activity.projectId}`, label: activity.projectName };
     }
     if (activity.proposalId && activity.proposalName) {
       return { to: `/admin/inquiries/${activity.inquiryId}`, label: activity.proposalName };
