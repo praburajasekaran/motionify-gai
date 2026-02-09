@@ -18,7 +18,7 @@ const MOTIONIFY_BRANDING = {
   companyName: 'Motionify',
   websiteUrl: 'https://motionify.ai',
   supportEmail: 'support@motionify.ai',
-  logoUrl: 'https://motionify.ai/logo.png',
+  logoUrl: 'https://motionify.studio/motionify-dark-logo.png',
   primaryColor: '#6366f1',
   secondaryColor: '#8b5cf6'
 };

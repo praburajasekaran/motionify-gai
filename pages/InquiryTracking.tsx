@@ -71,8 +71,17 @@ export function InquiryTracking() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen bg-gray-950">
+        <header className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
+          </div>
+        </header>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 65px)' }}>
+          <div className="text-white/60">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -82,7 +91,10 @@ export function InquiryTracking() {
       <div className="min-h-screen bg-gray-950">
         {/* Header */}
         <header className="border-b border-white/10">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
             <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
@@ -120,7 +132,10 @@ export function InquiryTracking() {
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
       <header className="border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link to="/landing" className="inline-flex items-center">
+            <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+          </Link>
           <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard

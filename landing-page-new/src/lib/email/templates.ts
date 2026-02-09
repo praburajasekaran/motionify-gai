@@ -48,12 +48,6 @@ function getTemplateStyles(primaryColor: string): string {
       padding: 32px 24px;
       text-align: center;
     }
-    .header-logo {
-      color: #ffffff;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
     .header-subtitle {
       color: rgba(255, 255, 255, 0.9);
       font-size: 14px;
@@ -303,7 +297,7 @@ export function paymentConfirmationTemplate(data: PaymentConfirmationTemplateDat
   <div class="container">
     <div class="email-wrapper">
       <div class="header">
-        <div class="header-logo">${companyName}</div>
+        <img src="https://motionify.studio/motionify-light-logo.png" alt="${companyName}" width="180" style="display: inline-block;" />
         <div class="header-subtitle">Payment Confirmation</div>
       </div>
       
@@ -428,7 +422,7 @@ export function proformaInvoiceTemplate(data: ProformaInvoiceTemplateData): stri
   <div class="container">
     <div class="email-wrapper">
       <div class="header">
-        <div class="header-logo">${companyName}</div>
+        <img src="https://motionify.studio/motionify-light-logo.png" alt="${companyName}" width="180" style="display: inline-block;" />
         <div class="header-subtitle">Proforma Invoice</div>
       </div>
       
@@ -587,7 +581,7 @@ export function paymentReminderTemplate(data: PaymentReminderTemplateData): stri
   <div class="container">
     <div class="email-wrapper">
       <div class="header">
-        <div class="header-logo">${companyName}</div>
+        <img src="https://motionify.studio/motionify-light-logo.png" alt="${companyName}" width="180" style="display: inline-block;" />
         <div class="header-subtitle">Payment Reminder</div>
       </div>
       

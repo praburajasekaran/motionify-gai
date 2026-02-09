@@ -58,6 +58,9 @@ export async function sendWelcomeEmail(data: {
 
     const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h1 style="color: #7c3aed;">Welcome to Motionify!</h1>
       <p>Hi ${data.name},</p>
       <p>We're excited to work with you on your project.</p>

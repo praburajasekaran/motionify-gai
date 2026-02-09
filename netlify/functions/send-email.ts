@@ -45,6 +45,9 @@ export async function sendMentionNotification(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #7c3aed;">You were mentioned in a comment</h2>
       <p><strong>${data.mentionedByName}</strong> mentioned you in <strong>${data.taskTitle}</strong>:</p>
       
@@ -79,6 +82,9 @@ export async function sendTaskAssignmentEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #7c3aed;">New Task Assignment</h2>
       <p>Hi <strong>${data.assigneeName}</strong>,</p>
       <p>You have been assigned to a new task in project <strong>${data.projectNumber}</strong>:</p>
@@ -115,6 +121,9 @@ export async function sendDeliverableReadyEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #7c3aed;">Deliverable Ready for Review</h2>
       <p>Hi <strong>${data.clientName}</strong>,</p>
       <p>A new deliverable is ready for your review in project <strong>${data.projectNumber}</strong>:</p>
@@ -152,6 +161,9 @@ export async function sendRevisionRequestEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #7c3aed;">Revision Requested</h2>
       <p>Hi Team,</p>
       <p><strong>${data.requestedBy}</strong> has requested a revision on <strong>${data.taskTitle}</strong> in project <strong>${data.projectName}</strong>.</p>
@@ -187,6 +199,9 @@ export async function sendFinalDeliverablesEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #7c3aed;">Final Deliverable Ready</h2>
       <p>Hi <strong>${data.clientName}</strong>,</p>
       <p>Thank you for your payment! The final files for <strong>${data.deliverableName}</strong> in project <strong>${data.projectNumber}</strong> are now ready for download.</p>
@@ -228,6 +243,9 @@ export async function sendPaymentReminderEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
+      </div>
       <h2 style="color: #dc2626;">Payment Reminder</h2>
       <p>Hi <strong>${data.clientName}</strong>,</p>
       <p>This is a friendly reminder that your balance payment for project <strong>${data.projectNumber}</strong> is still pending.</p>
@@ -269,10 +287,8 @@ export async function sendInquiryVerificationEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
       
       <h2 style="color: #7c3aed; text-align: center;">Verify Your Email</h2>
@@ -325,10 +341,8 @@ export async function sendProposalNotificationEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
       
       <h2 style="color: #7c3aed; text-align: center;">Your Proposal is Ready! 🎬</h2>
@@ -387,10 +401,8 @@ export async function sendNewInquiryNotificationEmail(data: {
 }) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
       
       <h2 style="color: #16a34a; text-align: center;">🎉 New Inquiry Received!</h2>
@@ -460,10 +472,8 @@ export async function sendCommentNotificationEmail(data: {
 
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
       
       <h2 style="color: #7c3aed; text-align: center;">New Comment on Your Proposal</h2>
@@ -507,10 +517,8 @@ export async function sendPaymentFailureNotificationEmail(data: {
 
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
 
       <h2 style="color: #dc2626; text-align: center;">Payment Verification Failed</h2>
@@ -583,10 +591,8 @@ export async function sendPaymentSuccessEmail(data: {
 
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
 
       <h2 style="color: #16a34a; text-align: center;">Payment Successful!</h2>
@@ -686,10 +692,8 @@ export async function sendProposalStatusChangeEmail(data: {
 
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
-        </div>
+      <div style="text-align: center; margin-bottom: 32px;">
+        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
 
       <h2 style="color: ${info.color}; text-align: center;">${info.greeting}</h2>
