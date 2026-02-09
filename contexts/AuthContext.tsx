@@ -9,6 +9,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { User } from '@/types';
 import { clearAuthSession } from '@/lib/auth';
 import { API_BASE } from '@/lib/api-config';
+import { setUserTimezone } from '@/utils/dateFormatting';
 
 interface AuthContextType {
     user: User | null;
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const data = await response.json();
                 if (data.success && data.user) {
                     setUserState(data.user);
+                    setUserTimezone(data.user.timezone || null);
                     setToken('cookie'); // Indicate we have a valid session
                     return;
                 }
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // No valid session
             setToken(null);
             setUserState(null);
+            setUserTimezone(null);
         } catch (error: any) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') {
@@ -72,6 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
             setToken(null);
             setUserState(null);
+            setUserTimezone(null);
         } finally {
             setIsLoading(false);
         }
@@ -108,6 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearAuthSession();
         setToken(null);
         setUserState(null);
+        setUserTimezone(null);
         // Redirect to login page
         window.location.href = '/login';
     }, []);
@@ -126,6 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const data = await response.json();
                 if (data.success && data.user) {
                     setUserState(data.user);
+                    setUserTimezone(data.user.timezone || null);
                     setToken('cookie');
                     return;
                 }
@@ -134,6 +140,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // Session expired or invalid
             setToken(null);
             setUserState(null);
+            setUserTimezone(null);
         } catch (error) {
             console.error('Failed to refresh session:', error);
             // Don't clear session on network errors - keep current state

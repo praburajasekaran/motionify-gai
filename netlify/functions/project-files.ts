@@ -208,7 +208,7 @@ export const handler = compose(
       }
 
       const isOwner = fileResult.rows[0].uploaded_by === userId;
-      const isAdminOrPM = userRole === 'super_admin' || userRole === 'project_manager';
+      const isAdminOrPM = userRole === 'super_admin' || userRole === 'support';
       if (!isOwner && !isAdminOrPM) {
         return {
           statusCode: 403,

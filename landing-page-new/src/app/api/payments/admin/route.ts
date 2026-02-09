@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
 
         const authData = await authResponse.json();
 
-        // Check if user is admin (super_admin or project_manager)
-        const adminRoles = ['super_admin', 'project_manager'];
+        // Check if user is admin (super_admin or support)
+        const adminRoles = ['super_admin', 'support'];
         if (!authData.user || !adminRoles.includes(authData.user.role)) {
             return NextResponse.json(
                 { error: 'Forbidden', message: 'Admin access required' },

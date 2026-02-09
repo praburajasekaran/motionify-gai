@@ -83,7 +83,7 @@ export const handler = compose(
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
         'advance_percentage', 'advance_amount', 'balance_amount',
-        'status', 'feedback', 'revisions_included', 'version'
+        'status', 'feedback', 'revisions_included', 'revisions_description', 'version'
       ];
 
       const updateFields: string[] = [];

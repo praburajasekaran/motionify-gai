@@ -121,7 +121,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
 
     let role = UserRole.TEAM_MEMBER;
     if (authUser.role === 'client') role = UserRole.PRIMARY_CONTACT;
-    else if (authUser.role === 'project_manager') role = UserRole.PROJECT_MANAGER;
+    else if (authUser.role === 'support') role = UserRole.SUPPORT;
     else if (authUser.role === 'admin' || authUser.role === 'super_admin') role = UserRole.MOTIONIFY_MEMBER;
 
     const user = {
@@ -147,7 +147,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
   const allMotionifyUsers = useMemo(() => {
     const allUsers = projectsData.flatMap(p => p.motionifyTeam);
     const uniqueUsers: User[] = Array.from(new Map<string, User>(allUsers.map(item => [item.id, item])).values());
-    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.PROJECT_MANAGER);
+    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.SUPPORT);
   }, [projectsData]);
 
   // Load tasks and activities from API when project is selected
@@ -315,7 +315,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     );
 
     if (revisionAllowed && updatedProject && updatedTask) {
-      const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.PROJECT_MANAGER);
+      const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.SUPPORT);
       if (projectManager) {
         addNotification(`A revision was requested for task '${updatedTask.title}'.`, projectManager.id, updatedProject.id);
       }
@@ -645,8 +645,8 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
 
   const deleteFile = useCallback((fileId: string) => {
     if (!projectId || !currentUser) return;
-    // Check if user has permission (Motionify Member or Project Manager)
-    if (currentUser.role !== UserRole.MOTIONIFY_MEMBER && currentUser.role !== UserRole.PROJECT_MANAGER) {
+    // Check if user has permission (Motionify Member or Motionify Support)
+    if (currentUser.role !== UserRole.MOTIONIFY_MEMBER && currentUser.role !== UserRole.SUPPORT) {
       console.error('Unauthorized: Only admins can delete files.');
       return;
     }
@@ -763,9 +763,9 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
       prevData.map(p => {
         if (p.id !== projectId) return p;
 
-        const hasPM = newTeam.some(u => u.role === UserRole.PROJECT_MANAGER);
+        const hasPM = newTeam.some(u => u.role === UserRole.SUPPORT);
         if (!hasPM) {
-          const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.PROJECT_MANAGER);
+          const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.SUPPORT);
           if (pmToAdd && !newTeam.some(u => u.id === pmToAdd.id)) {
             newTeam.push(pmToAdd);
           }

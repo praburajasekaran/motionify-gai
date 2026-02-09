@@ -32,7 +32,7 @@ function getJwtSecret(): string {
 }
 
 // User roles
-export type UserRole = 'super_admin' | 'project_manager' | 'client' | 'team';
+export type UserRole = 'super_admin' | 'support' | 'client' | 'team';
 
 // JWT payload structure
 export interface JwtPayload {
@@ -435,25 +435,25 @@ export async function requireSuperAdmin(event: NetlifyEvent): Promise<CookieAuth
 }
 
 /**
- * Verify user is Project Manager or Super Admin (cookie-based)
+ * Verify user is Support or Super Admin (cookie-based)
  */
-export async function requireProjectManager(event: NetlifyEvent): Promise<CookieAuthResult> {
+export async function requireSupport(event: NetlifyEvent): Promise<CookieAuthResult> {
     const auth = await requireAuthFromCookie(event);
 
     if (!auth.authorized) {
         return auth;
     }
 
-    const allowedRoles = ['super_admin', 'project_manager'];
+    const allowedRoles = ['super_admin', 'support'];
     if (!allowedRoles.includes(auth.user!.role)) {
-        logger.warn('Forbidden: Project Manager required', {
+        logger.warn('Forbidden: Support required', {
             userId: auth.user!.userId,
             role: auth.user!.role,
         });
 
         return {
             authorized: false,
-            error: 'Forbidden: Project Manager or Super Admin access required',
+            error: 'Forbidden: Support or Super Admin access required',
             statusCode: 403,
         };
     }

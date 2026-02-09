@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
-    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
+    Edit2, Clock, CheckCircle2, AlertTriangle, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
-    Bell, BellOff, Settings, Share2, CreditCard, Trash2
+    Bell, BellOff, Settings, CreditCard, Trash2
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
@@ -13,6 +13,7 @@ import {
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
+import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
@@ -28,6 +29,7 @@ import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectF
 import { createProjectFile } from '../services/projectFileApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
+import { formatTimestamp } from '../utils/dateFormatting';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
@@ -87,6 +89,64 @@ function formatActivityTarget(type: string, details: Record<string, string | num
     if (details.deliverableName) return String(details.deliverableName);
     if (targetUserName) return targetUserName;
     return '';
+}
+
+// Date grouping helpers for activity feed
+function getDateGroup(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (activityDate.getTime() === today.getTime()) return 'Today';
+    if (activityDate.getTime() === yesterday.getTime()) return 'Yesterday';
+
+    // Check if within the last 7 days
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (activityDate > weekAgo) {
+        return date.toLocaleDateString(undefined, { weekday: 'long' });
+    }
+
+    // Older than a week - show month/day
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+interface GroupedActivities {
+    label: string;
+    activities: Array<{
+        id: string;
+        type: string;
+        userId: string;
+        userName: string;
+        action: string;
+        target: string;
+        timestamp: number;
+        details: Record<string, string | number>;
+    }>;
+}
+
+function groupActivitiesByDate(activities: Array<{
+    id: string;
+    type: string;
+    userId: string;
+    userName: string;
+    action: string;
+    target: string;
+    timestamp: number;
+    details: Record<string, string | number>;
+}>): GroupedActivities[] {
+    const groups: Map<string, GroupedActivities> = new Map();
+
+    for (const activity of activities) {
+        const label = getDateGroup(activity.timestamp);
+        if (!groups.has(label)) {
+            groups.set(label, { label, activities: [] });
+        }
+        groups.get(label)!.activities.push(activity);
+    }
+
+    return Array.from(groups.values());
 }
 
 function getActivityLink(projectId: string, type: string, details?: Record<string, string | number>): string | null {
@@ -239,12 +299,12 @@ export const ProjectDetail = () => {
                     // Transform API response to match Project type
                     const apiProject: Project = {
                         id: data.id,
-                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+                        title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
                         client: data.client_name || data.client_company || 'Client',
                         thumbnail: '',
-                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
-                        startDate: data.created_at || new Date().toISOString(),
-                        dueDate: data.created_at || new Date().toISOString(),
+                        status: dbStatusToDisplay(data.status),
+                        startDate: data.start_date || data.created_at || new Date().toISOString(),
+                        dueDate: data.due_date || data.created_at || new Date().toISOString(),
                         progress: 0,
                         description: data.description || '',
                         budget: 0,
@@ -775,6 +835,16 @@ export const ProjectDetail = () => {
                                     <Zap className="h-3 w-3 mr-1 fill-current" />
                                     {project.status}
                                 </Badge>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                                    onClick={() => navigate(`/projects/${id}/settings`)}
+                                    title="Project Settings"
+                                >
+                                    <Settings className="h-3.5 w-3.5" />
+                                </Button>
                             </div>
 
                             {/* Vertical Divider */}
@@ -804,30 +874,6 @@ export const ProjectDetail = () => {
                             </div>
                         </div>
 
-                        {/* Right Side: Actions */}
-                        <div className="flex items-center gap-4 shrink-0">
-                            <DropdownMenu trigger={
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            }>
-                                <DropdownMenuItem onClick={() => navigate(`/projects/${id}/settings`)}>
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                    navigator.clipboard.writeText(window.location.href);
-                                    addToast({
-                                        title: 'Link Copied',
-                                        description: 'Project link copied to clipboard',
-                                        variant: 'success'
-                                    });
-                                }}>
-                                    <Share2 className="h-4 w-4 mr-2" />
-                                    Share Project
-                                </DropdownMenuItem>
-                            </DropdownMenu>
-                        </div>
                     </div>
 
                     {/* Bottom Row: Minimal Tabs */}
@@ -1312,54 +1358,15 @@ export const ProjectDetail = () => {
                                     <>
                                         {/* Group by date */}
                                         <div className="space-y-8">
-                                            {/* Today Section */}
-                                            <div>
-                                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                                                    <div className="h-px flex-1 bg-muted" />
-                                                    <span>Today</span>
-                                                    <div className="h-px flex-1 bg-muted" />
-                                                </h4>
-                                                <div className="space-y-0">
-                                                    {activityLog.slice(0, 3).map((log, i) => {
-                                                        const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
-                                                        const isCurrentUser = user && log.userId === user.id;
-                                                        const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
-                                                        const activityLink = getActivityLink(project.id, log.type, log.details);
-                                                        return (
-                                                            <div
-                                                                key={log.id}
-                                                                className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-muted -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
-                                                                onClick={() => activityLink && navigate(activityLink)}
-                                                            >
-                                                                {i !== 2 && (
-                                                                    <div className="absolute left-[23px] top-12 bottom-0 w-px bg-muted" />
-                                                                )}
-                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-card shadow-sm shrink-0" />
-                                                                <div className="flex-1 pt-1">
-                                                                    <p className="text-sm text-muted-foreground mb-1">
-                                                                        <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
-                                                                    </p>
-                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                                                                        <Clock className="h-3 w-3" />
-                                                                        {new Date(log.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            {/* Earlier Section */}
-                                            {activityLog.length > 3 && (
-                                                <div>
+                                            {groupActivitiesByDate(activityLog).map((group) => (
+                                                <div key={group.label}>
                                                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                                                         <div className="h-px flex-1 bg-muted" />
-                                                        <span>Earlier</span>
+                                                        <span>{group.label}</span>
                                                         <div className="h-px flex-1 bg-muted" />
                                                     </h4>
                                                     <div className="space-y-0">
-                                                        {activityLog.slice(3).map((log, i, arr) => {
+                                                        {group.activities.map((log, i, arr) => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
@@ -1380,7 +1387,7 @@ export const ProjectDetail = () => {
                                                                         </p>
                                                                         <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
                                                                             <Clock className="h-3 w-3" />
-                                                                            {new Date(log.timestamp).toLocaleDateString()}
+                                                                            {formatTimestamp(log.timestamp)}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -1388,14 +1395,7 @@ export const ProjectDetail = () => {
                                                         })}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Load More */}
-                                        <div className="pt-6 border-t border-border mt-6">
-                                            <Button variant="outline" className="w-full">
-                                                Load More Activity
-                                            </Button>
+                                            ))}
                                         </div>
                                     </>
                                 ) : (

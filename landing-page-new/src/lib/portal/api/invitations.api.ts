@@ -7,7 +7,7 @@ export interface ProjectInvitation {
     id: string;
     project_id: string;
     email: string;
-    role: 'client' | 'team';
+    role: 'client' | 'team_member';
     status: 'pending' | 'accepted' | 'revoked' | 'expired';
     expires_at: string;
     created_at: string;
@@ -16,7 +16,7 @@ export interface ProjectInvitation {
 
 export interface CreateInvitationData {
     email: string;
-    role: 'client' | 'team';
+    role: 'client' | 'team_member';
 }
 
 export interface AcceptInvitationData {

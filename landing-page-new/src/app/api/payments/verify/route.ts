@@ -58,7 +58,7 @@ async function notifyAdminPaymentFailure(data: {
   try {
     // Get admin users for in-app notification
     const adminResult = await query(
-      `SELECT id, email FROM users WHERE role IN ('super_admin', 'project_manager') AND is_active = true`
+      `SELECT id, email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`
     );
 
     // Create in-app notification for each admin

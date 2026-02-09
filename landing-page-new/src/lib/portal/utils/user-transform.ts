@@ -16,6 +16,7 @@ interface DatabaseUser {
     is_active?: boolean;
     status?: string;
     preferences?: any;
+    timezone?: string | null;
 }
 
 /**
@@ -42,6 +43,7 @@ export function transformUser(dbUser: DatabaseUser | null | undefined): AuthUser
         createdAt: dbUser.created_at ? new Date(dbUser.created_at) : new Date(),
         updatedAt: dbUser.updated_at ? new Date(dbUser.updated_at) : new Date(),
         lastLoginAt: dbUser.last_login_at ? new Date(dbUser.last_login_at) : null,
+        timezone: dbUser.timezone || null,
         deactivatedAt: null,
         metadata: {},
     };

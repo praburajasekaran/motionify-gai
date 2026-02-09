@@ -28,7 +28,7 @@ const UserManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    role: 'client' as 'super_admin' | 'project_manager' | 'client' | 'team',
+    role: 'client' as 'super_admin' | 'support' | 'client' | 'team',
   });
 
   useEffect(() => {
@@ -144,7 +144,7 @@ const UserManagement: React.FC = () => {
     switch (role) {
       case 'super_admin':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'project_manager':
+      case 'support':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'client':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
@@ -230,7 +230,7 @@ const UserManagement: React.FC = () => {
             >
               <option value="all">All Roles</option>
               <option value="super_admin">Super Admin</option>
-              <option value="project_manager">Project Manager</option>
+              <option value="support">Motionify Support</option>
               <option value="client">Client</option>
               <option value="team">Team</option>
             </select>
@@ -389,7 +389,7 @@ const UserManagement: React.FC = () => {
             >
               <option value="client">Client</option>
               <option value="team">Team</option>
-              <option value="project_manager">Project Manager</option>
+              <option value="support">Motionify Support</option>
               <option value="super_admin">Super Admin</option>
             </select>
           </div>
@@ -452,7 +452,7 @@ const UserManagement: React.FC = () => {
             >
               <option value="client">Client</option>
               <option value="team">Team</option>
-              <option value="project_manager">Project Manager</option>
+              <option value="support">Motionify Support</option>
               <option value="super_admin">Super Admin</option>
             </select>
           </div>

@@ -113,7 +113,7 @@ export function ActivityLogs() {
 
   // Check user roles
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const isProjectManager = currentUser?.role === 'project_manager';
+  const isSupport = currentUser?.role === 'support';
 
   // Fetch activities
   const fetchActivities = async (append = false) => {
@@ -187,14 +187,14 @@ export function ActivityLogs() {
   };
 
   // Access control
-  if (!isSuperAdmin && !isProjectManager) {
+  if (!isSuperAdmin && !isSupport) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
           <h2 className="text-xl font-semibold text-red-800 mb-2">Access Denied</h2>
           <p className="text-red-600">
             You don't have permission to access Activity Logs.
-            Only Super Admins and Project Managers can view activity logs.
+            Only Super Admins and Support users can view activity logs.
           </p>
         </div>
       </div>

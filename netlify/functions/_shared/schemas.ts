@@ -136,9 +136,14 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = z.object({
     name: nameSchema.optional(),
-    clientUserId: uuidSchema.optional(),
-    description: z.string().max(5000).optional(),
-    status: z.enum(['draft', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    website: z.string().max(500).optional().nullable(),
+    status: z.enum([
+        'draft', 'active', 'in_review', 'awaiting_payment',
+        'on_hold', 'completed', 'archived',
+    ]).optional(),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
+    due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
 });
 
 export const acceptProjectTermsSchema = z.object({
@@ -259,6 +264,7 @@ export const updateUserSettingsSchema = z.object({
     email_marketing: z.boolean().optional(),
     notification_sound: z.boolean().optional(),
     notification_desktop: z.boolean().optional(),
+    timezone: z.string().max(100).optional().nullable(),
 });
 
 // ==========================================

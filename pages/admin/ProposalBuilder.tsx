@@ -34,6 +34,7 @@ export function ProposalBuilder() {
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
   const [revisionsIncluded, setRevisionsIncluded] = useState<number>(2);
+  const [revisionsDescription, setRevisionsDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
@@ -199,6 +200,7 @@ export function ProposalBuilder() {
         advanceAmount: pricing.advanceAmount,
         balanceAmount: pricing.balanceAmount,
         revisionsIncluded,
+        revisionsDescription: revisionsDescription.trim() || undefined,
       });
 
       await updateInquiryStatus(inquiry.id, 'proposal_sent', {
@@ -403,6 +405,21 @@ ${proposalLink}
               onChange={(e) => setRevisionsIncluded(parseInt(e.target.value) || 0)}
               className="w-24 px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
             />
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Revision Notes <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Add a note for the client explaining how revisions work
+              </p>
+              <textarea
+                value={revisionsDescription}
+                onChange={(e) => setRevisionsDescription(e.target.value)}
+                placeholder="e.g. Each revision round includes feedback on all deliverables. Additional revisions beyond the included rounds will be billed separately."
+                rows={3}
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-y"
+              />
+            </div>
           </div>
         </div>
 

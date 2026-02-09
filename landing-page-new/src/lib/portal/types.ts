@@ -3,7 +3,7 @@
 export enum UserRole {
   PRIMARY_CONTACT = 'Primary Contact',
   TEAM_MEMBER = 'Team Member',
-  PROJECT_MANAGER = 'Project Manager',
+  SUPPORT = 'Motionify Support',
   MOTIONIFY_MEMBER = 'Motionify Member',
 }
 

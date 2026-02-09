@@ -5,5 +5,7 @@ export {
   sendProformaInvoiceEmail,
   sendPaymentReminderEmail,
   sendBulkPaymentReminders,
+  sendClientPaymentAndProjectEmail,
+  sendAdminPaymentAndProjectEmail,
   verifyResendConnection
 } from './emailService';

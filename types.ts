@@ -2,20 +2,20 @@
 // Database values for user roles (use these for permission checks)
 export type UserRole =
   | 'super_admin'       // Motionify Admin (full system access)
-  | 'project_manager'   // Motionify Project Manager (manages projects)
+  | 'support'           // Motionify Support (SPOC for clients)
   | 'team_member'       // Motionify Team Member (assigned to tasks)
   | 'client';           // Client (check is_primary_contact for permissions)
 
 // Display labels for roles (use these for UI display only)
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   'super_admin': 'Super Admin',
-  'project_manager': 'Motionify Support',
+  'support': 'Motionify Support',
   'team_member': 'Team Member',
   'client': 'Client',
 } as const;
 
 export type ProjectStatus =
-  | 'Draft'             // Only Admin/PM can view
+  | 'Draft'             // Only Admin/Support can view
   | 'Active'            // Full permissions as documented
   | 'In Review'         // Deliverables under review
   | 'Awaiting Payment'  // Client PM cannot approve new deliverables
@@ -38,6 +38,7 @@ export interface User {
   role: UserRole;
   avatar: string;
   email?: string;
+  timezone?: string | null; // IANA timezone (e.g., "Asia/Kolkata")
 
   // Permission-related fields
   projectTeamMemberships?: Record<string, ProjectTeamMembership>; // Map of projectId to membership

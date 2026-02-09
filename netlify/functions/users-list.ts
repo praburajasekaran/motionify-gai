@@ -36,7 +36,7 @@ interface NetlifyResponse {
 // Query params schema
 const querySchema = z.object({
     status: z.enum(['active', 'inactive', 'all']).optional(),
-    role: z.enum(['super_admin', 'project_manager', 'client', 'team', 'all']).optional(),
+    role: z.enum(['super_admin', 'support', 'client', 'team', 'all']).optional(),
     search: z.string().max(100).optional(),
 });
 

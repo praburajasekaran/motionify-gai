@@ -187,7 +187,7 @@ export const StartProductionRequest = () => {
                         <span className="font-bold text-zinc-900">{requestNumber}</span>
                     </div>
 
-                    <Card className="text-left mb-8 border-zinc-200/60 shadow-sm">
+                    <Card className="text-left mb-8 border-border shadow-sm">
                         <CardContent className="p-6">
                             <h3 className="font-semibold text-zinc-900 mb-4 flex items-center gap-2">
                                 <Clock className="h-5 w-5 text-primary" />
@@ -264,7 +264,7 @@ export const StartProductionRequest = () => {
             </div>
 
             {/* Form Card */}
-            <Card className="border-zinc-200/60 shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+            <Card className="border-border shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                 <CardContent className="p-8">
                     {/* API Error */}
                     {apiError && (

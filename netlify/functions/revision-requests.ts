@@ -77,7 +77,7 @@ export const handler = compose(
       const userId = auth?.user?.userId;
 
       // Permission check: admin/PM can view all, client only their own
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         if (userRole === 'client' && client_user_id !== userId) {
           return {
             statusCode: 403,
@@ -264,7 +264,7 @@ export const handler = compose(
 
         // 5. Create notifications for admins/PMs
         const adminsResult = await client.query(
-          `SELECT id, full_name, email FROM users WHERE role IN ('super_admin', 'project_manager') AND is_active = true`
+          `SELECT id, full_name, email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`
         );
 
         const projectUrl = `${process.env.URL || 'http://localhost:5173'}/projects/${deliverable.project_number}?tab=deliverables`;

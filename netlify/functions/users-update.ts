@@ -5,7 +5,7 @@
  *
  * Body:
  * - full_name: string (optional)
- * - role: 'super_admin' | 'project_manager' | 'client' | 'team' (optional)
+ * - role: 'super_admin' | 'support' | 'client' | 'team' (optional)
  */
 
 import {

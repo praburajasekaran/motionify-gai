@@ -36,7 +36,7 @@ const Header = ({ currentUser, onLogout, isProjectView, onBack, projectName, cli
                 />
               </div>
             </div>
-            {currentUser?.role === UserRole.PROJECT_MANAGER && isProjectView && (
+            {currentUser?.role === UserRole.SUPPORT && isProjectView && (
               <Button onClick={onBack} variant="secondary" className="hidden sm:block">
                 &larr; All Projects
               </Button>

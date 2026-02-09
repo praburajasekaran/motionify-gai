@@ -108,12 +108,16 @@ export const handler = compose(
             // and link is logged to console for dev testing
         }
 
+        // Include magic link in dev mode so the UI can display it
+        const isDev = process.env.NODE_ENV !== 'production';
+
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
                 success: true,
-                message: 'Verification email sent'
+                message: 'Verification email sent',
+                ...(isDev && { magicLink }),
             }),
         };
 

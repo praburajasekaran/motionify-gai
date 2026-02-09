@@ -34,6 +34,7 @@ export interface Proposal {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded: number;
+  revisionsDescription?: string;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -61,6 +62,7 @@ export async function getProposals(): Promise<Proposal[]> {
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
       revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
+      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
       editHistory: proposal.edit_history,
       deliverables: typeof proposal.deliverables === 'string'
         ? JSON.parse(proposal.deliverables)
@@ -94,6 +96,7 @@ export async function getProposalById(id: string): Promise<Proposal | null> {
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
       revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
+      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
       editHistory: proposal.edit_history,
       deliverables: typeof proposal.deliverables === 'string'
         ? JSON.parse(proposal.deliverables)
@@ -126,6 +129,7 @@ export async function getProposalsByInquiryId(inquiryId: string): Promise<Propos
       acceptedAt: proposal.accepted_at,
       rejectedAt: proposal.rejected_at,
       revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
+      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
       editHistory: proposal.edit_history,
       deliverables: typeof proposal.deliverables === 'string'
         ? JSON.parse(proposal.deliverables)
@@ -147,6 +151,7 @@ export async function createProposal(data: {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded?: number;
+  revisionsDescription?: string;
 }): Promise<Proposal> {
   if (!data.inquiryId || data.inquiryId.trim() === '') {
     throw new Error('Inquiry ID is required');
@@ -196,6 +201,7 @@ export async function createProposal(data: {
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
     revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
+    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
     editHistory: result.edit_history,
     deliverables: typeof result.deliverables === 'string'
       ? JSON.parse(result.deliverables)
@@ -216,6 +222,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
   if (updates.status !== undefined) snakeCaseUpdates.status = updates.status;
   if (updates.feedback !== undefined) snakeCaseUpdates.feedback = updates.feedback;
   if (updates.revisionsIncluded !== undefined) snakeCaseUpdates.revisions_included = updates.revisionsIncluded;
+  if (updates.revisionsDescription !== undefined) snakeCaseUpdates.revisions_description = updates.revisionsDescription;
   if (updates.version !== undefined) snakeCaseUpdates.version = updates.version;
 
   const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
@@ -243,6 +250,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
     revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
+    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
     editHistory: result.edit_history,
     deliverables: typeof result.deliverables === 'string'
       ? JSON.parse(result.deliverables)
@@ -282,6 +290,7 @@ export async function updateProposalStatus(
     acceptedAt: result.accepted_at,
     rejectedAt: result.rejected_at,
     revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
+    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
     editHistory: result.edit_history,
     deliverables: typeof result.deliverables === 'string'
       ? JSON.parse(result.deliverables)

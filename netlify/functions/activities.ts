@@ -4,6 +4,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { maskSupportName } from './_shared/displayName';
 
 const { Client } = pg;
 
@@ -36,8 +37,8 @@ export const handler = compose(
     if (event.httpMethod === 'GET') {
       const { inquiryId, proposalId, projectId, userId, offset = '0', limit = '50' } = event.queryStringParameters || {};
 
-      // Check if user is admin (super_admin or project_manager)
-      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'project_manager';
+      // Check if user is admin (super_admin or support)
+      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'support';
 
       let query = `
         SELECT
@@ -46,10 +47,14 @@ export const handler = compose(
           a.inquiry_id, a.proposal_id, a.project_id,
           a.details, a.created_at,
           p.project_number as project_name,
-          i.inquiry_number
+          i.inquiry_number,
+          u_actor.role as actor_role,
+          u_target.role as target_role
         FROM activities a
         LEFT JOIN projects p ON a.project_id = p.id
         LEFT JOIN inquiries i ON a.inquiry_id = i.id
+        LEFT JOIN users u_actor ON a.user_id = u_actor.id
+        LEFT JOIN users u_target ON a.target_user_id = u_target.id
         WHERE 1=1
       `;
       const params: (string | number)[] = [];
@@ -98,13 +103,14 @@ export const handler = compose(
       const result = await client.query(query, params);
 
       // Transform snake_case to camelCase for frontend
+      const requesterRole = auth?.user?.role || '';
       const activities = result.rows.map(row => ({
         id: row.id,
         type: row.type,
         userId: row.user_id,
-        userName: row.user_name,
+        userName: maskSupportName(row.user_name, row.actor_role || '', requesterRole),
         targetUserId: row.target_user_id,
-        targetUserName: row.target_user_name,
+        targetUserName: row.target_user_name ? maskSupportName(row.target_user_name, row.target_role || '', requesterRole) : row.target_user_name,
         inquiryId: row.inquiry_id,
         proposalId: row.proposal_id,
         projectId: row.project_id,

@@ -1,13 +1,55 @@
 "use client";
 
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Mail, CheckCircle2, RefreshCw, ExternalLink } from 'lucide-react';
 
 interface VerificationSentProps {
     contactEmail: string | null;
+    magicLink?: string | null;
     onReset: () => void;
+    onResend?: () => Promise<{ success: boolean; magicLink?: string }>;
 }
 
-export default function VerificationSent({ contactEmail, onReset }: VerificationSentProps) {
+export default function VerificationSent({ contactEmail, magicLink: initialMagicLink, onReset, onResend }: VerificationSentProps) {
+    const [isResending, setIsResending] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [resendMessage, setResendMessage] = useState<string | null>(null);
+    const [magicLink, setMagicLink] = useState<string | null>(initialMagicLink || null);
+
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    // Cooldown timer
+    useEffect(() => {
+        if (resendCooldown > 0) {
+            const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [resendCooldown]);
+
+    const handleResend = useCallback(async () => {
+        if (!onResend || isResending || resendCooldown > 0) return;
+
+        setIsResending(true);
+        setResendMessage(null);
+
+        try {
+            const result = await onResend();
+            if (result.success) {
+                setResendMessage('Verification link sent!');
+                setResendCooldown(60); // 60 second cooldown
+                if (result.magicLink) {
+                    setMagicLink(result.magicLink);
+                }
+            } else {
+                setResendMessage('Failed to resend. Please try again.');
+            }
+        } catch {
+            setResendMessage('Failed to resend. Please try again.');
+        } finally {
+            setIsResending(false);
+        }
+    }, [onResend, isResending, resendCooldown]);
+
     return (
         <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur p-8 sm:p-12">
             {/* Icon */}
@@ -49,8 +91,48 @@ export default function VerificationSent({ contactEmail, onReset }: Verification
                 </div>
             </div>
 
-            {/* Action Button */}
-            <div className="flex justify-center">
+            {/* Development Mode: Magic Link */}
+            {isDevelopment && magicLink && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6">
+                    <p className="text-xs text-emerald-400 font-medium mb-2">🔧 Development Mode - Magic Link:</p>
+                    <a
+                        href={magicLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-emerald-300 hover:text-emerald-200 underline break-all"
+                    >
+                        <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                        Click here to verify
+                    </a>
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col items-center gap-4">
+                {/* Resend Button */}
+                {onResend && (
+                    <div className="flex flex-col items-center gap-2">
+                        <button
+                            onClick={handleResend}
+                            disabled={isResending || resendCooldown > 0}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 hover:text-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isResending ? 'animate-spin' : ''}`} />
+                            {isResending
+                                ? 'Sending...'
+                                : resendCooldown > 0
+                                    ? `Resend in ${resendCooldown}s`
+                                    : 'Resend Link'}
+                        </button>
+                        {resendMessage && (
+                            <p className={`text-sm ${resendMessage.includes('Failed') ? 'text-red-400' : 'text-emerald-400'}`}>
+                                {resendMessage}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Start Over */}
                 <button
                     onClick={onReset}
                     className="text-sm text-white/50 hover:text-white transition-colors"

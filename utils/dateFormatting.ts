@@ -1,7 +1,38 @@
 /**
  * Contextual date formatting utilities for the admin app.
  * Mirrors formatTimestamp from landing-page-new/src/lib/portal/utils/dateUtils.ts
+ *
+ * Timezone support: call setUserTimezone() once at login to apply the user's
+ * preferred timezone to all formatting functions automatically.
  */
+
+/** Module-level timezone. null = use browser default. */
+let _userTimezone: string | null = null;
+
+export function setUserTimezone(tz: string | null): void {
+  _userTimezone = tz;
+}
+
+export function getUserTimezone(): string | null {
+  return _userTimezone;
+}
+
+/** Inject timeZone into Intl options when a user timezone is set. */
+function withTz(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  if (_userTimezone) {
+    return { ...options, timeZone: _userTimezone };
+  }
+  return options;
+}
+
+/** Format a date string for comparison in the user's timezone. */
+function toDateKey(date: Date): string {
+  return date.toLocaleDateString('en-CA', withTz({
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }));
+}
 
 /**
  * Contextual timestamp: relative for recent (<7 days), absolute for older.
@@ -28,11 +59,11 @@ export function formatTimestamp(date: string | number | Date | null | undefined)
  * Format a date as a short absolute string (e.g., "Jan 15, 2026")
  */
 function formatDate(date: Date): string {
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(undefined, withTz({
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  });
+  }));
 }
 
 /**
@@ -45,43 +76,32 @@ export function formatDateTime(date: string | number | Date | null | undefined):
     : date;
   if (isNaN(dateObj.getTime())) return null;
 
-  return dateObj.toLocaleDateString(undefined, {
+  return dateObj.toLocaleDateString(undefined, withTz({
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }));
 }
 
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString(undefined, withTz({
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+  }));
 }
 
 function isToday(timestamp: number): boolean {
-  const date = new Date(timestamp);
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
+  return toDateKey(new Date(timestamp)) === toDateKey(new Date());
 }
 
 function isYesterday(timestamp: number): boolean {
-  const date = new Date(timestamp);
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  return (
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
-  );
+  return toDateKey(new Date(timestamp)) === toDateKey(yesterday);
 }
 
 function timeAgo(timestamp: number): string {
@@ -110,13 +130,13 @@ function timeAgo(timestamp: number): string {
   }
 
   if (days < 7) {
-    const dayName = new Date(timestamp).toLocaleDateString(undefined, { weekday: 'long' });
+    const dayName = new Date(timestamp).toLocaleDateString(undefined, withTz({ weekday: 'long' }));
     return `${dayName} at ${time}`;
   }
 
-  const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+  const dateStr = new Date(timestamp).toLocaleDateString(undefined, withTz({
     month: 'short',
     day: 'numeric',
-  });
+  }));
   return `${dateStr} at ${time}`;
 }

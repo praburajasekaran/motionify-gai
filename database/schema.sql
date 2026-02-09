@@ -12,7 +12,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'project_manager', 'team_member', 'client')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'support', 'team_member', 'client')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -88,6 +88,7 @@ CREATE TABLE proposals (
   
   -- Project terms
   revisions_included INTEGER NOT NULL DEFAULT 2,
+  revisions_description TEXT,
 
   -- Edit history
   edit_history JSONB,
@@ -106,30 +107,39 @@ CREATE TABLE proposals (
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_number VARCHAR(50) UNIQUE NOT NULL,
-  
+  name VARCHAR(255),
+
   -- Relationships
   inquiry_id UUID REFERENCES inquiries(id),
   proposal_id UUID REFERENCES proposals(id),
   client_user_id UUID REFERENCES users(id),
-  
+
+  -- Details
+  description TEXT,
+  website VARCHAR(500),
+
   -- Status
   status VARCHAR(50) NOT NULL DEFAULT 'active',
-  
+
+  -- Timeline
+  start_date DATE,
+  due_date DATE,
+
   -- Revision management
   total_revisions_allowed INTEGER DEFAULT 2,
   revisions_used INTEGER DEFAULT 0,
-  
+
   -- Terms acceptance
   terms_accepted_at TIMESTAMPTZ,
   terms_accepted_by UUID REFERENCES users(id),
   terms_ip_address VARCHAR(50),
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   -- Constraints
-  CHECK (status IN ('active', 'on_hold', 'completed', 'cancelled')),
+  CHECK (status IN ('draft', 'active', 'in_review', 'awaiting_payment', 'on_hold', 'completed', 'archived', 'cancelled')),
   CHECK (revisions_used <= total_revisions_allowed)
 );
 
@@ -352,7 +362,7 @@ CREATE TRIGGER update_project_invitations_updated_at
 CREATE TABLE user_invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'project_manager', 'team_member', 'client')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'support', 'team_member', 'client')),
   full_name VARCHAR(255),
   token VARCHAR(500) UNIQUE NOT NULL,
   invited_by UUID REFERENCES users(id),
@@ -400,6 +410,21 @@ CREATE INDEX idx_activities_proposal ON activities(proposal_id);
 CREATE INDEX idx_activities_inquiry ON activities(inquiry_id);
 CREATE INDEX idx_activities_type ON activities(type);
 CREATE INDEX idx_activities_created_at ON activities(created_at DESC);
+
+-- ============================================================================
+-- 12. USER PREFERENCES TABLE
+-- ============================================================================
+CREATE TABLE user_preferences (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  email_task_assignment BOOLEAN DEFAULT true,
+  email_mention BOOLEAN DEFAULT true,
+  email_project_update BOOLEAN DEFAULT true,
+  email_marketing BOOLEAN DEFAULT false,
+  notification_sound BOOLEAN DEFAULT true,
+  notification_desktop BOOLEAN DEFAULT true,
+  timezone VARCHAR(100) DEFAULT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- ============================================================================
 -- INDEXES FOR INVITATIONS

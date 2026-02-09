@@ -57,8 +57,8 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
 
-  // Permission check: only super_admin and project_manager can delete
-  const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'project_manager';
+  // Permission check: only super_admin and support can delete
+  const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'support';
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();

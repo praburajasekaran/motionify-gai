@@ -25,9 +25,9 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  // Only super_admin or project_manager can access dashboard metrics
+  // Only super_admin or support can access dashboard metrics
   const userRole = auth?.user?.role;
-  if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+  if (userRole !== 'super_admin' && userRole !== 'support') {
     return {
       statusCode: 403,
       headers,

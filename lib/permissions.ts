@@ -3,7 +3,7 @@
  * Centralized permission checks for role-based access control
  */
 
-export type UserRole = 'super_admin' | 'project_manager' | 'team_member' | 'client';
+export type UserRole = 'super_admin' | 'support' | 'team_member' | 'client';
 
 interface User {
   id: string;
@@ -12,11 +12,11 @@ interface User {
 }
 
 /**
- * Check if user is a Motionify admin (super admin or project manager)
+ * Check if user is a Motionify admin (super admin or support)
  */
 export function isMotionifyAdmin(user: User | null): boolean {
   if (!user) return false;
-  return user.role === 'super_admin' || user.role === 'project_manager';
+  return user.role === 'super_admin' || user.role === 'support';
 }
 
 /**
@@ -28,11 +28,11 @@ export function isSuperAdmin(user: User | null): boolean {
 }
 
 /**
- * Check if user is project manager
+ * Check if user is support
  */
-export function isProjectManager(user: User | null): boolean {
+export function isSupport(user: User | null): boolean {
   if (!user) return false;
-  return user.role === 'project_manager';
+  return user.role === 'support';
 }
 
 /**
@@ -41,7 +41,7 @@ export function isProjectManager(user: User | null): boolean {
 export function isMotionifyTeam(user: User | null): boolean {
   if (!user) return false;
   return user.role === 'super_admin' ||
-         user.role === 'project_manager' ||
+         user.role === 'support' ||
          user.role === 'team_member';
 }
 
@@ -59,7 +59,7 @@ export function isClient(user: User | null): boolean {
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
     super_admin: 'Super Admin',
-    project_manager: 'Project Manager',
+    support: 'Motionify Support',
     team_member: 'Team Member',
     client: 'Client',
   };

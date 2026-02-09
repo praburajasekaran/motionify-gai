@@ -142,6 +142,9 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
               <p className="text-gray-900 font-semibold">
                 {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
               </p>
+              {proposal.revisionsDescription && (
+                <p className="text-sm text-gray-500 mt-1">{proposal.revisionsDescription}</p>
+              )}
             </div>
           </div>
         </div>

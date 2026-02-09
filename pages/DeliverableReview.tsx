@@ -27,6 +27,7 @@ import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
 import { Project } from '@/types';
+import { dbStatusToDisplay } from '@/utils/projectStatusMapping';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
@@ -448,12 +449,12 @@ export const DeliverableReview: React.FC = () => {
           // Transform API response to Project type
           const project: Project = {
             id: data.id,
-            title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+            title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
             client: data.client_name || 'Client',
             thumbnail: '',
-            status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
-            dueDate: data.due_date || new Date().toISOString(),
-            startDate: data.created_at || new Date().toISOString(),
+            status: dbStatusToDisplay(data.status),
+            dueDate: data.due_date || data.created_at || new Date().toISOString(),
+            startDate: data.start_date || data.created_at || new Date().toISOString(),
             progress: 0,
             description: '',
             tasks: [],

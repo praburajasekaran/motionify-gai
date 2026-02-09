@@ -1,11 +1,44 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
-import { User, Mail, Shield, Calendar, Save, Camera } from 'lucide-react';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
+import { User, Mail, Shield, Calendar, Save, Camera, Globe } from 'lucide-react';
 import Button from './ui/Button';
 import { AppContext } from '@/lib/portal/AppContext';
 import { updateMyProfile } from '../api/users.api';
-import { formatTimestamp } from '../utils/dateUtils';
+import { formatTimestamp, setUserTimezone } from '../utils/dateUtils';
+import { API_BASE } from '../utils/api-config';
+
+/** Build a label like "America/New_York (UTC-5)" for a given IANA timezone. */
+function getTimezoneLabel(tz: string): string {
+  try {
+    const offsetParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date());
+    const offset = offsetParts.find(p => p.type === 'timeZoneName')?.value || '';
+    return `${tz.replace(/_/g, ' ')} (${offset})`;
+  } catch {
+    return tz.replace(/_/g, ' ');
+  }
+}
+
+/** Get all IANA timezones. */
+function getTimezoneOptions(): { value: string; label: string }[] {
+  try {
+    const timezones = Intl.supportedValuesOf('timeZone');
+    return timezones.map(tz => ({
+      value: tz,
+      label: getTimezoneLabel(tz),
+    }));
+  } catch {
+    const common = [
+      'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'Europe/London', 'Europe/Berlin',
+      'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+    ];
+    return common.map(tz => ({ value: tz, label: getTimezoneLabel(tz) }));
+  }
+}
 
 const UserProfile: React.FC = () => {
   const { user, setUser } = useContext(AppContext);
@@ -18,6 +51,60 @@ const UserProfile: React.FC = () => {
     full_name: user?.full_name || '',
     avatar_url: user?.avatar_url || '',
   });
+
+  // Timezone state (separate from profile form — saved to user_preferences)
+  const [timezone, setTimezone] = useState<string | null>(null);
+  const [isLoadingTimezone, setIsLoadingTimezone] = useState(true);
+  const [isSavingTimezone, setIsSavingTimezone] = useState(false);
+
+  const browserTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+  const timezoneOptions = useMemo(() => getTimezoneOptions(), []);
+
+  // Fetch timezone from user_preferences on mount
+  useEffect(() => {
+    const fetchTimezone = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/users-settings`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.preferences) {
+            setTimezone(data.preferences.timezone || null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch timezone preference:', err);
+      } finally {
+        setIsLoadingTimezone(false);
+      }
+    };
+    fetchTimezone();
+  }, []);
+
+  const handleTimezoneChange = async (newTimezone: string | null) => {
+    const oldTimezone = timezone;
+    setTimezone(newTimezone);
+    setUserTimezone(newTimezone);
+    setIsSavingTimezone(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/users-settings`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: newTimezone }),
+      });
+      if (!response.ok) throw new Error('Failed to save timezone');
+    } catch (err) {
+      console.error('Failed to save timezone:', err);
+      // Revert on error
+      setTimezone(oldTimezone);
+      setUserTimezone(oldTimezone);
+    } finally {
+      setIsSavingTimezone(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +144,7 @@ const UserProfile: React.FC = () => {
     switch (role) {
       case 'super_admin':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'project_manager':
+      case 'support':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'client':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
@@ -261,14 +348,45 @@ const UserProfile: React.FC = () => {
         </form>
       </div>
 
-      {/* Notification Preferences (Placeholder for Phase 4) */}
+      {/* Display Preferences */}
       <div className="bg-white rounded-lg border border-[var(--todoist-gray-200)] p-6">
-        <h3 className="text-lg font-semibold text-[var(--todoist-gray-900)] mb-2">
-          Notification Preferences
+        <h3 className="text-lg font-semibold text-[var(--todoist-gray-900)] mb-2 flex items-center gap-2">
+          <Globe className="h-5 w-5 text-[var(--todoist-red)]" />
+          Display Preferences
         </h3>
-        <p className="text-sm text-[var(--todoist-gray-500)]">
-          Notification settings will be available in Phase 4: Notifications System
+        <p className="text-sm text-[var(--todoist-gray-500)] mb-4">
+          Set your timezone so dates and times display correctly.
         </p>
+
+        <div className="space-y-2">
+          <label htmlFor="timezone" className="block text-sm font-medium text-[var(--todoist-gray-700)]">
+            Timezone
+          </label>
+          {isLoadingTimezone ? (
+            <div className="px-4 py-2 bg-[var(--todoist-gray-50)] rounded-lg text-[var(--todoist-gray-500)]">
+              Loading...
+            </div>
+          ) : (
+            <select
+              id="timezone"
+              value={timezone || ''}
+              onChange={(e) => handleTimezoneChange(e.target.value || null)}
+              className="w-full px-4 py-2 border border-[var(--todoist-gray-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)] focus:border-transparent text-sm"
+            >
+              <option value="">Browser Default ({browserTimezone})</option>
+              {timezoneOptions.map(tz => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <p className="text-xs text-[var(--todoist-gray-500)]">
+            {isSavingTimezone
+              ? 'Saving...'
+              : 'All dates and times across the app will display in your selected timezone.'}
+          </p>
+        </div>
       </div>
     </div>
   );

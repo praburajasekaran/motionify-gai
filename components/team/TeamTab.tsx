@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Mail, MoreVertical, Crown, Clock, UserPlus, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { Users, MoreVertical, Crown, Clock, UserPlus, RefreshCw, X, AlertTriangle, Shield, Briefcase } from 'lucide-react';
 import {
     Button, Card, CardContent, Badge, Avatar,
     DropdownMenu, DropdownMenuItem, EmptyState
@@ -42,7 +42,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
     const [removingUserId, setRemovingUserId] = useState<string | null>(null);
     const [confirmRemove, setConfirmRemove] = useState<{ userId: string; name: string } | null>(null);
 
-    const canManageTeam = isPrimaryContact || user?.role === 'project_manager' || user?.role === 'super_admin';
+    const canManageTeam = isPrimaryContact || user?.role === 'support' || user?.role === 'super_admin';
 
     // Fetch pending invitations
     const fetchInvitations = useCallback(async () => {
@@ -167,7 +167,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
 
     // Split team into Motionify and Client groups
     const motionifyTeam = project.team.filter(m =>
-        m.role === 'super_admin' || m.role === 'project_manager' || m.role === 'team_member'
+        m.role === 'super_admin' || m.role === 'support' || m.role === 'team_member'
     );
     const clientTeam = project.team.filter(m => m.role === 'client');
 
@@ -183,61 +183,65 @@ export const TeamTab: React.FC<TeamTabProps> = ({
         return USER_ROLE_LABELS[role as keyof typeof USER_ROLE_LABELS] || role;
     };
 
-    const renderMemberCard = (member: User & { isPrimaryContact?: boolean }) => (
-        <Card key={member.id} hoverable className="group relative border-border">
-            {member.isPrimaryContact && (
-                <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
-                    <Crown className="h-3.5 w-3.5" />
-                </div>
-            )}
-            <CardContent className="p-8 flex flex-col items-center text-center">
-                <div className="relative mb-5">
-                    <Avatar src={member.avatar} fallback={member.name?.[0] || '?'} className="h-20 w-20 ring-4 ring-muted shadow-md group-hover:ring-primary/10 transition-all" />
-                    <div className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 border-4 border-card rounded-full"></div>
-                </div>
-                <h4 className="font-bold text-lg text-foreground">
-                    {member.name}
-                    {member.id === user?.id && (
-                        <span className="text-xs font-normal text-muted-foreground ml-2">(You)</span>
-                    )}
-                </h4>
-                <p className="text-sm text-muted-foreground font-medium mb-1">
-                    {getRoleLabel(member.role)}
-                    {member.isPrimaryContact && (
-                        <Badge variant="outline" className="ml-2 text-amber-600 border-amber-200 text-[10px]">Primary</Badge>
-                    )}
-                </p>
-                <p className="text-xs text-muted-foreground mb-6 font-mono">{member.email}</p>
+    const getRoleIcon = (role: string) => {
+        switch (role) {
+            case 'super_admin': return Shield;
+            case 'support': return Shield;
+            case 'team_member': return Briefcase;
+            default: return Users;
+        }
+    };
 
-                <div className="flex gap-2 w-full">
-                    {member.email && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent"
-                            onClick={() => window.open(`mailto:${member.email}`, '_blank')}
-                        >
-                            <Mail className="h-4 w-4" />
-                        </Button>
-                    )}
-                    {canRemoveMember(member) && (
-                        <DropdownMenu trigger={
-                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        }>
-                            <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => setConfirmRemove({ userId: member.id, name: member.name })}
-                            >
-                                Remove from project
-                            </DropdownMenuItem>
-                        </DropdownMenu>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-    );
+    const renderMemberCard = (member: User & { isPrimaryContact?: boolean }) => {
+        const RoleIcon = getRoleIcon(member.role);
+        return (
+            <Card key={member.id} hoverable className="group relative border-border">
+                <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                        <div className="relative flex-shrink-0">
+                            <Avatar src={member.avatar} fallback={member.name?.[0] || '?'} className="h-11 w-11 ring-2 ring-muted group-hover:ring-primary/10 transition-all" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-sm text-foreground truncate">
+                                    {member.name}
+                                </h4>
+                                {member.id === user?.id && (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">You</Badge>
+                                )}
+                                {member.isPrimaryContact && (
+                                    <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <RoleIcon className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">
+                                    {getRoleLabel(member.role)}
+                                </span>
+                                {member.isPrimaryContact && (
+                                    <Badge variant="outline" className="text-amber-600 border-amber-200 text-[10px] px-1.5 py-0">Primary Contact</Badge>
+                                )}
+                            </div>
+                        </div>
+                        {canRemoveMember(member) && (
+                            <DropdownMenu trigger={
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            }>
+                                <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => setConfirmRemove({ userId: member.id, name: member.name })}
+                                >
+                                    Remove from project
+                                </DropdownMenuItem>
+                            </DropdownMenu>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    };
 
     return (
         <>
@@ -283,7 +287,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                                 Motionify Team ({motionifyTeam.length})
                             </h4>
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                                 {motionifyTeam.map(renderMemberCard)}
                             </div>
                         </div>
@@ -295,7 +299,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
                                 Client Team ({clientTeam.length})
                             </h4>
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                                 {clientTeam.map(renderMemberCard)}
                             </div>
                         </div>
@@ -311,8 +315,8 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                                 {pendingInvitations.map((inv) => (
                                     <div key={inv.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                                                <Mail className="h-5 w-5" />
+                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                <UserPlus className="h-4 w-4" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-foreground">{inv.email}</p>

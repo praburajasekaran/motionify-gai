@@ -1,7 +1,9 @@
 import type {
   PaymentConfirmationTemplateData,
   ProformaInvoiceTemplateData,
-  PaymentReminderTemplateData
+  PaymentReminderTemplateData,
+  ClientPaymentProjectTemplateData,
+  AdminPaymentProjectTemplateData
 } from './types';
 
 function formatCurrency(amount: number, currency: string): string {
@@ -662,6 +664,229 @@ export function paymentReminderTemplate(data: PaymentReminderTemplateData): stri
         </div>
         <p class="footer-text" style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
           © ${new Date().getFullYear()} ${companyName}. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function clientPaymentProjectTemplate(data: ClientPaymentProjectTemplateData): string {
+  const {
+    customerName,
+    amount,
+    currency,
+    projectNumber,
+    projectDashboardUrl,
+    transactionId,
+    companyName,
+    websiteUrl,
+    supportEmail,
+    primaryColor
+  } = data;
+
+  const styles = getTemplateStyles(primaryColor);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Confirmed &amp; Project Started</title>
+  <style>${styles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-wrapper">
+      <div class="header">
+        <div class="header-logo">${companyName}</div>
+        <div class="header-subtitle">Payment Confirmed &amp; Project Started</div>
+      </div>
+
+      <div class="content">
+        <div class="status-icon status-icon-success">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+
+        <h1 style="text-align: center; font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">
+          You're All Set!
+        </h1>
+        <p style="text-align: center; color: #6b7280; margin-bottom: 24px;">
+          Your payment has been received and your project is now active
+        </p>
+
+        <p class="greeting">Hi ${customerName},</p>
+
+        <p class="text">
+          Thank you for your payment! We've received it successfully and your project is now active.
+          Our team will begin work immediately.
+        </p>
+
+        <div class="highlight-box">
+          <div class="highlight-title">Payment Details</div>
+          <div class="detail-row">
+            <span class="detail-label">Amount Paid</span>
+            <span class="detail-value">${formatCurrency(amount, currency)}</span>
+          </div>
+          ${transactionId ? `
+          <div class="detail-row">
+            <span class="detail-label">Transaction ID</span>
+            <span class="detail-value">${transactionId}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-title">Project Details</div>
+          <div class="detail-row">
+            <span class="detail-label">Project Number</span>
+            <span class="detail-value">${projectNumber}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value"><span class="badge badge-success">Active</span></span>
+          </div>
+        </div>
+
+        <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">What Happens Next</h3>
+        <ol style="color: #4b5563; font-size: 15px; padding-left: 20px; margin-bottom: 24px;">
+          <li style="margin-bottom: 8px;">Our team will begin work on your project immediately</li>
+          <li style="margin-bottom: 8px;">You'll receive updates on project milestones and deliverables</li>
+          <li style="margin-bottom: 8px;">Track progress and view deliverables in your dashboard</li>
+        </ol>
+
+        <div style="text-align: center;">
+          <a href="${projectDashboardUrl}" class="cta-button">View Your Project</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p class="footer-text">
+          Questions about your project? We're here to help.
+        </p>
+        <p class="footer-text">
+          <a href="mailto:${supportEmail}" class="footer-link">${supportEmail}</a>
+        </p>
+        <div class="social-links">
+          <a href="${websiteUrl}" class="social-link">Website</a>
+          <span style="color: #d1d5db;">|</span>
+          <a href="${websiteUrl}/support" class="social-link">Support</a>
+        </div>
+        <p class="footer-text" style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
+          &copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export function adminPaymentProjectTemplate(data: AdminPaymentProjectTemplateData): string {
+  const {
+    clientName,
+    clientEmail,
+    clientCompanyName,
+    amount,
+    currency,
+    razorpayPaymentId,
+    projectNumber,
+    adminProjectUrl,
+    companyName,
+    supportEmail,
+    primaryColor
+  } = data;
+
+  const styles = getTemplateStyles(primaryColor);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Payment Received &amp; Project Created</title>
+  <style>${styles}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-wrapper">
+      <div class="header">
+        <div class="header-logo">${companyName}</div>
+        <div class="header-subtitle">New Payment &amp; Project</div>
+      </div>
+
+      <div class="content">
+        <div class="status-icon status-icon-success">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+
+        <h1 style="text-align: center; font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 8px;">
+          New Payment Received
+        </h1>
+        <p style="text-align: center; color: #6b7280; margin-bottom: 24px;">
+          A new client has completed payment and their project is now active
+        </p>
+
+        <div class="highlight-box">
+          <div class="highlight-title">Client Details</div>
+          <div class="detail-row">
+            <span class="detail-label">Name</span>
+            <span class="detail-value">${clientName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Email</span>
+            <span class="detail-value">${clientEmail}</span>
+          </div>
+          ${clientCompanyName ? `
+          <div class="detail-row">
+            <span class="detail-label">Company</span>
+            <span class="detail-value">${clientCompanyName}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-title">Payment Details</div>
+          <div class="detail-row">
+            <span class="detail-label">Amount</span>
+            <span class="detail-value" style="color: #22c55e; font-size: 18px;">${formatCurrency(amount, currency)}</span>
+          </div>
+          ${razorpayPaymentId ? `
+          <div class="detail-row">
+            <span class="detail-label">Razorpay Payment ID</span>
+            <span class="detail-value">${razorpayPaymentId}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="highlight-box">
+          <div class="highlight-title">Project Details</div>
+          <div class="detail-row">
+            <span class="detail-label">Project Number</span>
+            <span class="detail-value">${projectNumber}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value"><span class="badge badge-success">Active</span></span>
+          </div>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="${adminProjectUrl}" class="cta-button">View in Portal</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p class="footer-text" style="font-size: 12px; color: #9ca3af;">
+          This is an automated notification from ${companyName}.
+        </p>
+        <p class="footer-text" style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
+          &copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.
         </p>
       </div>
     </div>

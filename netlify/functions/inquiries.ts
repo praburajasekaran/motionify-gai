@@ -116,7 +116,7 @@ export const handler = compose(
       // auth is guaranteed to be non-null and authorized for GET
       const userRole = auth!.user?.role;
       const userId = auth!.user?.userId;
-      const isAdmin = userRole === 'super_admin' || userRole === 'project_manager';
+      const isAdmin = userRole === 'super_admin' || userRole === 'support';
 
       // Check if we're fetching a specific inquiry by ID
       const pathParts = event.path.split('/');

@@ -5,6 +5,7 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { maskSupportName } from './_shared/displayName';
 
 const { Client } = pg;
 
@@ -69,17 +70,19 @@ export const handler = compose(
             }
 
             // Build query with optional since filter for efficient polling
-            let query = `SELECT 
-                id,
-                proposal_id as "proposalId",
-                author_id as "userId",
-                user_name as "userName",
-                content,
+            let query = `SELECT
+                pc.id,
+                pc.proposal_id as "proposalId",
+                pc.author_id as "userId",
+                pc.user_name as "userName",
+                pc.content,
                 false as "isEdited",
-                created_at as "createdAt",
-                updated_at as "updatedAt"
-            FROM proposal_comments
-            WHERE proposal_id = $1`;
+                pc.created_at as "createdAt",
+                pc.updated_at as "updatedAt",
+                u.role as "authorRole"
+            FROM proposal_comments pc
+            LEFT JOIN users u ON pc.author_id = u.id
+            WHERE pc.proposal_id = $1`;
             const queryParams: string[] = [proposalId];
 
             if (since) {
@@ -95,19 +98,20 @@ export const handler = compose(
                         }),
                     };
                 }
-                query += ` AND created_at > $2`;
+                query += ` AND pc.created_at > $2`;
                 queryParams.push(sinceDate.toISOString());
             }
 
-            query += ` ORDER BY created_at ASC`;
+            query += ` ORDER BY pc.created_at ASC`;
 
             const result = await client.query(query, queryParams);
 
+            const requesterRole = auth?.user?.role || '';
             const comments: Comment[] = result.rows.map(row => ({
                 id: row.id,
                 proposalId: row.proposalId,
                 userId: row.userId,
-                userName: row.userName,
+                userName: maskSupportName(row.userName, row.authorRole || '', requesterRole),
                 content: row.content,
                 isEdited: row.isEdited,
                 createdAt: new Date(row.createdAt).toISOString(),
@@ -175,7 +179,7 @@ export const handler = compose(
                     // Client posted comment - notify superadmin(s)
                     // Get superadmin email and user ID for this proposal
                     const adminResult = await client.query(
-                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'project_manager') ORDER BY created_at ASC LIMIT 1`
+                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') ORDER BY created_at ASC LIMIT 1`
                     );
                     if (adminResult.rows.length > 0) {
                         recipientEmail = adminResult.rows[0].email;

@@ -640,6 +640,59 @@ export async function sendPaymentSuccessEmail(data: {
   });
 }
 
+export async function sendProjectInvitationEmail(data: {
+  to: string;
+  inviteLink: string;
+  projectName: string;
+  role: string;
+  invitedByName: string;
+  expiresInDays?: number;
+}) {
+  const roleLabels: Record<string, string> = {
+    client: 'Client',
+    team_member: 'Team Member',
+    support: 'Motionify Support',
+  };
+  const roleLabel = roleLabels[data.role] || data.role;
+  const expiryDays = data.expiresInDays || 7;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: #7c3aed; text-align: center;">You're Invited to a Project</h2>
+      <p>Hi there,</p>
+      <p><strong>${data.invitedByName}</strong> has invited you to join the project <strong>${data.projectName}</strong> as a <strong>${roleLabel}</strong>.</p>
+
+      <div style="background: linear-gradient(135deg, rgba(217,70,239,0.1), rgba(139,92,246,0.1), rgba(59,130,246,0.1)); padding: 24px; border-radius: 12px; margin: 30px 0; text-align: center;">
+        <p style="margin: 0 0 15px 0; color: #4b5563;">Click the button below to accept the invitation:</p>
+        <a href="${data.inviteLink}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Accept Invitation</a>
+      </div>
+
+      <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+        This invitation will expire in ${expiryDays} days. If you didn't expect this invitation, you can safely ignore this email.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Studio<br>
+        <a href="https://motionify.com" style="color: #7c3aed;">motionify.com</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `You're invited to ${data.projectName} on Motionify`,
+    html,
+  });
+}
+
 export async function sendProposalStatusChangeEmail(data: {
   to: string;
   recipientName: string;

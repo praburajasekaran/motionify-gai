@@ -15,6 +15,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest, uuidSchema } from './_shared/validation';
+import { maskSupportName } from './_shared/displayName';
 
 const { Client } = pg;
 
@@ -60,27 +61,30 @@ export const handler = compose(
             }
 
             const result = await client.query(
-                `SELECT 
-          id,
-          user_id as "userId",
-          project_id as "projectId",
-          type,
-          title,
-          message,
-            is_read as "read",
-          action_url as "actionUrl",
-          actor_id as "actorId",
-          actor_name as "actorName",
-          created_at as "createdAt",
-          read_at as "readAt"
-        FROM notifications
-        WHERE user_id = $1
-        ORDER BY created_at DESC
+                `SELECT
+          n.id,
+          n.user_id as "userId",
+          n.project_id as "projectId",
+          n.type,
+          n.title,
+          n.message,
+          n.is_read as "read",
+          n.action_url as "actionUrl",
+          n.actor_id as "actorId",
+          n.actor_name as "actorName",
+          n.created_at as "createdAt",
+          n.read_at as "readAt",
+          u_actor.role as "actorRole"
+        FROM notifications n
+        LEFT JOIN users u_actor ON n.actor_id = u_actor.id
+        WHERE n.user_id = $1
+        ORDER BY n.created_at DESC
         LIMIT $2`,
                 [userId, parseInt(limit, 10)]
             );
 
             // Transform to match frontend AppNotification interface
+            const requesterRole = auth?.user?.role || '';
             const notifications = result.rows.map(row => ({
                 id: row.id,
                 type: row.type,
@@ -89,7 +93,7 @@ export const handler = compose(
                 timestamp: new Date(row.createdAt).getTime(),
                 read: row.read,
                 actionUrl: row.actionUrl,
-                actorName: row.actorName,
+                actorName: row.actorName ? maskSupportName(row.actorName, row.actorRole || '', requesterRole) : row.actorName,
                 projectId: row.projectId,
             }));
 

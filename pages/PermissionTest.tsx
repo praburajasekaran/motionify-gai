@@ -74,11 +74,11 @@ const TEST_USERS: Record<string, User> = {
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
     projectTeamMemberships: {},
   },
-  project_manager: {
+  support: {
     id: 'user-pm',
     name: 'John Support',
     email: 'john@motionify.studio',
-    role: 'project_manager',
+    role: 'support',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
     projectTeamMemberships: {},
   },

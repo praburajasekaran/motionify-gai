@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
 import { validateProjectStatusTransition } from '../utils/projectStateTransitions';
+import { dbStatusToDisplay, displayStatusToDb } from '../utils/projectStatusMapping';
+
+/** Extract YYYY-MM-DD from a date value, avoiding timezone shift issues.
+ *  PostgreSQL DATE columns come through as ISO strings like "2026-02-09T00:00:00.000Z".
+ *  Using new Date() then toLocaleDateString would shift the day in timezones ahead of UTC.
+ *  This function extracts the date portion directly from the string. */
+function toDateString(value: string | null | undefined): string {
+    if (!value) return '';
+    // If it's already YYYY-MM-DD (10 chars, no T), return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    // If it's an ISO string, take just the date part before 'T'
+    if (value.includes('T')) return value.split('T')[0];
+    // Fallback: try to extract date portion
+    return value.substring(0, 10);
+}
 import {
     ChevronLeft, Trash2, Archive,
     Layout, ShieldAlert
@@ -75,6 +90,7 @@ export const ProjectSettings = () => {
     const isSuperAdmin = user?.role === 'super_admin';
 
     const [project, setProject] = useState<Project | null>(null);
+    const [projectNumber, setProjectNumber] = useState('');
 
     // Check if project is archived (read-only mode)
     const isArchived = project?.status === 'Archived';
@@ -92,12 +108,13 @@ export const ProjectSettings = () => {
                     const data = await response.json();
                     const apiProject: Project = {
                         id: data.id,
-                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+                        title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
                         client: data.client_name || data.client_company || 'Client',
+                        website: data.website || '',
                         thumbnail: '',
-                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
-                        startDate: data.created_at || new Date().toISOString(),
-                        dueDate: data.created_at || new Date().toISOString(),
+                        status: dbStatusToDisplay(data.status),
+                        startDate: toDateString(data.start_date) || toDateString(data.created_at) || new Date().toISOString().split('T')[0],
+                        dueDate: toDateString(data.due_date) || toDateString(data.created_at) || new Date().toISOString().split('T')[0],
                         progress: 0,
                         description: data.description || '',
                         budget: 0,
@@ -113,6 +130,7 @@ export const ProjectSettings = () => {
                         termsAcceptedBy: data.terms_accepted_by,
                     };
                     setProject(apiProject);
+                    setProjectNumber(data.project_number || '');
                     setIsDirty(false);
                 }
             } catch (error) {
@@ -138,9 +156,25 @@ export const ProjectSettings = () => {
     const handleSave = async () => {
         setIsLoading(true);
         try {
-            // TODO: Implement API call to save project settings
-            // For now, just simulate success
-            await new Promise(resolve => setTimeout(resolve, 600));
+            const response = await fetch(`/api/projects/${id}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: project.title,
+                    description: project.description || null,
+                    website: project.website || null,
+                    status: displayStatusToDb(project.status),
+                    start_date: toDateString(project.startDate) || null,
+                    due_date: toDateString(project.dueDate) || null,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save');
+            }
+
             setIsDirty(false);
             addToast({
                 title: "Settings Saved",
@@ -150,7 +184,7 @@ export const ProjectSettings = () => {
         } catch (error) {
             addToast({
                 title: "Error",
-                description: "Failed to save project settings.",
+                description: error instanceof Error ? error.message : "Failed to save project settings.",
                 variant: "destructive"
             });
         } finally {
@@ -159,12 +193,19 @@ export const ProjectSettings = () => {
     };
 
     const confirmDeleteProject = async () => {
-        // Validate confirmation input
         if (deleteConfirmInput !== project.title) return;
 
         try {
-            // TODO: Implement API call to delete project
-            // For now, just navigate away
+            const response = await fetch(`/api/projects/${id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete project');
+            }
+
             setShowDeleteProjectDialog(false);
             setDeleteConfirmInput('');
             navigate('/projects');
@@ -177,14 +218,13 @@ export const ProjectSettings = () => {
         } catch (error) {
             addToast({
                 title: "Error",
-                description: "Failed to delete project.",
+                description: error instanceof Error ? error.message : "Failed to delete project.",
                 variant: "destructive"
             });
         }
     };
 
     const handleArchiveProject = async () => {
-        // Validate transition
         const validation = validateProjectStatusTransition(project.status, 'Archived');
         if (!validation.isValid) {
             addToast({
@@ -198,8 +238,18 @@ export const ProjectSettings = () => {
         }
 
         try {
-            // TODO: Implement API call to archive project
-            // For now, just update local state
+            const response = await fetch(`/api/projects/${id}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'archived' }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to archive project');
+            }
+
             setProject({ ...project, status: 'Archived' });
             setShowArchiveDialog(false);
             setArchiveConfirmInput('');
@@ -211,7 +261,7 @@ export const ProjectSettings = () => {
         } catch (error) {
             addToast({
                 title: "Error",
-                description: "Failed to archive project.",
+                description: error instanceof Error ? error.message : "Failed to archive project.",
                 variant: "destructive"
             });
         }
@@ -387,17 +437,23 @@ export const ProjectSettings = () => {
                     {activeTab === 'general' && (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                             {/* Identity Card */}
-                            <Card className="border-border/60 shadow-sm">
+                            <Card className="border-border shadow-sm">
                                 <CardHeader>
                                     <CardTitle>Project Identity</CardTitle>
                                     <CardDescription>Core information used to identify this project across the workspace.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     <div className="grid gap-6">
+                                        {projectNumber && (
+                                            <div className="space-y-1">
+                                                <Label className="text-foreground/80 text-xs">Project ID</Label>
+                                                <p className="text-sm font-mono text-muted-foreground">{projectNumber}</p>
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
-                                            <Label className="text-foreground/80" htmlFor="project-title">Project Title</Label>
+                                            <Label className="text-foreground/80" htmlFor="project-name">Project Name</Label>
                                             <Input
-                                                id="project-title"
+                                                id="project-name"
                                                 value={project.title}
                                                 onChange={e => updateGeneral('title', e.target.value)}
                                                 className="font-medium text-lg h-11"
@@ -406,7 +462,7 @@ export const ProjectSettings = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
                                                 <Label className="text-foreground/80" htmlFor="client-name">Client Name</Label>
-                                                <Input id="client-name" value={project.client} onChange={e => updateGeneral('client', e.target.value)} />
+                                                <Input id="client-name" value={project.client} disabled className="bg-muted" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-foreground/80" htmlFor="website">Website</Label>
@@ -429,7 +485,7 @@ export const ProjectSettings = () => {
                             </Card>
 
                             {/* Logistics Card */}
-                            <Card className="border-border/60 shadow-sm">
+                            <Card className="border-border shadow-sm">
                                 <CardHeader>
                                     <CardTitle>Logistics & Status</CardTitle>
                                     <CardDescription>Timeline and current operational state.</CardDescription>
@@ -452,11 +508,11 @@ export const ProjectSettings = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-foreground/80" htmlFor="start-date">Start Date</Label>
-                                            <Input id="start-date" type="date" value={project.startDate.split('T')[0]} onChange={e => updateGeneral('startDate', e.target.value)} />
+                                            <Input id="start-date" type="date" value={toDateString(project.startDate)} onChange={e => updateGeneral('startDate', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-foreground/80" htmlFor="due-date">Due Date</Label>
-                                            <Input id="due-date" type="date" value={project.dueDate.split('T')[0]} onChange={e => updateGeneral('dueDate', e.target.value)} />
+                                            <Input id="due-date" type="date" value={toDateString(project.dueDate)} onChange={e => updateGeneral('dueDate', e.target.value)} />
                                         </div>
                                     </div>
                                 </CardContent>

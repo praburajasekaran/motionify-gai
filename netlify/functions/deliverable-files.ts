@@ -77,7 +77,7 @@ export const handler = compose(
       const { project_id, client_user_id } = deliverableResult.rows[0];
 
       // Permission check
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         if (userRole === 'client' && client_user_id !== userId) {
           return {
             statusCode: 403,
@@ -124,7 +124,7 @@ export const handler = compose(
 
     if (event.httpMethod === 'POST') {
       // Only admins and PMs can add files
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
           statusCode: 403,
           headers,
@@ -210,7 +210,7 @@ export const handler = compose(
 
     if (event.httpMethod === 'DELETE') {
       // Only admins and PMs can delete files
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
           statusCode: 403,
           headers,

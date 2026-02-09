@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const projectsForUser = useMemo(() => {
     if (!currentUser || !projects) return [];
 
-    if (currentUser.role === UserRole.PROJECT_MANAGER) {
+    if (currentUser.role === UserRole.SUPPORT) {
       return projects;
     } else if (currentUser.role === UserRole.MOTIONIFY_MEMBER) {
       return projects.filter(p => p.motionifyTeam.some(u => u.id === currentUser.id));

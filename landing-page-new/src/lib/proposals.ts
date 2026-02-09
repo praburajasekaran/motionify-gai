@@ -36,6 +36,7 @@ export interface Proposal {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded: number;
+  revisionsDescription?: string;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -78,6 +79,7 @@ function mapProposal(data: any): Proposal {
     acceptedAt: data.accepted_at || data.acceptedAt,
     rejectedAt: data.rejected_at || data.rejectedAt,
     revisionsIncluded: data.revisions_included ?? data.revisionsIncluded ?? 2,
+    revisionsDescription: data.revisions_description ?? data.revisionsDescription ?? undefined,
     feedback: data.feedback,
     editHistory: data.edit_history || data.editHistory,
   };

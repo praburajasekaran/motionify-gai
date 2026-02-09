@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useRouter } from 'next/navigation';
 import type { AuthUser } from '@/lib/portal/types/auth.types';
 import * as authApi from '@/lib/portal/api/auth.api';
+import { setUserTimezone } from '@/lib/portal/utils/dateUtils';
 
 interface AuthContextType {
     user: AuthUser | null;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (response.success && 'data' in response) {
                     console.log('[AuthContext] Session valid, user loaded from API');
                     setUser(response.data.user);
+                    setUserTimezone(response.data.user.timezone || null);
                     setIsLoading(false);
                     return;
                 }
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // OPTIMIZATION: Set user AND immediately clear loading state
                 // This allows the portal to render faster
                 setUser(response.data.user);
+                setUserTimezone(response.data.user.timezone || null);
                 setIsLoading(false);
                 return { success: true, data: response.data };
             }
@@ -111,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('[AuthContext] Logout error:', error);
         } finally {
             setUser(null);
+            setUserTimezone(null);
             router.replace('/login');
             setIsLoading(false);
         }

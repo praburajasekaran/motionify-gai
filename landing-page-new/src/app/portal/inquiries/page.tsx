@@ -93,7 +93,7 @@ export default function InquiriesPage() {
       setLoadError(null);
       let data: Inquiry[] = [];
 
-      const isAdmin = currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER;
+      const isAdmin = currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.MOTIONIFY_MEMBER;
       
       if (isAdmin) {
         data = await fetchInquiries();
@@ -158,7 +158,7 @@ export default function InquiriesPage() {
     return null;
   }
 
-  const isAdmin = currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER;
+  const isAdmin = currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.MOTIONIFY_MEMBER;
 
   return (
     <div className="min-h-screen bg-[var(--todoist-gray-50)]">

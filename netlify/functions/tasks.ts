@@ -5,6 +5,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { maskSupportName } from './_shared/displayName';
 
 const { Client } = pg;
 
@@ -75,11 +76,11 @@ function mapTaskFromDB(row: any): any {
 }
 
 // Convert comment from DB to frontend format
-const mapCommentFromDB = (dbComment: any) => {
+const mapCommentFromDB = (dbComment: any, requesterRole: string = '') => {
   return {
     id: dbComment.id,
     userId: dbComment.user_id,
-    userName: dbComment.user_name,
+    userName: maskSupportName(dbComment.user_name, dbComment.commenter_role || '', requesterRole),
     content: dbComment.content,
     createdAt: dbComment.created_at
   };
@@ -138,11 +139,12 @@ export const handler = compose(
 
         // Fetch comments for this task
         const commentsResult = await client.query(
-          `SELECT * FROM task_comments WHERE task_id = $1 ORDER BY created_at ASC`,
+          `SELECT tc.*, u.role as commenter_role FROM task_comments tc LEFT JOIN users u ON tc.user_id = u.id WHERE tc.task_id = $1 ORDER BY tc.created_at ASC`,
           [taskId]
         );
 
-        task.comments = commentsResult.rows.map(mapCommentFromDB);
+        const requesterRole = auth?.user?.role || '';
+        task.comments = commentsResult.rows.map(c => mapCommentFromDB(c, requesterRole));
 
         return {
           statusCode: 200,
@@ -190,18 +192,19 @@ export const handler = compose(
       if (includeComments === 'true' && tasks.length > 0) {
         const taskIds = tasks.map(t => t.id);
         const commentsResult = await client.query(
-          `SELECT * FROM task_comments
-           WHERE task_id = ANY($1)
-           ORDER BY created_at ASC`,
+          `SELECT tc.*, u.role as commenter_role FROM task_comments tc LEFT JOIN users u ON tc.user_id = u.id
+           WHERE tc.task_id = ANY($1)
+           ORDER BY tc.created_at ASC`,
           [taskIds]
         );
 
+        const reqRole = auth?.user?.role || '';
         const commentsByTaskId: Record<string, any[]> = {};
         commentsResult.rows.forEach(comment => {
           if (!commentsByTaskId[comment.task_id]) {
             commentsByTaskId[comment.task_id] = [];
           }
-          commentsByTaskId[comment.task_id].push(mapCommentFromDB(comment));
+          commentsByTaskId[comment.task_id].push(mapCommentFromDB(comment, reqRole));
         });
 
         tasks = tasks.map(task => ({
@@ -716,7 +719,7 @@ export const handler = compose(
             const requestedBy = clientUserRes.rows[0]?.full_name || 'Client';
 
             // Limit emails to admins/PMs
-            const teamRes = await client.query(`SELECT email FROM users WHERE role IN ('admin', 'project_manager')`);
+            const teamRes = await client.query(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
 
             const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${projectId}?task=${taskId}`;
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
@@ -822,6 +825,36 @@ export const handler = compose(
         });
       }
 
+      // Notify support users when a team member completes or submits a task for approval
+      if (
+        auth?.user?.role === 'team_member' &&
+        updates.status &&
+        ['completed', 'awaiting_approval'].includes(updates.status) &&
+        previousStatus !== updates.status
+      ) {
+        try {
+          const projectId = updatedTask.projectId;
+          const taskTitle = updatedTask.title;
+
+          const supportUsersResult = await client.query(
+            `SELECT u.id FROM users u
+             JOIN project_team pt ON u.id = pt.user_id
+             WHERE pt.project_id = $1 AND u.role = 'support' AND pt.removed_at IS NULL`,
+            [projectId]
+          );
+
+          for (const su of supportUsersResult.rows) {
+            await client.query(
+              `INSERT INTO notifications (user_id, project_id, type, title, message, actor_id, actor_name)
+               VALUES ($1, $2, 'task_status_changed', $3, $4, $5, $6)`,
+              [su.id, projectId, 'Task completed', `"${taskTitle}" was marked ${updates.status}`, auth.user.userId, auth.user.fullName]
+            );
+          }
+        } catch (notifError) {
+          console.error('Failed to notify support users:', notifError);
+        }
+      }
+
       // Check for assignment change and send email
       if (updates.assignedTo) {
         try {
@@ -891,7 +924,7 @@ export const handler = compose(
 
       // Permission check: Admin/PM can delete any task; creators can delete their own
       const deleteUserRole = auth?.user?.role;
-      const deleteAllowedRoles = ['super_admin', 'project_manager'];
+      const deleteAllowedRoles = ['super_admin', 'support'];
 
       if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
         const taskOwnerCheck = await client.query(

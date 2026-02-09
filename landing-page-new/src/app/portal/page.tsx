@@ -38,7 +38,7 @@ export default function PortalPage() {
 
     // Otherwise, show dashboard (for project managers)
     console.log('[PortalPage] Redirecting to dashboard for role:', currentUser.role);
-    if (currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER) {
+    if (currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.MOTIONIFY_MEMBER) {
       router.push('/portal/dashboard');
     } else {
       // Client users should have a project - try to find their project

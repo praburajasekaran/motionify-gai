@@ -2,6 +2,7 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query, transaction } from './_shared/db';
+import { maskSupportName } from './_shared/displayName';
 
 /**
  * Project Team API
@@ -57,10 +58,11 @@ export const handler = compose(
         [projectId]
       );
 
+      const requesterRole = auth?.user?.role || '';
       const members = membersResult.rows.map(row => ({
         id: row.id,
         userId: row.user_id,
-        name: row.full_name || 'Unknown',
+        name: maskSupportName(row.full_name || 'Unknown', row.role, requesterRole),
         email: row.email || '',
         avatar: row.profile_picture_url || '',
         role: row.role,
@@ -137,6 +139,17 @@ export const handler = compose(
 
       const targetMember = memberResult.rows[0];
 
+      // Support users are auto-assigned to all projects and cannot be removed
+      if (targetMember.role === 'support') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            error: { code: 'CANNOT_REMOVE_SUPPORT', message: 'Support users are automatically assigned to all projects and cannot be removed.' },
+          }),
+        };
+      }
+
       // Cannot remove primary contact
       if (targetMember.is_primary_contact) {
         return {
@@ -149,11 +162,11 @@ export const handler = compose(
       }
 
       // Cannot remove last PM/admin on the project
-      if (targetMember.role === 'project_manager' || targetMember.role === 'super_admin') {
+      if (targetMember.role === 'support' || targetMember.role === 'super_admin') {
         const adminCount = await query(
           `SELECT COUNT(*) as count FROM project_team
            WHERE project_id = $1 AND removed_at IS NULL
-           AND role IN ('project_manager', 'super_admin')
+           AND role IN ('support', 'super_admin')
            AND user_id != $2`,
           [projectId, targetUserId]
         );
@@ -186,7 +199,7 @@ export const handler = compose(
           body: JSON.stringify({ error: 'Team members cannot remove other members' }),
         };
       }
-      // super_admin and project_manager can remove anyone (already checked above constraints)
+      // super_admin and support can remove anyone (already checked above constraints)
 
       // Soft-delete the member
       await query(

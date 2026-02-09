@@ -3,13 +3,17 @@ import type {
   PaymentConfirmationData,
   ProformaInvoiceData,
   PaymentReminderData,
+  ClientPaymentProjectEmailData,
+  AdminPaymentProjectEmailData,
   EmailAttachment,
   ResendEmailOptions
 } from './types';
 import {
   paymentConfirmationTemplate,
   proformaInvoiceTemplate,
-  paymentReminderTemplate
+  paymentReminderTemplate,
+  clientPaymentProjectTemplate,
+  adminPaymentProjectTemplate
 } from './templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -263,6 +267,86 @@ export async function sendPaymentReminderEmail(
     subject,
     html,
     attachments
+  });
+}
+
+export async function sendClientPaymentAndProjectEmail(
+  data: ClientPaymentProjectEmailData
+): Promise<{ success: boolean; messageId?: string; error?: EmailServiceError }> {
+  const { to, customerName, amount, currency, projectNumber, projectId, transactionId } = data;
+
+  if (!to || !amount || !projectNumber) {
+    return {
+      success: false,
+      error: new EmailServiceError(
+        'Missing required fields: to, amount, and projectNumber are required',
+        'VALIDATION_ERROR'
+      )
+    };
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai';
+  const projectDashboardUrl = `${appUrl}/projects/${projectId}`;
+
+  const html = clientPaymentProjectTemplate({
+    customerName,
+    amount,
+    currency,
+    projectNumber,
+    projectDashboardUrl,
+    transactionId,
+    companyName: MOTIONIFY_BRANDING.companyName,
+    websiteUrl: MOTIONIFY_BRANDING.websiteUrl,
+    supportEmail: MOTIONIFY_BRANDING.supportEmail,
+    primaryColor: MOTIONIFY_BRANDING.primaryColor
+  });
+
+  return sendEmail({
+    to,
+    subject: `Payment Confirmed & Project ${projectNumber} Started - Motionify`,
+    html
+  });
+}
+
+export async function sendAdminPaymentAndProjectEmail(
+  data: AdminPaymentProjectEmailData
+): Promise<{ success: boolean; messageId?: string; error?: EmailServiceError }> {
+  const { clientName, clientEmail, companyName, amount, currency, razorpayPaymentId, projectNumber, projectId } = data;
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (!adminEmail) {
+    return {
+      success: false,
+      error: new EmailServiceError(
+        'ADMIN_NOTIFICATION_EMAIL environment variable is not set',
+        'CONFIG_ERROR'
+      )
+    };
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai';
+  const adminProjectUrl = `${appUrl}/admin/projects/${projectId}`;
+
+  const html = adminPaymentProjectTemplate({
+    customerName: 'Admin',
+    clientName,
+    clientEmail,
+    clientCompanyName: companyName,
+    amount,
+    currency,
+    razorpayPaymentId,
+    projectNumber,
+    adminProjectUrl,
+    companyName: MOTIONIFY_BRANDING.companyName,
+    websiteUrl: MOTIONIFY_BRANDING.websiteUrl,
+    supportEmail: MOTIONIFY_BRANDING.supportEmail,
+    primaryColor: MOTIONIFY_BRANDING.primaryColor
+  });
+
+  return sendEmail({
+    to: adminEmail,
+    subject: `New Payment Received - ${clientName} - Project ${projectNumber}`,
+    html
   });
 }
 

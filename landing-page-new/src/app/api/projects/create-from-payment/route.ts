@@ -40,9 +40,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Fetch proposal from JSON storage (will migrate to DB later)
-        const proposals = await readJSON<any>(STORAGE_FILES.PROPOSALS);
-        const proposal = proposals.find((p: any) => p.id === proposalId && p.status === 'accepted');
+        // Fetch proposal from PostgreSQL first, fallback to local JSON
+        let proposal: any = null;
+        try {
+            const dbResult = await query(
+                'SELECT * FROM proposals WHERE id = $1 AND status = $2',
+                [proposalId, 'accepted']
+            );
+            if (dbResult.rows.length > 0) {
+                const row = dbResult.rows[0];
+                proposal = {
+                    ...row,
+                    inquiryId: row.inquiry_id,
+                    revisionsIncluded: row.revisions_included,
+                };
+            }
+        } catch (dbError) {
+            console.warn('DB proposal lookup failed, falling back to local JSON:', dbError);
+        }
+
+        if (!proposal) {
+            const proposals = await readJSON<any>(STORAGE_FILES.PROPOSALS);
+            proposal = proposals.find((p: any) => p.id === proposalId && p.status === 'accepted');
+        }
 
         if (!proposal) {
             return NextResponse.json(
@@ -51,9 +71,30 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Fetch inquiry from JSON storage
-        const inquiries = await readJSON<any>(STORAGE_FILES.INQUIRIES);
-        const inquiry = inquiries.find((i: any) => i.id === proposal.inquiryId);
+        // Fetch inquiry from PostgreSQL first, fallback to local JSON
+        let inquiry: any = null;
+        try {
+            const dbResult = await query(
+                'SELECT * FROM inquiries WHERE id = $1',
+                [proposal.inquiryId || proposal.inquiry_id]
+            );
+            if (dbResult.rows.length > 0) {
+                const row = dbResult.rows[0];
+                inquiry = {
+                    ...row,
+                    contactEmail: row.contact_email,
+                    contactName: row.contact_name,
+                    companyName: row.company_name,
+                };
+            }
+        } catch (dbError) {
+            console.warn('DB inquiry lookup failed, falling back to local JSON:', dbError);
+        }
+
+        if (!inquiry) {
+            const inquiries = await readJSON<any>(STORAGE_FILES.INQUIRIES);
+            inquiry = inquiries.find((i: any) => i.id === (proposal.inquiryId || proposal.inquiry_id));
+        }
 
         if (!inquiry) {
             return NextResponse.json(
@@ -113,12 +154,38 @@ export async function POST(request: NextRequest) {
             }
 
             // Update payment with project_id
-            await client.query(
-                `UPDATE payments 
-         SET project_id = $1 
-         WHERE id = $2`,
-                [newProject.id, paymentId]
+            // paymentId may be a UUID (from DB) or a timestamp-based ID (from JSON storage)
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId);
+            if (isUuid) {
+                await client.query(
+                    `UPDATE payments SET project_id = $1 WHERE id = $2`,
+                    [newProject.id, paymentId]
+                );
+            } else {
+                await client.query(
+                    `UPDATE payments SET project_id = $1
+                     WHERE id = (
+                       SELECT id FROM payments
+                       WHERE proposal_id = $2 AND project_id IS NULL
+                       ORDER BY created_at DESC LIMIT 1
+                     )`,
+                    [newProject.id, proposalId]
+                );
+            }
+
+            // Auto-add all active support users to the project team
+            const supportUsers = await client.query(
+                `SELECT id FROM users WHERE role = 'support' AND is_active = true`
             );
+
+            for (const supportUser of supportUsers.rows) {
+                await client.query(
+                    `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_at)
+                     VALUES ($1, $2, 'support', false, NOW())
+                     ON CONFLICT (user_id, project_id) DO NOTHING`,
+                    [supportUser.id, newProject.id]
+                );
+            }
 
             // Note: We'll update inquiry status after user creation
             // to avoid issues with foreign key constraints

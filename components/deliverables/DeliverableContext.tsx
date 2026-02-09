@@ -683,9 +683,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error('You must be logged in to delete deliverables');
     }
 
-    // Permission check: only super_admin and project_manager can delete
-    if (currentUser.role !== 'super_admin' && currentUser.role !== 'project_manager') {
-      throw new Error('Only administrators and project managers can delete deliverables');
+    // Permission check: only super_admin and support can delete
+    if (currentUser.role !== 'super_admin' && currentUser.role !== 'support') {
+      throw new Error('Only administrators and support can delete deliverables');
     }
 
     const response = await fetch(`/api/deliverables/${deliverableId}`, {

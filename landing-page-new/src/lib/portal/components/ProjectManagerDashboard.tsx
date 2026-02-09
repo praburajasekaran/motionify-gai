@@ -48,7 +48,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, currentUser, onSelec
           </div>
         </div>
         <div className="flex space-x-2 flex-shrink-0 ml-4">
-          {currentUser.role === UserRole.PROJECT_MANAGER && (
+          {currentUser.role === UserRole.SUPPORT && (
             <>
               {project.status === ProjectStatus.IN_PROGRESS && (
                 <Button onClick={() => onUpdateProjectStatus(project.id, ProjectStatus.COMPLETED)} variant="secondary">Mark Completed</Button>
@@ -105,7 +105,7 @@ const ProjectManagerDashboard: React.FC<ProjectManagerDashboardProps> = ({ proje
     }, initialGroups);
   }, [projects]);
 
-  const title = currentUser.role === UserRole.PROJECT_MANAGER ? "All Projects" : "My Assigned Projects";
+  const title = currentUser.role === UserRole.SUPPORT ? "All Projects" : "My Assigned Projects";
 
   const renderProjectList = (projectList: Project[], title: string) => (
     <div id={`status-${title.toLowerCase().replace(' ','-')}`}>
@@ -133,7 +133,7 @@ const ProjectManagerDashboard: React.FC<ProjectManagerDashboardProps> = ({ proje
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">{title}</h1>
-          {currentUser.role === UserRole.PROJECT_MANAGER && (
+          {currentUser.role === UserRole.SUPPORT && (
             <Button onClick={() => setIsCreateModalOpen(true)}>Create New Project</Button>
           )}
         </div>

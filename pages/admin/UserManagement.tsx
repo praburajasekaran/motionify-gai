@@ -9,7 +9,7 @@ interface User {
     id: string;
     email: string;
     full_name: string;
-    role: 'super_admin' | 'project_manager' | 'team_member' | 'client';
+    role: 'super_admin' | 'support' | 'team_member' | 'client';
     is_active: boolean;
     created_at: string;
     updated_at?: string;
@@ -38,7 +38,7 @@ export function UserManagement() {
     const [formData, setFormData] = useState({
         email: '',
         full_name: '',
-        role: 'project_manager' as 'super_admin' | 'project_manager' | 'team_member' | 'client',
+        role: 'support' as 'super_admin' | 'support' | 'team_member' | 'client',
     });
 
     // Deactivation modal states
@@ -95,7 +95,7 @@ export function UserManagement() {
             if (data.success) {
                 await loadUsers();
                 setIsCreateModalOpen(false);
-                setFormData({ email: '', full_name: '', role: 'project_manager' });
+                setFormData({ email: '', full_name: '', role: 'support' });
                 alert(`User created! Magic link sent to ${formData.email} (check server logs)`);
             } else {
                 setError(data.error || 'Failed to create user');
@@ -154,7 +154,7 @@ export function UserManagement() {
     const getRoleBadgeColor = (role: string) => {
         switch (role) {
             case 'super_admin': return 'bg-purple-100 text-purple-800';
-            case 'project_manager': return 'bg-blue-100 text-blue-800';
+            case 'support': return 'bg-blue-100 text-blue-800';
             case 'client': return 'bg-green-100 text-green-800';
             case 'team_member': return 'bg-muted text-foreground';
             default: return 'bg-muted text-foreground';
@@ -239,7 +239,7 @@ export function UserManagement() {
                     >
                         <option value="all">All Roles</option>
                         <option value="super_admin">Super Admin</option>
-                        <option value="project_manager">Project Manager</option>
+                        <option value="support">Motionify Support</option>
                         <option value="client">Client</option>
                         <option value="team_member">Team Member</option>
                     </select>
@@ -387,7 +387,7 @@ export function UserManagement() {
                                     className="mt-1 w-full px-3 py-2 border rounded-lg"
                                     required
                                 >
-                                    <option value="project_manager">Project Manager</option>
+                                    <option value="support">Motionify Support</option>
                                     <option value="team_member">Team Member</option>
                                     <option value="client">Client</option>
                                     <option value="super_admin">Super Admin</option>

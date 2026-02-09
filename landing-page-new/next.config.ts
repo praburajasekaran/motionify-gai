@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:9999/.netlify/functions/:path*',
+        destination: 'http://localhost:8888/.netlify/functions/:path*',
       },
     ];
   },

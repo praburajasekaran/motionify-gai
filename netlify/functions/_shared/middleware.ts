@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import { requireAuthFromCookie, requireSuperAdmin, requireProjectManager, type CookieAuthResult } from './auth';
+import { requireAuthFromCookie, requireSuperAdmin, requireSupport, type CookieAuthResult } from './auth';
 import { checkRateLimit, createRateLimitResponse, getClientIP, type RateLimitConfig } from './rateLimit';
 import { validateRequest } from './validation';
 import { getCorsHeaders, validateCors } from './cors';
@@ -102,7 +102,7 @@ export function withSuperAdmin(): Middleware {
  */
 export function withProjectManager(): Middleware {
     return (handler: Handler) => async (event: NetlifyEvent) => {
-        const auth = await requireProjectManager(event);
+        const auth = await requireSupport(event);
 
         if (!auth.authorized) {
             const origin = event.headers.origin || event.headers.Origin;

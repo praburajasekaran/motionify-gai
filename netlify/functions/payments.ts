@@ -500,7 +500,7 @@ export const handler = compose(
 
       if (action === 'send-reminder') {
         // Verify admin access for sending reminders
-        const adminRoles = ['super_admin', 'project_manager'];
+        const adminRoles = ['super_admin', 'support'];
         if (!auth?.user || !adminRoles.includes(auth.user.role)) {
           return {
             statusCode: 403,

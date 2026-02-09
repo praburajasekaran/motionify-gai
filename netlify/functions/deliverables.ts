@@ -97,7 +97,7 @@ export const handler = compose(
         const userId = auth?.user?.userId;
 
         // Admin and PM can view all
-        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        if (userRole !== 'super_admin' && userRole !== 'support') {
           // Client can only view their own project's deliverables
           if (userRole === 'client' && client_user_id !== userId) {
             return {
@@ -186,7 +186,7 @@ export const handler = compose(
         const userId = auth?.user?.userId;
 
         // Permission check
-        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        if (userRole !== 'super_admin' && userRole !== 'support') {
           if (userRole === 'client' && client_user_id !== userId) {
             return {
               statusCode: 403,
@@ -254,9 +254,9 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      // Permission check: Only super_admin and project_manager can create deliverables
+      // Permission check: Only super_admin and support can create deliverables
       const userRole = auth?.user?.role;
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
           statusCode: 403,
           headers,
@@ -522,9 +522,9 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Only super_admin and project_manager can delete deliverables
+      // Permission check: Only super_admin and support can delete deliverables
       const userRole = auth?.user?.role;
-      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+      if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
           statusCode: 403,
           headers,

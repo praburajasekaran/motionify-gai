@@ -116,7 +116,7 @@ export const handler = compose(
                 `, [key]);
 
                 // Admin/PM can access everything
-                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'project_manager') {
+                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'support') {
                     // Allow
                 } else if (attachmentResult.rows.length > 0) {
                     // Comment attachments: If user is authenticated and attachment exists, allow access.
@@ -156,7 +156,7 @@ export const handler = compose(
                 const { project_id, client_user_id, status } = keyOwnershipResult.rows[0];
 
                 // Admin/PM can access all
-                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'project_manager') {
+                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'support') {
                     // Allow
                 }
                 // Client can only access their own project's files when status allows viewing

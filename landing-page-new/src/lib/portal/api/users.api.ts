@@ -7,8 +7,9 @@ export interface User {
     id: string;
     email: string;
     full_name: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'support' | 'client' | 'team';
     avatar_url?: string;
+    timezone?: string | null;
     is_active: boolean;
     created_at: string;
     updated_at?: string;
@@ -17,12 +18,12 @@ export interface User {
 export interface CreateUserData {
     email: string;
     full_name: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'support' | 'client' | 'team';
 }
 
 export interface UpdateUserData {
     full_name?: string;
-    role?: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role?: 'super_admin' | 'support' | 'client' | 'team';
     avatar_url?: string;
 }
 

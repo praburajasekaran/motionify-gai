@@ -1,33 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { readJSON, writeJSON, STORAGE_FILES } from '@/lib/storage';
 
-interface QuizSelections {
-    niche?: string | null;
-    audience?: string | null;
-    style?: string | null;
-    mood?: string | null;
-    duration?: string | null;
-}
-
-interface InquiryVerificationPayload {
-    contactName: string;
-    contactEmail: string;
-    companyName?: string;
-    contactPhone?: string;
-    projectNotes?: string;
-    quizAnswers: QuizSelections;
-    recommendedVideoType: string;
-}
-
-interface PendingVerification {
-    id: string;
-    email: string;
-    token: string;
-    payload: InquiryVerificationPayload;
-    expiresAt: string;
-    createdAt: string;
-}
+/**
+ * Next.js API route proxy for inquiry-request-verification
+ * Proxies to Netlify function in development
+ */
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -35,67 +11,69 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// We need a separate storage file for pending verifications
-const PENDING_VERIFICATIONS_FILE = 'pending-verifications.json';
-
 export async function POST(request: NextRequest) {
     try {
-        const body: InquiryVerificationPayload = await request.json();
-        const { contactEmail, contactName, recommendedVideoType } = body;
+        const body = await request.json();
+        const functionsBase = process.env.NETLIFY_FUNCTIONS_URL
+            || 'http://localhost:8888/.netlify/functions';
+        const netlifyFunctionUrl = `${functionsBase}/inquiry-request-verification`;
 
-        if (!contactEmail || !contactName) {
+        console.log('[inquiry-request-verification proxy] Proxying to:', netlifyFunctionUrl);
+
+        const response = await fetch(netlifyFunctionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        // Get response text first to check if it's JSON
+        const responseText = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            // If response is not JSON, it's likely an error from Netlify
+            console.error('[inquiry-request-verification proxy] Non-JSON response:', responseText.substring(0, 200));
             return NextResponse.json(
-                { error: 'Name and email are required' },
-                { status: 400, headers: corsHeaders }
+                {
+                    success: false,
+                    error: 'Function not available',
+                    message: 'The inquiry service is not available. Please make sure Netlify Dev is running.',
+                    hint: 'Run: netlify dev (from project root)'
+                },
+                { status: 503, headers: corsHeaders }
             );
         }
 
-        // Generate token
-        const token = crypto.randomBytes(32).toString('base64url');
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
+        console.log('[inquiry-request-verification proxy] Response status:', response.status, 'success:', data.success);
 
-        // Read existing pending verifications
-        const pendingVerifications = await readJSON<PendingVerification>(PENDING_VERIFICATIONS_FILE);
+        return NextResponse.json(data, { status: response.status, headers: corsHeaders });
+    } catch (error: any) {
+        console.error('[inquiry-request-verification proxy] Error:', error);
 
-        // Create new pending verification
-        const verification: PendingVerification = {
-            id: crypto.randomUUID(),
-            email: contactEmail.toLowerCase(),
-            token,
-            payload: body,
-            expiresAt: expiresAt.toISOString(),
-            createdAt: new Date().toISOString(),
-        };
-
-        pendingVerifications.push(verification);
-        await writeJSON(PENDING_VERIFICATIONS_FILE, pendingVerifications);
-
-        // Generate magic link (for development, we log it)
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const magicLink = `${appUrl}/auth/verify?token=${token}&type=inquiry`;
-
-        // Log for dev (keep for debugging)
-        console.log(`✨ Inquiry Verification Magic Link for ${contactEmail}:`);
-        console.log(magicLink);
-
-        // In a production environment, you would send an email here
-        // For now, we just return success and log the link
-        console.log(`✅ Verification request created for ${contactEmail}`);
+        // Check if it's a connection error
+        if (error.message?.includes('fetch failed') || error.code === 'ECONNREFUSED') {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'Service unavailable',
+                    message: 'Cannot connect to inquiry service. Please make sure Netlify Dev is running.',
+                    hint: 'Run: netlify dev (from project root)'
+                },
+                { status: 503, headers: corsHeaders }
+            );
+        }
 
         return NextResponse.json(
             {
-                success: true,
-                message: 'Verification email sent',
-                // Include magic link in development for testing
-                ...(process.env.NODE_ENV === 'development' && { magicLink }),
+                success: false,
+                error: 'Internal server error',
+                message: error.message || 'An unexpected error occurred',
+                hint: 'Make sure Netlify Dev is running. Run: netlify dev (from project root)'
             },
-            { status: 200, headers: corsHeaders }
-        );
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Inquiry verification request error:', message);
-        return NextResponse.json(
-            { error: 'Internal server error', message },
             { status: 500, headers: corsHeaders }
         );
     }

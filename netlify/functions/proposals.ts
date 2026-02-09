@@ -49,6 +49,7 @@ interface CreateProposalPayload {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded?: number;
+  revisionsDescription?: string;
 }
 
 const getDbClient = () => {
@@ -147,11 +148,11 @@ async function notifyStatusChange(
         }
       }
     } else {
-      // Client changed status → notify all admins (super_admin and project_manager)
+      // Client changed status → notify all admins (super_admin and support)
       const adminsResult = await client.query(
         `SELECT id, email, full_name
          FROM users
-         WHERE role IN ('super_admin', 'project_manager')`
+         WHERE role IN ('super_admin', 'support')`
       );
 
       for (const admin of adminsResult.rows) {
@@ -510,8 +511,8 @@ export const handler = compose(
       const result = await client.query(
         `INSERT INTO proposals (
           inquiry_id, description, deliverables, currency, total_price,
-          advance_percentage, advance_amount, balance_amount, client_user_id, revisions_included
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          advance_percentage, advance_amount, balance_amount, client_user_id, revisions_included, revisions_description
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *`,
         [
           payload.inquiryId,
@@ -524,6 +525,7 @@ export const handler = compose(
           payload.balanceAmount,
           clientUserId,
           payload.revisionsIncluded ?? 2,
+          payload.revisionsDescription || null,
         ]
       );
 

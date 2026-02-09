@@ -78,7 +78,7 @@ const AppRoot: React.FC = () => {
   const allMotionifyUsers = useMemo(() => {
     const allUsers = projectsData.flatMap(p => p.motionifyTeam);
     const uniqueUsers: User[] = Array.from(new Map<string, User>(allUsers.map(item => [item.id, item])).values());
-    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.PROJECT_MANAGER);
+    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.SUPPORT);
   }, [projectsData]);
 
   // Load user from localStorage on client mount (after hydration)
@@ -261,7 +261,7 @@ const AppRoot: React.FC = () => {
 
     // Only send notification if revision was actually allowed
     if (revisionAllowed && updatedProject && updatedTask) {
-      const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.PROJECT_MANAGER);
+      const projectManager = updatedProject.motionifyTeam.find(u => u.role === UserRole.SUPPORT);
       if (projectManager) {
         addNotification(`A revision was requested for task '${updatedTask.title}'.`, projectManager.id, updatedProject.id);
       }
@@ -536,9 +536,9 @@ const AppRoot: React.FC = () => {
         if (p.id !== selectedProjectId) return p;
 
         // Ensure the project always has at least one PM
-        const hasPM = newTeam.some(u => u.role === UserRole.PROJECT_MANAGER);
+        const hasPM = newTeam.some(u => u.role === UserRole.SUPPORT);
         if (!hasPM) {
-          const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.PROJECT_MANAGER);
+          const pmToAdd = allMotionifyUsers.find(u => u.role === UserRole.SUPPORT);
           if (pmToAdd && !newTeam.some(u => u.id === pmToAdd.id)) {
             newTeam.push(pmToAdd);
           }
@@ -580,10 +580,10 @@ const AppRoot: React.FC = () => {
       return <LoginScreen users={uniqueUsers} onLogin={handleLogin} />;
     }
 
-    const isMotionifyStaff = currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER;
+    const isMotionifyStaff = currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.MOTIONIFY_MEMBER;
 
     if (isMotionifyStaff && !selectedProjectId) {
-      const projectsForUser = currentUser.role === UserRole.PROJECT_MANAGER
+      const projectsForUser = currentUser.role === UserRole.SUPPORT
         ? projectsData
         : projectsData.filter(p => p.motionifyTeam.some(u => u.id === currentUser.id));
 
@@ -618,7 +618,7 @@ const AppRoot: React.FC = () => {
           client={selectedProject?.client}
         />
         <div className="flex-grow overflow-y-auto">
-          <main className={!currentUser || (currentUser.role === UserRole.PROJECT_MANAGER && !selectedProjectId) ? "p-4 sm:p-6 md:p-8" : ""}>
+          <main className={!currentUser || (currentUser.role === UserRole.SUPPORT && !selectedProjectId) ? "p-4 sm:p-6 md:p-8" : ""}>
             {renderContent()}
           </main>
         </div>

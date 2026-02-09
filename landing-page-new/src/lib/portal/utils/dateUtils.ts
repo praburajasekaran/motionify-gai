@@ -2,10 +2,43 @@
  * Date utility functions with timezone support
  * Fixes Bug #3: Timezone-Unsafe Date Formatting
  * Fixes Bug #15: Code Duplication (timeAgo function)
+ *
+ * Timezone support: call setUserTimezone() once at login to apply the user's
+ * preferred timezone to all formatting functions automatically.
+ * Calendar-date functions (formatDeadline, isOverdue, toInputDateFormat) are
+ * intentionally timezone-unaware to avoid shifting dates.
  */
 
+/** Module-level timezone. null = use browser default. */
+let _userTimezone: string | null = null;
+
+export function setUserTimezone(tz: string | null): void {
+  _userTimezone = tz;
+}
+
+export function getUserTimezone(): string | null {
+  return _userTimezone;
+}
+
+/** Inject timeZone into Intl options when a user timezone is set. */
+function withTz(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  if (_userTimezone) {
+    return { ...options, timeZone: _userTimezone };
+  }
+  return options;
+}
+
+/** Format a date string for comparison in the user's timezone. */
+function toDateKey(date: Date): string {
+  return date.toLocaleDateString('en-CA', withTz({
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }));
+}
+
 /**
- * Format a date string or timestamp in the user's local timezone
+ * Format a date string or timestamp in the user's timezone
  * Safely handles ISO strings, timestamps, and Date objects
  */
 export function formatDate(date: string | number | Date, options?: Intl.DateTimeFormatOptions): string {
@@ -28,7 +61,7 @@ export function formatDate(date: string | number | Date, options?: Intl.DateTime
       ...options,
     };
 
-    return dateObj.toLocaleDateString(undefined, defaultOptions);
+    return dateObj.toLocaleDateString(undefined, withTz(defaultOptions));
   } catch (error) {
     console.error('Error formatting date:', error);
     return 'Invalid date';
@@ -36,7 +69,7 @@ export function formatDate(date: string | number | Date, options?: Intl.DateTime
 }
 
 /**
- * Format a date with time in the user's local timezone
+ * Format a date with time in the user's timezone
  */
 export function formatDateTime(date: string | number | Date): string {
   return formatDate(date, {
@@ -49,8 +82,9 @@ export function formatDateTime(date: string | number | Date): string {
 }
 
 /**
- * Format a deadline date (YYYY-MM-DD string) in user's local timezone
- * Handles the common case of date-only strings without time component
+ * Format a deadline date (YYYY-MM-DD string)
+ * Intentionally timezone-unaware — deadlines are calendar dates, not moments in time.
+ * Applying a timezone offset could shift "Jan 15" to "Jan 14".
  */
 export function formatDeadline(deadline: string): string {
   try {
@@ -62,7 +96,12 @@ export function formatDeadline(deadline: string): string {
       return deadline; // Return original if invalid
     }
 
-    return formatDate(dateObj);
+    // Use toLocaleDateString WITHOUT timezone override for calendar dates
+    return dateObj.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   } catch (error) {
     console.error('Error formatting deadline:', error);
     return deadline;
@@ -74,38 +113,27 @@ export function formatDeadline(deadline: string): string {
  */
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString(undefined, withTz({
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+  }));
 }
 
 /**
- * Check if a timestamp is from today
+ * Check if a timestamp is from today (in the user's timezone)
  */
 function isToday(timestamp: number): boolean {
-  const date = new Date(timestamp);
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
+  return toDateKey(new Date(timestamp)) === toDateKey(new Date());
 }
 
 /**
- * Check if a timestamp is from yesterday
+ * Check if a timestamp is from yesterday (in the user's timezone)
  */
 function isYesterday(timestamp: number): boolean {
-  const date = new Date(timestamp);
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  return (
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
-  );
+  return toDateKey(new Date(timestamp)) === toDateKey(yesterday);
 }
 
 /**
@@ -145,39 +173,40 @@ export function timeAgo(timestamp: number): string {
 
   // For this week (2-6 days ago)
   if (days < 7) {
-    const dayName = new Date(timestamp).toLocaleDateString(undefined, { weekday: 'long' });
+    const dayName = new Date(timestamp).toLocaleDateString(undefined, withTz({ weekday: 'long' }));
     return `${dayName} at ${time}`;
   }
 
   // For older dates: show date + time
   if (weeks < 4) {
-    const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+    const dateStr = new Date(timestamp).toLocaleDateString(undefined, withTz({
       month: 'short',
       day: 'numeric'
-    });
+    }));
     return `${dateStr} at ${time}`;
   }
 
   // For much older dates
   if (months < 12) {
-    const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+    const dateStr = new Date(timestamp).toLocaleDateString(undefined, withTz({
       month: 'short',
       day: 'numeric'
-    });
+    }));
     return `${dateStr} at ${time}`;
   }
 
   // For dates over a year old
-  const dateStr = new Date(timestamp).toLocaleDateString(undefined, {
+  const dateStr = new Date(timestamp).toLocaleDateString(undefined, withTz({
     year: 'numeric',
     month: 'short',
     day: 'numeric'
-  });
+  }));
   return `${dateStr} at ${time}`;
 }
 
 /**
  * Check if a deadline is overdue
+ * Intentionally timezone-unaware — uses local machine time for deadline comparison.
  */
 export function isOverdue(deadline: string): boolean {
   try {
@@ -189,9 +218,19 @@ export function isOverdue(deadline: string): boolean {
 }
 
 /**
- * Get ISO string for current date at local midnight (for deadline inputs)
+ * Get ISO string for current date (for deadline inputs)
+ * Timezone-aware: returns "today" in the user's timezone.
  */
 export function getTodayISODate(): string {
+  if (_userTimezone) {
+    // en-CA locale returns YYYY-MM-DD format
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: _userTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  }
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -201,6 +240,7 @@ export function getTodayISODate(): string {
 
 /**
  * Convert ISO date string to YYYY-MM-DD format for input fields
+ * Intentionally timezone-unaware — preserves the date as-is for form inputs.
  */
 export function toInputDateFormat(date: string | Date): string {
   try {

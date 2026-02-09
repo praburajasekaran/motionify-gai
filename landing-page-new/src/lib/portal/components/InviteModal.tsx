@@ -17,13 +17,13 @@ interface InviteModalProps {
 
 const InviteModal = ({ isOpen, onClose, projectId, onInviteSent, currentUserRole }: InviteModalProps) => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'client' | 'team'>('client');
+  const [role, setRole] = useState<'client' | 'team_member'>('client');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
-  // Determine if user can invite team members
+  // Determine if user can invite team members (support is managed at admin level, not per-project)
   const canInviteTeam = currentUserRole !== 'client';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent, currentUserRole
       setTimeout(() => {
         onClose();
         setEmail('');
-        setRole('client');
+        setRole(canInviteTeam ? 'team_member' : 'client');
         setSuccess(null);
       }, 1500);
     } else {
@@ -90,7 +90,7 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent, currentUserRole
     // Reset form after modal closes
     setTimeout(() => {
       setEmail('');
-      setRole('client');
+      setRole(canInviteTeam ? 'team_member' : 'client');
       setEmailError(null);
       setGeneralError(null);
       setSuccess(null);
@@ -153,11 +153,11 @@ const InviteModal = ({ isOpen, onClose, projectId, onInviteSent, currentUserRole
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value as 'client' | 'team')}
+              onChange={(e) => setRole(e.target.value as 'client' | 'team_member')}
               disabled={isSending}
               className="w-full px-4 py-2 border border-[var(--todoist-gray-300)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)] focus:border-transparent"
             >
-              {canInviteTeam && <option value="team">Team Member</option>}
+              {canInviteTeam && <option value="team_member">Motionify Team</option>}
               <option value="client">Client</option>
             </select>
             <p className="mt-1 text-xs text-[var(--todoist-gray-500)]">

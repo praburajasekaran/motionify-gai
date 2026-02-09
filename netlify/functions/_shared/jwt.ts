@@ -28,7 +28,7 @@ const TOKEN_EXPIRY_REMEMBER = '7d';      // 7 days
 export interface JWTPayload {
     userId: string;
     email: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'support' | 'client' | 'team';
     fullName: string;
 }
 

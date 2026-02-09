@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
+import { sendClientPaymentAndProjectEmail, sendAdminPaymentAndProjectEmail } from '@/lib/email/emailService';
 
 interface CreateClientRequest {
     email: string;
@@ -62,6 +63,14 @@ export async function POST(request: NextRequest) {
                 [user.id, projectId]
             );
 
+            // Add client to project_team as primary contact
+            await client.query(
+                `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_at)
+                 VALUES ($1, $2, 'client', true, NOW())
+                 ON CONFLICT (user_id, project_id) DO NOTHING`,
+                [user.id, projectId]
+            );
+
             // Get the updated project
             const projectResult = await client.query(
                 `SELECT 
@@ -109,6 +118,63 @@ export async function POST(request: NextRequest) {
         }).catch(err => {
             console.error('⚠️ Failed to send welcome email:', err);
         });
+
+        // Send payment + project notification emails (fire-and-forget)
+        (async () => {
+            try {
+                // Fetch payment and inquiry details for the emails
+                const [paymentResult, inquiryResult] = await Promise.all([
+                    query(
+                        'SELECT amount, currency, razorpay_payment_id FROM payments WHERE proposal_id = $1 ORDER BY created_at DESC LIMIT 1',
+                        [result.project.proposal_id]
+                    ),
+                    query(
+                        'SELECT company_name FROM inquiries WHERE id = $1',
+                        [result.project.inquiry_id]
+                    ),
+                ]);
+
+                const payment = paymentResult.rows[0];
+                const inquiry = inquiryResult.rows[0];
+
+                if (!payment) {
+                    console.warn('⚠️ No payment found for proposal, skipping payment notification emails');
+                    return;
+                }
+
+                // Amount is stored in smallest unit (paise/cents), convert to major unit
+                const amountInMajorUnit = payment.amount / 100;
+
+                // Client email
+                sendClientPaymentAndProjectEmail({
+                    to: result.user.email,
+                    customerName: result.user.full_name,
+                    amount: amountInMajorUnit,
+                    currency: payment.currency,
+                    projectNumber: result.project.project_number,
+                    projectId: result.project.id,
+                    transactionId: payment.razorpay_payment_id,
+                }).catch(err => {
+                    console.error('⚠️ Failed to send client payment notification email:', err);
+                });
+
+                // Admin email
+                sendAdminPaymentAndProjectEmail({
+                    clientName: result.user.full_name,
+                    clientEmail: result.user.email,
+                    companyName: inquiry?.company_name,
+                    amount: amountInMajorUnit,
+                    currency: payment.currency,
+                    razorpayPaymentId: payment.razorpay_payment_id,
+                    projectNumber: result.project.project_number,
+                    projectId: result.project.id,
+                }).catch(err => {
+                    console.error('⚠️ Failed to send admin payment notification email:', err);
+                });
+            } catch (err) {
+                console.error('⚠️ Failed to fetch data for payment notification emails:', err);
+            }
+        })();
 
         return NextResponse.json({
             success: true,

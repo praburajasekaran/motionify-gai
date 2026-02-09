@@ -29,6 +29,8 @@ export default function Quiz() {
     submittedInquiry,
     verificationSent,
     contactEmail,
+    magicLink,
+    resendVerification,
   } = useQuiz();
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -243,7 +245,9 @@ export default function Quiz() {
             {isSuccessScreen && (verificationSent ? (
               <VerificationSent
                 contactEmail={contactEmail}
+                magicLink={magicLink}
                 onReset={reset}
+                onResend={resendVerification}
               />
             ) : submittedInquiry ? (
               <InquirySuccess

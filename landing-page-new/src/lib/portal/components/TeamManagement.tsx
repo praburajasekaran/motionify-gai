@@ -3,7 +3,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '@/lib/portal/AppContext';
 import { UserRole } from '@/lib/portal/types';
-import { Clock, Mail, XCircle, RefreshCw, UserMinus } from 'lucide-react';
+import { Clock, XCircle, RefreshCw, UserMinus, UserPlus, Shield, Briefcase, Users } from 'lucide-react';
 import { formatTimestamp } from '@/lib/portal/utils/dateUtils';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -20,7 +20,7 @@ const TeamManagement = () => {
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
 
   const isPrimaryContact = currentUser?.role === UserRole.PRIMARY_CONTACT;
-  const isProjectManager = currentUser?.role === UserRole.PROJECT_MANAGER;
+  const isSupport = currentUser?.role === UserRole.SUPPORT;
 
   useEffect(() => {
     if (project?.id) {
@@ -131,30 +131,35 @@ const TeamManagement = () => {
             </Button>
           )}
         </div>
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {project.clientTeam.map(user => (
-            <div key={user.id} className="flex items-center justify-between p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
-              <div>
-                <p className="font-medium text-[var(--todoist-gray-900)]">{user.name}</p>
-                <p className="text-sm text-[var(--todoist-gray-500)]">{user.email}</p>
+            <div key={user.id} className="group flex items-center gap-3 p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
+              <div className="h-9 w-9 rounded-full bg-[var(--todoist-blue-light)] flex items-center justify-center text-[var(--todoist-blue)] font-semibold text-sm flex-shrink-0">
+                {user.name?.[0]?.toUpperCase() || '?'}
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-[var(--todoist-blue)]">{user.role}</span>
-                {/* Remove button: Only show for Primary Contact */}
-                {isPrimaryContact && (
-                  <button
-                    onClick={() => user.id !== currentUser?.id && setMemberToRemove({ id: user.id, name: user.name })}
-                    disabled={user.id === currentUser?.id}
-                    className={`p-1.5 rounded transition-colors ${user.id === currentUser?.id
-                      ? 'text-[var(--todoist-gray-300)] cursor-not-allowed'
-                      : 'text-[var(--todoist-red)] hover:text-[var(--todoist-red-dark)] hover:bg-[var(--todoist-red-light)]'
-                      }`}
-                    title={user.id === currentUser?.id ? "Transfer primary contact role first" : "Remove team member"}
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </button>
-                )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm text-[var(--todoist-gray-900)] truncate">{user.name}</p>
+                  {user.id === currentUser?.id && (
+                    <span className="text-[10px] font-medium text-[var(--todoist-gray-400)] bg-[var(--todoist-gray-200)] px-1.5 py-0.5 rounded flex-shrink-0">You</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Users className="h-3 w-3 text-[var(--todoist-gray-400)]" />
+                  <span className="text-xs text-[var(--todoist-gray-500)]">
+                    {user.role === UserRole.PRIMARY_CONTACT ? 'Primary Contact' : 'Client'}
+                  </span>
+                </div>
               </div>
+              {isPrimaryContact && user.id !== currentUser?.id && (
+                <button
+                  onClick={() => setMemberToRemove({ id: user.id, name: user.name })}
+                  className="p-1.5 rounded text-[var(--todoist-red)] hover:text-[var(--todoist-red-dark)] hover:bg-[var(--todoist-red-light)] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                  title="Remove team member"
+                >
+                  <UserMinus className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -162,20 +167,27 @@ const TeamManagement = () => {
         <div className="mt-6 border-t pt-4 border-[var(--todoist-gray-200)]">
           <div className="flex justify-between items-center">
             <h4 className="font-semibold text-[var(--todoist-gray-900)]">Motionify Team</h4>
-            {isProjectManager && (
+            {isSupport && (
               <Button variant="secondary" onClick={() => setIsManageModalOpen(true)} className="text-xs px-2.5 py-1.5">
                 Manage
               </Button>
             )}
           </div>
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {project.motionifyTeam.map(user => (
-              <div key={user.id} className="flex items-center justify-between p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
-                <div>
-                  <p className="font-medium text-[var(--todoist-gray-900)]">{user.name}</p>
-                  <p className="text-sm text-[var(--todoist-gray-500)]">{user.email}</p>
+              <div key={user.id} className="flex items-center gap-3 p-3 bg-[var(--todoist-gray-50)] rounded-lg border border-[var(--todoist-gray-200)] hover:bg-[var(--todoist-gray-100)] transition-colors">
+                <div className="h-9 w-9 rounded-full bg-[var(--todoist-blue-light)] flex items-center justify-center text-[var(--todoist-blue)] font-semibold text-sm flex-shrink-0">
+                  {user.name?.[0]?.toUpperCase() || '?'}
                 </div>
-                <span className="text-sm font-semibold text-[var(--todoist-blue)]">{user.role}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-[var(--todoist-gray-900)] truncate">{user.name}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Shield className="h-3 w-3 text-[var(--todoist-gray-400)]" />
+                    <span className="text-xs text-[var(--todoist-gray-500)]">
+                      {user.role === UserRole.SUPPORT ? 'Support' : 'Team'}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

@@ -74,7 +74,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
 
 
   const isPrimaryContact = currentUser?.role === UserRole.PRIMARY_CONTACT;
-  const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.PROJECT_MANAGER;
+  const isInternalUser = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.SUPPORT;
 
   const deliverable = project?.scope.deliverables.find(d => d.id === task.deliverableId);
 

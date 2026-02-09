@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import {
     MoreVertical,
     MoreHorizontal,
@@ -66,12 +67,12 @@ export const ProjectList = () => {
                 // Transform API response to match Project type
                 const transformed = data.map((p: any) => ({
                     id: p.id,
-                    title: p.project_number || `Project ${p.id.slice(0, 8)}`,
+                    title: p.name || p.project_number || `Project ${p.id.slice(0, 8)}`,
                     client: p.client_name || p.client_company || 'Client',
                     thumbnail: '',
-                    status: p.status === 'active' ? 'Active' : (p.status || 'Active'),
-                    dueDate: p.created_at || new Date().toISOString(),
-                    startDate: p.created_at || new Date().toISOString(),
+                    status: dbStatusToDisplay(p.status),
+                    dueDate: p.due_date || p.created_at || new Date().toISOString(),
+                    startDate: p.start_date || p.created_at || new Date().toISOString(),
                     progress: 0,
                     description: '',
                     tasks: [],

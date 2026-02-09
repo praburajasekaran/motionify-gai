@@ -41,9 +41,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch proposal directly from storage (server-side)
-    const proposals = await readJSON<any>(STORAGE_FILES.PROPOSALS);
-    const proposal = proposals.find((p: any) => p.id === proposalId);
+    // Fetch proposal from PostgreSQL first, fallback to local JSON
+    let proposal: any = null;
+    try {
+      const dbResult = await query('SELECT * FROM proposals WHERE id = $1', [proposalId]);
+      if (dbResult.rows.length > 0) {
+        proposal = dbResult.rows[0];
+      }
+    } catch (dbError) {
+      console.warn('DB lookup failed, falling back to local JSON:', dbError);
+    }
+
+    if (!proposal) {
+      const proposals = await readJSON<any>(STORAGE_FILES.PROPOSALS);
+      proposal = proposals.find((p: any) => p.id === proposalId);
+    }
 
     if (!proposal) {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
