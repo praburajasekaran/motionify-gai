@@ -19,11 +19,11 @@ import {
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const MOTIONIFY_BRANDING = {
-  companyName: 'Motionify',
-  websiteUrl: 'https://motionify.ai',
-  supportEmail: 'support@motionify.ai',
-  logoUrl: 'https://motionify.studio/motionify-dark-logo.png',
-  primaryColor: '#6366f1',
+  companyName: 'Motionify Studio',
+  websiteUrl: 'https://motionify.com',
+  supportEmail: 'support@motionify.com',
+  logoUrl: 'https://motionify.studio/motionify-studio-dark.png',
+  primaryColor: '#7c3aed',
   secondaryColor: '#8b5cf6'
 };
 

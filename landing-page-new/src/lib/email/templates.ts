@@ -700,7 +700,7 @@ export function clientPaymentProjectTemplate(data: ClientPaymentProjectTemplateD
   <div class="container">
     <div class="email-wrapper">
       <div class="header">
-        <div class="header-logo">${companyName}</div>
+        <img src="https://motionify.studio/motionify-light-logo.png" alt="${companyName}" width="180" style="display: inline-block;" />
         <div class="header-subtitle">Payment Confirmed &amp; Project Started</div>
       </div>
 
@@ -814,7 +814,7 @@ export function adminPaymentProjectTemplate(data: AdminPaymentProjectTemplateDat
   <div class="container">
     <div class="email-wrapper">
       <div class="header">
-        <div class="header-logo">${companyName}</div>
+        <img src="https://motionify.studio/motionify-light-logo.png" alt="${companyName}" width="180" style="display: inline-block;" />
         <div class="header-subtitle">New Payment &amp; Project</div>
       </div>
 
