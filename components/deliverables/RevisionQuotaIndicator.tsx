@@ -22,27 +22,27 @@ export const RevisionQuotaIndicator: React.FC<RevisionQuotaIndicatorProps> = ({
   const percentage = quota.total > 0 ? (quota.remaining / quota.total) * 100 : 0;
 
   // Determine color based on remaining percentage
-  let colorClass = 'from-emerald-50 to-emerald-100/50 border-emerald-200';
-  let textColorClass = 'text-emerald-700';
-  let iconColorClass = 'text-emerald-500';
+  let colorClass = 'bg-teal-50/60 border-teal-200/50';
+  let textColorClass = 'text-teal-700';
+  let iconColorClass = 'text-teal-600';
   let Icon = Zap;
 
   if (percentage <= 0) {
-    colorClass = 'from-red-50 to-red-100/50 border-red-200';
+    colorClass = 'bg-red-50/60 border-red-200/50';
     textColorClass = 'text-red-700';
-    iconColorClass = 'text-red-500';
+    iconColorClass = 'text-red-600';
     Icon = AlertTriangle;
   } else if (percentage <= 33) {
-    colorClass = 'from-amber-50 to-amber-100/50 border-amber-200';
+    colorClass = 'bg-amber-50/60 border-amber-200/50';
     textColorClass = 'text-amber-700';
-    iconColorClass = 'text-amber-500';
+    iconColorClass = 'text-amber-600';
     Icon = AlertTriangle;
   }
 
   return (
     <div
       className={cn(
-        'flex items-center justify-between p-4 rounded-xl border bg-gradient-to-br shadow-sm',
+        'flex items-center justify-between p-3 rounded-lg border',
         colorClass,
         className
       )}
@@ -50,11 +50,11 @@ export const RevisionQuotaIndicator: React.FC<RevisionQuotaIndicatorProps> = ({
       aria-label={`${quota.remaining} of ${quota.total} revisions remaining`}
     >
       <div className="flex items-center gap-3">
-        <div className={cn('p-2 bg-white/60 rounded-lg', iconColorClass)}>
-          <Icon className="h-5 w-5" />
+        <div className={cn('p-1.5 rounded-md', iconColorClass)}>
+          <Icon className="h-4 w-4" />
         </div>
         <div>
-          <p className={cn('text-sm font-bold', textColorClass)}>
+          <p className={cn('text-[14px] font-semibold', textColorClass)}>
             {quota.remaining === 0 ? (
               'Revision Quota Exhausted'
             ) : quota.remaining === 1 ? (

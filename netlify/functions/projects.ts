@@ -227,7 +227,8 @@ export const handler = compose(
       if (userRole === 'support') {
         // Support: See all projects (support users have platform-wide access)
         query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+          SELECT p.*, u.full_name as client_name, u.email as client_email,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
           ORDER BY p.created_at DESC
@@ -235,7 +236,8 @@ export const handler = compose(
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
         query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+          SELECT p.*, u.full_name as client_name, u.email as client_email,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
           WHERE p.client_user_id = $1
@@ -245,7 +247,8 @@ export const handler = compose(
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
         query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+          SELECT p.*, u.full_name as client_name, u.email as client_email,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
           ORDER BY p.created_at DESC

@@ -398,7 +398,7 @@ export const ProjectSettings = () => {
                 <aside className="lg:col-span-3 lg:sticky lg:top-6 flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-2 lg:gap-0 pb-2 lg:pb-0" role="tablist" aria-orientation="vertical">
                     <div className="space-y-6 w-full min-w-[200px]">
                         <div>
-                            <div className="px-1 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                            <div className="px-1 py-2 text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
                                 Configuration
                             </div>
                             <nav className="space-y-1">
@@ -414,7 +414,7 @@ export const ProjectSettings = () => {
                         </div>
 
                         <div className="hidden lg:block">
-                            <div className="px-1 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                            <div className="px-1 py-2 text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
                                 Advanced
                             </div>
                             <nav className="space-y-1">

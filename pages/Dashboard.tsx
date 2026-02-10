@@ -113,39 +113,29 @@ interface MetricCardProps {
 }
 
 function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, onToggle }: MetricCardProps) {
-  const colors = {
-    blue: { bg: 'bg-blue-500/10', icon: 'text-blue-500', ring: 'ring-blue-500/20' },
-    purple: { bg: 'bg-purple-500/10', icon: 'text-purple-500', ring: 'ring-purple-500/20' },
-    green: { bg: 'bg-green-500/10', icon: 'text-green-500', ring: 'ring-green-500/20' },
-    amber: { bg: 'bg-amber-500/10', icon: 'text-amber-500', ring: 'ring-amber-500/20' },
-  };
-
-  const colorClasses = colors[color];
-
   return (
     <button
       onClick={onToggle}
-      className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm hover:shadow-md transition-all text-left w-full"
+      className="bg-card rounded-lg border border-border p-4 hover:border-foreground/15 transition-colors text-left w-full"
     >
       <div className="flex items-center justify-between mb-3">
-        <div className={`w-12 h-12 rounded-lg ${colorClasses.bg} flex items-center justify-center ring-1 ${colorClasses.ring}`}>
-          <Icon className={`w-6 h-6 ${colorClasses.icon}`} />
-        </div>
+        <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
         {breakdown && (
           <div className="text-muted-foreground">
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </div>
         )}
       </div>
-      <p className="text-sm text-muted-foreground mb-1">{title}</p>
-      <p className="text-3xl font-bold text-foreground">{value.toLocaleString()}</p>
+      <div className="flex items-end gap-2">
+        <p className="text-2xl font-semibold text-foreground tracking-tight tabular-nums">{value.toLocaleString()}</p>
+      </div>
 
       {breakdown && isExpanded && (
-        <div className="mt-4 pt-4 border-t border-border space-y-2">
+        <div className="mt-3 pt-3 border-t border-border space-y-1.5">
           {breakdown.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{item.label}:</span>
-              <span className="font-semibold text-foreground">{item.value.toLocaleString()}</span>
+            <div key={idx} className="flex items-center justify-between text-[14px]">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="font-medium text-foreground tabular-nums">{item.value.toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -256,42 +246,40 @@ export const Dashboard = () => {
   const hasError = errorMetrics || errorActivities;
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col gap-1 animate-fade-in">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
-        <p className="text-muted-foreground">
-          {user?.name ? `Welcome back, ${user.name}` : 'Overview of platform metrics and activity'}
-          {user?.role && ` · ${user.role === 'superadmin' ? 'Super Admin' : user.role}`}
+    <div className="space-y-6">
+      {/* Header — tight, purposeful */}
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">Dashboard</h2>
+        <p className="text-[14px] text-muted-foreground mt-0.5">
+          {user?.name ? `Welcome back, ${user.name}` : 'Production overview'}
+          {user?.role && <span className="text-muted-foreground/60"> · {user.role === 'superadmin' ? 'Super Admin' : user.role}</span>}
         </p>
       </div>
 
-      {/* Metric Cards */}
+      {/* Metric Cards — clean grid, no icons, data-forward */}
       {errorMetrics ? (
-        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
+        <div className="bg-card rounded-lg border border-border">
           <ErrorState error={errorMetrics} onRetry={fetchMetrics} />
         </div>
       ) : loadingMetrics ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm animate-pulse">
-              <div className="w-12 h-12 bg-muted rounded-lg mb-3" />
-              <div className="h-4 bg-muted rounded w-24 mb-2" />
-              <div className="h-8 bg-muted rounded w-16" />
+            <div key={i} className="bg-card rounded-lg border border-border p-4 animate-pulse">
+              <div className="h-3 bg-muted rounded w-20 mb-3" />
+              <div className="h-7 bg-muted rounded w-14" />
             </div>
           ))}
         </div>
       ) : metrics ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
-            title="Total Projects"
+            title="Projects"
             value={metrics.projects.total}
             icon={FolderOpen}
             color="blue"
             breakdown={[
               { label: 'Active', value: metrics.projects.active },
               { label: 'Completed', value: metrics.projects.completed },
-              { label: 'Total', value: metrics.projects.total },
             ]}
             isExpanded={expandedCard === 'projects'}
             onToggle={() => setExpandedCard(expandedCard === 'projects' ? null : 'projects')}
@@ -304,7 +292,6 @@ export const Dashboard = () => {
             breakdown={[
               { label: 'Pending', value: metrics.proposals.pending },
               { label: 'Accepted', value: metrics.proposals.accepted },
-              { label: 'Total', value: metrics.proposals.total },
             ]}
             isExpanded={expandedCard === 'proposals'}
             onToggle={() => setExpandedCard(expandedCard === 'proposals' ? null : 'proposals')}
@@ -315,9 +302,8 @@ export const Dashboard = () => {
             icon={DollarSign}
             color="green"
             breakdown={[
-              { label: 'Completed', value: metrics.revenue.completed },
+              { label: 'Received', value: metrics.revenue.completed },
               { label: 'Pending', value: metrics.revenue.pending },
-              { label: 'Total', value: metrics.revenue.total },
             ]}
             isExpanded={expandedCard === 'revenue'}
             onToggle={() => setExpandedCard(expandedCard === 'revenue' ? null : 'revenue')}
@@ -329,7 +315,6 @@ export const Dashboard = () => {
             color="amber"
             breakdown={[
               { label: 'New', value: metrics.inquiries.new },
-              { label: 'Total', value: metrics.inquiries.total },
             ]}
             isExpanded={expandedCard === 'inquiries'}
             onToggle={() => setExpandedCard(expandedCard === 'inquiries' ? null : 'inquiries')}
@@ -337,24 +322,21 @@ export const Dashboard = () => {
         </div>
       ) : null}
 
-      {/* Recent Activity Table */}
-      <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-          <p className="text-sm text-muted-foreground mt-1">Latest platform actions and updates</p>
+      {/* Recent Activity — clean table, tighter rows */}
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="px-4 py-3 border-b border-border">
+          <h3 className="text-[15px] font-semibold text-foreground">Recent Activity</h3>
         </div>
 
         {errorActivities ? (
           <ErrorState error={errorActivities} onRetry={fetchActivities} />
         ) : loadingActivities ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="w-10 h-10 bg-muted rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-3 bg-muted rounded w-1/2" />
-                </div>
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="h-3 bg-muted rounded w-24" />
+                <div className="h-3 bg-muted rounded w-20" />
+                <div className="h-3 bg-muted rounded w-32" />
               </div>
             ))}
           </div>
@@ -362,58 +344,48 @@ export const Dashboard = () => {
           <EmptyState
             icon={Clock}
             title="No recent activity"
-            description="Platform activity will appear here as users interact with projects, proposals, and inquiries"
+            description="Activity will appear here as work progresses"
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted border-b border-border">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Action
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Context
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {activities.map((activity) => {
-                  const ActivityIcon = ACTIVITY_ICONS[activity.type] || FileText;
                   const activityLabel = ACTIVITY_LABELS[activity.type] || activity.type.replace(/_/g, ' ').toLowerCase();
                   const contextLink = getActivityContextLink(activity);
 
                   return (
-                    <tr key={activity.id} className="hover:bg-muted transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2" title={formatDateTime(activity.timestamp) || undefined}>
-                          <Clock className="w-4 h-4" />
-                          {formatTimestamp(activity.timestamp)}
-                        </div>
+                    <tr key={activity.id} className="hover:bg-accent/30 transition-colors">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-[14px] text-muted-foreground tabular-nums" title={formatDateTime(activity.timestamp) || undefined}>
+                        {formatTimestamp(activity.timestamp)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{activity.userName}</span>
-                        </div>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-[14px]">
+                        <span className="font-medium text-foreground">{activity.userName}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                          <ActivityIcon className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-foreground">{activityLabel}</span>
-                        </div>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-[14px] text-foreground">
+                        {activityLabel}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-[14px]">
                         {contextLink ? (
                           <Link
                             to={contextLink.to}
-                            className="text-purple-600 hover:text-purple-700 font-medium hover:underline"
+                            className="text-primary hover:text-primary/80 font-medium hover:underline underline-offset-2"
                           >
                             {contextLink.label}
                           </Link>

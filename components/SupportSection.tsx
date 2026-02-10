@@ -27,7 +27,7 @@ export default function SupportSection() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/40 px-3 py-1 text-[11px] text-gray-800 ring-1 ring-orange-400/20 backdrop-blur mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/40 px-3 py-1 text-[12px] text-gray-800 ring-1 ring-orange-400/20 backdrop-blur mb-6">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#FF8B7B' }} />
             Real People, Real Support
           </div>

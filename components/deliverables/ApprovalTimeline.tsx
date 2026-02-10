@@ -84,15 +84,15 @@ const formatVideoTimestamp = (seconds: number): string => {
           {/* Timeline Dot */}
           <div
             className={cn(
-              'absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-card shadow-sm',
+              'absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-card',
               approval.action === 'approved'
-                ? 'bg-emerald-500'
+                ? 'bg-teal-500'
                 : 'bg-red-500'
             )}
           />
 
           {/* Card */}
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
             {/* Header */}
             <div
               className={cn(

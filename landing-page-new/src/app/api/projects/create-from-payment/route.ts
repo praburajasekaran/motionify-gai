@@ -105,24 +105,50 @@ export async function POST(request: NextRequest) {
 
         // Use transaction to ensure all operations succeed or fail together
         const project = await transaction(async (client) => {
+            // Find or create client user from inquiry contact info
+            const contactEmail = (inquiry.contactEmail || inquiry.contact_email)?.toLowerCase();
+            const contactName = inquiry.contactName || inquiry.contact_name;
+            let clientUserId: string | null = null;
+
+            if (contactEmail) {
+                const existingUserResult = await client.query(
+                    'SELECT id FROM users WHERE email = $1',
+                    [contactEmail]
+                );
+
+                if (existingUserResult.rows.length > 0) {
+                    clientUserId = existingUserResult.rows[0].id;
+                } else {
+                    const newUserResult = await client.query(
+                        `INSERT INTO users (email, full_name, role, is_active)
+                         VALUES ($1, $2, 'client', true)
+                         RETURNING id`,
+                        [contactEmail, contactName]
+                    );
+                    clientUserId = newUserResult.rows[0].id;
+                }
+            }
+
             // Generate project number
             const projectNumber = await generateProjectNumber();
 
-            // Insert project
+            // Insert project with client_user_id
             const projectResult = await client.query(
                 `INSERT INTO projects (
           project_number,
           inquiry_id,
           proposal_id,
+          client_user_id,
           status,
           total_revisions_allowed,
           revisions_used
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *`,
                 [
                     projectNumber,
                     proposal.inquiryId,
                     proposalId,
+                    clientUserId,
                     'active',
                     proposal.revisionsIncluded ?? 2,
                     0
@@ -173,6 +199,16 @@ export async function POST(request: NextRequest) {
                 );
             }
 
+            // Add client as primary contact to project team
+            if (clientUserId) {
+                await client.query(
+                    `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_at)
+                     VALUES ($1, $2, 'client', true, NOW())
+                     ON CONFLICT (user_id, project_id) DO NOTHING`,
+                    [clientUserId, newProject.id]
+                );
+            }
+
             // Auto-add all active support users to the project team
             const supportUsers = await client.query(
                 `SELECT id FROM users WHERE role = 'support' AND is_active = true`
@@ -187,8 +223,12 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            // Note: We'll update inquiry status after user creation
-            // to avoid issues with foreign key constraints
+            // Update inquiry status to converted
+            await client.query(
+                `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW()
+                 WHERE id = $1`,
+                [proposal.inquiryId || proposal.inquiry_id, newProject.id]
+            );
 
             return newProject;
         });

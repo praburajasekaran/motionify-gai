@@ -49,7 +49,7 @@ export function ConfirmDialog({
 
       {/* Dialog */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-xl bg-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+        <div className="relative transform overflow-hidden rounded-lg bg-card border border-border text-left transition-all sm:my-8 sm:w-full sm:max-w-lg">
           {/* Close button */}
           <button
             onClick={onClose}
@@ -82,7 +82,7 @@ export function ConfirmDialog({
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className={`inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
+              className={`inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
             >
               {isLoading ? (
                 <>
@@ -96,7 +96,7 @@ export function ConfirmDialog({
             <button
               onClick={onClose}
               disabled={isLoading}
-              className="inline-flex justify-center rounded-lg bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-muted disabled:opacity-50"
+              className="inline-flex justify-center rounded-lg bg-card px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-inset ring-border hover:bg-muted disabled:opacity-50"
             >
               {cancelLabel}
             </button>

@@ -49,7 +49,7 @@ export function NotificationDropdown({
     };
 
     return (
-        <div className="w-96 max-w-[calc(100vw-2rem)] bg-card rounded-xl shadow-xl border border-border overflow-hidden">
+        <div className="w-96 max-w-[calc(100vw-2rem)] bg-card rounded-lg border border-border overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">

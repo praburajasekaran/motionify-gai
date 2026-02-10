@@ -101,7 +101,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
                       </span>
                       <kbd
                         className={cn(
-                          "px-3 py-1.5 text-xs font-semibold rounded-md border shadow-sm transition-all",
+                          "px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors",
                           "bg-card border-border text-foreground",
                           "group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary"
                         )}
@@ -117,7 +117,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
         </div>
 
         {/* Pro Tip */}
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+        <div className="mt-8 p-4 bg-muted/50 border border-border rounded-lg">
           <div className="flex items-start gap-3">
             <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
               <Zap className="h-3 w-3 text-white" />

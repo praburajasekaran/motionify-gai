@@ -22,12 +22,12 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, icon: Icon = FileQuestion, action, className }) => (
-  <div className={cn("flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95 duration-500", className)}>
-    <div className="bg-gradient-to-br from-muted to-muted p-5 rounded-2xl mb-5 ring-1 ring-black/5 shadow-md">
-      <Icon className="h-8 w-8 text-muted-foreground" />
+  <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
+    <div className="bg-muted p-4 rounded-lg mb-4 border border-border">
+      <Icon className="h-6 w-6 text-muted-foreground" />
     </div>
-    <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
-    <p className="text-sm text-muted-foreground max-w-sm mb-6 leading-relaxed">{description}</p>
+    <h3 className="text-[15px] font-semibold text-foreground mb-1">{title}</h3>
+    <p className="text-[14px] text-muted-foreground max-w-sm mb-5 leading-relaxed">{description}</p>
     {action}
   </div>
 );
@@ -49,10 +49,10 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   fullPage = false
 }) => (
   <div className={cn("flex flex-col items-center justify-center text-center p-8", fullPage ? "min-h-[60vh]" : "py-12")}>
-    <div className="bg-red-50 p-4 rounded-full mb-4 ring-1 ring-red-100 shadow-sm">
-      <AlertTriangle className="h-10 w-10 text-red-500" />
+    <div className="bg-red-50 p-3 rounded-lg mb-3 border border-red-200/50">
+      <AlertTriangle className="h-6 w-6 text-destructive" />
     </div>
-    <h2 className="text-xl font-bold text-foreground mb-2">{title}</h2>
+    <h2 className="text-[15px] font-semibold text-foreground mb-1">{title}</h2>
     <p className="text-muted-foreground max-w-md mb-6">{description}</p>
     {onRetry && (
       <Button onClick={onRetry} variant="outline" className="min-w-[120px]">
@@ -76,17 +76,17 @@ export const ClientLogo: React.FC<{ clientName: string; website?: string; classN
     .toUpperCase();
 
   const colors = [
-    'from-blue-100 to-indigo-100 text-indigo-700',
-    'from-emerald-100 to-teal-100 text-teal-700',
-    'from-orange-100 to-amber-100 text-amber-700',
-    'from-purple-100 to-pink-100 text-purple-700',
-    'from-zinc-100 to-zinc-200 text-foreground',
+    'bg-blue-50 text-blue-700',
+    'bg-teal-50 text-teal-700',
+    'bg-amber-50 text-amber-700',
+    'bg-purple-50 text-purple-700',
+    'bg-stone-100 text-stone-600',
   ];
   const colorClass = colors[clientName.length % colors.length];
 
   if (logoUrl && !error) {
     return (
-      <div className={cn("relative overflow-hidden bg-card flex items-center justify-center transition-transform hover:scale-105 duration-300", className)}>
+      <div className={cn("relative overflow-hidden bg-card flex items-center justify-center transition-colors", className)}>
         <img
           src={logoUrl}
           alt={clientName}
@@ -98,7 +98,7 @@ export const ClientLogo: React.FC<{ clientName: string; website?: string; classN
   }
 
   return (
-    <div className={cn("relative overflow-hidden bg-gradient-to-br flex items-center justify-center font-bold border border-white/50 shadow-inner", colorClass, className)}>
+    <div className={cn("relative overflow-hidden flex items-center justify-center font-semibold border border-border", colorClass, className)}>
       <span className="text-[40%] tracking-tight">{initials}</span>
     </div>
   );
@@ -125,32 +125,29 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--todoist-red)] focus-visible:ring-offset-2",
           // Enhanced disabled state
           "disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50",
-          // Enhanced active state with shadow feedback
-          "active:scale-[0.98] active:shadow-sm",
-          // Not disabled: add hover scale
-          !disabled && !isLoading && "hover:scale-[1.02]",
+          // Active state — subtle press
+          "active:scale-[0.98]",
           {
-            // Default variant: Todoist Red with solid hover
-            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)] shadow-sm hover:shadow-md hover:shadow-[var(--todoist-red)]/25': variant === 'default',
+            // Default: Warm amber — studio accent
+            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'default',
 
-            // Gradient variant: Animated gradient with enhanced shadow (Replaced with specific blue/purple for consistency if needed, but keeping gradient intent with specific colors)
-            'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md border border-blue-500/20': variant === 'gradient',
-            'hover:from-blue-500 hover:to-indigo-500 hover:shadow-lg hover:shadow-blue-500/30 hover:border-blue-400/30': variant === 'gradient' && !disabled && !isLoading,
+            // Gradient: kept as warm amber solid (no gradients in studio aesthetic)
+            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'gradient',
 
-            // Destructive: Todoist Red (same as default/primary for this system usually, but kept explicit)
-            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)] shadow-sm hover:shadow-md hover:shadow-red-500/20': variant === 'destructive',
+            // Destructive: Muted red
+            'bg-destructive text-white hover:bg-destructive/90': variant === 'destructive',
 
-            // Outline: Gray border, light gray hover
-            'border border-[var(--todoist-gray-300)] bg-white text-[var(--todoist-gray-800)] hover:bg-[var(--todoist-gray-50)] hover:border-[var(--todoist-gray-400)] shadow-sm': variant === 'outline',
+            // Outline: Border-only, clean
+            'border border-border bg-card text-foreground hover:bg-accent hover:border-foreground/15': variant === 'outline',
 
-            // Secondary: Light gray background, dark text
-            'bg-[var(--todoist-gray-100)] text-[var(--todoist-gray-800)] hover:bg-[var(--todoist-gray-200)] shadow-sm': variant === 'secondary',
+            // Secondary: Muted surface
+            'bg-secondary text-secondary-foreground hover:bg-secondary/80': variant === 'secondary',
 
-            // Ghost: Subtle background on hover
-            'hover:bg-[var(--todoist-gray-100)] hover:text-[var(--todoist-gray-900)]': variant === 'ghost',
+            // Ghost: Invisible until hover
+            'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
 
             // Link: Primary color
-            'text-[var(--todoist-red)] underline-offset-4 hover:underline': variant === 'link',
+            'text-primary underline-offset-4 hover:underline': variant === 'link',
 
             // Sizes
             'h-10 px-4 py-2': size === 'default',
@@ -189,7 +186,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-card/50 px-3 py-1 text-sm shadow-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-border",
+          "flex h-10 w-full rounded-md border border-input bg-card px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-foreground/15",
           className
         )}
         ref={ref}
@@ -206,7 +203,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-card/50 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-border transition-all",
+          "flex min-h-[80px] w-full rounded-md border border-input bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-foreground/15 transition-colors",
           className
         )}
         ref={ref}
@@ -226,8 +223,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, ho
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border border-border bg-card text-card-foreground shadow-sm transition-all duration-300",
-      hoverable && "hover:shadow-lg hover:-translate-y-1 cursor-default",
+      "rounded-lg border border-border bg-card text-card-foreground transition-colors",
+      hoverable && "hover:border-foreground/15 cursor-default",
       className
     )}
     {...props}
@@ -236,22 +233,22 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, ho
 Card.displayName = "Card";
 
 export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
+  <div ref={ref} className={cn("flex flex-col space-y-1 p-4", className)} {...props} />
 ));
 CardHeader.displayName = "CardHeader";
 
 export const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn("text-xl font-semibold leading-none tracking-tight text-foreground", className)} {...props} />
+  <h3 ref={ref} className={cn("text-[15px] font-semibold leading-none tracking-tight text-foreground", className)} {...props} />
 ));
 CardTitle.displayName = "CardTitle";
 
 export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  <p ref={ref} className={cn("text-[14px] text-muted-foreground", className)} {...props} />
 ));
 CardDescription.displayName = "CardDescription";
 
 export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-4 pt-0", className)} {...props} />
 ));
 CardContent.displayName = "CardContent";
 
@@ -264,15 +261,15 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   return (
     <div className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ring-1 ring-inset",
+      "inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ring-1 ring-inset",
       {
-        'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 ring-transparent shadow-sm': variant === 'default',
-        'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 ring-border': variant === 'secondary',
-        'border-transparent bg-red-50 text-red-700 hover:bg-red-100 ring-red-600/10': variant === 'destructive',
+        'bg-primary/10 text-primary ring-primary/20': variant === 'default',
+        'bg-secondary text-secondary-foreground ring-border': variant === 'secondary',
+        'bg-red-50 text-red-700 ring-red-200/50': variant === 'destructive',
         'text-foreground ring-border': variant === 'outline',
-        'border-transparent bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-emerald-600/20': variant === 'success',
-        'border-transparent bg-amber-50 text-amber-700 hover:bg-amber-100 ring-amber-600/20': variant === 'warning',
-        'border-transparent bg-blue-50 text-blue-700 hover:bg-blue-100 ring-blue-700/10': variant === 'info',
+        'bg-teal-50 text-teal-700 ring-teal-200/50': variant === 'success',
+        'bg-amber-50 text-amber-700 ring-amber-200/50': variant === 'warning',
+        'bg-blue-50 text-blue-700 ring-blue-200/50': variant === 'info',
       },
       className
     )} {...props} />
@@ -352,7 +349,7 @@ export const Slider: React.FC<{ value: number[]; onValueChange: (v: number[]) =>
 // --- AVATAR ---
 export const Avatar: React.FC<{ src?: string; fallback: string; className?: string } & React.HTMLAttributes<HTMLDivElement>> = ({ src, fallback, className, ...props }) => {
   return (
-    <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border bg-muted shadow-sm", className)} {...props}>
+    <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border bg-muted", className)} {...props}>
       {src ? (
         <img src={src} alt="Avatar" className="aspect-square h-full w-full object-cover" />
       ) : (
@@ -407,7 +404,7 @@ export const CircularProgress: React.FC<{ value: number; size?: number; strokeWi
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <svg className="transform -rotate-90 w-full h-full drop-shadow-sm">
+      <svg className="transform -rotate-90 w-full h-full">
         <circle
           className="text-muted"
           strokeWidth={strokeWidth}
@@ -478,7 +475,7 @@ export const Tabs: React.FC<{
 };
 
 export const TabsList: React.FC<{ className?: string; children: React.ReactNode }> = ({ className, children }) => (
-  <div role="tablist" className={cn("inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar max-w-full shadow-inner", className)}>
+  <div role="tablist" className={cn("inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar max-w-full", className)}>
     {children}
   </div>
 );
@@ -496,7 +493,7 @@ export const TabsTrigger: React.FC<{ value: string; className?: string; children
       data-state={isActive ? "active" : "inactive"}
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isActive ? "bg-white text-foreground shadow-sm" : "hover:bg-white/50 hover:text-foreground text-muted-foreground",
+        isActive ? "bg-card text-foreground" : "hover:bg-card/50 hover:text-foreground text-muted-foreground",
         className
       )}
     >
@@ -558,7 +555,7 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-muted transition-colors focus:ring-2 focus:ring-primary",
+          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-card px-3 py-2 text-sm font-medium text-foreground ring-1 ring-inset ring-border hover:bg-muted transition-colors focus:ring-2 focus:ring-primary",
           triggerClassName
         )}
         onClick={(e) => {
@@ -574,7 +571,7 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-xl bg-card shadow-xl ring-1 ring-black/5 focus:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-lg bg-card border border-border focus:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="py-1">
             {options.map((opt) => (
@@ -632,7 +629,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, a
       </div>
       {open && (
         <div className={cn(
-          "absolute z-50 mt-2 w-56 origin-top-right rounded-xl bg-card shadow-xl ring-1 ring-black/5 focus:outline-none py-1 border border-border animate-in fade-in zoom-in-95 duration-100",
+          "absolute z-50 mt-2 w-56 origin-top-right rounded-lg bg-card border border-border focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100",
           align === 'right' ? 'right-0' : 'left-0'
         )}>
           {children}
@@ -669,7 +666,7 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
         onClick={() => onOpenChange(false)}
       />
       {/* Content */}
-      <div className="relative bg-card rounded-2xl border border-white/20 shadow-2xl w-[95vw] md:w-full md:max-w-lg p-8 animate-in scale-in-95 fade-in duration-300 z-50">
+      <div className="relative bg-card rounded-lg border border-border w-[95vw] md:w-full md:max-w-lg p-6 animate-in scale-in-95 fade-in duration-200 z-50">
         {children}
         <button
           onClick={() => onOpenChange(false)}
@@ -715,7 +712,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] p-4">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => onOpenChange(false)} />
-      <div className="relative w-full max-w-xl bg-card rounded-xl shadow-2xl border border-border overflow-hidden animate-in scale-in fade-in duration-200 z-50 flex flex-col">
+      <div className="relative w-full max-w-xl bg-card rounded-lg border border-border overflow-hidden animate-in scale-in fade-in duration-200 z-50 flex flex-col">
         <div className="flex items-center border-b border-border px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <input
@@ -789,7 +786,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           <div
             key={toast.id}
             className={cn(
-              "pointer-events-auto relative w-full rounded-xl border p-4 shadow-xl transition-all animate-in slide-in-right fade-in duration-300 ring-1 ring-black/5",
+              "pointer-events-auto relative w-full rounded-lg border border-border p-4 transition-all animate-in slide-in-right fade-in duration-200",
               toast.variant === 'destructive' ? "bg-card text-red-600 border-red-100" :
                 toast.variant === 'success' ? "bg-card text-emerald-700 border-emerald-100" :
                   "bg-card text-foreground border-border"

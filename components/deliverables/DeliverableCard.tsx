@@ -445,14 +445,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   return (
     <div
       className={cn(
-        'group relative rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md hover:-translate-y-1 overflow-hidden',
+        'group relative rounded-lg border border-border bg-card transition-colors hover:border-foreground/15 overflow-hidden',
         isActionable && 'cursor-pointer',
         className
       )}
       onClick={() => isActionable && handleNavigate()}
     >
       {/* Thumbnail/Icon Area */}
-      <div className="relative aspect-video bg-gradient-to-br from-muted to-muted flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
         {deliverable.betaFileUrl && deliverable.type === 'Video' ? (
           <div className="relative w-full h-full bg-zinc-900 group-hover:scale-105 transition-transform duration-500">
             {thumbnailUrl ? (
@@ -481,7 +481,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
             )}
           </div>
         ) : (
-          <div className="bg-card p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+          <div className="bg-card p-5 rounded-lg border border-border">
             <Icon className={cn('h-10 w-10', statusConfig.color)} />
           </div>
         )}

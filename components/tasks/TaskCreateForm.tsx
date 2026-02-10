@@ -170,13 +170,29 @@ function TaskFormFields({
               <option value={userId}>
                 {teamMembers.find(m => m.id === userId)?.name || userName} (me)
               </option>
-              {!isClientRole && teamMembers
-                .filter(m => m.id !== userId)
-                .map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
+              {!isClientRole && (() => {
+                const others = teamMembers.filter(m => m.id !== userId);
+                const internalMembers = others.filter(m => m.role !== 'client');
+                const clientMembers = others.filter(m => m.role === 'client');
+                return (
+                  <>
+                    {internalMembers.length > 0 && (
+                      <optgroup label="Internal Team">
+                        {internalMembers.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {clientMembers.length > 0 && (
+                      <optgroup label="Client Team">
+                        {clientMembers.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                );
+              })()}
             </select>
           </div>
         )}

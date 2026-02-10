@@ -220,7 +220,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
             {/* Right Column - Sidebar Info & Actions (1/3 width on desktop) */}
             <div className="space-y-6">
               {/* Deliverable Details */}
-              <div className="bg-muted border border-border rounded-xl p-4 space-y-4">
+              <div className="bg-muted border border-border rounded-lg p-4 space-y-4">
                 <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">
                   Deliverable Details
                 </h3>
@@ -282,7 +282,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                       <Button
                         variant="gradient"
                         size="lg"
-                        className="w-full gap-2 shadow-lg"
+                        className="w-full gap-2 "
                         onClick={() => {
                           if (resolvedUrl) {
                             window.open(resolvedUrl, '_blank');
@@ -312,7 +312,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                       <Button
                         variant="default"
                         size="lg"
-                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white "
                         onClick={onApprove}
                       >
                         <CheckCircle2 className="h-5 w-5" />

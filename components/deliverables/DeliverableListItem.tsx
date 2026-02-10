@@ -104,7 +104,7 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
     <div
       className={cn(
         'group flex items-center gap-4 p-4 bg-card border border-border rounded-lg',
-        'hover:border-border hover:shadow-sm transition-all cursor-pointer',
+        'hover:border-foreground/15 transition-colors cursor-pointer',
         className
       )}
       onClick={handleClick}

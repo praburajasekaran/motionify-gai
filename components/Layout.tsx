@@ -15,18 +15,18 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
   <Link to={path}>
     <div
       className={cn(
-        "group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent",
+        "group flex items-center justify-between w-full px-3 py-2 text-[14px] font-medium rounded-md transition-colors duration-150",
         active
-          ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-primary/50"
-          : "hover:bg-accent hover:text-foreground hover:pl-5"
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
       )}
     >
-      <div className="flex items-center gap-3">
-        <Icon className={cn("h-4.5 w-4.5 transition-all", active ? "text-primary" : "text-foreground/55 group-hover:text-foreground")} />
-        <span className={cn(active ? "" : "text-foreground/70 group-hover:text-foreground")}>{label}</span>
+      <div className="flex items-center gap-2.5">
+        <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+        <span>{label}</span>
       </div>
       {count !== undefined && (
-        <span className={cn("text-xs px-2 py-0.5 rounded-full transition-colors font-semibold", active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground group-hover:bg-accent")}>
+        <span className={cn("text-[12px] tabular-nums px-1.5 py-0.5 rounded transition-colors font-medium", active ? "bg-primary/15 text-primary" : "text-muted-foreground")}>
           {count}
         </span>
       )}
@@ -213,32 +213,34 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden animate-in fade-in"
+            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar — same bg as canvas, border-only separation */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-card border-r border-border transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-lg",
+          "fixed lg:static inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col h-full",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <div className="h-20 flex items-center px-6 shrink-0">
-            <Link to="/" className="flex items-center group cursor-pointer">
+          {/* Logo */}
+          <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
+            <Link to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark' ? '/motionify-dark-logo.png' : '/motionify-studio-dark.png'}
                 alt="Motionify Studio"
-                className="h-16 w-auto object-contain"
+                className="h-8 w-auto object-contain"
               />
             </Link>
           </div>
 
-          <div className="flex-1 py-6 px-4 space-y-8 overflow-y-auto">
+          {/* Nav sections */}
+          <div className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
             <div>
-              <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Workspace
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {!isClient(user) && (
                   <SidebarItem
                     icon={LayoutDashboard}
@@ -269,10 +271,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
 
             <div>
-              <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 System
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <SidebarItem
                   icon={Settings}
                   label="Settings"
@@ -289,30 +291,30 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 )}
                 <div
                   onClick={logout}
-                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent hover:bg-accent hover:text-foreground hover:pl-5 cursor-pointer"
+                  className="group flex items-center w-full px-3 py-2 text-[14px] font-medium rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
-                    <LogOut className="h-4.5 w-4.5 transition-all text-foreground/55 group-hover:text-foreground" />
-                    <span className="text-foreground/70 group-hover:text-foreground">Log Out</span>
+                  <div className="flex items-center gap-2.5">
+                    <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    <span>Log Out</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 border-t border-border shrink-0">
+          {/* User footer */}
+          <div className="p-3 border-t border-border shrink-0">
             <div
               id="logout-btn"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-card to-muted border border-border hover:border-border transition-colors cursor-pointer group shadow-sm hover:shadow-md"
+              className="flex items-center gap-2.5 p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
               onClick={logout}
               title="Logout"
             >
-              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-9 w-9 ring-2 ring-card" />
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-semibold truncate text-foreground">{user?.name || 'User'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
+              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
+              <div className="flex-1 overflow-hidden min-w-0">
+                <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
+                <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
               </div>
-              <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
           </div>
         </aside>
@@ -321,41 +323,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-background via-card to-background h-full relative focus:outline-none"
+          className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
-          {/* Top Header */}
-          <header className="h-16 bg-card border-b border-border z-30 shrink-0 sticky top-0 shadow-sm">
-            <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6 lg:px-10">
+          {/* Top bar — minimal, functional */}
+          <header className="h-12 border-b border-border z-30 shrink-0 sticky top-0 bg-background">
+            <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
-                  <Menu className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
+                  <Menu className="h-4 w-4" />
                 </Button>
 
-                <nav className="hidden md:flex items-center text-sm text-muted-foreground">
-                  <span className="hover:text-foreground cursor-pointer transition-colors font-medium">Workspace</span>
-                  <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
-                  <span className={cn("font-semibold text-foreground animate-in fade-in slide-in-from-left-2")}>
+                <nav className="hidden md:flex items-center text-[14px] text-muted-foreground">
+                  <span className="hover:text-foreground cursor-pointer transition-colors">Workspace</span>
+                  <ChevronRight className="h-3.5 w-3.5 mx-1.5 text-muted-foreground/50" />
+                  <span className="font-medium text-foreground">
                     {location.pathname === '/' ? 'Dashboard' :
                       location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
                   </span>
                 </nav>
               </div>
 
-              <div className="flex items-center gap-3 md:gap-5">
-                <div className="hidden md:flex items-center relative group">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="h-9 w-40 rounded-full border border-border bg-card/50 pl-10 pr-4 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground shadow-sm"
-                    onClick={() => setCommandOpen(true)}
-                    readOnly
-                  />
-                  <div className="absolute right-3 top-2.5 hidden lg:flex items-center gap-1">
-                    <kbd className="hidden sm:inline-block rounded bg-muted border border-border px-1.5 text-[10px] font-bold text-muted-foreground shadow-sm">⌘</kbd>
-                    <kbd className="hidden sm:inline-block rounded bg-muted border border-border px-1.5 text-[10px] font-bold text-muted-foreground shadow-sm">K</kbd>
+              <div className="flex items-center gap-1">
+                {/* Search trigger */}
+                <button
+                  onClick={() => setCommandOpen(true)}
+                  className="hidden md:flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-background text-[14px] text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>Search</span>
+                  <div className="flex items-center gap-0.5 ml-4">
+                    <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">⌘</kbd>
+                    <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">K</kbd>
                   </div>
-                </div>
+                </button>
 
                 <NotificationBell />
 
@@ -363,16 +363,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8"
                     onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
                     title={`Theme: ${theme} (click to change)`}
                   >
                     {resolvedTheme === 'dark' ? (
-                      <Moon className="h-4.5 w-4.5" />
+                      <Moon className="h-4 w-4" />
                     ) : (
-                      <Sun className="h-4.5 w-4.5" />
+                      <Sun className="h-4 w-4" />
                     )}
                     {theme === 'system' && (
-                      <Monitor className="h-2.5 w-2.5 absolute bottom-1 right-1" />
+                      <Monitor className="h-2 w-2 absolute bottom-1 right-1" />
                     )}
                   </Button>
                 )}
@@ -380,9 +381,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           </header>
 
-          {/* Page Content with Entrance Animation */}
-          <div key={location.pathname} className="flex-1 overflow-y-auto scroll-smooth">
-            <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 lg:py-10 animate-fade-in-up">
+          {/* Page Content */}
+          <div key={location.pathname} className="flex-1 overflow-y-auto">
+            <div className="max-w-6xl mx-auto px-6 py-6">
               {children}
             </div>
           </div>

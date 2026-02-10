@@ -792,7 +792,7 @@ export const ProjectDetail = () => {
     };
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto pb-20">
+        <div className="space-y-6 max-w-7xl mx-auto pb-16">
 
             {/* Terms Acceptance Banner - Shows if not accepted */}
             {!termsAccepted && <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />}
@@ -811,7 +811,7 @@ export const ProjectDetail = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4 overflow-hidden">
                             {/* Project Icon */}
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                                 <LayoutDashboard className="h-5 w-5" />
                             </div>
 
@@ -831,8 +831,7 @@ export const ProjectDetail = () => {
                                     <DropdownMenuItem>On Hold</DropdownMenuItem>
                                 </DropdownMenu>
 
-                                <Badge variant={getStatusVariant(project.status)} className="h-6 px-2 text-xs font-medium">
-                                    <Zap className="h-3 w-3 mr-1 fill-current" />
+                                <Badge variant={getStatusVariant(project.status)} className="text-[12px] font-medium">
                                     {project.status}
                                 </Badge>
 
@@ -883,7 +882,7 @@ export const ProjectDetail = () => {
                                 <TabsTrigger
                                     key={name}
                                     value={Object.keys(TAB_INDEX_MAP).find(key => TAB_INDEX_MAP[key as TabName] === index) || 'overview'}
-                                    className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 hover:text-foreground text-muted-foreground"
+                                    className="rounded-md px-3 py-1.5 text-[14px] font-medium transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground hover:bg-muted/50 hover:text-foreground text-muted-foreground"
                                 >
                                     {name}
                                 </TabsTrigger>
@@ -895,29 +894,29 @@ export const ProjectDetail = () => {
                 {/* --- TAB CONTENT --- */}
                 {/* --- OVERVIEW TAB --- */}
                 <TabsContent value="overview">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left Column (Main) */}
-                        <div className="lg:col-span-2 space-y-8">
+                        <div className="lg:col-span-2 space-y-5">
                             {/* Progress Section */}
-                            <Card className="overflow-hidden bg-card shadow-sm border-border">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border bg-muted/30">
-                                    <CardTitle className="text-lg">Project Health</CardTitle>
+                            <Card className="overflow-hidden">
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border">
+                                    <CardTitle>Project Health</CardTitle>
                                     <Badge variant={project.progress === 100 ? 'success' : 'outline'}>{project.progress}% Complete</Badge>
                                 </CardHeader>
-                                <CardContent className="pt-6">
-                                    <div className="flex flex-col md:flex-row gap-8 items-center">
-                                        <div className="shrink-0 drop-shadow-lg">
-                                            <CircularProgress value={project.progress} size={150} strokeWidth={12} color={project.progress > 80 ? 'text-emerald-500' : 'text-primary'} />
+                                <CardContent className="pt-4">
+                                    <div className="flex flex-col md:flex-row gap-6 items-center">
+                                        <div className="shrink-0">
+                                            <CircularProgress value={project.progress} size={120} strokeWidth={10} color={project.progress > 80 ? 'text-teal-600' : 'text-primary'} />
                                         </div>
-                                        <div className="flex-1 space-y-5 w-full">
-                                            <p className="text-muted-foreground text-sm leading-relaxed">{project.description}</p>
-                                            <div className="bg-gradient-to-r from-purple-50 to-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Sparkles className="h-4 w-4 text-purple-600" />
-                                                    <h4 className="text-sm font-bold text-purple-900">AI Risk Analysis</h4>
+                                        <div className="flex-1 space-y-4 w-full">
+                                            <p className="text-muted-foreground text-[14px] leading-relaxed">{project.description}</p>
+                                            <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    <h4 className="text-[14px] font-semibold text-foreground">AI Risk Analysis</h4>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground italic">
-                                                    "{riskAssessment || 'Analyzing...'}"
+                                                <p className="text-[14px] text-muted-foreground">
+                                                    {riskAssessment || 'Analyzing...'}
                                                 </p>
                                             </div>
                                         </div>
@@ -926,9 +925,9 @@ export const ProjectDetail = () => {
                             </Card>
 
                             {/* Recent Deliverables Table - Now uses real API data */}
-                            <Card className="border-border shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border bg-muted/30">
-                                    <CardTitle className="text-lg">Active Deliverables</CardTitle>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border">
+                                    <CardTitle>Active Deliverables</CardTitle>
                                     <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
@@ -942,7 +941,7 @@ export const ProjectDetail = () => {
                                                 onClick={() => navigate(`/projects/${id}/deliverables/${del.id}`)}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground shadow-inner">
+                                                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground border border-border">
                                                         {del.type === 'Video' ? <FileVideo className="h-5 w-5" /> : <FileBox className="h-5 w-5" />}
                                                     </div>
                                                     <div>
@@ -986,11 +985,11 @@ export const ProjectDetail = () => {
                         {/* Right Column (Side) */}
                         <div className="space-y-6">
                             {/* Recent Activity */}
-                            <Card className="border-border shadow-sm">
-                                <CardHeader className="border-b border-border pb-3">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recent Activity</CardTitle>
+                            <Card>
+                                <CardHeader className="border-b border-border">
+                                    <CardTitle className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Recent Activity</CardTitle>
                                 </CardHeader>
-                                <CardContent className="pt-6">
+                                <CardContent className="pt-4">
                                     <div className="space-y-0">
                                         {activityLog.length > 0 ? activityLog.map((log, i) => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
@@ -1006,7 +1005,7 @@ export const ProjectDetail = () => {
                                                     {i !== activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-muted" />
                                                     )}
-                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-card shadow-sm" />
+                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-7 w-7 z-10 ring-2 ring-card" />
                                                     <div>
                                                         <p className="text-xs text-muted-foreground mb-0.5 group-hover:text-foreground transition-colors">
                                                             <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
@@ -1026,23 +1025,25 @@ export const ProjectDetail = () => {
                             </Card>
 
                             {/* Deadlines - Now uses real API data */}
-                            <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white shadow-lg shadow-black/10 border-zinc-700">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-2 mb-5">
-                                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                                        <h3 className="font-bold tracking-tight">Upcoming Deadlines</h3>
+                            <Card>
+                                <CardHeader className="border-b border-border">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                                        <CardTitle>Upcoming Deadlines</CardTitle>
                                     </div>
-                                    <div className="space-y-4">
+                                </CardHeader>
+                                <CardContent className="pt-3">
+                                    <div className="space-y-3">
                                         {deliverablesLoading ? (
-                                            <p className="text-sm text-muted-foreground italic">Loading...</p>
-                                        ) : deliverables.slice(0, 2).map(d => (
-                                            <div key={d.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-4 py-1">
-                                                <span className="text-zinc-200 truncate w-32 font-medium">{d.title}</span>
-                                                <span className="font-mono text-muted-foreground text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                            <p className="text-[14px] text-muted-foreground">Loading...</p>
+                                        ) : deliverables.slice(0, 3).map(d => (
+                                            <div key={d.id} className="flex justify-between items-center text-[14px] border-l-2 border-primary pl-3 py-1">
+                                                <span className="text-foreground truncate w-32 font-medium">{d.title}</span>
+                                                <span className="tabular-nums text-muted-foreground text-[13px]">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
                                         {!deliverablesLoading && deliverables.length === 0 && (
-                                            <p className="text-sm text-muted-foreground italic">No upcoming deadlines.</p>
+                                            <p className="text-[14px] text-muted-foreground">No upcoming deadlines.</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -1124,7 +1125,7 @@ export const ProjectDetail = () => {
                                                     {task.title}
                                                 </span>
                                                 <div className="flex items-center gap-1.5 shrink-0">
-                                                    <Badge variant="secondary" className={cn("text-[11px] font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
+                                                    <Badge variant="secondary" className={cn("text-[12px] font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
 
                                                     <Button
                                                         size="sm"
