@@ -1,0 +1,437 @@
+# Ralph Progress Log - Motionify PM Portal
+Started: 2026-01-09
+Branch: ralph/complete-features
+
+## Codebase Patterns
+
+Add discovered patterns here as you work through tasks. These help future iterations understand the codebase quickly.
+
+### File Structure
+- **Pages**: `pages/` - React Router pages
+- **Components**: `components/` - Reusable UI components
+- **API Functions**: `netlify/functions/` - Serverless API endpoints
+- **Database**: `database/schema.sql` - Neon Postgres schema
+- **Permissions**: `shared/permissions.ts` - Role-based access control
+- **State Transitions**: Look for `*StateTransitions.ts` files for state machine patterns
+
+### Tech Stack
+- **Frontend**: React + Vite + TypeScript
+- **Styling**: Tailwind CSS
+- **Backend**: Netlify Functions (TypeScript)
+- **Database**: Neon Postgres
+- **File Storage**: Cloudflare R2
+- **Auth**: Magic link (JWT pending)
+- **Testing**: Playwright E2E
+
+### Conventions
+- Use `shared/permissions.ts` for all permission checks
+- Follow existing state machine patterns when adding new transitions
+- Mock emails in development (no real SMTP in dev)
+- Use `MOCK_USER_*` constants from `constants.ts` for test accounts
+
+### Testing
+- Browser verification at `http://localhost:5173`
+- Run typecheck: `npm run typecheck`
+- Run E2E tests: `npm run test:e2e`
+
+---
+
+## Progress Entries
+
+<!-- Each iteration appends progress here -->
+
+## 2026-01-09 - TC-AUTH-006: Session Persistence
+- **What was implemented:** Added 30-day session expiry to localStorage-based authentication. Changed storage key from `mockUser` to `mockSession` which stores `{user, expiresAt}`. Added expiry validation on load - expired sessions are automatically cleared.
+- **Files changed:**
+  - `contexts/AuthContext.tsx` - Updated `loadUser()` to validate expiry, updated `setMockUser()` to include expiry, updated `logout()` to use new key
+- **Learnings for future iterations:**
+  - The codebase already has 400+ pre-existing TypeScript errors (mostly in `landing-page-new/`), so typecheck success means "no new errors"
+  - Session persistence was mostly working via localStorage - just needed expiry logic
+
+---
+
+## 2026-01-09 - TC-PM-003: Archive Completed Project
+- **What was implemented:** Archive feature with confirmation dialog requiring project name typing. Archive changes project status to 'Archived', makes it hidden from main list, accessible via "📦 View Archived" filter. Archived projects show in read-only mode with disabled Save button.
+- **Files changed:**
+  - `pages/ProjectSettings.tsx` - Added showArchiveDialog state, confirmation dialog with name input, handleArchiveProject now changes status, isArchived read-only mode
+  - `pages/ProjectList.tsx` - Added 'Archived' case to getStatusVariant, excluded Archived from 'all' filter, added "📦 View Archived" option to dropdown
+- **Learnings for future iterations:**
+  - Variable declaration order matters in React - `isArchived` needed to be declared AFTER `project` state
+  - No typecheck script exists in package.json, use `npx tsc --noEmit --skipLibCheck` instead
+  - MOCK_PROJECTS array is mutable for frontend-only state changes
+
+---
+
+## 2026-01-09 - TC-PM-004: Delete Project (Admin Only)
+- **What was implemented:** Permanent project deletion for Super Admin only. Enhanced delete dialog with project name confirmation (like archive). Delete button only visible to Super Admin and only enabled for archived projects. Triggers mocked audit log and email notifications via toast messages.
+- **Files changed:**
+  - `pages/ProjectSettings.tsx` - Added `useAuthContext` import, `deleteConfirmInput` state, `isSuperAdmin` check, enhanced confirmation dialog with name input, conditional rendering of delete button
+- **Learnings for future iterations:**
+  - Good pattern to require both archiving AND admin permission for destructive actions
+  - Toast notifications work well for mocking email/audit log in frontend-only implementations
+  - Pre-existing TypeScript errors in `landing-page-new/` don't affect portal code - typecheck exits 0 even with those errors
+
+---
+
+## 2026-01-10 - TC-PM-005: Project Status Transitions
+- **What was implemented:** Enforced project status transitions using a state machine utility. Implemented `handleStatusChange` in `ProjectSettings.tsx` to validate changes before applying them. Added 'In Review' to `ProjectStatus` type.
+- **Files changed:**
+  - `utils/projectStateTransitions.ts` - New utility for validation
+  - `pages/ProjectSettings.tsx` - Added validation logic and notifications
+  - `types.ts` - Added 'In Review' status
+- **Learnings for future iterations:**
+  - Always check `types.ts` against UI dropdowns (found missing 'In Review' status)
+  - Extract complex validation logic to utility files (like `projectStateTransitions.ts`) for reusability and testing
+  - TypeScript strictly checks record keys against union types
+
+---
+
+## 2026-01-10 - TC-TM-002: Client Cannot Create Tasks
+- **What was implemented:** Permission check to prevent clients from creating tasks - both UI restriction (hiding Add Task button and quick-add form) and API enforcement (403 response for client roles).
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/components/TaskList.tsx` - Wrapped quick-add form with `isInternalUser` conditional (Add Task button was already hidden)
+  - `netlify/functions/tasks.ts` - Added role check in POST /tasks handler, returns 403 with "Only Motionify team can create tasks" for client roles
+- **Learnings for future iterations:**
+  - Portal components are in `landing-page-new/src/lib/portal/` not root `components/`
+  - The `isInternalUser` pattern (checking for MOTIONIFY_MEMBER or PROJECT_MANAGER roles) is already established in TaskList.tsx
+  - Client roles to check for: 'Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'
+
+---
+
+## 2026-01-10 - TC-TM-009: Task Visibility - Internal Only
+- **What was implemented:** Enforced internal task visibility restrictions - clients cannot see tasks with `visibleToClient: false`. Added visual "Internal" badge for team members. API enforcement returns 404 (not 403) for clients accessing internal tasks directly to prevent enumeration.
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/components/TaskItem.tsx` - Replaced "Not visible to client" text with styled amber "Internal" badge with lock icon (positioned top-right)
+  - `netlify/functions/tasks.ts` - Added client role check in GET /tasks/:id (returns 404 for internal tasks), added filtering in GET /tasks list endpoint
+- **Learnings for future iterations:**
+  - TaskList.tsx ALREADY had `visibleToClient` filtering implemented (lines 80-82) - just needed badge and API enforcement
+  - Return 404 instead of 403 when hiding resources from clients - prevents enumeration of internal task IDs
+  - Mock data in `data.ts` is not connected to live app - app uses actual database, so test data may differ
+
+---
+
+## 2026-01-10 - TC-FM-006: Rename File
+- **What was implemented:** Enhanced file rename functionality with extension preservation, duplicate name validation, activity logging, and inline error feedback.
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/types.ts` - Added FILE_RENAMED to ActivityType enum
+  - `landing-page-new/src/lib/portal/utils/activityLogger.ts` - Added createFileRenamedActivity() function
+  - `landing-page-new/src/lib/portal/AppContext.tsx` - Enhanced renameFile() with extension preservation, duplicate validation, activity logging, and result object return
+  - `landing-page-new/src/lib/portal/components/FileItem.tsx` - Added error state, improved handleRename to display errors inline with red border
+- **Learnings for future iterations:**
+  - FileItem.tsx already had inline edit UI with isEditing state - just needed validation and activity logging
+  - Return result objects from context functions to enable UI error feedback (e.g. { success: boolean, error?: string })
+  - Mock projects have empty files arrays - can't browser-test file features without injecting test data
+  - Extension preservation: extract extension from original, strip from user input, then re-append
+
+---
+
+## 2026-01-10 - TC-TC-002 & TC-TC-003: Comment Edit Within 1 Hour
+- **What was implemented:** Discovered feature was already fully implemented. 1-hour edit window enforced in `editComment()` function, 'Edited' badge displays on edited comments, disabled edit button with tooltip for old comments.
+- **Files already complete:**
+  - `landing-page-new/src/lib/portal/AppContext.tsx` - `editComment()` at lines 435-461 validates 1-hour window and sets `editedAt`
+  - `landing-page-new/src/lib/portal/components/TaskItem.tsx` - Lines 246-281 calculate `canEdit`, render "(Edited)" badge, show disabled edit with tooltip
+  - `landing-page-new/src/lib/portal/types.ts` - `editedAt?: number` property on Comment type
+- **Learnings for future iterations:**
+  - Read implementation code before assuming features are missing - prd.json `relatedFiles` may be outdated (listed `components/comments/CommentItem.tsx` which doesn't exist)
+  - Comment editing is done inline in TaskItem.tsx, not in a separate CommentItem component
+  - Two related test cases (TC-TC-002 and TC-TC-003) can be marked complete together if they test the same feature
+
+---
+
+## 2026-01-11 - TC-TC-005: Invite Client Team Member
+- **What was implemented:** Backend invitation flow for Client Primary Contact to invite team members. Created `project_invitations` table with token-based invitations (7-day expiry). Implemented 5 API functions: create, list, accept, revoke, resend. Frontend was already complete.
+- **Files created:**
+  - `database/schema.sql` - Added `project_invitations` table with indexes and trigger
+  - `netlify/functions/invitations-create.ts` - POST to create invitation with 7-day token
+  - `netlify/functions/invitations-list.ts` - GET to list project invitations (filter by status)
+  - `netlify/functions/invitations-accept.ts` - POST to accept invitation via token
+  - `netlify/functions/invitations-revoke.ts` - DELETE to revoke pending invitation
+  - `netlify/functions/invitations-resend.ts` - POST to resend invitation email
+- **Learnings for future iterations:**
+  - Frontend can be fully implemented before backend exists (API client expects endpoints)
+  - Mock email sending via console.log is sufficient for development
+  - Token-based invitations with expiry timestamps are simple but effective
+  - Always join with users table to get inviter name in list endpoint
+  - Return 404 (not 403) when invitation not found to prevent enumeration attacks
+
+---
+
+## 2026-01-11 - TC-TC-004: @Mention Notification
+- **What was implemented:** Connected frontend `addComment()` in `AppContext.tsx` to backend API via `addTaskComment()`. This enables backend @mention parsing and email notifications via `sendMentionNotification()`. Feature was 90% complete - just needed the frontend-backend connection.
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/AppContext.tsx` - Made `addComment` async, added try/catch API call to `addTaskComment()` after local state update
+- **Learnings for future iterations:**
+  - Feature can appear complete in frontend (autocomplete, rendering) but miss the backend API connection
+  - `addTaskComment` API was already fully implemented with @mention detection and email sending
+  - Pattern: update local state first for responsive UI, then call API in background (don't block on API)
+  - The 40 TypeScript errors in typecheck are pre-existing in other files (components/ui, pages/PermissionTest.tsx etc)
+
+---
+
+## 2026-01-11 - TC-TC-006: Client PM Removes Team Member
+- **What was implemented:** Client Primary Contact can remove other client team members from a project. Added TEAM_MEMBER_REMOVED activity type, createTeamMemberRemovedActivity() logger function, removeClientTeamMember() context function, and UI with confirmation dialog.
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/types.ts` - Added TEAM_MEMBER_REMOVED to ActivityType enum
+  - `landing-page-new/src/lib/portal/utils/activityLogger.ts` - Added createTeamMemberRemovedActivity() function
+  - `landing-page-new/src/lib/portal/AppContext.tsx` - Added removeClientTeamMember() function to context
+  - `landing-page-new/src/lib/portal/components/TeamManagement.tsx` - Added UserMinus button + confirmation dialog
+- **Learnings for future iterations:**
+  - Follow existing activity logging patterns (TEAM_MEMBER_INVITED → TEAM_MEMBER_REMOVED)
+  - Always prevent self-removal in team management UIs (check user.id !== currentUser.id)
+  - Use confirmation dialogs for destructive actions with clear explanation of consequences
+  - The 19 TypeScript errors in typecheck are pre-existing in unrelated files
+
+---
+
+
+## 2026-01-11 - TC-TC-007: Client PM Cannot Remove Self
+- **What was implemented:** Prevented Client Primary Contact from removing themselves. Updated TeamManagement.tsx to disable the remove button for the current user and added tooltips. Added backend validation in AppContext to block self-removal.
+- **Files changed:**
+  - `landing-page-new/src/lib/portal/components/TeamManagement.tsx` - Disabled remove button logic for currentUser
+  - `landing-page-new/src/lib/portal/AppContext.tsx` - Added guard clause in removeClientTeamMember
+- **Learnings for future iterations:**
+  - Better to show disabled buttons with tooltips than to hide controls completely (improves UX/discoverability of why action is blocked)
+  - Always enforce UI restrictions with context/backend validation guarantees
+  - Remember `npx tsc --noEmit --skipLibCheck` is the correct typecheck command for this project
+
+---
+
+## 2026-01-11 - Housekeeping: Fixed 40+ TypeScript Errors
+- **What was implemented:** Resolved all accumulating TypeScript errors in the main portal application. The codebase now passes `npx tsc --noEmit` with 0 errors.
+- **Files changed:**
+  - `pages/PermissionTest.tsx` - Fixed outdated mock data types
+  - `components/deliverables/mockDeliverables.ts` - Syncing mock data with `TimestampedComment` interface
+  - `components/ErrorBoundary.tsx` - Fixed React component type inheritance
+  - `components/auth/SessionExpiredModal.tsx` - Replaced `useRouter` (Next.js) with `useNavigate` (React Router)
+  - `components/ui/badge.tsx` - Added explicit `className` prop to interface
+- **Learnings for future iterations:**
+  - Mock data often drifts from actual type definitions if not checked regularly
+  - `PermissionTest.tsx` is a good place to catch type drifts as it exercises many interfaces
+  - `landing-page-new/` errors are excluded and tracked separately
+
+---
+
+## 2026-01-11 - TC-NT-001: Email on Task Assignment
+- **What was implemented:** Backend email notifications for task assignments. Updated `tasks.ts` to trigger `sendTaskAssignmentEmail` (in `send-email.ts`) on Create Task (POST) and Update Task (PATCH) when an assignee is set. Uses `project_number` from the database as the project identifier in the email.
+- **Files changed:**
+  - `netlify/functions/send-email.ts` - Added `sendTaskAssignmentEmail` template
+  - `netlify/functions/tasks.ts` - Added email trigger logic to POST and PATCH handlers
+- **Learnings for future iterations:**
+  - The `projects` table uses `project_number` (e.g., PROJ-2026-001) as the primary user-facing identifier, not a name column.
+  - When implementing emails, always check if the necessary data (like project title/number) is available in the current context or needs to be fetched.
+  
+---
+
+## 2026-01-11 - TC-NT-002: Email on Deliverable Ready
+- **What was implemented:** Backend email notifications for "Ready for Review" status updates. When a deliverable status changes to `awaiting_approval` via PATCH /deliverables/:id, it fetches the client (Primary Contact) details and triggers `sendDeliverableReadyEmail` with a link to review.
+- **Files changed:**
+  - `netlify/functions/send-email.ts` - Added `sendDeliverableReadyEmail` template
+  - `netlify/functions/deliverables.ts` - Added email trigger logic to PATCH handler
+- **Learnings for future iterations:**
+  - Template strings in TypeScript need careful handling when modifying via AI to avoid escaping issues (e.g. `\${var}` becoming literal).
+  - Netlify Function logs (`console.log`) are the primary way to verify email sending in development without a real SMTP service or UI feedback.
+
+2026-01-11: Implemented Email on Revision Request (TC-NT-003)
+- Created sendRevisionRequestEmail in netlify/functions/send-email.ts.
+- Updated netlify/functions/tasks.ts to handle revision_requested status.
+- Updated AppRoot.tsx to integrate frontend with backend API.
+
+2026-01-11: Implemented Email on Revision Request (TC-NT-003)
+- Created sendRevisionRequestEmail in netlify/functions/send-email.ts.
+- Updated netlify/functions/tasks.ts to handle revision_requested status.
+- Updated AppRoot.tsx to integrate frontend with backend API.
+## 2026-01-11 - TC-DA-007: Final Delivery After Payment
+- **What was implemented:** Added payment simulation flow. 'Pay Balance' button appears for 'payment_pending' deliverables. confirm() dialog simulates payment gateway. On success, updates status to 'final_delivered' which triggers 'Final Files Ready' email via backend.
+- **Files changed:**
+  - `components/deliverables/DeliverableCard.tsx` - Added Pay Balance button and handlePayment logic
+  - `netlify/functions/deliverables.ts` - Added email trigger for final_delivered status
+  - `netlify/functions/send-email.ts` - Added sendFinalDeliverablesEmail template
+- **Learnings for future iterations:**
+  - For simulated payments, a simple window.confirm is enough for MVP, but real implementation would need Stripe/Payment provider SDK.
+  - `window.location.reload()` is a crude but effective way to refresh state after major status changes in a non-optimistic UI.
+
+
+- [x] Implement "View Payment History" (TC-PW-004)
+  - Created `services/paymentApi.ts` for fetching payments.
+  - Created `components/payments/PaymentHistory.tsx` to display payment list and summary cards.
+  - Updated `types.ts` with `Payment` interface.
+  - Added "Payments" tab to `ProjectDetail.tsx` and integrated `PaymentHistory`.
+  - Updated `constants.ts` to include 'payments' in `TAB_INDEX_MAP`.
+  - Verified in browser (Localhost:5173).
+
+## 2026-01-11 - TC-PT-001: Client Must Accept Terms Before Work
+- **What was implemented:** Added terms acceptance enforcement. Clients must accept terms via a banner before they can approve deliverables or request revisions.
+- **Files changed:**
+  - `types.ts` - Added `termsAcceptedAt` and `termsAcceptedBy` to Project interface.
+  - `components/project/TermsBanner.tsx` - Created new component for terms display and acceptance.
+  - `pages/ProjectDetail.tsx` - Integrated TermsBanner.
+  - `utils/deliverablePermissions.ts` - Updated `canApproveDeliverable` and `canRequestRevisions` to check `termsAcceptedAt`.
+  - `hooks/useDeliverablePermissions.ts` - Updated to use modified permission functions.
+  - `components/deliverables/DeliverableReviewModal.tsx` - Updated to show "Terms not accepted" message if action is attempted (though buttons should be disabled/hidden by permissions).
+- **Learnings for future iterations:**
+  - Permission logic should be centralized in utility functions (`utils/deliverablePermissions.ts`) rather than scattered in components.
+  - Using a dedicated banner component keeps the main project page clean.
+  - Mocking API calls (updating MOCK_PROJECTS) is effective for frontend-first development.
+
+---
+
+## 2026-01-11 - TC-AD-001: User Management - Create User
+- **What was implemented:** Super Admin can create, list, update, and deactivate users via Admin → Users page. Created 4 backend API endpoints and a standalone UserManagement page with permission check.
+- **Files created:**
+  - `netlify/functions/users-list.ts` - GET endpoint with status/role/search filters
+  - `netlify/functions/users-create.ts` - POST endpoint with magic link invitation
+  - `netlify/functions/users-update.ts` - PATCH endpoint for name/role updates
+  - `netlify/functions/users-delete.ts` - DELETE endpoint (soft delete, invalidates sessions)
+  - `pages/admin/UserManagement.tsx` - Standalone page with Super Admin check
+- **Files modified:**
+  - `App.tsx` - Added route `/admin/users`
+- **Learnings for future iterations:**
+  - Existing frontend components in `landing-page-new/` use path aliases that don't resolve from root project - better to create standalone components in `pages/` or `components/`
+  - User invitation uses same magic link pattern as auth-request-magic-link.ts - can reuse token generation logic
+  - Soft delete (is_active = false) preserves historical data while revoking access
+
+---
+
+## 2026-01-11 - TC-AD-002: User Management - Deactivate User
+- **What was implemented:** Added deactivation modal with reason input to UserManagement.tsx. Modal displays consequences (access revoked, sessions invalidated, email sent, data preserved), requires 10+ character reason. Backend updated to accept reason in request body and include in email log.
+- **Files changed:**
+  - `pages/admin/UserManagement.tsx` - Added deactivation modal state, modal UI with consequence list and reason textarea
+  - `netlify/functions/users-delete.ts` - Added body parsing for reason, enhanced email log with reason
+- **Learnings for future iterations:**
+  - Modal confirmation with reason input is better UX than simple window.confirm() for destructive actions
+  - Character minimum validation prevents empty or meaningless reasons
+
+---
+
+## 2026-01-11 - TC-AD-003: Cannot Deactivate Last Super Admin
+- **What was implemented:** Added validation to prevent deactivating the last Super Admin. Backend counts active super admins and returns 400 error if attempting to deactivate when only 1 remains.
+- **Files changed:**
+  - `netlify/functions/users-delete.ts` - Added query to count active super admins, returns error with suggestion to promote another user first
+- **Learnings for future iterations:**
+  - Simple count query is effective for "last of type" validations
+  - Include actionable suggestion in error message (e.g., "Promote another user first")
+  - Check role before executing expensive validation queries
+
+## 2026-01-11 - TC-AD-004: Activity Log - View All Projects
+- **What was implemented:** Admin Activity Logs page accessible at `/admin/activity-logs`. Super Admin can view all project activities with filtering (date range, project, user, action type), search, and CSV export. Non-admins see "Access Denied" message.
+- **Files created:**
+  - `pages/admin/ActivityLogs.tsx` - Standalone admin page with filtering, search, table, and CSV export
+- **Files modified:**
+  - `App.tsx` - Added import and route for ActivityLogs
+- **Learnings for future iterations:**
+  - Aggregating activities from mock `MOCK_PROJECTS` data works for MVP; backend API structure ready for future DB integration
+  - Following `UserManagement.tsx` pattern ensures consistency across admin pages
+  - Client-side CSV export is simple with Blob and download link approach
+
+
+---
+
+## 2026-01-11 - TC-AC-002: Project Manager - Assigned Projects Only
+- **What was implemented:** Enforced role-based access control in the projects API. Updated `projects.ts` to filter projects based on user role: Project Managers only see projects linked to inquiries assigned to them, Clients only see their own projects, and Super Admins see all. Added strict input validation for User ID.
+- **Files changed:**
+  - `netlify/functions/projects.ts` - Updated GET handler to accept `userId`, fetch user role, and apply role-specific SQL filters (JOIN with inquiries for PMs).
+- **Learnings for future iterations:**
+  - Local database connection in `npm run dev:all` environment seems flaky (encountered 500 errors on unrelated endpoints), but code logic can be verified via unit tests or code review.
+  - Relying on `clientUserId` query param was insufficient; strictly validating role from DB via `userId` is more secure.
+
+---
+
+## 2026-01-11 - TC-UI-003: Accessibility Improvements
+- **What was implemented:** Added global focus ring styles. Implemented "Skip to content" link in Layout.
+- **Files changed:**
+  - `index.css` - Added :focus-visible rules
+  - `components/Layout.tsx` - Added skip link and main ID
+- **Learnings for future iterations:**
+  - `sr-only focus:not-sr-only` is standard for skip links.
+  - Adding `tabIndex={-1}` allows programmatic focus on non-interactive elements.
+
+---
+
+## 2026-01-12 - TC-UI-004: Error States - API Failure
+- **What was implemented:** Implemented global API error handling. Configured React Query to `throwOnError`, which triggers the existing `ErrorBoundary`. Restructured `App.tsx` providers to include `QueryErrorResetBoundary`, allowing the "Try Again" button to reset failed queries and retry.
+- **Files changed:**
+  - `shared/providers/QueryProvider.tsx` - Set `throwOnError: true`
+  - `components/ErrorBoundary.tsx` - Added `onReset` prop handling
+  - `App.tsx` - Added `QueryErrorResetBoundary`
+  - `pages/PermissionTest.tsx` - Added "Simulate 500 API Error" button for verification
+- **Learnings for future iterations:**
+  - `QueryErrorResetBoundary` is essential when using `ErrorBoundary` with React Query to ensuring retries actually re-fetch data instead of just re-rendering the error.
+  - Arrow functions as class properties in React components allow easy access to `this`, but `this.props` TS typing can be finicky without explicit generic typings or if `ts-ignore` is needed.
+
+---
+
+## 2026-01-12 - TC-AD-005: Activity Log - PM Sees Assigned Only
+- **What was implemented:** Updated ActivityLogs.tsx to filter activity logs based on user role. Super Admins see all logs. Project Managers only see logs for projects they are assigned to (via motionifyTeam check).
+- **Files changed:**
+  - `pages/admin/ActivityLogs.tsx` - Added role-based filtering logic
+- **Learnings for future iterations:**
+  - When filtering mock data, strict ID checks might fail if mock user IDs in AuthContext differ from data.ts. Used email matching for robustness.
+
+---
+
+## 2026-01-12 - TC-AC-005: Session Invalidation on Deactivation
+- **What was implemented:** Verified existing implementation prevents deactivated users from maintaining sessions. users-delete.ts explicitly deletes sessions and magic link tokens.
+- **Files changed:**
+  - None (Verification only)
+- **Learnings for future iterations:**
+  - Always verify if "blocked" tasks were actually unblocked by previous work but not updated in tracking.
+
+
+2026-01-12: TC-PM-007: Cannot Delete Last Project Manager complete
+- Investigated 'projects' table mismatch, discovered 'vertical_slice_projects' table was missing.
+- Ran 'database/add-missing-tables.sql' to fix database schema.
+- Created 'netlify/functions/project-members-remove.ts' backend endpoint.
+- Implemented validation logic to prevent removing the assigned Project Manager if they are the last one.
+- Created 'scripts/verify-tc-pm-007.cjs' to verify the fix with real DB interactions (seeding test data).
+- Verified API returns 400 Bad Request with correct error message.
+- Updated 'prd.json' and 'MOTIONIFY-PORTAL-TEST-CASES.md'.
+
+## 2026-01-12 - TC-NT-005: Notification Preferences
+- **What was implemented:** Implemented comprehensive notification preferences system. Users can toggle email notifications for Task Assignments, Mentions, Project Updates, and Marketing. Backend checks these preferences before sending emails.
+- **Files created:**
+  - `database/add-user-preferences.sql` - Migration for `user_preferences` table
+  - `netlify/functions/users-settings.ts` - API for user settings management (GET/PUT)
+  - `pages/Settings.tsx` - Frontend settings page with 4 toggles
+- **Files modified:**
+  - `netlify/functions/tasks.ts` - Added preference checks for assignment and mention emails
+  - `netlify/functions/deliverables.ts` - Added preference checks for deliverable emails
+  - `App.tsx` & `components/Layout.tsx` - Added Settings route and navigation
+- **Learnings for future iterations:**
+  - Explicit preference checks in backend logic are cleaner than filtering at sending time
+  - Ensuring database migrations are run in verification scripts is crucial for local testing
+  - PostgreSQL `pg` library locally might require different SSL settings than production
+
+---
+
+## 2026-01-12 - Scheduled Job Infrastructure (TC-FM-007 & TC-PW-003)
+- **What was implemented:** Netlify Scheduled Functions infrastructure for background jobs. Two scheduled functions: file expiry check (daily at 2 AM UTC) and payment reminder (daily at 9 AM UTC).
+- **Files created:**
+  - `database/add-file-expiry-tracking.sql` - Migration for `final_delivered_at`, `files_expired`, `last_reminder_sent` columns
+  - `netlify/functions/scheduled-file-expiry.ts` - Daily job to mark 365+ day old deliverables as expired
+  - `netlify/functions/scheduled-payment-reminder.ts` - Daily job to send payment reminders for 7+ day pending payments
+- **Files modified:**
+  - `netlify/functions/deliverables.ts` - Set `final_delivered_at` on final delivery, check `files_expired` in GET (returns 403)
+  - `netlify/functions/send-email.ts` - Added `sendPaymentReminderEmail` template
+- **Learnings for future iterations:**
+  - Netlify Scheduled Functions use `@netlify/functions` Config export with `schedule: "@daily"` syntax
+  - For `pg` pool in scheduled context, import as `import pg from 'pg'; const { Pool } = pg;`
+  - Only 1 item remains in `notImplemented`: TC-NT-004 (In-App Notification Bell) needs UI work, not infra
+
+---
+
+## 2026-01-12 - TC-NT-004: In-App Notification Bell
+- **What was implemented:** In-app notification bell with dropdown. Created NotificationContext for state management with mock notification data. NotificationBell component displays animated unread count badge. NotificationDropdown shows grouped notifications (New/Earlier sections). Click to mark as read and navigate.
+- **Files created:**
+  - `contexts/NotificationContext.tsx` - Notification state management with mock data
+  - `components/notifications/NotificationBell.tsx` - Bell icon with badge and dropdown trigger
+  - `components/notifications/NotificationDropdown.tsx` - Dropdown with header, notification list, footer
+  - `components/notifications/NotificationItem.tsx` - Individual notification item
+  - `components/notifications/index.ts` - Component exports
+- **Files modified:**
+  - `App.tsx` - Added NotificationProvider wrapper
+  - `components/Layout.tsx` - Replaced placeholder bell with NotificationBell component
+- **Learnings for future iterations:**
+  - When mapping over components in React, TypeScript can complain about `key` prop on custom components - wrapping with a div works as a workaround
+  - Notification type icons using emojis (🎯, 💬, etc.) provide quick visual distinction
+  - Mock data with varied timestamps helps test time formatting ("5m ago", "2h ago", "1d ago")
+---

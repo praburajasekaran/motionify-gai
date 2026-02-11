@@ -1,0 +1,10 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Frame 3 - Background layer -->
+  <rect x="16" y="16" width="40" height="40" rx="8" fill="#93C5FD"/>
+  <!-- Frame 2 - Middle layer -->
+  <rect x="12" y="12" width="40" height="40" rx="8" fill="#60A5FA"/>
+  <!-- Frame 1 - Foreground layer -->
+  <rect x="8" y="8" width="40" height="40" rx="8" fill="#3B82F6"/>
+  <!-- Play icon -->
+  <path d="M26 24L34 28L26 32V24Z" fill="white" opacity="0.9"/>
+</svg>

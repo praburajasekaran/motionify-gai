@@ -1,0 +1,65 @@
+config:
+  target: "http://localhost:8888/.netlify/functions"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm-up"
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 20
+      name: "Ramp-up"
+    - duration: 300
+      arrivalRate: 20
+      name: "Sustained load"
+  http:
+    timeout: 10
+  processor: "./scenarios/auth-processor.js"
+  ensure:
+    thresholds:
+      - http.response_time.p99: 3000
+    conditions:
+      - expression: "http.codes.4xx + http.codes.5xx < http.responses * 0.01"
+        strict: false
+
+scenarios:
+  - name: "Proposal CRUD"
+    weight: 60
+    flow:
+      - post:
+          url: "/proposals"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            inquiry_id: "00000000-0000-0000-0000-000000000001"
+            title: "Load Test Proposal"
+            description: "Generated during load testing"
+            items:
+              - name: "Load Test Item"
+                description: "Test item"
+                quantity: 1
+                unit_price: 1000
+            total_amount: 1000
+            currency: "INR"
+            valid_until: "2026-12-31"
+          capture:
+            - json: "$.id"
+              as: "proposalId"
+          expect:
+            - statusCode: 201
+      - get:
+          url: "/proposal-detail?id={{ proposalId }}"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Read-heavy workload"
+    weight: 40
+    flow:
+      - get:
+          url: "/proposals"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+          expect:
+            - statusCode: 200
