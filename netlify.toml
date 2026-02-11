@@ -8,6 +8,9 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Staging branch deploys
 [context.staging]
   command = "npm run build:all"

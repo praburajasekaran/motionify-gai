@@ -1,24 +1,8 @@
-[build]
-  command = "npm install && npm run build"
-  publish = ".next"
-
-[build.environment]
-  NODE_VERSION = "20"
+# Build settings are in the root netlify.toml
+# Do not add [build] here — it overrides the root config
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# Redirects to block login and portal routes (only in production)
-# Commented out for development - uncomment for production deployment
-# [[redirects]]
-#   from = "/login"
-#   to = "/404"
-#   status = 404
-#
-# [[redirects]]
-#   from = "/portal/*"
-#   to = "/404"
-#   status = 404
 
 
 
