@@ -8,6 +8,14 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
+# Staging branch deploys
+[context.staging]
+  command = "npm run build:all"
+
+[context.staging.environment]
+  NODE_ENV = "production"
+  CONTEXT = "staging"
+
 [dev]
   command = "vite"
   port = 8888
