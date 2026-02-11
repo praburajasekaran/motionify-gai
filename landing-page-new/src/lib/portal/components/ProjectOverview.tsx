@@ -79,7 +79,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
 
   switch (type) {
     // Task activities
-    case ActivityType.TASK_STATUS_CHANGED:
+    case 'TASK_STATUS_CHANGED':
       icon = <CheckCircle2 className="h-5 w-5 text-emerald-400" />;
       message = (
         <p>
@@ -89,7 +89,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TASK_CREATED:
+    case 'TASK_CREATED':
       icon = <PlusCircle className="h-5 w-5 text-blue-400" />;
       message = (
         <p>
@@ -98,7 +98,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TASK_UPDATED:
+    case 'TASK_UPDATED':
       icon = <PenSquare className="h-5 w-5 text-amber-400" />;
       message = (
         <p>
@@ -107,7 +107,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.REVISION_REQUESTED:
+    case 'REVISION_REQUESTED':
       icon = <AlertCircle className="h-5 w-5 text-orange-400" />;
       message = (
         <p>
@@ -116,7 +116,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.COMMENT_ADDED:
+    case 'COMMENT_ADDED':
       icon = <MessageSquare className="h-5 w-5 text-blue-400" />;
       message = (
         <p>
@@ -126,7 +126,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // File activities
-    case ActivityType.FILE_UPLOADED:
+    case 'FILE_UPLOADED':
       icon = <FileUp className="h-5 w-5 text-purple-400" />;
       message = (
         <p>
@@ -135,7 +135,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.FILE_RENAMED:
+    case 'FILE_RENAMED':
       icon = <FileEdit className="h-5 w-5 text-purple-400" />;
       message = (
         <p>
@@ -144,7 +144,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.FILE_DOWNLOADED:
+    case 'FILE_DOWNLOADED':
       icon = <Download className="h-5 w-5 text-purple-400" />;
       message = (
         <p>
@@ -154,7 +154,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // Team activities
-    case ActivityType.TEAM_MEMBER_INVITED:
+    case 'TEAM_MEMBER_INVITED':
       icon = <UserPlus className="h-5 w-5 text-teal-400" />;
       message = (
         <p>
@@ -163,7 +163,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TEAM_MEMBER_REMOVED:
+    case 'TEAM_MEMBER_REMOVED':
       icon = <UserMinus className="h-5 w-5 text-red-400" />;
       message = (
         <p>
@@ -172,7 +172,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TEAM_UPDATED:
+    case 'TEAM_UPDATED':
       icon = <Users className="h-5 w-5 text-teal-400" />;
       message = (
         <p>
@@ -182,7 +182,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // Proposal activities (role-aware)
-    case ActivityType.PROPOSAL_SENT:
+    case 'PROPOSAL_SENT':
       icon = <Send className="h-5 w-5 text-blue-400" />;
       if (isActor) {
         message = (
@@ -205,7 +205,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.PROPOSAL_ACCEPTED:
+    case 'PROPOSAL_ACCEPTED':
       icon = <ThumbsUp className="h-5 w-5 text-emerald-400" />;
       if (isActor) {
         message = (
@@ -228,7 +228,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.PROPOSAL_REJECTED:
+    case 'PROPOSAL_REJECTED':
       icon = <ThumbsDown className="h-5 w-5 text-red-400" />;
       if (isActor) {
         message = (
@@ -251,7 +251,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.PROPOSAL_CHANGES_REQUESTED:
+    case 'PROPOSAL_CHANGES_REQUESTED':
       icon = <FileEdit className="h-5 w-5 text-amber-400" />;
       if (isActor) {
         message = (
@@ -275,7 +275,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // Deliverable activities (role-aware)
-    case ActivityType.DELIVERABLE_UPLOADED:
+    case 'DELIVERABLE_UPLOADED':
       icon = <Upload className="h-5 w-5 text-purple-400" />;
       if (isActor) {
         message = (
@@ -298,7 +298,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.DELIVERABLE_APPROVED:
+    case 'DELIVERABLE_APPROVED':
       icon = <FileCheck className="h-5 w-5 text-emerald-400" />;
       if (isActor) {
         message = (
@@ -321,7 +321,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.DELIVERABLE_REJECTED:
+    case 'DELIVERABLE_REJECTED':
       icon = <ThumbsDown className="h-5 w-5 text-red-400" />;
       if (isActor) {
         message = (
@@ -345,7 +345,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // Payment activities (role-aware)
-    case ActivityType.PAYMENT_RECEIVED:
+    case 'PAYMENT_RECEIVED':
       icon = <CreditCard className="h-5 w-5 text-emerald-400" />;
       if (isActor) {
         message = (
@@ -368,7 +368,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       }
       break;
 
-    case ActivityType.PAYMENT_REMINDER_SENT:
+    case 'PAYMENT_REMINDER_SENT':
       icon = <Bell className="h-5 w-5 text-amber-400" />;
       if (isRecipient) {
         message = (
@@ -386,7 +386,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       break;
 
     // Project activities
-    case ActivityType.PROJECT_CREATED:
+    case 'PROJECT_CREATED':
       icon = <FolderPlus className="h-5 w-5 text-blue-400" />;
       message = (
         <p>
@@ -395,7 +395,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TERMS_ACCEPTED:
+    case 'TERMS_ACCEPTED':
       icon = <FileCheck className="h-5 w-5 text-emerald-400" />;
       message = (
         <p>
@@ -404,7 +404,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.TASK_DELETED:
+    case 'TASK_DELETED':
       icon = <Trash2 className="h-5 w-5 text-red-400" />;
       message = (
         <p>
@@ -413,7 +413,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.FILE_DELETED:
+    case 'FILE_DELETED':
       icon = <Trash2 className="h-5 w-5 text-red-400" />;
       message = (
         <p>
@@ -422,7 +422,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.DELIVERABLE_CREATED:
+    case 'DELIVERABLE_CREATED':
       icon = <PlusCircle className="h-5 w-5 text-purple-400" />;
       message = (
         <p>
@@ -431,7 +431,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.DELIVERABLE_DELETED:
+    case 'DELIVERABLE_DELETED':
       icon = <Trash2 className="h-5 w-5 text-red-400" />;
       message = (
         <p>
@@ -440,7 +440,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.DELIVERABLE_STATUS_CHANGED:
+    case 'DELIVERABLE_STATUS_CHANGED':
       icon = <ArrowRightLeft className="h-5 w-5 text-amber-400" />;
       message = (
         <p>
@@ -450,7 +450,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.INQUIRY_CREATED:
+    case 'INQUIRY_CREATED':
       icon = <Inbox className="h-5 w-5 text-blue-400" />;
       message = (
         <p>
@@ -459,7 +459,7 @@ const getActivityDetails = (activity: Activity, currentUserId: string | undefine
       );
       break;
 
-    case ActivityType.INQUIRY_STATUS_CHANGED:
+    case 'INQUIRY_STATUS_CHANGED':
       icon = <ArrowRightLeft className="h-5 w-5 text-amber-400" />;
       message = (
         <p>

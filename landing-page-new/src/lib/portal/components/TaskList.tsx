@@ -100,7 +100,7 @@ const TaskList = ({ focusedDeliverableId, setFocusedDeliverableId }: TaskListPro
     const deliverableMap = new Map<string, Deliverable>(
       project.scope.deliverables.map(d => [d.id, d])
     );
-    deliverableMap.set('general', { id: 'general', name: 'General Tasks' });
+    deliverableMap.set('general', { id: 'general', name: 'General Tasks', status: '' });
 
     const grouped = new Map<string, Deliverable & { tasks: Task[] }>();
     for (const task of visibleTasks) {

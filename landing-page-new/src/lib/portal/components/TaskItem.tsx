@@ -222,7 +222,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
           {isTaskCreator && (
             <>
               <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
-              {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
+              {onDelete && <Button onClick={() => onDelete(task.id)} variant="danger">Delete</Button>}
             </>
           )}
         </div>
@@ -233,7 +233,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
       return (
         <div className="flex space-x-2">
           <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
-          {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
+          {onDelete && <Button onClick={() => onDelete(task.id)} variant="danger">Delete</Button>}
         </div>
       );
     }
@@ -242,7 +242,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
       return (
         <div className="flex space-x-2">
           <Button onClick={() => onEdit(task)} variant="secondary">Edit</Button>
-          {onDelete && <Button onClick={() => onDelete(task.id)} variant="destructive">Delete</Button>}
+          {onDelete && <Button onClick={() => onDelete(task.id)} variant="danger">Delete</Button>}
         </div>
       );
     }

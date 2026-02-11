@@ -33,6 +33,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
       .map((name) => ({
         id: generateDeliverableId('del-new'),
         name,
+        status: 'Pending',
       }));
 
     const scope = {

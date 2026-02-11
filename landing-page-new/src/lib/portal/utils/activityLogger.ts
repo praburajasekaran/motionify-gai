@@ -17,7 +17,7 @@ export function createTaskStatusChangedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TASK_STATUS_CHANGED,
+    type: 'TASK_STATUS_CHANGED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -39,7 +39,7 @@ export function createTaskCreatedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TASK_CREATED,
+    type: 'TASK_CREATED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -60,7 +60,7 @@ export function createTaskUpdatedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TASK_UPDATED,
+    type: 'TASK_UPDATED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -82,7 +82,7 @@ export function createRevisionRequestedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.REVISION_REQUESTED,
+    type: 'REVISION_REQUESTED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -105,7 +105,7 @@ export function createCommentAddedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.COMMENT_ADDED,
+    type: 'COMMENT_ADDED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -128,7 +128,7 @@ export function createFileUploadedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.FILE_UPLOADED,
+    type: 'FILE_UPLOADED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -150,7 +150,7 @@ export function createTeamMemberInvitedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TEAM_MEMBER_INVITED,
+    type: 'TEAM_MEMBER_INVITED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -171,7 +171,7 @@ export function createTeamMemberRemovedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TEAM_MEMBER_REMOVED,
+    type: 'TEAM_MEMBER_REMOVED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -191,7 +191,7 @@ export function createTeamUpdatedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TEAM_UPDATED,
+    type: 'TEAM_UPDATED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -211,7 +211,7 @@ export function createFileRenamedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.FILE_RENAMED,
+    type: 'FILE_RENAMED',
     timestamp: Date.now(),
     userId: user.id,
     userName: user.name,
@@ -239,7 +239,7 @@ export function createProposalSentActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PROPOSAL_SENT,
+    type: 'PROPOSAL_SENT',
     timestamp: Date.now(),
     userId: sender.id,
     userName: sender.name,
@@ -261,7 +261,7 @@ export function createProposalAcceptedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PROPOSAL_ACCEPTED,
+    type: 'PROPOSAL_ACCEPTED',
     timestamp: Date.now(),
     userId: accepter.id,
     userName: accepter.name,
@@ -284,7 +284,7 @@ export function createProposalRejectedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PROPOSAL_REJECTED,
+    type: 'PROPOSAL_REJECTED',
     timestamp: Date.now(),
     userId: rejecter.id,
     userName: rejecter.name,
@@ -308,7 +308,7 @@ export function createProposalChangesRequestedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PROPOSAL_CHANGES_REQUESTED,
+    type: 'PROPOSAL_CHANGES_REQUESTED',
     timestamp: Date.now(),
     userId: requester.id,
     userName: requester.name,
@@ -335,7 +335,7 @@ export function createDeliverableApprovedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.DELIVERABLE_APPROVED,
+    type: 'DELIVERABLE_APPROVED',
     timestamp: Date.now(),
     userId: approver.id,
     userName: approver.name,
@@ -358,7 +358,7 @@ export function createDeliverableUploadedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.DELIVERABLE_UPLOADED,
+    type: 'DELIVERABLE_UPLOADED',
     timestamp: Date.now(),
     userId: uploader.id,
     userName: uploader.name,
@@ -386,7 +386,7 @@ export function createPaymentReceivedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PAYMENT_RECEIVED,
+    type: 'PAYMENT_RECEIVED',
     timestamp: Date.now(),
     userId: payer.id,
     userName: payer.name,
@@ -412,7 +412,7 @@ export function createProjectCreatedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.PROJECT_CREATED,
+    type: 'PROJECT_CREATED',
     timestamp: Date.now(),
     userId: creator.id,
     userName: creator.name,
@@ -431,7 +431,7 @@ export function createTermsAcceptedActivity(
 ): Activity {
   return {
     id: generateActivityId(),
-    type: ActivityType.TERMS_ACCEPTED,
+    type: 'TERMS_ACCEPTED',
     timestamp: Date.now(),
     userId: accepter.id,
     userName: accepter.name,

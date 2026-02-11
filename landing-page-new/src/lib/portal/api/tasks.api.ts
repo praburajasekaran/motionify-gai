@@ -1,5 +1,4 @@
 import { Task, Comment } from '../types';
-import { apiFetch } from '../../api-client';
 
 const API_BASE = '/.netlify/functions';
 
@@ -67,8 +66,10 @@ export async function createTask(taskData: {
   if (taskData.status) apiPayload.status = taskData.status;
   if (taskData.visible_to_client !== undefined) apiPayload.visible_to_client = taskData.visible_to_client;
 
-  const response = await apiFetch('/tasks', {
+  const response = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(apiPayload),
   });
 
