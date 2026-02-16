@@ -22,6 +22,7 @@ import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
+import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
 import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm';
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
@@ -382,6 +383,19 @@ const DeliverableReviewContent: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Video & Feedback Form (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Video Player with Timeline Comments */}
+          <DeliverableVideoSection
+            deliverable={deliverable}
+            canRequestRevision={permissions.canReject}
+            canComment={permissions.canComment}
+            canUploadBeta={permissions.canUploadBeta}
+            comments={state.revisionFeedback.timestampedComments}
+            onAddComment={handleAddComment}
+            onRemoveComment={handleRemoveComment}
+            onUpdateComment={handleUpdateComment}
+            onUpload={handleUpload}
+          />
+
           {/* File List Section */}
           <DeliverableFilesList
             deliverable={deliverable}
