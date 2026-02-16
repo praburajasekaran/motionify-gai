@@ -60,22 +60,43 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   onUpload,
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
+  const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const loadUrl = async () => {
-      // Determine if we need to generate a URL
       const isFinal = deliverable.status === 'final_delivered';
-      const key = isFinal
+
+      // 1. Try legacy fields on the deliverable record first
+      let key = isFinal
         ? deliverable.finalFileKey || deliverable.betaFileKey
         : deliverable.betaFileKey;
 
+      // 2. If no key on deliverable record, fetch from deliverable_files table
+      if (!key) {
+        try {
+          const res = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const files = await res.json();
+            // Find the first video file (or first file if none are video)
+            const videoFile = files.find((f: any) => f.file_category === 'video') || files[0];
+            if (videoFile?.file_key) {
+              key = videoFile.file_key;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch deliverable files", e);
+        }
+      }
+
       if (!key) return;
+
+      setResolvedFileKey(key);
 
       try {
         if (isFinal) {
-          // Final files are typically public or handled differently, but try public first or presign
-          // If we have a direct URL, use it (handled below), otherwise key
           const url = storageService.getPublicUrl(key);
           setGeneratedUrl(url);
         } else {
@@ -88,7 +109,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       }
     };
     loadUrl();
-  }, [deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status]);
+  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -108,10 +129,10 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
     ? deliverable.finalFileUrl || deliverable.betaFileUrl
     : deliverable.betaFileUrl);
 
-  // Detect actual media type from file key (not the static deliverable.type)
-  const fileKey = isFinalDelivered
+  // Detect actual media type from the resolved file key
+  const fileKey = resolvedFileKey || (isFinalDelivered
     ? deliverable.finalFileKey || deliverable.betaFileKey
-    : deliverable.betaFileKey;
+    : deliverable.betaFileKey);
   const detectedMediaType = detectMediaTypeFromKey(fileKey);
 
   return (
