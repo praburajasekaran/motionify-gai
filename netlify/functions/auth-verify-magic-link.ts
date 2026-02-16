@@ -274,7 +274,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 createdInquiryNumber = inquiryNumber;
 
                 // Send notification to admin about new inquiry (async, don't wait)
-                const portalUrl = process.env.PORTAL_URL || 'http://localhost:3003';
+                const portalUrl = (process.env.PORTAL_URL || 'http://localhost:3003').replace(/\/(api|portal)\/?$/, '');
                 const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
                 sendNewInquiryNotificationEmail({
                     to: adminEmail,

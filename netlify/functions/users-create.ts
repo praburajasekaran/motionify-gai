@@ -86,7 +86,8 @@ export const handler = compose(
         );
 
         // Build magic link URL - points to /auth/verify which handles token verification
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
+        const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
+        const appUrl = rawAppUrl.replace(/\/(api|portal)\/?$/, '');
         const magicLink = `${appUrl}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
         // If the new user is support, auto-add them to all existing projects
