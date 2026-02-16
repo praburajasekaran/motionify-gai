@@ -140,7 +140,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
         // Build magic link URL
         const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
-        const magicLink = `${portalUrl}/login?token=${token}&email=${encodeURIComponent(email)}`;
+        const magicLink = `${portalUrl}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
         // Send the magic link email
         const emailResult = await sendMagicLinkEmail({
