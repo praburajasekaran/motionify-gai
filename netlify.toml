@@ -16,8 +16,8 @@
   command = "npm run build:all"
 
 [context.staging.environment]
-  NODE_ENV = "production"
   CONTEXT = "staging"
+  NPM_FLAGS = "--legacy-peer-deps --include=dev"
 
 [dev]
   command = "vite"
