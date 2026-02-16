@@ -26,22 +26,30 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    return [
-      {
-        source: '/portal/:path*',
-        destination: 'http://localhost:5173',
-        permanent: false,
-      },
-    ];
+    // Only proxy to Vite dev server in local development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/portal/:path*',
+          destination: 'http://localhost:5173',
+          permanent: false,
+        },
+      ];
+    }
+    return [];
   },
 
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8888/.netlify/functions/:path*',
-      },
-    ];
+    // Only proxy API calls to Netlify Dev in local development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/api/:path*',
+          destination: 'http://localhost:8888/.netlify/functions/:path*',
+        },
+      ];
+    }
+    return [];
   },
 };
 
