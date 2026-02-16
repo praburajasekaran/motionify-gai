@@ -78,7 +78,7 @@ const AppRoot: React.FC = () => {
   const allMotionifyUsers = useMemo(() => {
     const allUsers = projectsData.flatMap(p => p.motionifyTeam);
     const uniqueUsers: User[] = Array.from(new Map<string, User>(allUsers.map(item => [item.id, item])).values());
-    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.SUPPORT);
+    return uniqueUsers.filter(u => u.role === UserRole.SUPER_ADMIN || u.role === UserRole.SUPPORT);
   }, [projectsData]);
 
   // Load user from localStorage on client mount (after hydration)
@@ -580,7 +580,7 @@ const AppRoot: React.FC = () => {
       return <LoginScreen users={uniqueUsers} onLogin={handleLogin} />;
     }
 
-    const isMotionifyStaff = currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.MOTIONIFY_MEMBER;
+    const isMotionifyStaff = currentUser.role === UserRole.SUPPORT || currentUser.role === UserRole.SUPER_ADMIN;
 
     if (isMotionifyStaff && !selectedProjectId) {
       const projectsForUser = currentUser.role === UserRole.SUPPORT

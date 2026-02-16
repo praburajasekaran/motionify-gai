@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
     if (currentUser.role === UserRole.SUPPORT) {
       return projects;
-    } else if (currentUser.role === UserRole.MOTIONIFY_MEMBER) {
+    } else if (currentUser.role === UserRole.SUPER_ADMIN) {
       return projects.filter(p => p.motionifyTeam.some(u => u.id === currentUser.id));
     }
     // For clients, return empty array - they should be redirected to their project

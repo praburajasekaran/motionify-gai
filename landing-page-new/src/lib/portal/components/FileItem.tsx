@@ -90,7 +90,7 @@ const FileItem: React.FC<FileItemProps> = ({ file }) => {
     }
   };
 
-  const isAdmin = currentUser?.role === UserRole.MOTIONIFY_MEMBER || currentUser?.role === UserRole.SUPPORT;
+  const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.SUPPORT;
 
   return (
     <div className="p-4 bg-white/10 backdrop-blur border border-white/10 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">

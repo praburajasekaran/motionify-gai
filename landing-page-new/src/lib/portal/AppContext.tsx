@@ -122,7 +122,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
     let role = UserRole.TEAM_MEMBER;
     if (authUser.role === 'client') role = UserRole.PRIMARY_CONTACT;
     else if (authUser.role === 'support') role = UserRole.SUPPORT;
-    else if (authUser.role === 'admin' || authUser.role === 'super_admin') role = UserRole.MOTIONIFY_MEMBER;
+    else if (authUser.role === 'admin' || authUser.role === 'super_admin') role = UserRole.SUPER_ADMIN;
 
     const user = {
       id: authUser.id,
@@ -147,7 +147,7 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
   const allMotionifyUsers = useMemo(() => {
     const allUsers = projectsData.flatMap(p => p.motionifyTeam);
     const uniqueUsers: User[] = Array.from(new Map<string, User>(allUsers.map(item => [item.id, item])).values());
-    return uniqueUsers.filter(u => u.role === UserRole.MOTIONIFY_MEMBER || u.role === UserRole.SUPPORT);
+    return uniqueUsers.filter(u => u.role === UserRole.SUPER_ADMIN || u.role === UserRole.SUPPORT);
   }, [projectsData]);
 
   // Load tasks and activities from API when project is selected
@@ -645,8 +645,8 @@ export function AppProvider({ children, selectedProjectId }: { children: React.R
 
   const deleteFile = useCallback((fileId: string) => {
     if (!projectId || !currentUser) return;
-    // Check if user has permission (Motionify Member or Motionify Support)
-    if (currentUser.role !== UserRole.MOTIONIFY_MEMBER && currentUser.role !== UserRole.SUPPORT) {
+    // Check if user has permission (Super Admin or Motionify Support)
+    if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.SUPPORT) {
       console.error('Unauthorized: Only admins can delete files.');
       return;
     }
