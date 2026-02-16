@@ -17,5 +17,8 @@ landing-page-new/.next
 .env.test.local
 .env.production.local
 
+# Vite portal build output copied for Next.js
+landing-page-new/public/portal/
+
 # Local Netlify folder
 .netlify

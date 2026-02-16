@@ -38,7 +38,7 @@ function handleUnauthorized(): void {
     clearAuthSession();
     // Only redirect if not already on login page
     if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login?session=expired';
+        window.location.href = '/portal/login?session=expired';
     }
 }
 

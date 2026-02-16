@@ -31,19 +31,10 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Portal app served from /portal subdirectory
+# Vite Portal SPA fallback
+# Static assets (JS, CSS) in /portal/ are served directly by Netlify
+# Non-file routes fall through to index.html for client-side routing
 [[redirects]]
   from = "/portal/*"
-  to = "/portal/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/portal"
   to = "/portal/index.html"
-  status = 200
-
-# Landing page (Next.js) - catch-all for root routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
   status = 200

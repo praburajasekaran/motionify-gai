@@ -114,7 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUserState(null);
         setUserTimezone(null);
         // Redirect to login page
-        window.location.href = '/login';
+        window.location.href = '/portal/login';
     }, []);
 
     /**

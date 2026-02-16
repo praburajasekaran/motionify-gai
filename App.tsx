@@ -98,7 +98,7 @@ function App() {
             <ErrorBoundary onReset={reset}>
               <AuthProvider>
                 <NotificationProvider>
-                  <BrowserRouter>
+                  <BrowserRouter basename="/portal">
                     <Routes>
                       {/* Public routes - no layout */}
                       <Route path="/landing" element={<LandingPage />} />

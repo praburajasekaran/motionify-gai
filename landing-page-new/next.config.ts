@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
       return [
         {
           source: '/portal/:path*',
-          destination: 'http://localhost:5173',
+          destination: 'http://localhost:5173/portal/:path*',
           permanent: false,
         },
       ];
