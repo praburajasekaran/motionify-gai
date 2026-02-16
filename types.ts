@@ -120,6 +120,8 @@ export interface Project {
   id: string;
   title: string;
   client: string;
+  clientEmail?: string;
+  clientPhone?: string;
   website?: string; // Domain for logo fetching
   thumbnail: string;
   status: ProjectStatus;

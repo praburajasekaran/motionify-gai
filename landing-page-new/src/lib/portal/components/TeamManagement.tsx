@@ -150,6 +150,9 @@ const TeamManagement = () => {
                     {user.role === UserRole.PRIMARY_CONTACT ? 'Primary Contact' : 'Client'}
                   </span>
                 </div>
+                {user.email && (
+                  <p className="text-xs text-[var(--todoist-gray-400)] truncate mt-0.5">{user.email}</p>
+                )}
               </div>
               {isPrimaryContact && user.id !== currentUser?.id && (
                 <button
@@ -187,6 +190,9 @@ const TeamManagement = () => {
                       {user.role === UserRole.SUPPORT ? 'Support' : 'Team'}
                     </span>
                   </div>
+                  {user.email && (
+                    <p className="text-xs text-[var(--todoist-gray-400)] truncate mt-0.5">{user.email}</p>
+                  )}
                 </div>
               </div>
             ))}

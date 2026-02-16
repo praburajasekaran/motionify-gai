@@ -222,6 +222,9 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                                     <Badge variant="outline" className="text-amber-600 border-amber-200 text-[10px] px-1.5 py-0">Primary Contact</Badge>
                                 )}
                             </div>
+                            {member.email && (
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">{member.email}</p>
+                            )}
                         </div>
                         {canRemoveMember(member) && (
                             <DropdownMenu trigger={

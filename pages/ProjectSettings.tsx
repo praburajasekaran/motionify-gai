@@ -110,6 +110,8 @@ export const ProjectSettings = () => {
                         id: data.id,
                         title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
                         client: data.client_name || data.client_company || 'Client',
+                        clientEmail: data.client_email || '',
+                        clientPhone: data.client_phone || '',
                         website: data.website || '',
                         thumbnail: '',
                         status: dbStatusToDisplay(data.status),
@@ -467,6 +469,16 @@ export const ProjectSettings = () => {
                                             <div className="space-y-2">
                                                 <Label className="text-foreground/80" htmlFor="website">Website</Label>
                                                 <Input id="website" value={project.website || ''} placeholder="e.g. acme.com" onChange={e => updateGeneral('website', e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-foreground/80" htmlFor="client-email">Client Email</Label>
+                                                <Input id="client-email" type="email" value={project.clientEmail || ''} disabled className="bg-muted" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-foreground/80" htmlFor="client-phone">Client Phone</Label>
+                                                <Input id="client-phone" type="tel" value={project.clientPhone || ''} disabled className="bg-muted" />
                                             </div>
                                         </div>
                                         <div className="space-y-2">

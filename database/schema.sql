@@ -13,6 +13,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255) NOT NULL,
   role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'support', 'team_member', 'client')),
+  phone VARCHAR(50),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -441,7 +442,8 @@ CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 -- ============================================================================
 
 INSERT INTO users (email, full_name, role) VALUES
-  ('admin@motionify.com', 'Motionify Admin', 'super_admin')
+  ('admin@motionify.com', 'Motionify Admin', 'super_admin'),
+  ('saravanan@motionify.co', 'Saravanan', 'super_admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================================
