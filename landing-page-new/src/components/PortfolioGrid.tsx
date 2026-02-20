@@ -1,4 +1,3 @@
-import Image from "next/image";
 
 export default function PortfolioGrid() {
   const videos = [
@@ -49,11 +48,11 @@ export default function PortfolioGrid() {
           <div className="relative">
             <div className="pointer-events-none absolute -inset-x-10 -top-6 h-24 rounded-full blur-2xl opacity-70" style={{ background: "radial-gradient(60% 100% at 50% 50%, rgba(99,102,241,0.18), rgba(99,102,241,0))" }} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {videos.map((v) => (
                 <div key={v.src} className="group relative rounded-2xl overflow-hidden bg-gray-900/90 ring-1 ring-gray-700/50 shadow-lg">
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                  <div className="relative aspect-[16/9] overflow-hidden">
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+                  <div className="relative aspect-video overflow-hidden">
                     <iframe
                       src={v.src + (v.src.includes("youtube") ? "?controls=1&modestbranding=1&rel=0&playsinline=1" : "?title=0&byline=0&portrait=0&dnt=1")}
                       title={v.title}
@@ -63,12 +62,11 @@ export default function PortfolioGrid() {
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                       allowFullScreen
                     />
-                    
                   </div>
-                  <div className="p-3 sm:p-4 bg-gray-900/95 backdrop-blur">
-                    <p className="text-sm font-medium tracking-tight text-white">{v.title}</p>
+                  <div className="px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-900/95">
+                    <p className="text-sm font-medium tracking-tight text-white leading-tight">{v.title}</p>
                     {"type" in v && v.type ? (
-                      <p className="text-xs text-gray-400 mt-0.5">{v.type}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">{v.type}</p>
                     ) : null}
                   </div>
                 </div>

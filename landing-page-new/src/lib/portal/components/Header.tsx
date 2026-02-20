@@ -27,7 +27,7 @@ const Header = ({ currentUser, onLogout, isProjectView, onBack, projectName, cli
             <div className="flex items-center space-x-4">
               <div className="relative h-8 w-32">
                 <Image
-                  src="/motionify-light-logo.png"
+                  src="/images/motionify-light-logo.png"
                   alt="Motionify Studio"
                   fill
                   className="object-contain object-left"

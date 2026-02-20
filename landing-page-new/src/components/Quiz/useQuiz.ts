@@ -41,14 +41,28 @@ export function useQuiz() {
     recommendedVideoType: string;
   } | null>(null);
 
+  // When navigating back via a chip, remember where to return after editing
+  const returnToRef = useRef<number | null>(null);
+
   const startQuiz = useCallback(() => {
     setCurrent(0);
   }, []);
 
   const select = useCallback((key: keyof QuizSelections, value: string) => {
     setSelections((s) => ({ ...s, [key]: value }));
-    setCurrent((c) => Math.min(c + 1, total - 1));
+    if (returnToRef.current !== null) {
+      const target = Math.min(returnToRef.current, total - 1);
+      returnToRef.current = null;
+      setCurrent(target);
+    } else {
+      setCurrent((c) => Math.min(c + 1, total - 1));
+    }
   }, []);
+
+  const navigateToQuestion = useCallback((idx: number) => {
+    returnToRef.current = current;
+    setCurrent(idx);
+  }, [current]);
 
   const goBack = useCallback(() => {
     setCurrent((c) => Math.max(c - 1, -1));
@@ -128,6 +142,7 @@ export function useQuiz() {
     selections,
     select,
     setCurrent,
+    navigateToQuestion,
     goBack,
     reset,
     isComplete,

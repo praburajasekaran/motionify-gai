@@ -24,7 +24,7 @@ export default function Header() {
           }`}>
           <Link href="/" className="inline-flex items-center gap-3 group">
             <Image
-              src="/motionify-light-logo.png"
+              src="/images/motionify-light-logo.png"
               alt="Motionify.Studio"
               width={120}
               height={36}
@@ -34,9 +34,9 @@ export default function Header() {
             />
           </Link>
           <div className="hidden sm:flex items-center gap-8">
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Work</a>
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Approach</a>
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Pricing</a>
+            <Link href="/work" className="text-sm text-white/80 hover:text-white transition">Work</Link>
+            <Link href="/work#approach" className="text-sm text-white/80 hover:text-white transition">Approach</Link>
+            <Link href="/work#pricing" className="text-sm text-white/80 hover:text-white transition">Pricing</Link>
             <Link href="/login" className={`inline-flex items-center gap-2 rounded-lg bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/30 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'
               }`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" x2="3" y1="12" y2="12"></line></svg>

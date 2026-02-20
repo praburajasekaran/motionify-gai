@@ -17,6 +17,7 @@ export default function Quiz() {
     selections,
     select,
     setCurrent,
+    navigateToQuestion,
     goBack,
     reset: resetQuiz,
     isComplete,
@@ -38,6 +39,7 @@ export default function Quiz() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const lastGeneratedIdRef = useRef<string | null>(null);
 
   const recommendation = useMemo(() => {
     return isComplete ? generateRecommendation(selections) : null;
@@ -49,6 +51,7 @@ export default function Quiz() {
     setIsGenerating(false);
     setLoadingStep(0);
     setIsSubmitting(false);
+    lastGeneratedIdRef.current = null;
   };
 
   const handleContactSubmit = async (contactInfo: ContactInfo) => {
@@ -70,8 +73,17 @@ export default function Quiz() {
     setCurrent(total - 1); // Go back to last quiz question
   };
 
+  // Persist completed quiz selections so the WhatsApp widget can pre-fill messages
+  useEffect(() => {
+    if (isComplete) {
+      localStorage.setItem("motionify_quiz_responses", JSON.stringify(selections));
+    }
+  }, [isComplete, selections]);
+
   useEffect(() => {
     if (!recommendation) return;
+    if (lastGeneratedIdRef.current === recommendation.id) return;
+    lastGeneratedIdRef.current = recommendation.id;
 
     // Start UI transition
     if (placeholderRef.current && cardRef.current) {
@@ -186,6 +198,25 @@ export default function Quiz() {
               </div>
             )}
 
+            {/* Selected choices summary */}
+            {!isWelcomeScreen && !isContactForm && !isSuccessScreen && current > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {questions.slice(0, current).map((q, idx) =>
+                  selections[q.key] ? (
+                    <button
+                      key={q.key}
+                      onClick={() => navigateToQuestion(idx)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium bg-white/5 ring-1 ring-white/10 backdrop-blur hover:ring-violet-400/40 hover:bg-white/10 transition-all duration-150"
+                    >
+                      <span className="text-white/40">{q.title.replace("?", "")}</span>
+                      <span className="text-white/20">·</span>
+                      <span className="text-violet-300">{labelFor(q.key, selections[q.key])}</span>
+                    </button>
+                  ) : null
+                )}
+              </div>
+            )}
+
             {/* Quiz Questions - only show when not on welcome screen and on quiz questions */}
             {!isWelcomeScreen && !isContactForm && !isSuccessScreen && (
               <div className="space-y-8">
@@ -209,9 +240,9 @@ export default function Quiz() {
                         {q.options.map((opt) => (
                           <button
                             key={opt}
-                            className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-all
+                            className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150
                             ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
-                            bg-white/5 ring-white/10 text-white/90 hover:bg-white/10 hover:ring-white/20 hover:shadow-md
+                            bg-white/5 ring-white/10 text-white/70 hover:bg-white/12 hover:ring-violet-400/50 hover:text-white hover:scale-105 hover:shadow-[0_4px_16px_rgba(139,92,246,.20)]
                             ${selections[q.key] === opt ?
                                 'bg-gradient-to-r from-fuchsia-500/20 via-violet-500/20 to-blue-500/20 ring-violet-400/40 text-white shadow-[0_8px_24px_rgba(139,92,246,.25)]' :
                                 ''}

@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-16">
           {/* Logo and Intro */}
           <div className="lg:col-span-4 flex flex-col items-start gap-6 text-left">
-            <img src="/motionify-light-logo.png" alt="Motionify.Studio" className="h-10 w-auto object-contain" />
+            <img src="/images/motionify-light-logo.png" alt="Motionify.Studio" className="h-10 w-auto object-contain" />
             <p className="text-sm text-gray-400 leading-relaxed max-w-sm">
               Crafting stories that connect and convert. From concept to final cut, we bring your vision to life with creativity and precision.
             </p>

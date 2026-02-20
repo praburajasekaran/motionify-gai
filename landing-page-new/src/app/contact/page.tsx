@@ -26,14 +26,6 @@ export default function ContactPage() {
           <section>
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                <span className="text-2xl">📍</span>
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-1">Location</h3>
-                  <p className="text-gray-300">Chennai, India</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
                 <span className="text-2xl">📧</span>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-1">Email</h3>

@@ -45,7 +45,7 @@ const MagicLinkSent = ({ email, onRequestNew }: { email: string; onRequestNew: (
         <div className="mb-8 flex justify-center">
           <div className="relative h-12 w-48">
             <Image
-              src="/motionify-light-logo.png"
+              src="/images/motionify-light-logo.png"
               alt="Motionify Studio"
               fill
               className="object-contain"
@@ -154,7 +154,7 @@ export default function LoginScreen() {
         <div className="mb-8 flex justify-center">
           <div className="relative h-12 w-48">
             <Image
-              src="/motionify-light-logo.png"
+              src="/images/motionify-light-logo.png"
               alt="Motionify Studio"
               fill
               className="object-contain"

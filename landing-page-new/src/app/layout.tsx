@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans, Fraunces, IBM_Plex_Sans } from "next/font/google";
+import { Open_Sans, IBM_Plex_Sans, Merriweather } from "next/font/google";
 import "./globals.css";
 
 const openSans = Open_Sans({
@@ -8,9 +8,11 @@ const openSans = Open_Sans({
   display: "swap",
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+
+const merriweather = Merriweather({
+  variable: "--font-merriweather",
   subsets: ["latin"],
+  weight: ["300", "400", "700", "900"],
   display: "swap",
 });
 
@@ -29,6 +31,7 @@ export const metadata: Metadata = {
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import WebVitals from "@/components/WebVitals";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 export default function RootLayout({
   children,
@@ -37,13 +40,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${openSans.variable} ${fraunces.variable} ${ibmPlexSans.variable} antialiased`}>
+      <body className={`${openSans.variable} ${merriweather.variable} ${ibmPlexSans.variable} antialiased`}>
         <WebVitals />
         <AuthProvider>
           <NotificationProvider>
             {children}
           </NotificationProvider>
         </AuthProvider>
+        <WhatsAppWidget />
       </body>
     </html>
   );
