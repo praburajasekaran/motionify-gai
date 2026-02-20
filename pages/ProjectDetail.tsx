@@ -27,7 +27,7 @@ import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfoll
 import { Activity as ApiActivity } from '../services/activityApi';
 import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { formatTimestamp } from '../utils/dateFormatting';
 import { MentionInput } from '../components/tasks/MentionInput';
@@ -226,8 +226,6 @@ export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthContext();
-    const [project, setProject] = useState<Project | null>(null);
-    const [projectLoading, setProjectLoading] = useState(true);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -252,17 +250,7 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
-    // Real deliverables from API (not mock data)
-    const [deliverables, setDeliverables] = useState<Array<{
-        id: string;
-        title: string;
-        type: string;
-        status: string;
-        progress: number;
-        dueDate: string;
-    }>>([]);
-    const [deliverablesLoading, setDeliverablesLoading] = useState(true);
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     // Expandable comments state
@@ -270,8 +258,73 @@ export const ProjectDetail = () => {
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
     const { addToast } = useToast();
 
-    // Polling hooks for cross-user sync
+    // Parallel data fetching with React Query cache
     const queryClient = useQueryClient();
+
+    const { data: project = null, isLoading: projectLoading } = useQuery<Project | null>({
+        queryKey: ['project', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/projects/${id}`, { credentials: 'include' });
+            if (!response.ok) {
+                console.error(`API returned ${response.status} for project ${id}`);
+                return null;
+            }
+            const data = await response.json();
+            return {
+                id: data.id,
+                title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
+                client: data.client_name || data.client_company || 'Client',
+                thumbnail: '',
+                status: dbStatusToDisplay(data.status),
+                startDate: data.start_date || data.created_at || new Date().toISOString(),
+                dueDate: data.due_date || data.created_at || new Date().toISOString(),
+                progress: 0,
+                description: data.description || '',
+                budget: 0,
+                team: (data.team || []).map((m: any) => ({
+                    id: m.id,
+                    name: m.name || 'Unknown',
+                    email: m.email || '',
+                    avatar: m.avatar || '',
+                    role: m.role || 'team_member',
+                })),
+                tasks: [],
+                deliverables: [],
+                files: [],
+                deliverablesCount: 0,
+                revisionCount: data.revisions_used ?? 0,
+                maxRevisions: data.total_revisions_allowed ?? 2,
+                activityLog: [],
+                termsAcceptedAt: data.terms_accepted_at,
+                termsAcceptedBy: data.terms_accepted_by,
+            };
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    const { data: deliverables = [], isLoading: deliverablesLoading } = useQuery({
+        queryKey: ['deliverables', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/deliverables?projectId=${id}`, { credentials: 'include' });
+            if (!response.ok) return [];
+            const data = await response.json();
+            return (data || []).map((d: any) => ({
+                id: d.id,
+                title: d.name || d.title || 'Untitled',
+                type: d.type || 'Video',
+                status: d.status || 'pending',
+                progress: d.progress || 0,
+                dueDate: d.estimated_completion_week
+                    ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+                    : new Date().toISOString(),
+            }));
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    // Polling hooks for cross-user sync
     const { data: tasks = [] } = useTasks(project?.id);
     const { data: activities = [] } = useActivities(project?.id);
     const { data: projectFiles = [] } = useProjectFiles(project?.id);
@@ -281,63 +334,14 @@ export const ProjectDetail = () => {
         if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
     };
 
+    // Sync termsAccepted from project data once it loads
+    useEffect(() => {
+        if (project?.termsAcceptedAt) setTermsAccepted(true);
+    }, [project?.termsAcceptedAt]);
+
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
 
-    // Fetch project from API
-    useEffect(() => {
-        if (!id) return;
-
-        const fetchProject = async () => {
-            try {
-                const response = await fetch(`/api/projects/${id}`, {
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    // Transform API response to match Project type
-                    const apiProject: Project = {
-                        id: data.id,
-                        title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
-                        client: data.client_name || data.client_company || 'Client',
-                        thumbnail: '',
-                        status: dbStatusToDisplay(data.status),
-                        startDate: data.start_date || data.created_at || new Date().toISOString(),
-                        dueDate: data.due_date || data.created_at || new Date().toISOString(),
-                        progress: 0,
-                        description: data.description || '',
-                        budget: 0,
-                        team: (data.team || []).map((m: any) => ({
-                            id: m.id,
-                            name: m.name || 'Unknown',
-                            email: m.email || '',
-                            avatar: m.avatar || '',
-                            role: m.role || 'team_member',
-                        })),
-                        tasks: [],
-                        deliverables: [],
-                        files: [],
-                        deliverablesCount: 0,
-                        revisionCount: data.revisions_used ?? 0,
-                        maxRevisions: data.total_revisions_allowed ?? 2,
-                        activityLog: [],
-                        termsAcceptedAt: data.terms_accepted_at,
-                        termsAcceptedBy: data.terms_accepted_by,
-                    };
-                    setProject(apiProject);
-                } else {
-                    console.error(`API returned ${response.status} for project ${id}`);
-                }
-            } catch (error) {
-                console.error('Failed to fetch project:', error);
-            } finally {
-                setProjectLoading(false);
-            }
-        };
-
-        fetchProject();
-    }, [id]);
 
 
     // Derive activityLog directly from the query data (avoids flash on refetch)
@@ -357,47 +361,6 @@ export const ProjectDetail = () => {
         });
     }, [activities, user?.id]);
 
-    // Load deliverables from API (for Overview tab consistency with Deliverables tab)
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadDeliverables = async () => {
-            setDeliverablesLoading(true);
-            try {
-                const response = await fetch(`/api/deliverables?projectId=${project.id}`, {
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load deliverables');
-                }
-
-                const data = await response.json();
-
-                // Transform API response to match the display format
-                const transformed = (data || []).map((d: any) => ({
-                    id: d.id,
-                    title: d.name || d.title || 'Untitled',
-                    type: d.type || 'Video',
-                    status: d.status || 'pending',
-                    progress: d.progress || 0,
-                    dueDate: d.estimated_completion_week
-                        ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-                        : new Date().toISOString(),
-                }));
-
-                setDeliverables(transformed);
-            } catch (error) {
-                console.error('Failed to load deliverables:', error);
-                // Fallback to empty array - don't show mock data
-                setDeliverables([]);
-            } finally {
-                setDeliverablesLoading(false);
-            }
-        };
-
-        loadDeliverables();
-    }, [project?.id]);
 
     // Auto-analysis on load
     useEffect(() => {
@@ -1060,7 +1023,7 @@ export const ProjectDetail = () => {
                         isPrimaryContact={isPrimaryContact}
                         isInviteModalOpen={isInviteModalOpen}
                         setIsInviteModalOpen={setIsInviteModalOpen}
-                        onTeamUpdated={(updatedTeam) => setProject(prev => prev ? { ...prev, team: updatedTeam } : prev)}
+                        onTeamUpdated={(updatedTeam) => queryClient.setQueryData<Project | null>(['project', id], (prev) => prev ? { ...prev, team: updatedTeam } : prev)}
                         addToast={addToast}
                     />
                 </TabsContent>

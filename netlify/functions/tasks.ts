@@ -1,4 +1,5 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { sendMentionNotification, sendTaskAssignmentEmail, sendRevisionRequestEmail } from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
@@ -6,40 +7,6 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
-
-const { Client } = pg;
-
-async function logActivity(dbClient: pg.Client, params: {
-  type: string;
-  userId: string;
-  userName: string;
-  projectId?: string;
-  details?: Record<string, string | number>;
-}) {
-  try {
-    await dbClient.query(
-      `INSERT INTO activities (type, user_id, user_name, project_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [params.type, params.userId, params.userName,
-       params.projectId || null,
-       JSON.stringify(params.details || {})]
-    );
-  } catch (err) {
-    console.error('Failed to log activity:', err);
-  }
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
 
 // Validate task status transitions
 const isValidUUID = (id: string): boolean => {
@@ -94,11 +61,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // ========================================================================
     // GET - Fetch tasks
     // ========================================================================
@@ -110,7 +73,7 @@ export const handler = compose(
       if (lastPart !== 'tasks' && !event.queryStringParameters?.projectId) {
         const taskId = lastPart;
 
-        const taskResult = await client.query(
+        const taskResult = await dbQuery(
           `SELECT * FROM tasks WHERE id = $1`,
           [taskId]
         );
@@ -138,7 +101,7 @@ export const handler = compose(
         }
 
         // Fetch comments for this task
-        const commentsResult = await client.query(
+        const commentsResult = await dbQuery(
           `SELECT tc.*, u.role as commenter_role FROM task_comments tc LEFT JOIN users u ON tc.user_id = u.id WHERE tc.task_id = $1 ORDER BY tc.created_at ASC`,
           [taskId]
         );
@@ -174,7 +137,7 @@ export const handler = compose(
       }
 
       // Fetch all tasks for a project
-      const tasksResult = await client.query(
+      const tasksResult = await dbQuery(
         `SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC`,
         [projectId]
       );
@@ -191,7 +154,7 @@ export const handler = compose(
       // Include comments if requested
       if (includeComments === 'true' && tasks.length > 0) {
         const taskIds = tasks.map(t => t.id);
-        const commentsResult = await client.query(
+        const commentsResult = await dbQuery(
           `SELECT tc.*, u.role as commenter_role FROM task_comments tc LEFT JOIN users u ON tc.user_id = u.id
            WHERE tc.task_id = ANY($1)
            ORDER BY tc.created_at ASC`,
@@ -239,7 +202,7 @@ export const handler = compose(
           };
         }
 
-        const result = await client.query(
+        const result = await dbQuery(
           `INSERT INTO task_comments (task_id, user_id, user_name, content)
            VALUES ($1, $2, $3, $4)
            RETURNING *`,
@@ -251,12 +214,12 @@ export const handler = compose(
 
         // Log comment activity
         try {
-          const taskForComment = await client.query(
+          const taskForComment = await dbQuery(
             'SELECT title, project_id FROM tasks WHERE id = $1',
             [taskId]
           );
           if (taskForComment.rows.length > 0) {
-            await logActivity(client, {
+            await logActivity({
               type: 'COMMENT_ADDED',
               userId: commentData.user_id,
               userName: commentData.user_name,
@@ -284,15 +247,15 @@ export const handler = compose(
 
           if (mentionedNames.length > 0) {
             // Fetch users matching these names
-            // Note: This is a simple case-insensitive name match. 
+            // Note: This is a simple case-insensitive name match.
             // In a production app, we should use IDs in the mention format (e.g. @[Name](userId))
-            const usersResult = await client.query(
+            const usersResult = await dbQuery(
               `SELECT id, email, name FROM users WHERE LOWER(name) = ANY($1)`,
               [mentionedNames.map((n: string) => n.toLowerCase())]
             );
 
             // Fetch task details for the email
-            const taskDetailsResult = await client.query(
+            const taskDetailsResult = await dbQuery(
               `SELECT title FROM tasks WHERE id = $1`,
               [taskId]
             );
@@ -305,7 +268,7 @@ export const handler = compose(
               if (user.id === commentData.user_id) return;
 
               // Check user preferences
-              const prefResult = await client.query(
+              const prefResult = await dbQuery(
                 `SELECT email_mention FROM user_preferences WHERE user_id = $1`,
                 [user.id]
               );
@@ -370,7 +333,7 @@ export const handler = compose(
         }
 
         // Check if task exists
-        const taskCheck = await client.query(
+        const taskCheck = await dbQuery(
           `SELECT id FROM tasks WHERE id = $1`,
           [taskId]
         );
@@ -384,7 +347,7 @@ export const handler = compose(
         }
 
         // Insert follow (or ignore if already following)
-        await client.query(
+        await dbQuery(
           `INSERT INTO task_followers (task_id, user_id)
            VALUES ($1, $2)
            ON CONFLICT (task_id, user_id) DO NOTHING`,
@@ -392,12 +355,12 @@ export const handler = compose(
         );
 
         // Return the task with updated followers list
-        const taskResult = await client.query(
+        const taskResult = await dbQuery(
           `SELECT * FROM tasks WHERE id = $1`,
           [taskId]
         );
 
-        const followersResult = await client.query(
+        const followersResult = await dbQuery(
           `SELECT user_id FROM task_followers WHERE task_id = $1`,
           [taskId]
         );
@@ -444,7 +407,7 @@ export const handler = compose(
         }
 
         // Check if task exists
-        const taskCheck = await client.query(
+        const taskCheck = await dbQuery(
           `SELECT id FROM tasks WHERE id = $1`,
           [taskId]
         );
@@ -458,18 +421,18 @@ export const handler = compose(
         }
 
         // Remove follow
-        await client.query(
+        await dbQuery(
           `DELETE FROM task_followers WHERE task_id = $1 AND user_id = $2`,
           [taskId, unfollowData.userId]
         );
 
         // Return the task with updated followers list
-        const taskResult = await client.query(
+        const taskResult = await dbQuery(
           `SELECT * FROM tasks WHERE id = $1`,
           [taskId]
         );
 
-        const followersResult = await client.query(
+        const followersResult = await dbQuery(
           `SELECT user_id FROM task_followers WHERE task_id = $1`,
           [taskId]
         );
@@ -511,7 +474,7 @@ export const handler = compose(
         createdBy = null;
       }
       if (!createdBy) {
-        const userResult = await client.query('SELECT id FROM users LIMIT 1');
+        const userResult = await dbQuery('SELECT id FROM users LIMIT 1');
         createdBy = userResult.rows[0]?.id;
       }
 
@@ -520,7 +483,7 @@ export const handler = compose(
         ? true
         : (rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false);
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO tasks (
           project_id, title, description, stage,
           is_client_visible, assigned_to, due_date, position, created_by
@@ -544,7 +507,7 @@ export const handler = compose(
       newTask.comments = [];
 
       // Log activity
-      await logActivity(client, {
+      await logActivity({
         type: 'TASK_CREATED',
         userId: auth?.user?.userId || createdBy,
         userName: auth?.user?.fullName || 'Unknown',
@@ -555,8 +518,8 @@ export const handler = compose(
       // Send email notification if assigned
       if (taskData.assignedTo) {
         try {
-          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [taskData.projectId]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [taskData.assignedTo]);
+          const projectResult = await dbQuery('SELECT project_number FROM projects WHERE id = $1', [taskData.projectId]);
+          const assigneeResult = await dbQuery('SELECT email, full_name FROM users WHERE id = $1', [taskData.assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -564,7 +527,7 @@ export const handler = compose(
             const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${taskData.project_id}?task=${newTask.id}`;
 
             // Check user preferences
-            const prefResult = await client.query(
+            const prefResult = await dbQuery(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
               [taskData.assignedTo]
             );
@@ -618,7 +581,7 @@ export const handler = compose(
       const isClientRole = userRole && clientRoles.includes(userRole);
 
       if (isClientRole) {
-        const taskCreatorCheck = await client.query(
+        const taskCreatorCheck = await dbQuery(
           'SELECT created_by FROM tasks WHERE id = $1',
           [taskId]
         );
@@ -654,7 +617,7 @@ export const handler = compose(
       // Validate status transition if status is being updated
       let previousStatus: string | null = null;
       if (updates.status) {
-        const currentTaskResult = await client.query(
+        const currentTaskResult = await dbQuery(
           `SELECT stage, project_id, title FROM tasks WHERE id = $1`,
           [taskId]
         );
@@ -687,7 +650,7 @@ export const handler = compose(
           const taskTitle = currentTaskResult.rows[0].title;
 
           // 1. Get Project Details & Check Quota
-          const projectRes = await client.query(
+          const projectRes = await dbQuery(
             `SELECT id, total_revisions_allowed, revisions_used, project_number, client_user_id, name FROM projects WHERE id = $1`,
             [projectId]
           );
@@ -707,7 +670,7 @@ export const handler = compose(
           }
 
           // 2. Increment Revision Count
-          await client.query(
+          await dbQuery(
             `UPDATE projects SET revisions_used = revisions_used + 1 WHERE id = $1`,
             [projectId]
           );
@@ -715,11 +678,11 @@ export const handler = compose(
           // 3. Send Email Notification
           try {
             // Get the client's name for "Requested By"
-            const clientUserRes = await client.query(`SELECT full_name FROM users WHERE id = $1`, [project.client_user_id]);
+            const clientUserRes = await dbQuery(`SELECT full_name FROM users WHERE id = $1`, [project.client_user_id]);
             const requestedBy = clientUserRes.rows[0]?.full_name || 'Client';
 
             // Limit emails to admins/PMs
-            const teamRes = await client.query(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
+            const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
 
             const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${projectId}?task=${taskId}`;
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
@@ -727,7 +690,7 @@ export const handler = compose(
             const emailPromises = teamRes.rows.map(async (admin) => {
               // Check preferences for each admin
               // Using email_project_update for revision requests
-              const prefResult = await client.query(
+              const prefResult = await dbQuery(
                 `SELECT email_project_update FROM user_preferences WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
                 [admin.email]
               );
@@ -784,7 +747,7 @@ export const handler = compose(
 
       updateFields.push(`updated_at = NOW()`);
 
-      const query = `
+      const sql = `
         UPDATE tasks
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
@@ -793,7 +756,7 @@ export const handler = compose(
 
       updateValues.push(taskId);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -808,7 +771,7 @@ export const handler = compose(
       // Log activity for task update
       if (updates.status && previousStatus !== updates.status) {
         const activityType = updates.status === 'revision_requested' ? 'REVISION_REQUESTED' : 'TASK_STATUS_CHANGED';
-        await logActivity(client, {
+        await logActivity({
           type: activityType,
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
@@ -816,7 +779,7 @@ export const handler = compose(
           details: { taskId: updatedTask.id, taskTitle: updatedTask.title, oldStatus: previousStatus || '', newStatus: updates.status },
         });
       } else if (!updates.status) {
-        await logActivity(client, {
+        await logActivity({
           type: 'TASK_UPDATED',
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
@@ -836,7 +799,7 @@ export const handler = compose(
           const projectId = updatedTask.projectId;
           const taskTitle = updatedTask.title;
 
-          const supportUsersResult = await client.query(
+          const supportUsersResult = await dbQuery(
             `SELECT u.id FROM users u
              JOIN project_team pt ON u.id = pt.user_id
              WHERE pt.project_id = $1 AND u.role = 'support' AND pt.removed_at IS NULL`,
@@ -844,7 +807,7 @@ export const handler = compose(
           );
 
           for (const su of supportUsersResult.rows) {
-            await client.query(
+            await dbQuery(
               `INSERT INTO notifications (user_id, project_id, type, title, message, actor_id, actor_name)
                VALUES ($1, $2, 'task_status_changed', $3, $4, $5, $6)`,
               [su.id, projectId, 'Task completed', `"${taskTitle}" was marked ${updates.status}`, auth.user.userId, auth.user.fullName]
@@ -858,16 +821,11 @@ export const handler = compose(
       // Check for assignment change and send email
       if (updates.assignedTo) {
         try {
-          // Get current user ID from checking the assignedTo update vs old one?
-          // Actually, we just check if it's set.
-          // Note: Ideally we should check if it CHANGED, but standard update logic usually implies intention.
-          // Plus we already did the update.
-
           const assignedTo = updates.assignedTo;
           const projectId = updatedTask.projectId;
 
-          const projectResult = await client.query('SELECT project_number FROM projects WHERE id = $1', [projectId]);
-          const assigneeResult = await client.query('SELECT email, full_name FROM users WHERE id = $1', [assignedTo]);
+          const projectResult = await dbQuery('SELECT project_number FROM projects WHERE id = $1', [projectId]);
+          const assigneeResult = await dbQuery('SELECT email, full_name FROM users WHERE id = $1', [assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
@@ -875,7 +833,7 @@ export const handler = compose(
             const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${projectId}?task=${taskId}`;
 
             // Check user preferences
-            const prefResult = await client.query(
+            const prefResult = await dbQuery(
               `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
               [assignedTo]
             );
@@ -927,7 +885,7 @@ export const handler = compose(
       const deleteAllowedRoles = ['super_admin', 'support'];
 
       if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
-        const taskOwnerCheck = await client.query(
+        const taskOwnerCheck = await dbQuery(
           'SELECT created_by FROM tasks WHERE id = $1',
           [taskId]
         );
@@ -951,13 +909,13 @@ export const handler = compose(
       }
 
       // Pre-fetch task info for activity logging
-      const taskInfoResult = await client.query(
+      const taskInfoResult = await dbQuery(
         'SELECT title, project_id FROM tasks WHERE id = $1',
         [taskId]
       );
       const taskInfo = taskInfoResult.rows[0];
 
-      const result = await client.query(
+      const result = await dbQuery(
         `DELETE FROM tasks WHERE id = $1 RETURNING id`,
         [taskId]
       );
@@ -972,7 +930,7 @@ export const handler = compose(
 
       // Log activity
       if (taskInfo) {
-        await logActivity(client, {
+        await logActivity({
           type: 'TASK_DELETED',
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
@@ -1004,7 +962,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

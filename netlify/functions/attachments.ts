@@ -1,4 +1,4 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -6,8 +6,6 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
-
-const { Client } = pg;
 
 interface Attachment {
     id: string;
@@ -18,18 +16,6 @@ interface Attachment {
     uploadedBy: string;
     createdAt: string;
 }
-
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-};
 
 const isValidUUID = (id: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -67,7 +53,7 @@ const getR2Client = () => {
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
         return null;
     }
-    
+
     const endpoint = getR2Endpoint();
     return new S3Client({
         region: "auto",
@@ -88,12 +74,7 @@ export const handler = compose(
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    let client;
-
     try {
-        client = getDbClient();
-        await client.connect();
-
         // GET: Fetch attachments for a comment
         if (event.httpMethod === 'GET') {
             const params = event.queryStringParameters || {};
@@ -113,7 +94,7 @@ export const handler = compose(
                 }
 
                 // Fetch the attachment to get the r2_key
-                const attachmentResult = await client.query(
+                const attachmentResult = await dbQuery(
                     'SELECT id, r2_key, file_name FROM comment_attachments WHERE id = $1',
                     [attachmentId]
                 );
@@ -185,8 +166,8 @@ export const handler = compose(
                 };
             }
 
-            const result = await client.query(
-                `SELECT 
+            const result = await dbQuery(
+                `SELECT
                     id,
                     comment_id as "commentId",
                     file_name as "fileName",
@@ -230,7 +211,7 @@ export const handler = compose(
             const { commentId, fileName, fileType, fileSize, r2Key } = validation.data;
 
             // Verify comment exists
-            const commentCheck = await client.query(
+            const commentCheck = await dbQuery(
                 'SELECT id FROM proposal_comments WHERE id = $1',
                 [commentId]
             );
@@ -247,10 +228,10 @@ export const handler = compose(
             }
 
             // Insert the attachment record
-            const result = await client.query(
+            const result = await dbQuery(
                 `INSERT INTO comment_attachments (comment_id, file_name, file_type, file_size, r2_key, uploaded_by)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING 
+                RETURNING
                     id,
                     comment_id as "commentId",
                     file_name as "fileName",
@@ -295,7 +276,5 @@ export const handler = compose(
                 error: 'Internal server error',
             }),
         };
-    } finally {
-        if (client) await client.end();
     }
 });

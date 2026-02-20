@@ -1,21 +1,7 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['GET', 'OPTIONS']),
@@ -35,15 +21,11 @@ export const handler = compose(
     };
   }
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // GET - Fetch aggregated platform metrics
     if (event.httpMethod === 'GET') {
       // Use separate subqueries to avoid cartesian product issues
-      const query = `
+      const sql = `
         SELECT
           (SELECT COUNT(*) FROM projects) as total_projects,
           (SELECT COUNT(*) FROM projects WHERE status = 'active') as active_projects,
@@ -59,7 +41,7 @@ export const handler = compose(
           (SELECT COUNT(*) FROM deliverables WHERE status = 'awaiting_approval') as pending_deliverables
       `;
 
-      const result = await client.query(query);
+      const result = await dbQuery(sql);
       const row = result.rows[0];
 
       // Transform snake_case to camelCase
@@ -80,7 +62,7 @@ export const handler = compose(
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=60' },
         body: JSON.stringify(metrics),
       };
     }
@@ -100,7 +82,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

@@ -1,22 +1,8 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, withValidation, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-};
 
 export const handler = compose(
     withCORS(['POST']),
@@ -27,11 +13,7 @@ export const handler = compose(
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    const client = getDbClient();
-
     try {
-        await client.connect();
-
         // Get validated data from middleware
         const data = (event as any).validatedData;
         const { projectId, accepted } = data;
@@ -50,7 +32,7 @@ export const handler = compose(
         }
 
         // Verify project exists
-        const projectResult = await client.query(
+        const projectResult = await dbQuery(
             'SELECT id, terms_accepted_at FROM projects WHERE id = $1',
             [projectId]
         );
@@ -76,7 +58,7 @@ export const handler = compose(
         }
 
         // Verify user exists and is a client for this project
-        const userResult = await client.query(
+        const userResult = await dbQuery(
             'SELECT id, role FROM users WHERE id = $1',
             [userId]
         );
@@ -96,9 +78,9 @@ export const handler = compose(
             || 'unknown';
 
         // Update project with terms acceptance
-        const updateResult = await client.query(
-            `UPDATE projects 
-       SET terms_accepted_at = NOW(), 
+        const updateResult = await dbQuery(
+            `UPDATE projects
+       SET terms_accepted_at = NOW(),
            terms_accepted_by = $1,
            terms_ip_address = $2,
            updated_at = NOW()
@@ -111,14 +93,13 @@ export const handler = compose(
 
         // Log activity
         try {
-            // Get user's full name for activity
-            const userNameResult = await client.query(
+            const userNameResult = await dbQuery(
                 'SELECT full_name FROM users WHERE id = $1',
                 [userId]
             );
             const userName = userNameResult.rows[0]?.full_name || auth?.user?.fullName || 'Unknown';
 
-            await client.query(
+            await dbQuery(
                 `INSERT INTO activities (type, user_id, user_name, project_id, details)
                  VALUES ('TERMS_ACCEPTED', $1, $2, $3, $4)`,
                 [userId, userName, projectId, JSON.stringify({ ip: clientIp })]
@@ -148,7 +129,5 @@ export const handler = compose(
                 message: error instanceof Error ? error.message : 'Unknown error',
             }),
         };
-    } finally {
-        await client.end();
     }
 });

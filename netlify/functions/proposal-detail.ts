@@ -1,22 +1,8 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
 import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['GET', 'PUT', 'PATCH']),
@@ -51,13 +37,9 @@ export const handler = compose(
     }
   }
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
-      const result = await client.query(
+      const result = await dbQuery(
         `SELECT * FROM proposals WHERE id = $1`,
         [id]
       );
@@ -72,7 +54,7 @@ export const handler = compose(
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
         body: JSON.stringify(result.rows[0]),
       };
     }
@@ -109,8 +91,8 @@ export const handler = compose(
 
       updateFields.push(`updated_at = NOW()`);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -118,7 +100,7 @@ export const handler = compose(
 
       updateValues.push(id);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -173,14 +155,14 @@ export const handler = compose(
 
       params.push(id);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       if (result.rows.length === 0) {
         return {
@@ -191,7 +173,7 @@ export const handler = compose(
       }
 
       if (status === 'accepted') {
-        await client.query(
+        await dbQuery(
           `UPDATE inquiries SET status = 'accepted' WHERE proposal_id = $1`,
           [id]
         );
@@ -220,7 +202,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

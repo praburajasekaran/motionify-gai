@@ -1,9 +1,7 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
 
 interface CreateProjectRequestPayload {
     title: string;
@@ -12,24 +10,12 @@ interface CreateProjectRequestPayload {
     clientUserId: string;
 }
 
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-};
-
-const generateRequestNumber = async (client: pg.Client): Promise<string> => {
+const generateRequestNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
 
-    const result = await client.query(
-        `SELECT request_number FROM project_requests 
-     WHERE request_number LIKE $1 
+    const result = await dbQuery(
+        `SELECT request_number FROM project_requests
+     WHERE request_number LIKE $1
      ORDER BY request_number DESC LIMIT 1`,
         [`REQ-${year}-%`]
     );
@@ -53,11 +39,7 @@ export const handler = compose(
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    const client = getDbClient();
-
     try {
-        await client.connect();
-
         // GET: Fetch project requests for a client
         if (event.httpMethod === 'GET') {
             const { clientUserId } = event.queryStringParameters || {};
@@ -70,9 +52,9 @@ export const handler = compose(
                 };
             }
 
-            const result = await client.query(
-                `SELECT * FROM project_requests 
-         WHERE client_user_id = $1 
+            const result = await dbQuery(
+                `SELECT * FROM project_requests
+         WHERE client_user_id = $1
          ORDER BY created_at DESC`,
                 [clientUserId]
             );
@@ -133,9 +115,9 @@ export const handler = compose(
                 };
             }
 
-            const requestNumber = await generateRequestNumber(client);
+            const requestNumber = await generateRequestNumber();
 
-            const result = await client.query(
+            const result = await dbQuery(
                 `INSERT INTO project_requests (
           request_number, client_user_id, title, description, tentative_deadline, status
         ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -183,7 +165,5 @@ export const handler = compose(
                 message: error instanceof Error ? error.message : 'Unknown error',
             }),
         };
-    } finally {
-        await client.end();
     }
 });

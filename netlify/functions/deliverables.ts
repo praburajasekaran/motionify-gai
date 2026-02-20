@@ -1,5 +1,6 @@
-import pg from 'pg';
 import { randomUUID } from 'crypto';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { sendDeliverableReadyEmail, sendFinalDeliverablesEmail } from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
@@ -7,8 +8,6 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { deleteMultipleFromR2 } from './_shared/r2';
-
-const { Client } = pg;
 
 // Correlated subquery to determine dominant file category by priority (video > image > document > script)
 const DOMINANT_FILE_CATEGORY_SQL = `
@@ -22,38 +21,6 @@ const DOMINANT_FILE_CATEGORY_SQL = `
      ELSE 5 END
    LIMIT 1) as dominant_file_category`;
 
-async function logActivity(dbClient: pg.Client, params: {
-  type: string;
-  userId: string;
-  userName: string;
-  projectId?: string;
-  details?: Record<string, string | number>;
-}) {
-  try {
-    await dbClient.query(
-      `INSERT INTO activities (type, user_id, user_name, project_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [params.type, params.userId, params.userName,
-       params.projectId || null,
-       JSON.stringify(params.details || {})]
-    );
-  } catch (err) {
-    console.error('Failed to log activity:', err);
-  }
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
 export const handler = compose(
   withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
@@ -62,17 +29,12 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
       const { projectId, id } = event.queryStringParameters || {};
 
       if (id) {
-        // Fetch deliverable with project info for permission check
-        const result = await client.query(
+        const result = await dbQuery(
           `SELECT d.*, p.client_user_id,
             ${DOMINANT_FILE_CATEGORY_SQL}
            FROM deliverables d
@@ -91,14 +53,10 @@ export const handler = compose(
 
         const deliverable = result.rows[0];
         const { client_user_id } = deliverable;
-
-        // Permission check
         const userRole = auth?.user?.role;
         const userId = auth?.user?.userId;
 
-        // Admin and PM can view all
         if (userRole !== 'super_admin' && userRole !== 'support') {
-          // Client can only view their own project's deliverables
           if (userRole === 'client' && client_user_id !== userId) {
             return {
               statusCode: 403,
@@ -110,9 +68,8 @@ export const handler = compose(
             };
           }
 
-          // Team member: check task assignment on project
           if (userRole === 'team_member') {
-            const taskResult = await client.query(
+            const taskResult = await dbQuery(
               `SELECT 1 FROM tasks
                WHERE project_id = $1
                AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -133,7 +90,6 @@ export const handler = compose(
           }
         }
 
-        // Dynamic expiry check (more accurate than relying on files_expired column)
         if (deliverable.status === 'final_delivered' && deliverable.final_delivered_at) {
           const deliveryDate = new Date(deliverable.final_delivered_at);
           const expiryDate = new Date(deliveryDate.getTime() + 365 * 24 * 60 * 60 * 1000);
@@ -151,12 +107,10 @@ export const handler = compose(
             };
           }
 
-          // Add computed expiry info to response
           deliverable.expires_at = expiryDate.toISOString();
           deliverable.files_expired = isExpired;
         }
 
-        // Remove internal fields before sending
         delete deliverable.client_user_id;
 
         return {
@@ -167,8 +121,7 @@ export const handler = compose(
       }
 
       if (projectId) {
-        // First validate user can access this project
-        const projectResult = await client.query(
+        const projectResult = await dbQuery(
           `SELECT client_user_id FROM projects WHERE id = $1`,
           [projectId]
         );
@@ -185,7 +138,6 @@ export const handler = compose(
         const userRole = auth?.user?.role;
         const userId = auth?.user?.userId;
 
-        // Permission check
         if (userRole !== 'super_admin' && userRole !== 'support') {
           if (userRole === 'client' && client_user_id !== userId) {
             return {
@@ -199,7 +151,7 @@ export const handler = compose(
           }
 
           if (userRole === 'team_member') {
-            const taskResult = await client.query(
+            const taskResult = await dbQuery(
               `SELECT 1 FROM tasks
                WHERE project_id = $1
                AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -220,15 +172,13 @@ export const handler = compose(
           }
         }
 
-        // Fetch deliverables
-        const result = await client.query(
+        const result = await dbQuery(
           `SELECT d.*,
             ${DOMINANT_FILE_CATEGORY_SQL}
            FROM deliverables d WHERE d.project_id = $1 ORDER BY d.estimated_completion_week`,
           [projectId]
         );
 
-        // Add computed expiry to each deliverable
         const deliverables = result.rows.map(d => {
           if (d.status === 'final_delivered' && d.final_delivered_at) {
             const deliveryDate = new Date(d.final_delivered_at);
@@ -254,7 +204,6 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      // Permission check: Only super_admin and support can create deliverables
       const userRole = auth?.user?.role;
       if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
@@ -271,8 +220,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const { project_id, name, description, estimated_completion_week } = validation.data;
 
-      // Verify project exists
-      const projectResult = await client.query(
+      const projectResult = await dbQuery(
         `SELECT id FROM projects WHERE id = $1`,
         [project_id]
       );
@@ -285,17 +233,15 @@ export const handler = compose(
         };
       }
 
-      // Create deliverable with generated UUID
       const deliverableId = randomUUID();
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO deliverables (id, project_id, name, description, status, estimated_completion_week, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
          RETURNING *`,
         [deliverableId, project_id, name, description || '', 'pending', estimated_completion_week || 1]
       );
 
-      // Log activity
-      await logActivity(client, {
+      await logActivity({
         type: 'DELIVERABLE_CREATED',
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -326,8 +272,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const updates = validation.data;
 
-      // Pre-fetch current status and name for activity logging
-      const currentDeliverable = await client.query(
+      const currentDeliverable = await dbQuery(
         'SELECT status, name, project_id FROM deliverables WHERE id = $1',
         [id]
       );
@@ -368,13 +313,12 @@ export const handler = compose(
         updateFields.push(`approved_at = NOW()`);
       }
 
-      // Track when final delivery occurs for expiry calculation
       if (updates.status === 'final_delivered') {
         updateFields.push(`final_delivered_at = NOW()`);
       }
 
-      const query = `
-        UPDATE deliverables 
+      const sql = `
+        UPDATE deliverables
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -382,7 +326,7 @@ export const handler = compose(
 
       updateValues.push(id);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -394,7 +338,6 @@ export const handler = compose(
 
       const updatedDeliverable = result.rows[0];
 
-      // Log activity for status change
       if (updates.status && oldDeliverableStatus !== updates.status) {
         let activityType = 'DELIVERABLE_STATUS_CHANGED';
         if (updates.status === 'awaiting_approval' || updates.status === 'final_delivered') {
@@ -402,7 +345,7 @@ export const handler = compose(
         } else if (updates.status === 'approved') {
           activityType = 'DELIVERABLE_APPROVED';
         }
-        await logActivity(client, {
+        await logActivity({
           type: activityType,
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
@@ -419,21 +362,20 @@ export const handler = compose(
 
       if (updates.status === 'awaiting_approval') {
         try {
-          const projectQuery = `
-             SELECT p.project_number, u.email, u.full_name
+          const projectResult = await dbQuery(
+            `SELECT p.project_number, u.email, u.full_name
              FROM projects p
              JOIN users u ON p.client_user_id = u.id
-             WHERE p.id = $1
-           `;
-          const projectResult = await client.query(projectQuery, [updatedDeliverable.project_id]);
+             WHERE p.id = $1`,
+            [updatedDeliverable.project_id]
+          );
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            // Check preferences (using email_project_update)
-            const userIdResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+            const userIdResult = await dbQuery('SELECT id FROM users WHERE email = $1', [email]);
             let emailEnabled = true;
             if (userIdResult.rows.length > 0) {
-              const prefResult = await client.query(
+              const prefResult = await dbQuery(
                 `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
                 [userIdResult.rows[0].id]
               );
@@ -461,22 +403,20 @@ export const handler = compose(
 
       if (updates.status === 'final_delivered') {
         try {
-          const projectQuery = `
-             SELECT p.project_number, u.email, u.full_name
+          const projectResult = await dbQuery(
+            `SELECT p.project_number, u.email, u.full_name
              FROM projects p
              JOIN users u ON p.client_user_id = u.id
-             WHERE p.id = $1
-           `;
-          const projectResult = await client.query(projectQuery, [updatedDeliverable.project_id]);
+             WHERE p.id = $1`,
+            [updatedDeliverable.project_id]
+          );
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            // Check preferences (using email_project_update)
-            const userIdResult = await client.query('SELECT id FROM users WHERE email = $1', [email]);
-            // If user not found (unlikely), default to send
+            const userIdResult = await dbQuery('SELECT id FROM users WHERE email = $1', [email]);
             let emailEnabled = true;
             if (userIdResult.rows.length > 0) {
-              const prefResult = await client.query(
+              const prefResult = await dbQuery(
                 `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
                 [userIdResult.rows[0].id]
               );
@@ -510,7 +450,6 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'DELETE') {
-      // Extract ID from path: /api/deliverables/{id}
       const pathParts = event.path.split('/');
       const id = pathParts[pathParts.length - 1];
 
@@ -522,7 +461,6 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Only super_admin and support can delete deliverables
       const userRole = auth?.user?.role;
       if (userRole !== 'super_admin' && userRole !== 'support') {
         return {
@@ -535,8 +473,7 @@ export const handler = compose(
         };
       }
 
-      // Verify deliverable exists
-      const deliverableResult = await client.query(
+      const deliverableResult = await dbQuery(
         'SELECT * FROM deliverables WHERE id = $1',
         [id]
       );
@@ -550,37 +487,28 @@ export const handler = compose(
       }
 
       const deliverable = deliverableResult.rows[0];
-
-      // Collect all file keys for R2 cleanup
       const fileKeysToDelete: string[] = [];
-
-      // Add beta and final file keys from deliverable
       if (deliverable.beta_file_key) fileKeysToDelete.push(deliverable.beta_file_key);
       if (deliverable.final_file_key) fileKeysToDelete.push(deliverable.final_file_key);
 
-      // Fetch all associated files from deliverable_files table
-      const filesResult = await client.query(
+      const filesResult = await dbQuery(
         'SELECT file_key FROM deliverable_files WHERE deliverable_id = $1',
         [id]
       );
-
       for (const file of filesResult.rows) {
         if (file.file_key) fileKeysToDelete.push(file.file_key);
       }
 
-      // Delete files from R2 storage
       if (fileKeysToDelete.length > 0) {
         try {
           await deleteMultipleFromR2(fileKeysToDelete);
           console.log(`[Deliverables] Deleted ${fileKeysToDelete.length} files from R2 for deliverable ${id}`);
         } catch (r2Error) {
           console.error('[Deliverables] R2 cleanup error:', r2Error);
-          // Continue with database deletion even if R2 cleanup fails
         }
       }
 
-      // Log activity before delete
-      await logActivity(client, {
+      await logActivity({
         type: 'DELIVERABLE_DELETED',
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -588,8 +516,7 @@ export const handler = compose(
         details: { deliverableId: id, deliverableName: deliverable.name },
       });
 
-      // Delete deliverable (CASCADE handles deliverable_files and revision_requests)
-      await client.query('DELETE FROM deliverables WHERE id = $1', [id]);
+      await dbQuery('DELETE FROM deliverables WHERE id = $1', [id]);
 
       console.log(`[Deliverables] Deleted deliverable ${id} by user ${auth?.user?.email}`);
 
@@ -616,7 +543,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });
