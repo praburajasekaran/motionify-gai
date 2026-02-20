@@ -210,7 +210,7 @@ export default function Quiz() {
                     >
                       <span className="text-white/40">{q.title.replace("?", "")}</span>
                       <span className="text-white/20">·</span>
-                      <span className="text-violet-300">{labelFor(q.key, selections[q.key])}</span>
+                      <span className="text-violet-300">{labelFor(q.key, selections[q.key]!)}</span>
                     </button>
                   ) : null
                 )}
