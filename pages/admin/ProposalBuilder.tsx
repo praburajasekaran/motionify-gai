@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
-import { getInquiryById, updateInquiryStatus, type Inquiry } from '../../lib/inquiries';
+import { getInquiryById, type Inquiry } from '../../lib/inquiries';
 import { createProposal } from '../../lib/proposals';
 import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, Save } from 'lucide-react';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
@@ -201,10 +201,6 @@ export function ProposalBuilder() {
         balanceAmount: pricing.balanceAmount,
         revisionsIncluded,
         revisionsDescription: revisionsDescription.trim() || undefined,
-      });
-
-      await updateInquiryStatus(inquiry.id, 'proposal_sent', {
-        proposalId: proposal.id,
       });
 
       // Generate proposal link with data parameter
