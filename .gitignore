@@ -22,3 +22,7 @@ landing-page-new/public/portal/
 
 # Local Netlify folder
 .netlify
+
+# Git worktrees
+worktrees/
+.worktrees/
