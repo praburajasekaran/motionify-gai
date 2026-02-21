@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
@@ -227,9 +228,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
             <Link to="/" className="flex items-center cursor-pointer">
               <img
-                src={mounted && resolvedTheme === 'dark' ? '/motionify-dark-logo.png' : '/motionify-studio-dark.png'}
+                src={mounted && resolvedTheme === 'dark'
+                  ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
+                  : `${import.meta.env.BASE_URL}motionify-studio-dark.png`}
                 alt="Motionify Studio"
-                className="h-8 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
             </Link>
           </div>
@@ -289,33 +292,48 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     active={location.pathname === '/admin/users'}
                   />
                 )}
-                <div
-                  onClick={logout}
-                  className="group flex items-center w-full px-3 py-2 text-[14px] font-medium rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-                    <span>Log Out</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
           {/* User footer */}
           <div className="p-3 border-t border-border shrink-0">
-            <div
-              id="logout-btn"
-              className="flex items-center gap-2.5 p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
-              onClick={logout}
-              title="Logout"
-            >
-              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
-              <div className="flex-1 overflow-hidden min-w-0">
-                <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
-                <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div
+                  className="flex items-center gap-2.5 p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
+                  aria-label="User menu"
+                >
+                  <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
+                  <div className="flex-1 overflow-hidden min-w-0">
+                    <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
+                    <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
+                  </div>
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-sm font-medium">{user?.name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.role ? getRoleLabel(user.role) : ''}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" onClick={() => setSidebarOpen(false)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => { setSidebarOpen(false); logout(); }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </aside>
 
@@ -326,7 +344,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
           {/* Top bar — minimal, functional */}
-          <header className="h-12 border-b border-border z-30 shrink-0 sticky top-0 bg-background">
+          <header className="h-14 border-b border-border z-30 shrink-0 sticky top-0 bg-background">
             <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
                 <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
@@ -367,13 +385,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
                     title={`Theme: ${theme} (click to change)`}
                   >
-                    {resolvedTheme === 'dark' ? (
+                    {theme === 'dark' ? (
                       <Moon className="h-4 w-4" />
-                    ) : (
+                    ) : theme === 'light' ? (
                       <Sun className="h-4 w-4" />
-                    )}
-                    {theme === 'system' && (
-                      <Monitor className="h-2 w-2 absolute bottom-1 right-1" />
+                    ) : (
+                      <Monitor className="h-4 w-4" />
                     )}
                   </Button>
                 )}
