@@ -106,7 +106,7 @@ export const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img
-              src="/images/motionify-studio-dark-web.png"
+              src={`${import.meta.env.BASE_URL}images/motionify-studio-dark-web.png`}
               alt="Motionify Studio"
               className="h-12"
             />
