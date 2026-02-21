@@ -141,7 +141,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         // Build magic link URL - strip any trailing /api or /portal suffixes
         const rawPortalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
         const portalUrl = rawPortalUrl.replace(/\/(api|portal)\/?$/, '');
-        const magicLink = `${portalUrl}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+        const magicLink = `${portalUrl}/portal/login?token=${token}&email=${encodeURIComponent(email)}`;
         console.log('[magic-link] ENV:', { NEXT_PUBLIC_PORTAL_URL: process.env.NEXT_PUBLIC_PORTAL_URL, PORTAL_URL: process.env.PORTAL_URL, rawPortalUrl, portalUrl, magicLink: magicLink.substring(0, 80) + '...' });
 
         // Send the magic link email

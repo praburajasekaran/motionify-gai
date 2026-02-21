@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User } from '@/types';
 import { clearAuthSession } from '@/lib/auth';
 import { API_BASE } from '@/lib/api-config';
@@ -31,6 +32,7 @@ interface AuthProviderProps {
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
 
 export function AuthProvider({ children }: AuthProviderProps) {
+    const navigate = useNavigate();
     const [user, setUserState] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -113,8 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setToken(null);
         setUserState(null);
         setUserTimezone(null);
-        // Redirect to login page
-        window.location.href = '/portal/login';
+        navigate('/login', { replace: true });
     }, []);
 
     /**

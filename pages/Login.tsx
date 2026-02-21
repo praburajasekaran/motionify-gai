@@ -13,6 +13,7 @@ export const Login: React.FC = () => {
 
   // Login Form States
   const [email, setEmail] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -74,7 +75,7 @@ export const Login: React.FC = () => {
     setSendSuccess(false);
 
     try {
-      const result = await requestMagicLink({ email });
+      const result = await requestMagicLink({ email, rememberMe });
 
       if (result.success) {
         setSendSuccess(true);
@@ -105,7 +106,7 @@ export const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img
-              src="/images/motionify-studio-dark-web.png"
+              src={`${import.meta.env.BASE_URL}images/motionify-studio-dark-web.png`}
               alt="Motionify Studio"
               className="h-12"
             />
@@ -152,6 +153,16 @@ export const Login: React.FC = () => {
                   required
                 />
               </div>
+
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-zinc-300 text-primary focus:ring-primary/20"
+                />
+                Remember me for 30 days
+              </label>
 
               {sendError && (
                 <p className="text-sm text-red-500">{sendError}</p>

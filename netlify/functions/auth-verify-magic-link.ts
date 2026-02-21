@@ -292,7 +292,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }
 
             // 3. Create Session (Common for both flows)
-            const sessionDurationSeconds = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
+            const sessionDurationSeconds = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
             const sessionExpiresAt = new Date(Date.now() + sessionDurationSeconds * 1000);
 
             // Generate JWT using new jwt.ts module
