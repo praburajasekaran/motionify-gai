@@ -133,5 +133,15 @@ export function createAuthCookie(token: string, rememberMe: boolean): string {
  */
 export function createClearAuthCookie(): string {
     const isProduction = process.env.NODE_ENV === 'production';
-    return `auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=${isProduction ? 'Strict' : 'Lax'}`;
+    const cookieAttributes = [
+        'auth_token=',
+        'HttpOnly',
+        'Path=/',
+        'Max-Age=0',
+        `SameSite=${isProduction ? 'Strict' : 'Lax'}`,
+    ];
+    if (isProduction) {
+        cookieAttributes.push('Secure');
+    }
+    return cookieAttributes.join('; ');
 }
