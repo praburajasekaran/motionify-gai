@@ -96,9 +96,9 @@ function App() {
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary onReset={reset}>
-              <AuthProvider>
-                <NotificationProvider>
-                  <BrowserRouter basename="/portal">
+              <BrowserRouter basename="/portal">
+                <AuthProvider>
+                  <NotificationProvider>
                     <Routes>
                       {/* Public routes - no layout */}
                       <Route path="/landing" element={<LandingPage />} />
@@ -132,9 +132,9 @@ function App() {
                       {/* Catch-all redirect */}
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
-                  </BrowserRouter>
-                </NotificationProvider>
-              </AuthProvider>
+                  </NotificationProvider>
+                </AuthProvider>
+              </BrowserRouter>
             </ErrorBoundary>
           )}
         </QueryErrorResetBoundary>
