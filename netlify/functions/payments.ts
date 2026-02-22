@@ -37,9 +37,10 @@ const getDbClient = () => {
     throw new Error('DATABASE_URL not configured');
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
   return new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: isProduction ? true : { rejectUnauthorized: false },
   });
 };
 
@@ -334,8 +335,6 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
               error: 'Payment verification failed',
-              details: verifyError.message || 'Unknown error',
-              stack: verifyError.stack,
             }),
           };
         }
@@ -594,7 +593,7 @@ export const handler = compose(
           };
         }
 
-        console.log(`[Payments API] Reminder sent to ${payment.client_email} for payment ${paymentId}`);
+        console.log(`[Payments API] Reminder sent for payment ${paymentId}`);
 
         // Log activity
         await logActivity(client, {
@@ -638,7 +637,6 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
   } finally {

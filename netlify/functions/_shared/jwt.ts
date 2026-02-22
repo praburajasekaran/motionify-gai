@@ -12,13 +12,13 @@ import { createLogger } from './logger';
 
 const logger = createLogger('jwt');
 
-// JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
+// JWT Configuration - secret is required in all environments
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_ISSUER = 'motionify-platform';
 const JWT_AUDIENCE = 'motionify-users';
 
-if (!process.env.JWT_SECRET) {
-    logger.warn('JWT_SECRET not set - using default (INSECURE for production)');
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required. Set it in your .env file.');
 }
 
 // Token expiration times

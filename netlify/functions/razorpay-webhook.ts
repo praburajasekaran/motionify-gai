@@ -52,8 +52,12 @@ interface RazorpayWebhookPayload {
 function verifySignature(rawBody: string, signature: string, secret: string): boolean {
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(rawBody);
-  const expectedSignature = hmac.digest('hex');
-  return expectedSignature === signature;
+  const expected = Buffer.from(hmac.digest('hex'), 'hex');
+  const actual = Buffer.from(signature, 'hex');
+  if (expected.length !== actual.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expected, actual);
 }
 
 /**
@@ -180,7 +184,7 @@ async function handlePaymentCaptured(
       const baseUrl = process.env.URL || 'http://localhost:5173';
       const projectUrl = `${baseUrl}/#/portal/projects`;
 
-      console.log('[Webhook] Sending payment success email to:', info.client_email);
+      console.log('[Webhook] Sending payment success email for payment:', paymentId);
 
       // Call email function directly (non-blocking)
       sendPaymentSuccessEmail({
@@ -244,7 +248,11 @@ async function handlePaymentFailed(
 
   // Send failure notification to admin (non-blocking)
   try {
-    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+    if (!adminEmail) {
+      console.warn('[Webhook] ADMIN_NOTIFICATION_EMAIL not configured, skipping failure notification');
+      return;
+    }
     sendPaymentFailureNotificationEmail({
       to: adminEmail,
       orderId: razorpayOrderId,

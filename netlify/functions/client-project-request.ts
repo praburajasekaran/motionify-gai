@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
@@ -18,9 +18,10 @@ const getDbClient = () => {
         throw new Error('DATABASE_URL not configured');
     }
 
+    const isProduction = process.env.NODE_ENV === 'production';
     return new Client({
         connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
+        ssl: isProduction ? true : { rejectUnauthorized: false },
     });
 };
 
@@ -48,8 +49,9 @@ const generateRequestNumber = async (client: pg.Client): Promise<string> => {
 
 export const handler = compose(
     withCORS(['GET', 'POST', 'OPTIONS']),
+    withAuth(),
     withRateLimit(RATE_LIMITS.apiStrict, 'client_project_request')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
@@ -60,6 +62,15 @@ export const handler = compose(
 
         // GET: Fetch project requests for a client
         if (event.httpMethod === 'GET') {
+            // Require authentication for reading project requests
+            if (!auth?.user) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ error: 'Authentication required' }),
+                };
+            }
+
             const { clientUserId } = event.queryStringParameters || {};
 
             if (!clientUserId) {
@@ -70,9 +81,19 @@ export const handler = compose(
                 };
             }
 
+            // Non-admin users can only access their own project requests
+            const adminRoles = ['super_admin', 'support'];
+            if (!adminRoles.includes(auth.user.role) && auth.user.userId !== clientUserId) {
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({ error: 'You can only access your own project requests' }),
+                };
+            }
+
             const result = await client.query(
-                `SELECT * FROM project_requests 
-         WHERE client_user_id = $1 
+                `SELECT * FROM project_requests
+         WHERE client_user_id = $1
          ORDER BY created_at DESC`,
                 [clientUserId]
             );
@@ -180,7 +201,6 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
                 error: 'Internal server error',
-                message: error instanceof Error ? error.message : 'Unknown error',
             }),
         };
     } finally {

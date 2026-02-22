@@ -7,6 +7,20 @@ import { Building2, Calendar, CheckCircle2, Clock, FileText, RotateCcw, User } f
 import { StatusTimeline } from './StatusTimeline';
 import { getStatusConfig } from '@/lib/status-config';
 
+/**
+ * Sanitize HTML to prevent XSS attacks.
+ * Strips script tags, event handlers, and dangerous attributes.
+ */
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '');
+}
+
 interface ProposalReviewProps {
   proposal: Proposal;
   inquiry: Inquiry;
@@ -87,7 +101,7 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Description</h2>
         <div className="max-w-none">
           {/<[^>]+>/.test(proposal.description) ? (
-            <div className="tiptap text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: proposal.description }} />
+            <div className="tiptap text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.description) }} />
           ) : (
             <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
               {proposal.description}

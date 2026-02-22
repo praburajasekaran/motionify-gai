@@ -39,10 +39,9 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
     },
     plugins: [react()],
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-    },
+    // SECURITY: API keys must not be embedded in client bundles.
+    // Use a backend proxy endpoint (e.g., /.netlify/functions/gemini-proxy) instead.
+    define: {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

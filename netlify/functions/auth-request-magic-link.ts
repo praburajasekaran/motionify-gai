@@ -142,7 +142,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         const rawPortalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
         const portalUrl = rawPortalUrl.replace(/\/(api|portal)\/?$/, '');
         const magicLink = `${portalUrl}/portal/login?token=${token}&email=${encodeURIComponent(email)}`;
-        console.log('[magic-link] ENV:', { NEXT_PUBLIC_PORTAL_URL: process.env.NEXT_PUBLIC_PORTAL_URL, PORTAL_URL: process.env.PORTAL_URL, rawPortalUrl, portalUrl, magicLink: magicLink.substring(0, 80) + '...' });
+        logger.info('Magic link generated', { portalUrl });
 
         // Send the magic link email
         const emailResult = await sendMagicLinkEmail({
@@ -150,12 +150,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             userName: user.full_name || email.split('@')[0],
             magicLink,
         });
-
-        // DEVELOPMENT: Always log the magic link for local testing
-        const isLocalDev = portalUrl.includes('localhost');
-        if (isLocalDev) {
-            logger.info('Magic link generated for local testing', { magicLink });
-        }
 
         if (emailResult) {
             logger.info('Magic link email sent', { email: email.slice(0, 3) + '***' });

@@ -973,10 +973,14 @@ describe('Send Proforma Email API', () => {
   describe('OPTIONS /api/payments/send-proforma-email', () => {
     it('should return CORS headers', async () => {
       const { OPTIONS } = require('../send-proforma-email/route');
-      const response = await OPTIONS();
+      const request = new NextRequest('http://localhost:3000/api/payments/send-proforma-email', {
+        method: 'OPTIONS',
+        headers: { origin: 'https://portal.motionify.studio' },
+      });
+      const response = await OPTIONS(request);
 
       expect(response.status).toBe(200);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://portal.motionify.studio');
     });
   });
 });

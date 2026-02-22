@@ -10,7 +10,7 @@ export default async function handler(req: Request, context: Context) {
 
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+        ssl: process.env.NODE_ENV === 'production' ? true : undefined,
     });
 
     try {

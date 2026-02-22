@@ -53,9 +53,10 @@ const getDbClient = () => {
     throw new Error('DATABASE_URL not configured');
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
   return new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: isProduction ? true : { rejectUnauthorized: false },
   });
 };
 
@@ -124,13 +125,12 @@ export const handler = compose(
 
       // If the last path segment looks like an ID (UUID or inquiry number), fetch that specific inquiry
       if (potentialId && potentialId !== 'inquiries' && potentialId !== 'api') {
+        // Use explicit query branching instead of dynamic column interpolation
         const isInquiryNumber = potentialId.startsWith('INQ-');
-        const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
 
-        const result = await client.query(
-          `SELECT * FROM inquiries WHERE ${lookupColumn} = $1`,
-          [potentialId]
-        );
+        const result = isInquiryNumber
+          ? await client.query(`SELECT * FROM inquiries WHERE inquiry_number = $1`, [potentialId])
+          : await client.query(`SELECT * FROM inquiries WHERE id = $1`, [potentialId]);
 
         if (result.rows.length === 0) {
           return {
@@ -318,13 +318,11 @@ export const handler = compose(
 
       const updates = JSON.parse(event.body || '{}');
 
-      // Pre-fetch old status for activity logging
+      // Pre-fetch old status for activity logging (explicit query branching)
       const isInquiryNumberLookup = id.startsWith('INQ-');
-      const lookupCol = isInquiryNumberLookup ? 'inquiry_number' : 'id';
-      const oldInquiryResult = await client.query(
-        `SELECT status, inquiry_number, id FROM inquiries WHERE ${lookupCol} = $1`,
-        [id]
-      );
+      const oldInquiryResult = isInquiryNumberLookup
+        ? await client.query(`SELECT status, inquiry_number, id FROM inquiries WHERE inquiry_number = $1`, [id])
+        : await client.query(`SELECT status, inquiry_number, id FROM inquiries WHERE id = $1`, [id]);
       const oldInquiryStatus = oldInquiryResult.rows[0]?.status;
       const inquiryNumber = oldInquiryResult.rows[0]?.inquiry_number;
       const inquiryUuid = oldInquiryResult.rows[0]?.id;
@@ -356,14 +354,14 @@ export const handler = compose(
 
       updateFields.push(`updated_at = NOW()`);
 
-      // Support lookup by UUID or by inquiry_number
+      // Support lookup by UUID or by inquiry_number (explicit query branching)
       const isInquiryNumber = id.startsWith('INQ-');
-      const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
+      const whereClause = isInquiryNumber ? 'inquiry_number' : 'id';
 
       const query = `
-        UPDATE inquiries 
+        UPDATE inquiries
         SET ${updateFields.join(', ')}
-        WHERE ${lookupColumn} = $${paramIndex}
+        WHERE ${whereClause} = $${paramIndex}
         RETURNING *
       `;
 
@@ -410,7 +408,6 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
   } finally {

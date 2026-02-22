@@ -40,12 +40,10 @@ export async function createAttachment(
     r2Key: string
 ): Promise<Attachment | null> {
     try {
-        const token = localStorage.getItem('portal_token');
         const response = await fetch(`${API_BASE}/attachments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
             credentials: 'include',
             body: JSON.stringify({ commentId, fileName, fileType, fileSize, r2Key }),
@@ -81,11 +79,7 @@ export async function getPresignedUploadUrl(
 
 export async function getAttachmentDownloadUrl(attachmentId: string): Promise<{ url: string; fileName: string } | null> {
     try {
-        const token = localStorage.getItem('portal_token');
         const response = await fetch(`${API_BASE}/attachments?attachmentId=${encodeURIComponent(attachmentId)}`, {
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            },
             credentials: 'include',
         });
         if (!response.ok) return null;

@@ -33,8 +33,8 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean } {
     // Set DATABASE_SSL=true to enable SSL (useful for staging environments)
     // Set DATABASE_SSL=false to disable SSL (local development only)
     if (process.env.DATABASE_SSL === 'true') {
-        // Enable SSL but allow self-signed certificates in development
-        return { rejectUnauthorized: false };
+        // Enable SSL with certificate validation in staging/dev
+        return true;
     }
 
     if (process.env.DATABASE_SSL === 'false') {
@@ -42,9 +42,8 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean } {
         return false;
     }
 
-    // Default in development: SSL enabled with self-signed cert support
-    // This is safer than completely disabling SSL
-    return { rejectUnauthorized: false };
+    // Default in development: SSL enabled with certificate validation
+    return true;
 }
 
 // Validate DATABASE_URL exists

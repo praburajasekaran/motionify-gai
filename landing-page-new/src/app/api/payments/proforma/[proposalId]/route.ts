@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readJSON, STORAGE_FILES } from '@/lib/storage';
 import { generateInvoicePDF, InvoiceData } from '@/lib/invoice/pdfGenerator';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_ORIGINS = [
+  'https://portal.motionify.studio',
+  'https://motionify.studio',
+  'https://www.motionify.studio',
+];
+
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('origin') || '';
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+    origin.match(/^https:\/\/[a-z0-9-]+--motionify-pm-portal\.netlify\.app$/) ||
+    (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')));
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 const MOTIONIFY_COMPANY_DETAILS = {
   name: 'Motionify',
@@ -173,7 +186,7 @@ export async function GET(
     if (!data) {
       return NextResponse.json(
         { error: 'Proposal not found' },
-        { status: 404, headers: corsHeaders }
+        { status: 404, headers: getCorsHeaders(request) }
       );
     }
 
@@ -187,7 +200,7 @@ export async function GET(
       return new NextResponse(pdfBlob, {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(request),
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="proforma-${invoiceNumber}.pdf"`,
         },
@@ -220,18 +233,18 @@ export async function GET(
       bankDetails: invoiceData.bankDetails,
       razorpayDetails: invoiceData.razorpayDetails,
       paymentUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payments/proforma/${proposalId}`,
-    }, { status: 200, headers: corsHeaders });
+    }, { status: 200, headers: getCorsHeaders(request) });
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error generating proforma invoice:', message);
     return NextResponse.json(
       { error: 'Failed to generate proforma invoice', message },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(request: NextRequest) {
+  return NextResponse.json({}, { headers: getCorsHeaders(request) });
 }
