@@ -9,6 +9,19 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify <onboarding@resen
 
 const LOGO_URL = 'https://motionify.studio/motionify-studio-dark.png';
 
+/**
+ * Escape HTML special characters to prevent HTML injection in email templates.
+ * Must be applied to all user-controlled values interpolated into HTML.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function emailWrapper(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -75,10 +88,10 @@ export async function sendMentionNotification(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; margin: 0 0 16px;">You were mentioned in a comment</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;"><strong>${data.mentionedByName}</strong> mentioned you in <strong>${data.taskTitle}</strong>:</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;"><strong>${escapeHtml(data.mentionedByName)}</strong> mentioned you in <strong>${escapeHtml(data.taskTitle)}</strong>:</p>
 
     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-      "${data.commentContent}"
+      "${escapeHtml(data.commentContent)}"
     </div>
 
     <div style="margin: 30px 0; text-align: center;">
@@ -103,11 +116,11 @@ export async function sendTaskAssignmentEmail(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; margin: 0 0 16px;">New Task Assignment</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.assigneeName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">You have been assigned to a new task in project <strong>${data.projectNumber}</strong>:</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.assigneeName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">You have been assigned to a new task in project <strong>${escapeHtml(data.projectNumber)}</strong>:</p>
 
     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-      <h3 style="margin-top: 0; color: #111827;">${data.taskTitle}</h3>
+      <h3 style="margin-top: 0; color: #111827;">${escapeHtml(data.taskTitle)}</h3>
       ${data.dueDate ? `<p style="margin-bottom: 0; color: #6b7280;">Due: ${new Date(data.dueDate).toLocaleDateString()}</p>` : ''}
     </div>
 
@@ -133,12 +146,12 @@ export async function sendDeliverableReadyEmail(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; margin: 0 0 16px;">Deliverable Ready for Review</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.clientName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">A new deliverable is ready for your review in project <strong>${data.projectNumber}</strong>:</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.clientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">A new deliverable is ready for your review in project <strong>${escapeHtml(data.projectNumber)}</strong>:</p>
 
     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-      <h3 style="margin-top: 0; color: #111827;">${data.deliverableName}</h3>
-      ${data.deliveryNotes ? `<p style="margin-top: 10px; color: #4b5563;"><strong>Note from team:</strong><br>${data.deliveryNotes}</p>` : ''}
+      <h3 style="margin-top: 0; color: #111827;">${escapeHtml(data.deliverableName)}</h3>
+      ${data.deliveryNotes ? `<p style="margin-top: 10px; color: #4b5563;"><strong>Note from team:</strong><br>${escapeHtml(data.deliveryNotes)}</p>` : ''}
     </div>
 
     <div style="margin: 30px 0; text-align: center;">
@@ -165,10 +178,10 @@ export async function sendRevisionRequestEmail(data: {
   const content = `
     <h2 style="color: #7c3aed; margin: 0 0 16px;">Revision Requested</h2>
     <p style="margin: 0 0 8px; color: #1a1a1a;">Hi Team,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;"><strong>${data.requestedBy}</strong> has requested a revision on <strong>${data.taskTitle}</strong> in project <strong>${data.projectName}</strong>.</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;"><strong>${escapeHtml(data.requestedBy)}</strong> has requested a revision on <strong>${escapeHtml(data.taskTitle)}</strong> in project <strong>${escapeHtml(data.projectName)}</strong>.</p>
 
     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-      <p style="margin: 0; color: #4b5563;"><strong>Revision Status:</strong> ${data.revisionCount}</p>
+      <p style="margin: 0; color: #4b5563;"><strong>Revision Status:</strong> ${escapeHtml(data.revisionCount)}</p>
     </div>
 
     <div style="margin: 30px 0; text-align: center;">
@@ -193,8 +206,8 @@ export async function sendFinalDeliverablesEmail(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; margin: 0 0 16px;">Final Deliverable Ready</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.clientName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">Thank you for your payment! The final files for <strong>${data.deliverableName}</strong> in project <strong>${data.projectNumber}</strong> are now ready for download.</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.clientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">Thank you for your payment! The final files for <strong>${escapeHtml(data.deliverableName)}</strong> in project <strong>${escapeHtml(data.projectNumber)}</strong> are now ready for download.</p>
 
     <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
       <h3 style="margin-top: 0; color: #166534;">Download Ready</h3>
@@ -228,8 +241,8 @@ export async function sendPaymentReminderEmail(data: {
 }) {
   const content = `
     <h2 style="color: #dc2626; margin: 0 0 16px;">Payment Reminder</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.clientName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">This is a friendly reminder that your balance payment for project <strong>${data.projectNumber}</strong> is still pending.</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.clientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">This is a friendly reminder that your balance payment for project <strong>${escapeHtml(data.projectNumber)}</strong> is still pending.</p>
 
     <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
       <h3 style="margin-top: 0; color: #991b1b;">Outstanding Balance</h3>
@@ -263,8 +276,8 @@ export async function sendInquiryVerificationEmail(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">Verify Your Email</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.contactName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">Thanks for your interest in working with us! To complete your inquiry for a <strong>${data.recommendedVideoType}</strong> video project, please verify your email address.</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.contactName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">Thanks for your interest in working with us! To complete your inquiry for a <strong>${escapeHtml(data.recommendedVideoType)}</strong> video project, please verify your email address.</p>
 
     <div style="background: linear-gradient(135deg, rgba(217,70,239,0.1), rgba(139,92,246,0.1), rgba(59,130,246,0.1)); padding: 20px; border-radius: 12px; margin: 30px 0; text-align: center;">
       <p style="margin: 0 0 15px 0; color: #4b5563;">Click the button below to verify and create your account:</p>
@@ -304,8 +317,8 @@ export async function sendProposalNotificationEmail(data: {
 }) {
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">Your Proposal is Ready!</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.clientName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">Great news! We've reviewed your video project inquiry (<strong>${data.inquiryNumber}</strong>) and prepared a custom proposal for you.</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.clientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">Great news! We've reviewed your video project inquiry (<strong>${escapeHtml(data.inquiryNumber)}</strong>) and prepared a custom proposal for you.</p>
 
     <div style="background: linear-gradient(135deg, rgba(217,70,239,0.1), rgba(139,92,246,0.1), rgba(59,130,246,0.1)); padding: 24px; border-radius: 12px; margin: 30px 0;">
       <div style="text-align: center; margin-bottom: 16px;">
@@ -357,25 +370,25 @@ export async function sendNewInquiryNotificationEmail(data: {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; color: #6b7280; width: 140px;">Inquiry Number:</td>
-          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.inquiryNumber}</td>
+          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${escapeHtml(data.inquiryNumber)}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">Client Name:</td>
-          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.clientName}</td>
+          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${escapeHtml(data.clientName)}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">Email:</td>
-          <td style="padding: 8px 0; color: #111827;">${data.clientEmail}</td>
+          <td style="padding: 8px 0; color: #111827;">${escapeHtml(data.clientEmail)}</td>
         </tr>
         ${data.companyName ? `
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">Company:</td>
-          <td style="padding: 8px 0; color: #111827;">${data.companyName}</td>
+          <td style="padding: 8px 0; color: #111827;">${escapeHtml(data.companyName)}</td>
         </tr>
         ` : ''}
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">Video Type:</td>
-          <td style="padding: 8px 0; color: #111827;">${data.recommendedVideoType}</td>
+          <td style="padding: 8px 0; color: #111827;">${escapeHtml(data.recommendedVideoType)}</td>
         </tr>
       </table>
     </div>
@@ -413,8 +426,8 @@ export async function sendCommentNotificationEmail(data: {
     <p style="margin: 0 0 16px; color: #1a1a1a;">A ${roleLabel.toLowerCase()} has commented on ${proposalDisplay}.</p>
 
     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-      <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;"><strong>${data.commenterName}</strong> (${roleLabel}) wrote:</p>
-      <p style="margin: 0; color: #111827;">"${data.commentPreview}"</p>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;"><strong>${escapeHtml(data.commenterName)}</strong> (${roleLabel}) wrote:</p>
+      <p style="margin: 0; color: #111827;">"${escapeHtml(data.commentPreview)}"</p>
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
@@ -506,8 +519,8 @@ export async function sendPaymentSuccessEmail(data: {
 
   const content = `
     <h2 style="color: #16a34a; text-align: center; margin: 0 0 16px;">Payment Successful!</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.clientName}</strong>,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;">Thank you! Your ${paymentTypeLabel.toLowerCase()} for project <strong>${data.projectNumber}</strong> has been received.</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.clientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">Thank you! Your ${paymentTypeLabel.toLowerCase()} for project <strong>${escapeHtml(data.projectNumber)}</strong> has been received.</p>
 
     <div style="background-color: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #16a34a;">
       <table style="width: 100%; border-collapse: collapse;">
@@ -561,7 +574,7 @@ export async function sendProjectInvitationEmail(data: {
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">You're Invited to a Project</h2>
     <p style="margin: 0 0 8px; color: #1a1a1a;">Hi there,</p>
-    <p style="margin: 0 0 16px; color: #1a1a1a;"><strong>${data.invitedByName}</strong> has invited you to join the project <strong>${data.projectName}</strong> as a <strong>${roleLabel}</strong>.</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;"><strong>${escapeHtml(data.invitedByName)}</strong> has invited you to join the project <strong>${escapeHtml(data.projectName)}</strong> as a <strong>${escapeHtml(roleLabel)}</strong>.</p>
 
     <div style="background: linear-gradient(135deg, rgba(217,70,239,0.1), rgba(139,92,246,0.1), rgba(59,130,246,0.1)); padding: 24px; border-radius: 12px; margin: 30px 0; text-align: center;">
       <p style="margin: 0 0 15px 0; color: #4b5563;">Click the button below to accept the invitation:</p>
@@ -625,28 +638,28 @@ export async function sendProposalStatusChangeEmail(data: {
       message = `Your proposal status has been updated to <strong>${statusLabel}</strong>.`;
     }
   } else {
-    message = `<strong>${data.changedBy || 'Client'}</strong> has responded to the proposal with status: <strong>${statusLabel}</strong>.`;
+    message = `<strong>${escapeHtml(data.changedBy || 'Client')}</strong> has responded to the proposal with status: <strong>${escapeHtml(statusLabel)}</strong>.`;
   }
 
   const content = `
     <h2 style="color: ${info.color}; text-align: center; margin: 0 0 16px;">${info.greeting}</h2>
-    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.recipientName}</strong>,</p>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.recipientName)}</strong>,</p>
     <p style="margin: 0 0 16px; color: #1a1a1a;">${message}</p>
 
     <div style="background-color: ${info.bgColor}; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid ${info.color};">
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; color: #6b7280; width: 140px;">Proposal:</td>
-          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.proposalTitle}</td>
+          <td style="padding: 8px 0; font-weight: bold; color: #111827;">${escapeHtml(data.proposalTitle)}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">New Status:</td>
-          <td style="padding: 8px 0; color: ${info.color}; font-weight: bold;">${statusLabel}</td>
+          <td style="padding: 8px 0; color: ${info.color}; font-weight: bold;">${escapeHtml(statusLabel)}</td>
         </tr>
         ${data.feedback ? `
         <tr>
           <td style="padding: 8px 0; color: #6b7280; vertical-align: top;">Feedback:</td>
-          <td style="padding: 8px 0; color: #111827;">${data.feedback}</td>
+          <td style="padding: 8px 0; color: #111827;">${escapeHtml(data.feedback)}</td>
         </tr>
         ` : ''}
       </table>
@@ -688,7 +701,7 @@ export const handler: Handler = async (event) => {
     switch (type) {
       case 'payment_failure':
         result = await sendPaymentFailureNotificationEmail({
-          to: data.to || process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com',
+          to: data.to || process.env.ADMIN_NOTIFICATION_EMAIL || '',
           orderId: data.data?.orderId || 'unknown',
           paymentId: data.data?.paymentId,
           errorCode: data.data?.errorCode,

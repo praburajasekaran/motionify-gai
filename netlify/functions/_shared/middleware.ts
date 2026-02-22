@@ -237,7 +237,6 @@ export function withCORS(allowedMethods: string[]): Middleware {
                     error: {
                         code: 'INTERNAL_SERVER_ERROR',
                         message: 'An unexpected error occurred',
-                        details: error.message,
                     },
                 }),
             };

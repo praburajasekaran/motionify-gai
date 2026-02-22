@@ -11,9 +11,10 @@ const getDbClient = () => {
     throw new Error('DATABASE_URL not configured');
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
   return new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: isProduction ? true : { rejectUnauthorized: false },
   });
 };
 
@@ -43,13 +44,12 @@ export const handler = compose(
 
     if (event.httpMethod === 'GET') {
       // Support lookup by UUID or by inquiry_number (e.g., INQ-2026-001)
+      // Use explicit query branching instead of dynamic column interpolation
       const isInquiryNumber = id.startsWith('INQ-');
-      const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
 
-      const result = await client.query(
-        `SELECT * FROM inquiries WHERE ${lookupColumn} = $1`,
-        [id]
-      );
+      const result = isInquiryNumber
+        ? await client.query(`SELECT * FROM inquiries WHERE inquiry_number = $1`, [id])
+        : await client.query(`SELECT * FROM inquiries WHERE id = $1`, [id]);
 
       if (result.rows.length === 0) {
         return {
@@ -135,7 +135,6 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
   } finally {

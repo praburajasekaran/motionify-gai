@@ -28,7 +28,7 @@ const getDbClient = () => {
 
     return new Client({
         connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
+        ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
     });
 };
 

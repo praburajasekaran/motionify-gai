@@ -5,11 +5,24 @@ import { NextRequest, NextResponse } from 'next/server';
  * Proxies to Netlify function in development
  */
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_ORIGINS = [
+    'https://portal.motionify.studio',
+    'https://motionify.studio',
+    'https://www.motionify.studio',
+];
+
+function getCorsHeaders(request: Request): Record<string, string> {
+    const origin = request.headers.get('origin') || '';
+    const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+        origin.match(/^https:\/\/[a-z0-9-]+--motionify-pm-portal\.netlify\.app$/) ||
+        (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')));
+    return {
+        'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    };
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -44,13 +57,13 @@ export async function POST(request: NextRequest) {
                     message: 'The inquiry service is not available. Please make sure Netlify Dev is running.',
                     hint: 'Run: netlify dev (from project root)'
                 },
-                { status: 503, headers: corsHeaders }
+                { status: 503, headers: getCorsHeaders(request) }
             );
         }
 
         console.log('[inquiry-request-verification proxy] Response status:', response.status, 'success:', data.success);
 
-        return NextResponse.json(data, { status: response.status, headers: corsHeaders });
+        return NextResponse.json(data, { status: response.status, headers: getCorsHeaders(request) });
     } catch (error: any) {
         console.error('[inquiry-request-verification proxy] Error:', error);
 
@@ -63,7 +76,7 @@ export async function POST(request: NextRequest) {
                     message: 'Cannot connect to inquiry service. Please make sure Netlify Dev is running.',
                     hint: 'Run: netlify dev (from project root)'
                 },
-                { status: 503, headers: corsHeaders }
+                { status: 503, headers: getCorsHeaders(request) }
             );
         }
 
@@ -74,11 +87,11 @@ export async function POST(request: NextRequest) {
                 message: error.message || 'An unexpected error occurred',
                 hint: 'Make sure Netlify Dev is running. Run: netlify dev (from project root)'
             },
-            { status: 500, headers: corsHeaders }
+            { status: 500, headers: getCorsHeaders(request) }
         );
     }
 }
 
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(request: NextRequest) {
+    return NextResponse.json({}, { headers: getCorsHeaders(request) });
 }

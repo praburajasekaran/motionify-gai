@@ -16,6 +16,7 @@ export const emailSchema = z
     .email('Invalid email format')
     .min(5, 'Email too short')
     .max(255, 'Email too long')
+    .refine(val => !/[\r\n]/.test(val), 'Email contains invalid characters')
     .transform(val => val.toLowerCase().trim());
 
 export const uuidSchema = z

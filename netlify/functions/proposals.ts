@@ -60,7 +60,7 @@ const getDbClient = () => {
 
   return new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
   });
 };
 
@@ -590,7 +590,6 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
   } finally {

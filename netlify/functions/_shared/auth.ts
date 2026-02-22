@@ -15,17 +15,12 @@ import { createLogger } from './logger';
 
 const logger = createLogger('auth-middleware');
 
-// JWT secret - MUST be set in production
+// JWT secret - MUST be set in all environments
 function getJwtSecret(): string {
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
-        if (process.env.NODE_ENV === 'production') {
-            throw new Error('JWT_SECRET environment variable is required in production');
-        }
-        // Development fallback - log warning
-        console.warn('[AUTH] WARNING: JWT_SECRET not set, using development fallback');
-        return 'dev-only-secret-do-not-use-in-production-32chars';
+        throw new Error('JWT_SECRET environment variable is required. Set it in your .env file.');
     }
 
     return secret;
@@ -141,7 +136,7 @@ export function extractToken(headers: Record<string, string>): string | null {
  */
 export async function authenticateRequest(
     headers: Record<string, string>,
-    validateSession = false
+    validateSession = true
 ): Promise<AuthResult> {
     const token = extractToken(headers);
 

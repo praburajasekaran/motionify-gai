@@ -71,8 +71,8 @@ export function isOriginAllowed(origin: string | undefined): boolean {
         return true;
     }
 
-    // Check Netlify preview URLs (deploy previews)
-    if (origin.match(/^https:\/\/[a-z0-9-]+--motionify.*\.netlify\.app$/)) {
+    // Check Netlify preview URLs (deploy previews) - exact site name match
+    if (origin.match(/^https:\/\/[a-z0-9-]+--motionify-pm-portal\.netlify\.app$/)) {
         return true;
     }
 
@@ -99,7 +99,7 @@ export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Private-Network': 'true',
+        ...(process.env.NODE_ENV !== 'production' ? { 'Access-Control-Allow-Private-Network': 'true' } : {}),
     };
 }
 
@@ -159,6 +159,15 @@ export function validateCors(event: {
     // In production, validate origin
     if (isProduction && origin && !isOriginAllowed(origin)) {
         return createCorsError();
+    }
+
+    // CSRF protection: reject state-changing requests without a valid origin in production
+    const stateMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.httpMethod);
+    if (isProduction && stateMutating && !origin) {
+        const referer = event.headers.referer || event.headers.Referer;
+        if (!referer || !isOriginAllowed(new URL(referer).origin)) {
+            return createCorsError();
+        }
     }
 
     return null;

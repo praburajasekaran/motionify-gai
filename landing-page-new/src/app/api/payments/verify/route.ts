@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 import type { PaymentVerificationRequest } from '@/lib/payment.types';
 
 // Admin email for payment failure notifications
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@motionify.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
 
 /**
  * Log a payment attempt to the database
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     console.error('Error verifying payment:', errorMessage);
 
     return NextResponse.json(
-      { error: 'Failed to verify payment', details: errorMessage, verified: false },
+      { error: 'Failed to verify payment', verified: false },
       { status: 500 }
     );
   }

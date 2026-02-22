@@ -36,7 +36,7 @@ const getDbClient = () => {
 
   return new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
   });
 };
 
@@ -294,7 +294,7 @@ export const handler = compose(
             body: JSON.stringify({
                 error: {
                     code: 'R2_ERROR',
-                    message: error.message || 'File storage error',
+                    message: 'File storage error',
                 },
             }),
         };

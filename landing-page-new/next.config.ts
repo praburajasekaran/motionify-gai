@@ -17,8 +17,16 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
           },
         ],
       },
