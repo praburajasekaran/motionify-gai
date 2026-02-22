@@ -8,20 +8,42 @@
 
 ## Executive Summary
 
-This audit identified **21 security findings** across the Motionify PM Portal codebase, including 4 Critical, 7 High, 7 Medium, and 3 Low severity issues. The most significant risks involve duplicate JWT implementations with hardcoded fallback secrets, a missing authentication check on a data-access endpoint, XSS via unsanitized HTML rendering, and a timing-attack-vulnerable webhook signature comparison.
+This audit identified **25 security findings** across the Motionify PM Portal codebase, including 5 Critical, 9 High, 8 Medium, and 3 Low severity issues. The most significant risks involve an API key exposed in the client-side bundle, duplicate JWT implementations with hardcoded fallback secrets, a missing authentication check on a data-access endpoint, XSS via unsanitized HTML rendering, and a timing-attack-vulnerable webhook signature comparison.
 
 | Severity | Count |
 |----------|-------|
-| Critical | 4     |
-| High     | 7     |
-| Medium   | 7     |
+| Critical | 5     |
+| High     | 9     |
+| Medium   | 8     |
 | Low      | 3     |
 
 ---
 
 ## Critical Findings
 
-### C1. Duplicate JWT Implementations with Weak Default Secrets
+### C1. API Key Exposed in Client-Side JavaScript Bundle
+
+**File:** `vite.config.ts:42-44`
+
+**Description:**
+The Gemini API key is embedded directly into the client-side JavaScript bundle via Vite's `define` option:
+
+```typescript
+define: {
+    'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+    'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+},
+```
+
+This compiles the secret value into the production JavaScript bundle, making it visible to anyone who inspects the page source, network requests, or source maps.
+
+**Impact:** Unauthorized use of the Gemini API at the project's expense. Potential for API abuse, quota exhaustion, and cost escalation.
+
+**Remediation:** Remove the API key from the client bundle. Proxy Gemini API calls through a backend endpoint that injects the key server-side.
+
+---
+
+### C2. Duplicate JWT Implementations with Weak Default Secrets
 
 **Files:**
 - `netlify/functions/_shared/auth.ts:19-32`
@@ -48,7 +70,7 @@ Both modules are used by different parts of the codebase. If `JWT_SECRET` is uns
 
 ---
 
-### C2. Missing Authentication on `client-project-request` Endpoint
+### C3. Missing Authentication on `client-project-request` Endpoint
 
 **File:** `netlify/functions/client-project-request.ts:49-85`
 
@@ -72,7 +94,7 @@ if (event.httpMethod === 'GET') {
 
 ---
 
-### C3. XSS via `dangerouslySetInnerHTML` on User-Controlled Content
+### C4. XSS via `dangerouslySetInnerHTML` on User-Controlled Content
 
 **Files:**
 - `pages/admin/ProposalDetail.tsx:619`
@@ -98,7 +120,7 @@ dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(proposal.description) }}
 
 ---
 
-### C4. Timing-Attack Vulnerable Webhook Signature Verification
+### C5. Timing-Attack Vulnerable Webhook Signature Verification
 
 **File:** `netlify/functions/razorpay-webhook.ts:52-57`
 
@@ -259,23 +281,75 @@ Authentication is only enforced for GET and PUT, not POST (intentional for publi
 
 ---
 
-### H7. Error Responses Leak Internal Details
+### H7. Error Responses Leak Internal Details Including Stack Traces
 
-**File:** `netlify/functions/client-project-request.ts:181-184`, and multiple other endpoints
+**Files:**
+- `netlify/functions/payments.ts:335-339` (includes `stack` property)
+- `netlify/functions/client-project-request.ts:181-184`
+- Multiple other endpoints
 
 **Description:**
+Error messages from database drivers, payment providers, and other internal systems are forwarded to clients. One endpoint explicitly includes the full stack trace:
+
 ```typescript
+// payments.ts:335-339
 body: JSON.stringify({
-    error: 'Internal server error',
-    message: error instanceof Error ? error.message : 'Unknown error',
+    error: 'Payment verification failed',
+    details: verifyError.message || 'Unknown error',
+    stack: verifyError.stack,  // FULL STACK TRACE exposed
 }),
 ```
 
-Error messages from database drivers, payment providers, and other internal systems are forwarded to clients.
+**Impact:** Information disclosure — stack traces, file paths, SQL errors, and provider-specific messages help attackers understand the system architecture and identify attack vectors.
 
-**Impact:** Information disclosure — stack traces, SQL errors, and provider-specific messages help attackers understand the system architecture.
+**Remediation:** Remove `stack` from all responses. Log detailed errors server-side. Return generic error messages to clients.
 
-**Remediation:** Log detailed errors server-side. Return generic error messages to clients.
+---
+
+### H8. CORS Wildcard (`*`) on Landing Page API Routes
+
+**Files:**
+- `landing-page-new/src/app/api/inquiry-request-verification/route.ts`
+- `landing-page-new/src/app/api/payments/send-proforma-email/route.ts`
+- `landing-page-new/src/app/api/inquiries/[id]/route.ts`
+- `landing-page-new/src/app/api/inquiries/route.ts`
+- `landing-page-new/src/app/api/proposals/route.ts`
+- `landing-page-new/src/app/api/proposals/[id]/route.ts`
+- `landing-page-new/src/app/api/payments/proforma/[proposalId]/route.ts`
+
+**Description:**
+All Next.js API routes in the landing page use `Access-Control-Allow-Origin: '*'`:
+
+```typescript
+const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' };
+```
+
+This allows any website to make cross-origin requests to these endpoints, including payment-related and proposal-related APIs.
+
+**Impact:** Any malicious website can interact with these API endpoints on behalf of a user if combined with other auth weaknesses.
+
+**Remediation:** Replace `*` with the specific allowed origins list. Reuse the CORS configuration from `netlify/functions/_shared/cors.ts`.
+
+---
+
+### H9. Authentication Tokens Stored in localStorage
+
+**Files:**
+- `landing-page-new/src/components/CommentThread.tsx:65`
+- `landing-page-new/src/lib/attachments.ts:43, 84`
+
+**Description:**
+JWT tokens are retrieved from `localStorage` for authenticated API calls:
+
+```typescript
+const token = localStorage.getItem('portal_token');
+```
+
+`localStorage` is accessible to any JavaScript running on the page. Combined with the XSS vulnerabilities (C4) and unsanitized email templates (H1), this creates a token theft vector.
+
+**Impact:** Any XSS vulnerability allows immediate theft of authentication tokens, enabling full account takeover.
+
+**Remediation:** Use httpOnly cookies for authentication (already implemented in the portal via `_shared/jwt.ts`). Migrate the landing page to use the same cookie-based auth.
 
 ---
 
@@ -416,6 +490,34 @@ While Zod's `.email()` provides basic format validation, it may not catch all CR
 
 ---
 
+### M8. Missing Security Headers
+
+**File:** `netlify.toml`
+
+**Description:**
+No security headers are configured for production deployment:
+- No `Content-Security-Policy` (CSP)
+- No `X-Frame-Options`
+- No `X-Content-Type-Options`
+- No `Strict-Transport-Security` (HSTS)
+- No `Referrer-Policy`
+
+**Impact:** Increased exposure to clickjacking, MIME-type sniffing attacks, and downgrade attacks.
+
+**Remediation:** Add security headers in `netlify.toml`:
+```toml
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+```
+
+---
+
 ## Low Findings
 
 ### L1. `secure: false` in Vite Dev Proxy
@@ -458,11 +560,16 @@ While Zod's `.email()` provides basic format validation, it may not catch all CR
 
 ## Recommended Priority Actions
 
-1. **Immediate:** Consolidate JWT into single module, remove all fallback secrets (C1)
-2. **Immediate:** Add authentication to `client-project-request` endpoint (C2)
-3. **Immediate:** Sanitize HTML with DOMPurify before rendering proposals (C3)
-4. **Immediate:** Use `crypto.timingSafeEqual` for webhook signature comparison (C4)
-5. **This sprint:** Escape all user values in email templates (H1)
-6. **This sprint:** Implement CSRF protection (H2)
-7. **This sprint:** Change rate limiter to fail-closed for auth endpoints (H3)
-8. **This sprint:** Enable session validation by default (H5)
+1. **Immediate:** Remove Gemini API key from client bundle, proxy through backend (C1)
+2. **Immediate:** Consolidate JWT into single module, remove all fallback secrets (C2)
+3. **Immediate:** Add authentication to `client-project-request` endpoint (C3)
+4. **Immediate:** Sanitize HTML with DOMPurify before rendering proposals (C4)
+5. **Immediate:** Use `crypto.timingSafeEqual` for webhook signature comparison (C5)
+6. **Immediate:** Remove `stack` property from all error responses (H7)
+7. **This sprint:** Escape all user values in email templates (H1)
+8. **This sprint:** Implement CSRF protection (H2)
+9. **This sprint:** Change rate limiter to fail-closed for auth endpoints (H3)
+10. **This sprint:** Replace CORS `*` with specific origins in landing page APIs (H8)
+11. **This sprint:** Migrate landing page from localStorage tokens to httpOnly cookies (H9)
+12. **This sprint:** Enable session validation by default (H5)
+13. **This sprint:** Add security headers in netlify.toml (M8)
