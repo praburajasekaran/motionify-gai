@@ -43,20 +43,7 @@ function sendToAnalytics(metric: Metric): void {
       });
     })
     .catch(() => {
-      // Sentry not available, try sendBeacon as fallback
-      try {
-        const body = JSON.stringify({
-          name: metric.name,
-          value: metric.value,
-          rating: metric.rating,
-          delta: metric.delta,
-          id: metric.id,
-          navigationType: metric.navigationType,
-        });
-        navigator.sendBeacon('/api/analytics/vitals', body);
-      } catch {
-        // Silently ignore - analytics is non-critical
-      }
+      // Sentry not available – silently ignore; analytics is non-critical
     });
 }
 
