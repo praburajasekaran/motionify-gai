@@ -344,7 +344,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
           {/* Top bar — minimal, functional */}
-          <header className="h-14 border-b border-border z-30 shrink-0 sticky top-0 bg-background">
+          <header className="h-14 border-b border-border z-40 shrink-0 sticky top-0 bg-background">
             <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
                 <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
