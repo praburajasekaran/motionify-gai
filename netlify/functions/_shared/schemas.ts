@@ -156,6 +156,14 @@ export const createProjectFromProposalSchema = z.object({
     proposalId: uuidSchema,
 });
 
+export const createProjectDirectSchema = z.object({
+    name: nameSchema,
+    clientUserId: uuidSchema,
+    deliverables: z.array(z.string().min(1).max(500)).min(1).max(50),
+    nonInclusions: z.array(z.string().min(1).max(500)).optional(),
+    totalRevisions: z.number().int().min(0).max(100).optional().default(2),
+});
+
 // ==========================================
 // Task Schemas
 // ==========================================
@@ -428,6 +436,7 @@ export const SCHEMAS = {
         update: updateProjectSchema,
         acceptTerms: acceptProjectTermsSchema,
         fromProposal: createProjectFromProposalSchema,
+        direct: createProjectDirectSchema,
     },
     task: {
         create: createTaskSchema,

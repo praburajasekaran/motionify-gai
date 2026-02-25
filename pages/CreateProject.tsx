@@ -26,7 +26,6 @@ import {
     Select, 
     Avatar,
     Switch,
-    Slider,
     Badge,
     Separator,
     cn
@@ -198,12 +197,23 @@ export const CreateProject = () => {
                      </div>
                      <span className="font-bold text-lg">{formData.maxRevisions}</span>
                  </div>
-                 <Slider 
-                    value={[formData.maxRevisions]} 
-                    max={10} 
-                    step={1} 
-                    onValueChange={(v) => updateField('maxRevisions', v[0])}
-                 />
+                 <div className="flex flex-wrap gap-2">
+                     {Array.from({ length: 11 }, (_, i) => i).map(n => (
+                         <button
+                             key={n}
+                             type="button"
+                             onClick={() => updateField('maxRevisions', n)}
+                             className={cn(
+                                 "w-9 h-9 rounded-md text-sm font-medium border transition-colors",
+                                 formData.maxRevisions === n
+                                     ? "bg-primary text-primary-foreground border-primary"
+                                     : "bg-background text-foreground border-border hover:border-primary hover:text-primary"
+                             )}
+                         >
+                             {n}
+                         </button>
+                     ))}
+                 </div>
             </div>
         </div>
     );

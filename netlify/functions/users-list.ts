@@ -18,7 +18,7 @@ import {
     z,
     validateQueryParams,
 } from './_shared';
-import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withProjectManager, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
 interface NetlifyEvent {
@@ -42,7 +42,7 @@ const querySchema = z.object({
 
 export const handler = compose(
     withCORS(['GET']),
-    withSuperAdmin(),
+    withProjectManager(),
     withRateLimit(RATE_LIMITS.api, 'users_list')
 )(async (event: NetlifyEvent) => {
     const correlationId = getCorrelationId(event.headers);

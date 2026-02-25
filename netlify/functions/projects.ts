@@ -272,6 +272,106 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
+      // Detect which creation path: direct admin creation (has 'name' field) vs from proposal (has 'inquiryId')
+      let parsedBody: Record<string, unknown> = {};
+      try { parsedBody = JSON.parse(event.body || '{}'); } catch { /* ignore */ }
+
+      if ('name' in parsedBody) {
+        // ── Direct admin/support project creation ──────────────────────────────
+        const userRole = auth?.user?.role;
+        if (userRole !== 'super_admin' && userRole !== 'support') {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Only administrators and support users can create projects directly' }),
+          };
+        }
+
+        const validation = validateRequest(event.body, SCHEMAS.project.direct, origin);
+        if (!validation.success) return validation.response;
+        const { name, clientUserId, deliverables: deliverableNames, nonInclusions, totalRevisions } = validation.data;
+
+        // Verify the client user exists
+        const clientUserResult = await client.query(
+          'SELECT id, full_name FROM users WHERE id = $1',
+          [clientUserId]
+        );
+        if (clientUserResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Client user not found' }),
+          };
+        }
+
+        const projectNumber = await generateProjectNumber(client);
+
+        const projectResult = await client.query(
+          `INSERT INTO projects (project_number, name, client_user_id, status, total_revisions_allowed)
+           VALUES ($1, $2, $3, 'active', $4)
+           RETURNING *`,
+          [projectNumber, name, clientUserId, totalRevisions ?? 2]
+        );
+        const newProject = projectResult.rows[0];
+
+        // Insert deliverables
+        for (const deliverableName of deliverableNames) {
+          await client.query(
+            `INSERT INTO deliverables (project_id, name, status) VALUES ($1, $2, 'pending')`,
+            [newProject.id, deliverableName]
+          );
+        }
+
+        // Add client to project_team as primary contact
+        await client.query(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, 'client', true, $3)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [clientUserId, newProject.id, auth?.user?.userId || null]
+        );
+
+        // Add creator to project_team
+        if (auth?.user?.userId && auth.user.userId !== clientUserId) {
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             VALUES ($1, $2, $3, false, $1)
+             ON CONFLICT (user_id, project_id) DO NOTHING`,
+            [auth.user.userId, newProject.id, auth.user.role || 'super_admin']
+          );
+        }
+
+        // Auto-add all active support users
+        const supportUsersResult = await client.query(
+          `SELECT id FROM users WHERE role = 'support' AND is_active = true`
+        );
+        for (const supportUser of supportUsersResult.rows) {
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             VALUES ($1, $2, 'support', false, $3)
+             ON CONFLICT (user_id, project_id) DO NOTHING`,
+            [supportUser.id, newProject.id, auth?.user?.userId || null]
+          );
+        }
+
+        await logActivity(client, {
+          type: 'PROJECT_CREATED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: newProject.id,
+          details: { projectNumber },
+        });
+
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify({
+            ...newProject,
+            client_name: clientUserResult.rows[0].full_name,
+          }),
+        };
+      }
+
+      // ── Create project from accepted proposal ──────────────────────────────
       // Validate request body using Zod schema
       const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
       if (!validation.success) return validation.response;
