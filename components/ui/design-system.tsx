@@ -128,11 +128,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // Active state — subtle press
           "active:scale-[0.98]",
           {
-            // Default: Warm amber — studio accent
-            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'default',
-
-            // Gradient: kept as warm amber solid (no gradients in studio aesthetic)
-            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'gradient',
+            // Default + Gradient: Warm amber — studio accent
+            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'default' || variant === 'gradient',
 
             // Destructive: Muted red
             'bg-destructive text-white hover:bg-destructive/90': variant === 'destructive',
