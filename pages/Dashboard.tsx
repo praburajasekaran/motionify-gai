@@ -7,6 +7,7 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
+  Loader2,
   Send,
   CheckCircle,
   CreditCard,
@@ -153,6 +154,9 @@ export const Dashboard = () => {
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
   const [errorActivities, setErrorActivities] = useState<string | null>(null);
+  const [activityOffset, setActivityOffset] = useState(0);
+  const [hasMoreActivities, setHasMoreActivities] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Fetch dashboard metrics
   const fetchMetrics = async () => {
@@ -215,11 +219,34 @@ export const Dashboard = () => {
 
       const data = await response.json();
       setActivities(data);
+      setActivityOffset(0);
+      setHasMoreActivities(data.length === 10);
     } catch (error: any) {
       console.error('Failed to fetch activities:', error);
       setErrorActivities(error.message || 'Failed to load recent activity');
     } finally {
       setLoadingActivities(false);
+    }
+  };
+
+  // Load more activities (append next page)
+  const handleLoadMoreActivities = async () => {
+    setIsLoadingMore(true);
+    try {
+      const newOffset = activityOffset + 10;
+      const response = await fetch(
+        `/.netlify/functions/activities?limit=10&offset=${newOffset}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error(`Failed to load more activities: ${response.status}`);
+      const data: Activity[] = await response.json();
+      setActivities(prev => [...prev, ...data]);
+      setActivityOffset(newOffset);
+      setHasMoreActivities(data.length === 10);
+    } catch (error: any) {
+      console.error('Failed to load more activities:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -347,6 +374,7 @@ export const Dashboard = () => {
             description="Activity will appear here as work progresses"
           />
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -399,6 +427,21 @@ export const Dashboard = () => {
               </tbody>
             </table>
           </div>
+          {hasMoreActivities && (
+            <div className="flex justify-center border-t border-border py-3">
+              <button
+                onClick={handleLoadMoreActivities}
+                disabled={isLoadingMore}
+                className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                {isLoadingMore
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <ChevronDown size={13} />}
+                {isLoadingMore ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
