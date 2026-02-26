@@ -68,9 +68,7 @@ function ClientHomeRedirect() {
     return <Dashboard />;
   }
 
-  // Use projectCount from auth-me response (avoids extra API call)
-  const hasProjects = (user as any)?.projectCount > 0;
-  return <Navigate to={hasProjects ? '/projects' : '/admin/inquiries'} replace />;
+  return <Navigate to="/projects" replace />;
 }
 
 function App() {
