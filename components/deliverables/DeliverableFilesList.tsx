@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff } from 'lucide-react';
+import React, { useRef, useState, useEffect, DragEvent } from 'react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff, Loader2 } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
@@ -13,6 +13,9 @@ export interface DeliverableFilesListProps {
     canUploadFinal?: boolean;
     onUpload: (file: File) => void;
     onFilesChange?: () => void;
+    isUploading?: boolean;
+    uploadProgress?: number;
+    uploadingFileName?: string;
 }
 
 // Database file record from deliverable_files table
@@ -57,12 +60,16 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     canUploadFinal,
     onUpload,
     onFilesChange,
+    isUploading = false,
+    uploadProgress = 0,
+    uploadingFileName = '',
 }) => {
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Clients cannot see files when deliverable is still in beta_ready (not yet sent for review)
     const filesHiddenForClient = currentUser && isClient(currentUser) && deliverable.status === 'beta_ready';
@@ -94,6 +101,34 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             onUpload(file);
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (file && onUpload) {
+            onUpload(file);
+        }
     };
 
     const handleDeleteFile = async (fileId: string) => {
@@ -200,30 +235,24 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Files ({fileItems.length})</h3>
-                {canUploadBeta && (
-                    <div>
-                        <Button size="sm" onClick={handleUploadClick} className="gap-2">
-                            <Upload className="h-4 w-4" />
-                            Upload File
-                        </Button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileChange}
-                            accept="video/*,image/*,application/pdf"
-                        />
-                    </div>
-                )}
-            </div>
+            <h3 className="text-lg font-semibold text-foreground">Files ({fileItems.length})</h3>
+
+            {/* Hidden file input */}
+            {canUploadBeta && (
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept="video/*,image/*,application/pdf"
+                />
+            )}
 
             {isLoading ? (
                 <div className="text-center py-12 bg-muted rounded-lg border border-border">
                     <p className="text-muted-foreground text-sm">Loading files...</p>
                 </div>
-            ) : fileItems.length === 0 ? (
+            ) : fileItems.length === 0 && !canUploadBeta ? (
                 <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed border-border">
                     <div className="flex justify-center mb-3">
                         {deliverable.status === 'pending' || deliverable.status === 'in_progress' ? (
@@ -239,57 +268,107 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                             ? 'This deliverable is currently being worked on. Files will appear here once ready for review.'
                             : 'No files uploaded yet.'}
                     </p>
-                    {canUploadBeta && (
-                        <Button variant="link" onClick={handleUploadClick} className="mt-2 text-indigo-600">
-                            Upload your first file
-                        </Button>
-                    )}
                 </div>
             ) : (
-                <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-border">
-                    {fileItems.map((file) => {
-                        const config = getFileTypeConfig(file.category);
-                        const Icon = config.icon;
-                        return (
-                            <div key={file.id} className="p-4 flex items-center justify-between hover:bg-muted transition-colors">
-                                <div className="flex items-center gap-4">
-                                    {/* File Type Icon */}
-                                    <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${config.bgColor}`}>
-                                        <Icon className={`h-7 w-7 ${config.iconColor}`} />
+                <>
+                    {/* File list */}
+                    {fileItems.length > 0 && (
+                        <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-border">
+                            {fileItems.map((file) => {
+                                const config = getFileTypeConfig(file.category);
+                                const Icon = config.icon;
+                                return (
+                                    <div key={file.id} className="p-4 flex items-center justify-between hover:bg-muted transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${config.bgColor}`}>
+                                                <Icon className={`h-7 w-7 ${config.iconColor}`} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                    <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
+                                                        {file.isFinal ? 'Final' : file.category}
+                                                    </Badge>
+                                                    <span>• {file.size}</span>
+                                                    {file.date && <span title={formatDateTime(file.date) || undefined}>• {formatTimestamp(file.date) || new Date(file.date).toLocaleDateString()}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="sm" onClick={() => handleDownload(file.key, file.isFinal)}>
+                                                <Download className="h-4 w-4" />
+                                            </Button>
+                                            {canUploadBeta && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteFile(file.id)}
+                                                    disabled={deletingId === file.id}
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                                    <div>
-                                        <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                            <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
-                                                {file.isFinal ? 'Final' : file.category}
-                                            </Badge>
-                                            <span>• {file.size}</span>
-                                            {file.date && <span title={formatDateTime(file.date) || undefined}>• {formatTimestamp(file.date) || new Date(file.date).toLocaleDateString()}</span>}
+                    {/* Drag-and-drop upload zone */}
+                    {canUploadBeta && (
+                        <div
+                            className={`
+                                relative rounded-lg border-2 border-dashed transition-all duration-200 cursor-pointer
+                                ${isUploading
+                                    ? 'border-primary/40 bg-primary/5 pointer-events-none'
+                                    : isDragging
+                                    ? 'border-primary bg-primary/5 scale-[1.01]'
+                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                }
+                            `}
+                            onClick={!isUploading ? handleUploadClick : undefined}
+                            onDragEnter={handleDragEnter}
+                            onDragLeave={handleDragLeave}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                        >
+                            {isUploading ? (
+                                <div className="flex items-center gap-4 px-5 py-4">
+                                    <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between text-sm mb-1.5">
+                                            <span className="truncate text-foreground font-medium">{uploadingFileName}</span>
+                                            <span className="font-mono text-muted-foreground ml-3">{uploadProgress}%</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => handleDownload(file.key, file.isFinal)}>
-                                        <Download className="h-4 w-4" />
-                                    </Button>
-                                    {canUploadBeta && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDeleteFile(file.id)}
-                                            disabled={deletingId === file.id}
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
+                            ) : (
+                                <div className="flex flex-col items-center py-6">
+                                    <div className={`
+                                        h-10 w-10 rounded-full flex items-center justify-center mb-2 transition-colors
+                                        ${isDragging ? 'bg-primary/10' : 'bg-muted'}
+                                    `}>
+                                        <Upload className={`h-5 w-5 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                                    </div>
+                                    <p className={`text-sm font-medium ${isDragging ? 'text-primary' : 'text-muted-foreground'}`}>
+                                        {isDragging ? 'Drop file here' : 'Drag & drop files here, or click to browse'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Video, images, or PDF up to 500MB
+                                    </p>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

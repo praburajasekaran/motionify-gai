@@ -54,6 +54,11 @@ const DeliverableReviewContent: React.FC = () => {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  // Upload progress state (passed to DeliverableFilesList for inline display)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFileName, setUploadingFileName] = useState('');
+
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
     if (deliverableId) {
@@ -185,17 +190,19 @@ const DeliverableReviewContent: React.FC = () => {
     if (!deliverable) return;
 
     try {
-      setShowSuccessMessage(false); // Reset
-      setSuccessMessage('Uploading file...');
-      setShowSuccessMessage(true);
+      // Track upload progress inline (shown in DeliverableFilesList)
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadingFileName(file.name);
 
       const folder = 'beta'; // Default for empty state upload
 
-      // Upload file to R2
+      // Upload file to R2 with progress tracking
       const key = await storageService.uploadFile(
         file,
         deliverable.projectId,
-        folder
+        folder,
+        (p) => setUploadProgress(p)
       );
 
       // Generate thumbnail if video
@@ -251,8 +258,6 @@ const DeliverableReviewContent: React.FC = () => {
         });
       }
 
-      setSuccessMessage('File uploaded successfully!');
-
       // Refresh file list
       if ((window as any).__refreshDeliverableFiles) {
         (window as any).__refreshDeliverableFiles();
@@ -261,13 +266,14 @@ const DeliverableReviewContent: React.FC = () => {
       // Also refresh deliverables for status update
       await refreshCurrentDeliverable();
 
-      // Allow success message to show for a bit
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-
+      showSuccess('File uploaded successfully!');
     } catch (error) {
       console.error('Upload error:', error);
-      setShowSuccessMessage(false);
       showError(error, 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadingFileName('');
     }
   };
 
@@ -414,6 +420,9 @@ const DeliverableReviewContent: React.FC = () => {
             deliverable={deliverable}
             canUploadBeta={permissions.canUploadBeta}
             onUpload={handleUpload}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            uploadingFileName={uploadingFileName}
           />
 
           {/* Inline Feedback Form (shown when "Request Revision" clicked) */}
