@@ -44,6 +44,15 @@ export function Payment() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentComplete, setPaymentComplete] = useState(false);
 
+    // Load Razorpay checkout script dynamically (removed from index.html for performance)
+    useEffect(() => {
+        if (document.querySelector('script[src*="checkout.razorpay.com"]')) return;
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+    }, []);
+
     useEffect(() => {
         async function fetchData() {
             if (!proposalId) return;

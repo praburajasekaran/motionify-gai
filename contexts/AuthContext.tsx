@@ -43,7 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const loadUser = useCallback(async () => {
         // Create abort controller for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
         try {
             const response = await fetch(`${API_BASE}/auth-me`, {

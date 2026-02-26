@@ -45,6 +45,8 @@ export const createProposalSchema = z.object({
     advancePercentage: z.number().min(0).max(100),
     advanceAmount: z.number().min(0),
     balanceAmount: z.number().min(0),
+    revisionsIncluded: z.number().int().min(0).max(100).optional(),
+    revisionsDescription: z.string().max(2000).optional(),
 });
 
 export const updateProposalSchema = z.object({
@@ -59,6 +61,8 @@ export const updateProposalSchema = z.object({
     feedback: z.string().max(5000).optional(),
     version: z.number().int().min(1).optional(),
     editHistory: z.array(z.any()).optional(),
+    revisionsIncluded: z.number().int().min(0).max(100).optional(),
+    revisionsDescription: z.string().max(2000).optional(),
     acceptedAt: dateSchema.optional().nullable(),
     rejectedAt: dateSchema.optional().nullable(),
 });

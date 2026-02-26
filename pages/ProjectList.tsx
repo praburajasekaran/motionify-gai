@@ -307,7 +307,7 @@ export const ProjectList = () => {
                                 >
                                     <Link
                                         to={`/projects/${project.id}`}
-                                        className="group flex bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors overflow-hidden"
+                                        className="group flex bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
                                     >
                                         {/* Status stripe */}
                                         <div className={cn("w-1 shrink-0 rounded-l-lg", getStatusColor(project.status))} title={`Status: ${project.status}`} />
@@ -390,7 +390,7 @@ const getStatusColor = (status: ProjectStatus) => {
 const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navigate: any }> = ({ project, getStatusVariant, navigate }) => (
     <Link
         to={`/projects/${project.id}`}
-        className="group block bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors overflow-hidden"
+        className="group block bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
     >
         <div className="flex">
             {/* Status stripe — the colored tab on a production folder */}

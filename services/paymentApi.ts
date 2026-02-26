@@ -2,7 +2,7 @@ import { Payment } from '../types';
 
 // Admin Payment Types
 export interface PaymentFilters {
-    status?: 'pending' | 'completed' | 'failed' | 'all';
+    status?: 'pending' | 'completed' | 'failed' | 'refunded' | 'all';
     dateFrom?: string;  // ISO date
     dateTo?: string;    // ISO date
     clientName?: string;
@@ -23,7 +23,7 @@ export interface AdminPayment {
     amount: number;
     currency: string;
     paymentType: 'advance' | 'balance';
-    status: 'pending' | 'completed' | 'failed';
+    status: 'pending' | 'completed' | 'failed' | 'refunded';
     razorpayOrderId: string | null;
     razorpayPaymentId: string | null;
     paidAt: string | null;
@@ -46,7 +46,7 @@ export interface AdminPaymentsResponse {
 /**
  * Fetch all payments for admin dashboard with optional filters
  */
-export async function fetchAllPayments(filters?: PaymentFilters): Promise<AdminPaymentsResponse> {
+export async function fetchAllPayments(filters?: PaymentFilters, signal?: AbortSignal): Promise<AdminPaymentsResponse | AdminPayment[]> {
     const params = new URLSearchParams();
     if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
     if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom);
@@ -61,11 +61,16 @@ export async function fetchAllPayments(filters?: PaymentFilters): Promise<AdminP
 
     const response = await fetch(url, {
         credentials: 'include',
+        signal,
     });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || 'Failed to fetch payments');
+        const msg = typeof errorData.message === 'string' ? errorData.message
+            : typeof errorData.error === 'string' ? errorData.error
+            : response.status === 429 ? 'Too many requests. Please wait a moment and try again.'
+            : `Could not load payments (${response.status})`;
+        throw new Error(msg);
     }
 
     return response.json();
@@ -85,6 +90,60 @@ export async function sendPaymentReminder(paymentId: string): Promise<{ success:
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to send payment reminder');
+    }
+
+    return response.json();
+}
+
+/**
+ * Link an unlinked payment to an existing project
+ */
+export async function linkPaymentToProject(paymentId: string, projectId: string): Promise<{ success: boolean }> {
+    const response = await fetch('/.netlify/functions/payments/link-project', {
+        method: 'POST',
+        body: JSON.stringify({ paymentId, projectId }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to link payment to project');
+    }
+
+    return response.json();
+}
+
+/**
+ * Refund a completed payment
+ */
+export async function refundPayment(paymentId: string, reason?: string): Promise<{ success: boolean }> {
+    const response = await fetch('/.netlify/functions/payments/refund', {
+        method: 'POST',
+        body: JSON.stringify({ paymentId, reason }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to refund payment');
+    }
+
+    return response.json();
+}
+
+/**
+ * Fetch active projects for linking (minimal data)
+ */
+export async function fetchProjectsForLinking(): Promise<Array<{ id: string; projectNumber: string; clientName: string }>> {
+    const response = await fetch('/api/payments/admin/projects', {
+        credentials: 'include',
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch projects');
     }
 
     return response.json();

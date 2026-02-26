@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { getInquiries, getInquiriesByClientUserId, getInquiryStats, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
+import { getInquiries, getInquiriesByClientUserId, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
@@ -76,22 +76,33 @@ export function InquiryDashboard() {
 
   const loadInquiries = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      let allInquiries: Inquiry[];
-      let inquiryStats;
-      
-      if (isClient(user)) {
-        allInquiries = await getInquiriesByClientUserId(user.id);
-        inquiryStats = await getInquiryStats(user.id);
-      } else {
-        allInquiries = await getInquiries();
-        inquiryStats = await getInquiryStats();
-      }
-      
+      const allInquiries = isClient(user)
+        ? await getInquiriesByClientUserId(user.id)
+        : await getInquiries();
+
+      // Compute stats locally from the already-fetched list (avoids duplicate API call)
+      const inquiryStats = isClient(user)
+        ? {
+            total: allInquiries.length,
+            pendingResponse: allInquiries.filter(i => i.status === 'new' || i.status === 'reviewing').length,
+            proposalReceived: allInquiries.filter(i => i.status === 'proposal_sent').length,
+            accepted: allInquiries.filter(i => i.status === 'accepted').length,
+          }
+        : {
+            total: allInquiries.length,
+            new: allInquiries.filter(i => i.status === 'new').length,
+            reviewing: allInquiries.filter(i => i.status === 'reviewing').length,
+            proposalSent: allInquiries.filter(i => i.status === 'proposal_sent').length,
+            accepted: allInquiries.filter(i => i.status === 'accepted').length,
+            converted: allInquiries.filter(i => i.status === 'converted').length,
+            rejected: allInquiries.filter(i => i.status === 'rejected').length,
+          };
+
       setInquiries(allInquiries);
       setFilteredInquiries(allInquiries);
       setStats(inquiryStats);

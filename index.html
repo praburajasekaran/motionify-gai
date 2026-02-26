@@ -9,8 +9,8 @@
   <title>Motionify - Welcome Back</title>
   <meta name="description"
     content="Bring your video productions to life with seamless collaboration and feedback workflows" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Fraunces:wght@400;500;600;700&display=swap"
     rel="stylesheet">
@@ -41,106 +41,6 @@
       background: rgba(0, 0, 0, 0.2);
     }
   </style>
-  <script>
-    tailwind.config = {
-      darkMode: ["class"],
-      theme: {
-        container: {
-          center: true,
-          padding: "2rem",
-          screens: {
-            "2xl": "1400px",
-          },
-        },
-        extend: {
-          colors: {
-            border: "var(--border)",
-            input: "var(--input)",
-            ring: "var(--ring)",
-            background: "var(--background)",
-            foreground: "var(--foreground)",
-            primary: {
-              DEFAULT: "var(--primary)",
-              foreground: "var(--primary-foreground)",
-            },
-            secondary: {
-              DEFAULT: "var(--secondary)",
-              foreground: "var(--secondary-foreground)",
-            },
-            destructive: {
-              DEFAULT: "var(--destructive)",
-              foreground: "var(--destructive-foreground)",
-            },
-            muted: {
-              DEFAULT: "var(--muted)",
-              foreground: "var(--muted-foreground)",
-            },
-            accent: {
-              DEFAULT: "var(--accent)",
-              foreground: "var(--accent-foreground)",
-            },
-            popover: {
-              DEFAULT: "var(--popover)",
-              foreground: "var(--popover-foreground)",
-            },
-            card: {
-              DEFAULT: "var(--card)",
-              foreground: "var(--card-foreground)",
-            },
-          },
-          borderRadius: {
-            lg: "var(--radius)",
-            md: "calc(var(--radius) - 2px)",
-            sm: "calc(var(--radius) - 4px)",
-          },
-          animation: {
-            'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'fade-in': 'fadeIn 0.2s ease-out forwards',
-            'pulse-soft': 'pulseSoft 3s infinite ease-in-out',
-            'scale-in': 'scaleIn 0.2s ease-out forwards',
-            'slide-in-right': 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          },
-          keyframes: {
-            fadeInUp: {
-              '0%': { opacity: '0', transform: 'translateY(15px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            fadeIn: {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            scaleIn: {
-              '0%': { opacity: '0', transform: 'scale(0.95)' },
-              '100%': { opacity: '1', transform: 'scale(1)' },
-            },
-            slideInRight: {
-              '0%': { opacity: '0', transform: 'translateX(100%)' },
-              '100%': { opacity: '1', transform: 'translateX(0)' },
-            },
-            pulseSoft: {
-              '0%, 100%': { opacity: '1' },
-              '50%': { opacity: '0.7' },
-            }
-          }
-        },
-      },
-    }
-  </script>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.4.0",
-    "clsx": "https://aistudiocdn.com/clsx@^2.1.1"
-  }
-}
-</script>
   <link rel="stylesheet" href="/index.css">
 </head>
 

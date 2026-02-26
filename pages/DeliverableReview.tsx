@@ -41,7 +41,7 @@ const DeliverableReviewContent: React.FC = () => {
     deliverableId: string;
   }>();
   const navigate = useNavigate();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables } =
+  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -271,7 +271,7 @@ const DeliverableReviewContent: React.FC = () => {
     }
   };
 
-  if (state.isLoading) {
+  if (deliverablesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
@@ -282,7 +282,8 @@ const DeliverableReviewContent: React.FC = () => {
     );
   }
 
-  if (!deliverable) {
+  // Only show "not found" if deliverables have loaded and this ID isn't in the list
+  if (!deliverable && state.deliverables.length > 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
@@ -291,6 +292,18 @@ const DeliverableReviewContent: React.FC = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deliverables
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Still resolving (deliverables fetched but LOAD_DELIVERABLE_BY_ID hasn't fired yet)
+  if (!deliverable) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="text-muted-foreground">Loading deliverable...</p>
         </div>
       </div>
     );

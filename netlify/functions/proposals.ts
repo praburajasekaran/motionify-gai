@@ -229,7 +229,8 @@ export const handler = compose(
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
         'advance_percentage', 'advance_amount', 'balance_amount',
-        'status', 'feedback', 'version', 'edit_history', 'revisions_included'
+        'status', 'feedback', 'version', 'edit_history', 'revisions_included',
+        'revisions_description'
       ];
 
       // Map camelCase to snake_case
@@ -240,6 +241,7 @@ export const handler = compose(
         balanceAmount: 'balance_amount',
         editHistory: 'edit_history',
         revisionsIncluded: 'revisions_included',
+        revisionsDescription: 'revisions_description',
         acceptedAt: 'accepted_at',
         rejectedAt: 'rejected_at',
       };
