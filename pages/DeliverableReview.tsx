@@ -406,26 +406,7 @@ const DeliverableReviewContent: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Video & Feedback Form (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Video Player with Timeline Comments */}
-          <DeliverableVideoSection
-            deliverable={deliverable}
-            canRequestRevision={permissions.canReject}
-            canComment={permissions.canComment}
-            canUploadBeta={permissions.canUploadBeta}
-            comments={state.revisionFeedback.timestampedComments}
-            onAddComment={handleAddComment}
-            onRemoveComment={handleRemoveComment}
-            onUpdateComment={handleUpdateComment}
-            onUpload={handleUpload}
-            selectedFileKey={activeVideoFileKey}
-            selectedFileName={activeVideoFileName}
-            onActiveFileChange={(key, name) => {
-              setActiveVideoFileKey(key);
-              setActiveVideoFileName(name);
-            }}
-          />
-
-          {/* File List Section */}
+          {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
             canUploadBeta={permissions.canUploadBeta}
@@ -435,9 +416,33 @@ const DeliverableReviewContent: React.FC = () => {
             uploadingFileName={uploadingFileName}
             activeFileKey={activeVideoFileKey}
             onVideoFileSelect={(key, name) => {
-              setActiveVideoFileKey(key);
-              setActiveVideoFileName(name);
+              if (key === activeVideoFileKey) {
+                setActiveVideoFileKey(undefined);
+                setActiveVideoFileName('');
+              } else {
+                setActiveVideoFileKey(key);
+                setActiveVideoFileName(name);
+              }
             }}
+            videoPlayer={
+              <DeliverableVideoSection
+                deliverable={deliverable}
+                canRequestRevision={permissions.canReject}
+                canComment={permissions.canComment}
+                canUploadBeta={permissions.canUploadBeta}
+                comments={state.revisionFeedback.timestampedComments}
+                onAddComment={handleAddComment}
+                onRemoveComment={handleRemoveComment}
+                onUpdateComment={handleUpdateComment}
+                onUpload={handleUpload}
+                selectedFileKey={activeVideoFileKey}
+                selectedFileName={activeVideoFileName}
+                onActiveFileChange={(key, name) => {
+                  setActiveVideoFileKey(key);
+                  setActiveVideoFileName(name);
+                }}
+              />
+            }
           />
 
           {/* Inline Feedback Form (shown when "Request Revision" clicked) */}

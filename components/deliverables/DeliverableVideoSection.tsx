@@ -67,7 +67,6 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
   const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
-  const [resolvedFileName, setResolvedFileName] = React.useState<string>('');
   const currentFileKeyRef = React.useRef<string | undefined>();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -114,7 +113,6 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       currentFileKeyRef.current = key;
 
       setResolvedFileKey(key);
-      if (fileName) setResolvedFileName(fileName);
 
       // Notify parent of the active file (for highlighting in files list)
       onActiveFileChange?.(key, fileName || '');
@@ -157,19 +155,11 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
     ? deliverable.finalFileKey || deliverable.betaFileKey
     : deliverable.betaFileKey);
   const detectedMediaType = detectMediaTypeFromKey(fileKey);
-  const displayFileName = selectedFileName || resolvedFileName;
 
   return (
     <div className="space-y-6">
       {/* Media Preview Section */}
       <div>
-        {displayFileName && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 px-1">
-            <FileVideo className="h-3.5 w-3.5 shrink-0 text-purple-500" />
-            <span>Now playing: <span className="font-medium text-foreground">{displayFileName}</span></span>
-          </div>
-        )}
-
         {/* Video, Image, or Empty State */}
         {fileUrl && detectedMediaType === 'video' ? (
         canComment ? (

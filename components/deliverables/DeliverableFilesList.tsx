@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, DragEvent } from 'react';
-import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff, Loader2, Play } from 'lucide-react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff, Loader2, Play, ChevronDown } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
@@ -18,6 +18,7 @@ export interface DeliverableFilesListProps {
     uploadingFileName?: string;
     activeFileKey?: string;
     onVideoFileSelect?: (fileKey: string, fileName: string) => void;
+    videoPlayer?: React.ReactNode;
 }
 
 // Database file record from deliverable_files table
@@ -67,6 +68,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     uploadingFileName = '',
     activeFileKey,
     onVideoFileSelect,
+    videoPlayer,
 }) => {
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -214,6 +216,16 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         fetchFiles();
     };
 
+    // Auto-expand first video file on load
+    useEffect(() => {
+        if (fileItems.length > 0 && !activeFileKey && onVideoFileSelect) {
+            const firstVideo = fileItems.find(f => f.category === 'video');
+            if (firstVideo) {
+                onVideoFileSelect(firstVideo.key, firstVideo.name);
+            }
+        }
+    }, [fileItems.length]);
+
     useEffect(() => {
         (window as any).__refreshDeliverableFiles = refreshFiles;
         return () => {
@@ -283,70 +295,68 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 const Icon = config.icon;
                                 const isVideoFile = file.category === 'video';
                                 const isActive = isVideoFile && file.key === activeFileKey;
-                                const isClickable = isVideoFile && !!onVideoFileSelect && !isActive;
+                                const canPreview = isVideoFile && !!onVideoFileSelect;
                                 return (
-                                    <div
-                                        key={file.id}
-                                        className={`p-4 flex items-center justify-between transition-colors ${
-                                            isActive
-                                                ? 'bg-purple-50/60'
-                                                : isClickable
-                                                ? 'hover:bg-muted cursor-pointer'
-                                                : 'hover:bg-muted'
-                                        }`}
-                                        onClick={isClickable ? () => onVideoFileSelect(file.key, file.name) : undefined}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-purple-100' : config.bgColor}`}>
-                                                <Icon className={`h-7 w-7 ${isActive ? 'text-purple-600' : config.iconColor}`} />
+                                    <React.Fragment key={file.id}>
+                                        <div
+                                            className={`p-4 flex items-center justify-between transition-colors ${
+                                                isActive
+                                                    ? 'bg-purple-50/60'
+                                                    : canPreview
+                                                    ? 'hover:bg-muted cursor-pointer'
+                                                    : 'hover:bg-muted'
+                                            }`}
+                                            onClick={canPreview ? () => onVideoFileSelect(file.key, file.name) : undefined}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`h-14 w-14 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-purple-100' : config.bgColor}`}>
+                                                    <Icon className={`h-7 w-7 ${isActive ? 'text-purple-600' : config.iconColor}`} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
+                                                        {isActive && (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
+                                                                <Play className="h-2.5 w-2.5 fill-current" />
+                                                                Now Playing
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                        <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
+                                                            {file.isFinal ? 'Final' : file.category}
+                                                        </Badge>
+                                                        <span>• {file.size}</span>
+                                                        {file.date && <span title={formatDateTime(file.date) || undefined}>• {formatTimestamp(file.date) || new Date(file.date).toLocaleDateString()}</span>}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
-                                                    {isActive && (
-                                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
-                                                            <Play className="h-2.5 w-2.5 fill-current" />
-                                                            Now Playing
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                                    <Badge variant={file.isFinal ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0 capitalize">
-                                                        {file.isFinal ? 'Final' : file.category}
-                                                    </Badge>
-                                                    <span>• {file.size}</span>
-                                                    {file.date && <span title={formatDateTime(file.date) || undefined}>• {formatTimestamp(file.date) || new Date(file.date).toLocaleDateString()}</span>}
-                                                </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(file.key, file.isFinal); }}>
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                                {canUploadBeta && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id); }}
+                                                        disabled={deletingId === file.id}
+                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {canPreview && (
+                                                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isActive ? 'rotate-180' : ''}`} />
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            {isClickable && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); onVideoFileSelect(file.key, file.name); }}
-                                                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-50"
-                                                    title="Preview this video"
-                                                >
-                                                    <Play className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(file.key, file.isFinal); }}>
-                                                <Download className="h-4 w-4" />
-                                            </Button>
-                                            {canUploadBeta && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id); }}
-                                                    disabled={deletingId === file.id}
-                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
+                                        {isActive && videoPlayer && (
+                                            <div className="bg-muted/20 px-4 py-4">
+                                                {videoPlayer}
+                                            </div>
+                                        )}
+                                    </React.Fragment>
                                 );
                             })}
                         </div>
