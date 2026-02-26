@@ -59,6 +59,10 @@ const DeliverableReviewContent: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFileName, setUploadingFileName] = useState('');
 
+  // Active video file state (connects video player to files list)
+  const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
+  const [activeVideoFileName, setActiveVideoFileName] = useState('');
+
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
     if (deliverableId) {
@@ -413,6 +417,12 @@ const DeliverableReviewContent: React.FC = () => {
             onRemoveComment={handleRemoveComment}
             onUpdateComment={handleUpdateComment}
             onUpload={handleUpload}
+            selectedFileKey={activeVideoFileKey}
+            selectedFileName={activeVideoFileName}
+            onActiveFileChange={(key, name) => {
+              setActiveVideoFileKey(key);
+              setActiveVideoFileName(name);
+            }}
           />
 
           {/* File List Section */}
@@ -423,6 +433,11 @@ const DeliverableReviewContent: React.FC = () => {
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadingFileName={uploadingFileName}
+            activeFileKey={activeVideoFileKey}
+            onVideoFileSelect={(key, name) => {
+              setActiveVideoFileKey(key);
+              setActiveVideoFileName(name);
+            }}
           />
 
           {/* Inline Feedback Form (shown when "Request Revision" clicked) */}

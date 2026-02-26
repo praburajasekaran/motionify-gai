@@ -46,6 +46,9 @@ export interface DeliverableVideoSectionProps {
   onRemoveComment: (commentId: string) => void;
   onUpdateComment: (commentId: string, text: string) => void;
   onUpload?: (file: File) => void;
+  selectedFileKey?: string;
+  selectedFileName?: string;
+  onActiveFileChange?: (fileKey: string, fileName: string) => void;
 }
 
 export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = ({
@@ -58,49 +61,69 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   onRemoveComment,
   onUpdateComment,
   onUpload,
+  selectedFileKey,
+  selectedFileName,
+  onActiveFileChange,
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
   const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
+  const [resolvedFileName, setResolvedFileName] = React.useState<string>('');
+  const currentFileKeyRef = React.useRef<string | undefined>();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const loadUrl = async () => {
       const isFinal = deliverable.status === 'final_delivered';
+      let key: string | undefined;
+      let fileName: string | undefined;
 
-      // 1. Try legacy fields on the deliverable record first
-      let key = isFinal
-        ? deliverable.finalFileKey || deliverable.betaFileKey
-        : deliverable.betaFileKey;
+      if (selectedFileKey) {
+        // Explicit file selected from the files list
+        key = selectedFileKey;
+        fileName = selectedFileName;
+      } else {
+        // 1. Try legacy fields on the deliverable record first
+        key = isFinal
+          ? deliverable.finalFileKey || deliverable.betaFileKey
+          : deliverable.betaFileKey;
 
-      // 2. If no key on deliverable record, fetch from deliverable_files table
-      if (!key) {
-        try {
-          const res = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
-            credentials: 'include',
-          });
-          if (res.ok) {
-            const files = await res.json();
-            // Find the first video file (or first file if none are video)
-            const videoFile = files.find((f: any) => f.file_category === 'video') || files[0];
-            if (videoFile?.file_key) {
-              key = videoFile.file_key;
+        // 2. If no key on deliverable record, fetch from deliverable_files table
+        if (!key) {
+          try {
+            const res = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
+              credentials: 'include',
+            });
+            if (res.ok) {
+              const files = await res.json();
+              const videoFile = files.find((f: any) => f.file_category === 'video') || files[0];
+              if (videoFile?.file_key) {
+                key = videoFile.file_key;
+                fileName = videoFile.label || videoFile.file_name;
+              }
             }
+          } catch (e) {
+            console.error("Failed to fetch deliverable files", e);
           }
-        } catch (e) {
-          console.error("Failed to fetch deliverable files", e);
         }
       }
 
       if (!key) return;
 
+      // Skip if the same file is already loaded
+      if (key === currentFileKeyRef.current) return;
+      currentFileKeyRef.current = key;
+
       setResolvedFileKey(key);
+      if (fileName) setResolvedFileName(fileName);
+
+      // Notify parent of the active file (for highlighting in files list)
+      onActiveFileChange?.(key, fileName || '');
 
       try {
-        if (isFinal) {
+        if (isFinal && !selectedFileKey) {
           const url = storageService.getPublicUrl(key);
           setGeneratedUrl(url);
         } else {
-          // Beta files need presigned URL
           const url = await storageService.getDownloadUrl(key);
           setGeneratedUrl(url);
         }
@@ -109,7 +132,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       }
     };
     loadUrl();
-  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status]);
+  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, selectedFileKey]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -134,11 +157,21 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
     ? deliverable.finalFileKey || deliverable.betaFileKey
     : deliverable.betaFileKey);
   const detectedMediaType = detectMediaTypeFromKey(fileKey);
+  const displayFileName = selectedFileName || resolvedFileName;
 
   return (
     <div className="space-y-6">
-      {/* Media Preview: Video, Image, or Empty State */}
-      {fileUrl && detectedMediaType === 'video' ? (
+      {/* Media Preview Section */}
+      <div>
+        {displayFileName && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 px-1">
+            <FileVideo className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+            <span>Now playing: <span className="font-medium text-foreground">{displayFileName}</span></span>
+          </div>
+        )}
+
+        {/* Video, Image, or Empty State */}
+        {fileUrl && detectedMediaType === 'video' ? (
         canComment ? (
           // Interactive commenting enabled for users with comment permissions
           <VideoCommentTimeline
@@ -202,6 +235,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
           )}
         </div>
       )}
+      </div>
 
       {/* Video Metadata Cards */}
       <div className="grid grid-cols-3 gap-4">
