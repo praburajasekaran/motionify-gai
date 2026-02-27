@@ -19,6 +19,7 @@ export interface DeliverableFilesListProps {
     activeFileKey?: string;
     onVideoFileSelect?: (fileKey: string, fileName: string) => void;
     videoPlayer?: React.ReactNode;
+    reviewActions?: React.ReactNode;
 }
 
 // Database file record from deliverable_files table
@@ -69,6 +70,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     activeFileKey,
     onVideoFileSelect,
     videoPlayer,
+    reviewActions,
 }) => {
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -294,8 +296,8 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 const config = getFileTypeConfig(file.category);
                                 const Icon = config.icon;
                                 const isVideoFile = file.category === 'video';
-                                const isActive = isVideoFile && file.key === activeFileKey;
-                                const canPreview = isVideoFile && !!onVideoFileSelect;
+                                const isActive = file.key === activeFileKey;
+                                const canPreview = !!onVideoFileSelect;
                                 return (
                                     <React.Fragment key={file.id}>
                                         <div
@@ -351,9 +353,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 )}
                                             </div>
                                         </div>
-                                        {isActive && videoPlayer && (
-                                            <div className="bg-muted/20 px-4 py-4">
-                                                {videoPlayer}
+                                        {isActive && (videoPlayer || reviewActions) && (
+                                            <div className="bg-muted/20 px-4 py-4 space-y-4">
+                                                {isVideoFile && videoPlayer}
+                                                {reviewActions}
                                             </div>
                                         )}
                                     </React.Fragment>

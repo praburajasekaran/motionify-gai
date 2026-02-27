@@ -24,7 +24,7 @@ import { DeliverableProvider, useDeliverables } from '@/components/deliverables/
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
 import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
-import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm';
+import { DeliverableReviewActions } from '@/components/deliverables/DeliverableReviewActions';
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
 import { Project } from '@/types';
@@ -142,6 +142,12 @@ const DeliverableReviewContent: React.FC = () => {
   // Handle request revision button click
   const handleRequestRevisionClick = () => {
     setShowRevisionForm(true);
+  };
+
+  // Handle cancel revision (reset form and exit revision mode)
+  const handleCancelRevision = () => {
+    setShowRevisionForm(false);
+    dispatch({ type: 'RESET_REVISION_FORM' });
   };
 
   // Handle revision submission
@@ -427,6 +433,7 @@ const DeliverableReviewContent: React.FC = () => {
             videoPlayer={
               <DeliverableVideoSection
                 deliverable={deliverable}
+                isRevisionMode={showRevisionForm}
                 canRequestRevision={permissions.canReject}
                 canComment={permissions.canComment}
                 canUploadBeta={permissions.canUploadBeta}
@@ -443,20 +450,28 @@ const DeliverableReviewContent: React.FC = () => {
                 }}
               />
             }
+            reviewActions={
+              <DeliverableReviewActions
+                deliverable={deliverable}
+                isRevisionMode={showRevisionForm}
+                canApprove={permissions.canApprove}
+                canReject={permissions.canReject}
+                canAccessFinal={permissions.canAccessFinal}
+                canSendForReview={permissions.canSendForReview}
+                isClientPM={permissions.isClientPM}
+                getDeniedReason={permissions.getDeniedReason}
+                onApprove={() => setShowApproveDialog(true)}
+                onRequestRevision={handleRequestRevisionClick}
+                onCancelRevision={handleCancelRevision}
+                onSubmit={handleSubmitRevision}
+                quota={state.quota}
+                allComments={state.revisionFeedback.timestampedComments}
+                currentUserId={currentUser?.id || ''}
+                currentUserName={currentUser?.name || ''}
+                currentUserEmail={currentUser?.email || ''}
+              />
+            }
           />
-
-          {/* Inline Feedback Form (shown when "Request Revision" clicked) */}
-          {showRevisionForm && permissions.canReject && (
-            <InlineFeedbackForm
-              deliverable={deliverable}
-              onSubmit={handleSubmitRevision}
-              quota={state.quota}
-              currentUserId={currentUser?.id || ''}
-              currentUserName={currentUser?.name || ''}
-              currentUserEmail={currentUser?.email || ''}
-              allComments={state.revisionFeedback.timestampedComments}
-            />
-          )}
 
           {/* Approval History */}
           {deliverable.approvalHistory.length > 0 && (
@@ -468,12 +483,10 @@ const DeliverableReviewContent: React.FC = () => {
         </div>
 
         {/* Right Column - Metadata Sidebar (1/3 width) */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           <DeliverableMetadataSidebar
             deliverable={deliverable}
             project={currentProject}
-            onApprove={() => setShowApproveDialog(true)}
-            onRequestRevision={handleRequestRevisionClick}
             onSendForReview={() => setShowSendForReviewDialog(true)}
             isSendingForReview={isSendingForReview}
           />

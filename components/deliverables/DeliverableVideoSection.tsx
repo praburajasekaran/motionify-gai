@@ -41,6 +41,7 @@ export interface DeliverableVideoSectionProps {
   canRequestRevision: boolean;
   canComment: boolean;
   canUploadBeta: boolean;
+  isRevisionMode?: boolean;
   comments: TimestampedComment[];
   onAddComment: (timestamp: number, comment: string) => void;
   onRemoveComment: (commentId: string) => void;
@@ -56,6 +57,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   canRequestRevision,
   canComment,
   canUploadBeta,
+  isRevisionMode = false,
   comments,
   onAddComment,
   onRemoveComment,
@@ -162,8 +164,9 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       <div>
         {/* Video, Image, or Empty State */}
         {fileUrl && detectedMediaType === 'video' ? (
-        canComment ? (
-          // Interactive commenting enabled for users with comment permissions
+        (isRevisionMode || canRequestRevision === false) && canComment ? (
+          // Interactive commenting: gated behind revision mode for client PM,
+          // always available for team members (canComment && !canRequestRevision)
           <VideoCommentTimeline
             videoUrl={fileUrl}
             comments={comments}

@@ -83,7 +83,7 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
 
   return (
     <>
-      <div className="space-y-6 bg-card border border-border rounded-lg p-6">
+      <div className="space-y-4 bg-card border border-border rounded-lg p-4">
         {/* Form Header */}
         <div className="border-b border-border pb-4">
           <h3 className="text-lg font-bold text-foreground">
@@ -136,11 +136,11 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
         />
 
         {/* Footer with Quota Warning and Submit */}
-        <div className="border-t border-border pt-4 flex items-center justify-between gap-4">
+        <div className="border-t border-border pt-4 space-y-3">
           {/* Quota Warning */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle
-              className={`h-4 w-4 ${
+              className={`h-4 w-4 shrink-0 ${
                 quota.remaining === 0 ? 'text-red-500' : 'text-amber-500'
               }`}
             />
@@ -156,7 +156,7 @@ export const InlineFeedbackForm: React.FC<InlineFeedbackFormProps> = ({
             variant="default"
             onClick={handleSubmitClick}
             disabled={!isFormValid || quota.remaining === 0}
-            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
             size="lg"
           >
             <Send className="h-4 w-4" />

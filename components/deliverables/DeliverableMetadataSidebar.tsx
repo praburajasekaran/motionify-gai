@@ -1,20 +1,21 @@
 /**
  * DeliverableMetadataSidebar Component
  *
- * Sidebar section for deliverable review page showing metadata and actions.
+ * Metadata-only sidebar for deliverable review page.
+ * Action buttons (Approve/Request Revision) have moved to the accordion
+ * via DeliverableReviewActions for a linear review flow.
  *
  * Features:
- * - Deliverable details (type, due date, progress)
- * - Permission-aware action buttons (Approve/Request Revision/Download)
- * - Beta version notices and next steps information
+ * - Deliverable details (type, due date, timestamps)
+ * - Revision quota display
+ * - "Send for Client Review" (admin-only action)
+ * - Beta version notice
+ * - Next steps information
  */
 
 import React from 'react';
 import {
-  CheckCircle2,
-  XCircle,
   Calendar,
-  Download,
   AlertCircle,
   FileVideo,
   FileImage,
@@ -22,8 +23,9 @@ import {
   Send,
   Loader2,
   Clock,
+  RefreshCw,
 } from 'lucide-react';
-import { Button, Badge, Separator } from '../ui/design-system';
+import { Button, Separator } from '../ui/design-system';
 import { Deliverable } from '../../types/deliverable.types';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 import { Project } from '@/types';
@@ -32,8 +34,6 @@ import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 export interface DeliverableMetadataSidebarProps {
   deliverable: Deliverable;
   project: Project;
-  onApprove: () => void;
-  onRequestRevision: () => void;
   onSendForReview?: () => void;
   isSendingForReview?: boolean;
 }
@@ -41,8 +41,6 @@ export interface DeliverableMetadataSidebarProps {
 export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProps> = ({
   deliverable,
   project,
-  onApprove,
-  onRequestRevision,
   onSendForReview,
   isSendingForReview,
 }) => {
@@ -52,10 +50,6 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
   });
 
   const isFinalDelivered = deliverable.status === 'final_delivered';
-  const isBetaReady = deliverable.status === 'beta_ready';
-  const canApprove = permissions.canApprove;
-  const canReject = permissions.canReject;
-  const canAccessFinal = permissions.canAccessFinal;
   const canSendForReview = permissions.canSendForReview;
 
   return (
@@ -115,6 +109,17 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
 
           <Separator />
 
+          {/* Revision Quota */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Revisions</p>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              {project.maxRevisions - project.revisionCount} of {project.maxRevisions} remaining
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Timestamps */}
           {deliverable.createdAt && (
             <div>
@@ -151,117 +156,42 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="space-y-3">
-        {isFinalDelivered ? (
-          <>
-            {canAccessFinal ? (
-              <Button
-                variant="gradient"
-                size="lg"
-                className="w-full gap-2 "
-                onClick={() => {
-                  // In a real app, this would trigger download
-                  window.open(deliverable.finalFileUrl, '_blank');
-                }}
-              >
-                <Download className="h-5 w-5" />
-                Download Final Files
-              </Button>
-            ) : (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold mb-1">Access Restricted</p>
-                    <p>{permissions.getDeniedReason('access_final')}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        ) : canApprove || canReject ? (
-          <>
-            {canApprove && (
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white "
-                onClick={onApprove}
-              >
-                <CheckCircle2 className="h-5 w-5" />
-                Approve Deliverable
-              </Button>
-            )}
-            {canReject && (
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full gap-2 border-2 border-amber-600 text-amber-700 hover:bg-amber-50"
-                onClick={onRequestRevision}
-              >
-                <XCircle className="h-5 w-5" />
-                Request Revision
-              </Button>
-            )}
-          </>
-        ) : canSendForReview ? (
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white "
-            onClick={onSendForReview}
-            disabled={isSendingForReview}
-          >
-            {isSendingForReview ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-            {isSendingForReview ? 'Sending...' : 'Send for Client Review'}
-          </Button>
-        ) : isBetaReady && permissions.isClientPM ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-            <div className="flex items-start gap-2">
-              <Clock className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold mb-1">Pending Review</p>
-                <p>This deliverable is being prepared for your review. You'll be notified when it's ready for approval.</p>
-              </div>
-            </div>
-          </div>
-        ) : !permissions.isClientPM ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold mb-1">Team Member View</p>
-                <p>You can add timeline comments. Only the Primary Contact can approve or submit revision requests.</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
+      {/* Admin-only: Send for Client Review */}
+      {canSendForReview && (
+        <Button
+          variant="default"
+          size="lg"
+          className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+          onClick={onSendForReview}
+          disabled={isSendingForReview}
+        >
+          {isSendingForReview ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Send className="h-5 w-5" />
+          )}
+          {isSendingForReview ? 'Sending...' : 'Send for Client Review'}
+        </Button>
+      )}
 
-        {deliverable.watermarked && !isFinalDelivered && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-            <p className="font-semibold mb-1">Beta Version Notice</p>
-            <p>
-              This is a watermarked preview. Final version will be delivered
-              after approval and payment.
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Beta Version Notice */}
+      {deliverable.watermarked && !isFinalDelivered && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+          <p className="font-semibold mb-1">Beta Version Notice</p>
+          <p>
+            This is a watermarked preview. Final version will be delivered
+            after approval and payment.
+          </p>
+        </div>
+      )}
 
       {/* Next Steps */}
-      {canApprove && (
+      {permissions.canApprove && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
           <h4 className="font-bold text-sm text-blue-900">Next Steps</h4>
           <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
-            <li>Review the deliverable carefully</li>
-            <li>
-              Click "Approve" if satisfied, or "Request Revision" for changes
-            </li>
+            <li>Watch the deliverable video</li>
+            <li>Approve or request changes below the video</li>
             <li>After approval, payment link will be sent</li>
             <li>Final files delivered within 24 hours of payment</li>
           </ol>
