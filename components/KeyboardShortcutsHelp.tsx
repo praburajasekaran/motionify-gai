@@ -125,7 +125,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
             <div>
               <p className="text-sm font-medium text-blue-900 mb-1">Pro Tip</p>
               <p className="text-sm text-blue-700">
-                Use <kbd className="px-2 py-1 text-xs font-semibold bg-white border border-blue-200 rounded mx-1">Cmd+K</kbd> to open the command palette for quick access to any action.
+                Use <kbd className="px-2 py-1 text-xs font-semibold bg-secondary border border-border rounded mx-1">Cmd+K</kbd> to open the command palette for quick access to any action.
               </p>
             </div>
           </div>

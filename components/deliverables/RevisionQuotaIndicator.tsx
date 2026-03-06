@@ -77,8 +77,8 @@ export const RevisionQuotaIndicator: React.FC<RevisionQuotaIndicatorProps> = ({
             className={cn(
               'w-3 h-3 rounded-full border-2 transition-all',
               idx < quota.used
-                ? 'bg-zinc-400 border-zinc-500'
-                : 'bg-white border-zinc-300'
+                ? 'bg-muted-foreground border-muted-foreground'
+                : 'bg-card border-border'
             )}
             title={idx < quota.used ? 'Used' : 'Available'}
           />

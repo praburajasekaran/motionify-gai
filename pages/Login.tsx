@@ -91,7 +91,7 @@ export const Login: React.FC = () => {
 
   if (isVerifying) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto mb-4" />
           <h2 className="text-xl font-semibold">Verifying your login...</h2>
@@ -101,14 +101,14 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img
               src={`${import.meta.env.BASE_URL}images/motionify-studio-dark-web.png`}
               alt="Motionify Studio"
-              className="h-12"
+              className="h-12 dark:invert"
             />
           </div>
 
@@ -142,14 +142,14 @@ export const Login: React.FC = () => {
           ) : (
             <form onSubmit={handleSendLink} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1">Email Address</label>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">Email Address</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-background text-foreground"
                   required
                 />
               </div>
@@ -159,7 +159,7 @@ export const Login: React.FC = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-zinc-300 text-primary focus:ring-primary/20"
+                  className="rounded border-input text-primary focus:ring-primary/20"
                 />
                 Remember me for 30 days
               </label>

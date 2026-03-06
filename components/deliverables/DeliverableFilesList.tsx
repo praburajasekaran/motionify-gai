@@ -56,7 +56,7 @@ const FILE_TYPE_CONFIG: Record<string, { icon: typeof FileVideo; bgColor: string
     document: { icon: FileText, bgColor: 'bg-amber-50', iconColor: 'text-amber-600' },
     script: { icon: FileText, bgColor: 'bg-green-50', iconColor: 'text-green-600' },
     audio: { icon: FileAudio, bgColor: 'bg-pink-50', iconColor: 'text-pink-500' },
-    asset: { icon: File, bgColor: 'bg-zinc-100', iconColor: 'text-zinc-500' },
+    asset: { icon: File, bgColor: 'bg-secondary', iconColor: 'text-muted-foreground' },
 };
 
 export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
@@ -240,12 +240,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     if (filesHiddenForClient) {
         return (
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-zinc-900">Files</h3>
-                <div className="text-center py-12 bg-zinc-50 rounded-lg border border-zinc-200">
+                <h3 className="text-lg font-semibold text-foreground">Files</h3>
+                <div className="text-center py-12 bg-muted rounded-lg border border-border">
                     <div className="flex justify-center mb-3">
-                        <EyeOff className="h-10 w-10 text-zinc-300" />
+                        <EyeOff className="h-10 w-10 text-muted-foreground/40" />
                     </div>
-                    <p className="text-sm text-zinc-500">
+                    <p className="text-sm text-muted-foreground">
                         Files will be available once this deliverable is sent for your review.
                     </p>
                 </div>
@@ -399,7 +399,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                             e.stopPropagation();
                                                             onCancelUpload();
                                                         }}
-                                                        className="p-1 hover:bg-zinc-200 rounded-md text-zinc-500 hover:text-zinc-700 transition-colors pointer-events-auto"
+                                                        className="p-1 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
                                                         title="Cancel upload"
                                                     >
                                                         <X className="h-4 w-4" />

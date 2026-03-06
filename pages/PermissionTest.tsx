@@ -347,16 +347,16 @@ export default function PermissionTest() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
+        <div className="bg-card rounded-xl shadow-lg p-8 border border-border">
           <div className="flex items-center gap-4 mb-4">
             <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">
+              <h1 className="text-3xl font-bold text-foreground">
                 Permission System Test
               </h1>
-              <p className="text-slate-600 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Test all 5 roles against 8 deliverable statuses
               </p>
             </div>
@@ -370,7 +370,7 @@ export default function PermissionTest() {
                 onClick={() => setCurrentRole(user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role as UserRole)}
                 className={`p-4 rounded-lg border-2 transition-all ${currentRole === (user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role)
                   ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  : 'border-border bg-card hover:border-border'
                   }`}
               >
                 <div className="flex flex-col items-center gap-2">
@@ -380,8 +380,8 @@ export default function PermissionTest() {
                     className="h-12 w-12 rounded-full"
                   />
                   <div className="text-center">
-                    <p className="font-semibold text-sm text-slate-900">{user.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-semibold text-sm text-foreground">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {USER_ROLE_LABELS[user.role]}
                       {user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact && ' (PM)'}
                     </p>
@@ -394,8 +394,8 @@ export default function PermissionTest() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left: Deliverables List */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Test Deliverables (All Statuses)
             </h2>
             <div className="space-y-3">
@@ -410,8 +410,8 @@ export default function PermissionTest() {
                     className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedDeliverable.id === deliverable.id
                       ? 'border-indigo-500 bg-indigo-50'
                       : canView
-                        ? 'border-slate-200 bg-white hover:border-slate-300'
-                        : 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                        ? 'border-border bg-card hover:border-border'
+                        : 'border-border bg-muted opacity-50 cursor-not-allowed'
                       }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -420,13 +420,13 @@ export default function PermissionTest() {
                           {canView ? (
                             <Eye className="h-4 w-4 text-emerald-500" />
                           ) : (
-                            <EyeOff className="h-4 w-4 text-slate-400" />
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
                           )}
-                          <h3 className="font-semibold text-sm text-slate-900">
+                          <h3 className="font-semibold text-sm text-foreground">
                             {deliverable.title}
                           </h3>
                         </div>
-                        <p className="text-xs text-slate-600">{deliverable.description}</p>
+                        <p className="text-xs text-muted-foreground">{deliverable.description}</p>
                       </div>
                       <Badge
                         variant={
@@ -450,8 +450,8 @@ export default function PermissionTest() {
           </div>
 
           {/* Right: Permission Matrix */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Permission Matrix
             </h2>
             <div className="space-y-3">
@@ -528,17 +528,17 @@ export default function PermissionTest() {
             </div>
 
             {/* Role Info */}
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3">Role Info</h3>
+            <div className="mt-6 pt-6 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Role Info</h3>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Is Client Primary Contact:</span>
+                  <span className="text-muted-foreground">Is Client Primary Contact:</span>
                   <Badge variant={permissions.isClientPM ? 'success' : 'default'}>
                     {permissions.isClientPM ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Is Motionify Team:</span>
+                  <span className="text-muted-foreground">Is Motionify Team:</span>
                   <Badge variant={permissions.isTeam ? 'success' : 'default'}>
                     {permissions.isTeam ? 'Yes' : 'No'}
                   </Badge>
@@ -549,26 +549,26 @@ export default function PermissionTest() {
         </div>
 
         {/* Selected Deliverable Details */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">
+        <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             Selected Deliverable Details
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Title</p>
-              <p className="text-sm font-semibold text-slate-900">{selectedDeliverable.title}</p>
+              <p className="text-xs text-muted-foreground mb-1">Title</p>
+              <p className="text-sm font-semibold text-foreground">{selectedDeliverable.title}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-1">Status</p>
+              <p className="text-xs text-muted-foreground mb-1">Status</p>
               <Badge variant="default">{selectedDeliverable.status}</Badge>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-1">Progress</p>
-              <p className="text-sm font-semibold text-slate-900">{selectedDeliverable.progress}%</p>
+              <p className="text-xs text-muted-foreground mb-1">Progress</p>
+              <p className="text-sm font-semibold text-foreground">{selectedDeliverable.progress}%</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-1">Due Date</p>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-xs text-muted-foreground mb-1">Due Date</p>
+              <p className="text-sm font-semibold text-foreground">
                 {new Date(selectedDeliverable.dueDate).toLocaleDateString()}
               </p>
             </div>

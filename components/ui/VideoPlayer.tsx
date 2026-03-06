@@ -511,7 +511,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
       {/* Inline Comment Tooltips - Rendered via Portal to escape modal stacking context */}
       {(activeCommentId || showAddCommentForm) && ReactDOM.createPortal(
         <div
-          className="fixed w-80 bg-white rounded-lg shadow-2xl border-2 border-amber-400 z-[100] animate-in slide-in-from-right-2 duration-200 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity"
+          className="fixed w-80 bg-card rounded-lg shadow-2xl border-2 border-amber-400 z-[100] animate-in slide-in-from-right-2 duration-200 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity"
           style={{
             top: `${tooltipPosition.top}px`,
             right: `${tooltipPosition.right}px`,
@@ -534,7 +534,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   </div>
                   <button
                     onClick={() => setActiveCommentId(null)}
-                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Close"
                   >
                     <X className="h-4 w-4" />
@@ -548,7 +548,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                       Convert to Task
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-zinc-500">Task Title</label>
+                      <label className="text-xs font-medium text-muted-foreground">Task Title</label>
                       <Input
                         value={taskTitle}
                         onChange={(e) => setTaskTitle(e.target.value)}
@@ -556,7 +556,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-zinc-500">Assignee</label>
+                      <label className="text-xs font-medium text-muted-foreground">Assignee</label>
                       <Select
                         value={taskAssignee}
                         onValueChange={setTaskAssignee}
@@ -591,12 +591,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                         avatarUrl={comment.userAvatar}
                         size="sm"
                       />
-                      <span className="text-sm font-semibold text-zinc-900">
+                      <span className="text-sm font-semibold text-foreground">
                         {comment.userName}
                       </span>
                     </div>
-                    <p className="text-sm text-zinc-700">{comment.comment}</p>
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+                    <p className="text-sm text-foreground">{comment.comment}</p>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
                         className="text-xs text-red-600 hover:text-red-700 font-medium"
@@ -632,7 +632,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                 </span>
                 <button
                   onClick={() => setShowAddCommentForm(false)}
-                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
@@ -644,7 +644,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   onChange={(e) => setNewCommentText(e.target.value)}
                   onKeyDown={handleCommentKeyDown}
                   placeholder="Describe the issue... (Enter to submit, Shift+Enter for new line)"
-                  className="flex-1 min-h-[60px] px-3 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  className="flex-1 min-h-[60px] px-3 py-2 text-sm border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none bg-background text-foreground"
                   autoFocus
                 />
                 <button
@@ -656,7 +656,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   <Send className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Press Enter to submit, Shift+Enter for new line
               </p>
             </div>

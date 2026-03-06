@@ -174,26 +174,26 @@ export const StartProductionRequest = () => {
                         </div>
                     </div>
 
-                    <h1 className="text-3xl font-bold text-zinc-900 mb-3">
+                    <h1 className="text-3xl font-bold text-foreground mb-3">
                         Request Submitted! 🎉
                     </h1>
-                    <p className="text-lg text-zinc-600 mb-6">
+                    <p className="text-lg text-muted-foreground mb-6">
                         Your project request has been sent to the Motionify team.
                     </p>
 
                     {/* Request Number Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 rounded-full mb-8">
-                        <span className="text-sm text-zinc-500">Request Number:</span>
-                        <span className="font-bold text-zinc-900">{requestNumber}</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary rounded-full mb-8">
+                        <span className="text-sm text-muted-foreground">Request Number:</span>
+                        <span className="font-bold text-foreground">{requestNumber}</span>
                     </div>
 
                     <Card className="text-left mb-8 border-border shadow-sm">
                         <CardContent className="p-6">
-                            <h3 className="font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                                 <Clock className="h-5 w-5 text-primary" />
                                 What happens next?
                             </h3>
-                            <ol className="space-y-3 text-sm text-zinc-600">
+                            <ol className="space-y-3 text-sm text-muted-foreground">
                                 <li className="flex items-start gap-3">
                                     <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">1</span>
                                     <span>Our team will review your project request within 24-48 hours.</span>
@@ -253,10 +253,10 @@ export const StartProductionRequest = () => {
                         <Sparkles className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
                             Start a Production
                         </h1>
-                        <p className="text-zinc-500 mt-1">
+                        <p className="text-muted-foreground mt-1">
                             Tell us about your project and we'll create a proposal for you.
                         </p>
                     </div>
@@ -277,7 +277,7 @@ export const StartProductionRequest = () => {
                     <div className="space-y-6">
                         {/* Project Title */}
                         <div className="space-y-2">
-                            <Label htmlFor="title" className="flex items-center gap-2 text-zinc-700">
+                            <Label htmlFor="title" className="flex items-center gap-2 text-foreground">
                                 <FileText className="h-4 w-4 text-primary" />
                                 Project Title
                                 <span className="text-red-500">*</span>
@@ -299,14 +299,14 @@ export const StartProductionRequest = () => {
                                     {errors.title}
                                 </p>
                             )}
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-muted-foreground">
                                 {formData.title.length}/100 characters
                             </p>
                         </div>
 
                         {/* Description */}
                         <div className="space-y-2">
-                            <Label htmlFor="description" className="flex items-center gap-2 text-zinc-700">
+                            <Label htmlFor="description" className="flex items-center gap-2 text-foreground">
                                 <FileText className="h-4 w-4 text-primary" />
                                 Project Description
                                 <span className="text-red-500">*</span>
@@ -328,14 +328,14 @@ export const StartProductionRequest = () => {
                                     {errors.description}
                                 </p>
                             )}
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-muted-foreground">
                                 {formData.description.length}/1000 characters
                             </p>
                         </div>
 
                         {/* Tentative Deadline */}
                         <div className="space-y-2">
-                            <Label htmlFor="deadline" className="flex items-center gap-2 text-zinc-700">
+                            <Label htmlFor="deadline" className="flex items-center gap-2 text-foreground">
                                 <Calendar className="h-4 w-4 text-primary" />
                                 Tentative Deadline
                                 <span className="text-red-500">*</span>
@@ -358,7 +358,7 @@ export const StartProductionRequest = () => {
                                     {errors.tentativeDeadline}
                                 </p>
                             )}
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-muted-foreground">
                                 This is a tentative date. We'll confirm the actual timeline in your proposal.
                             </p>
                         </div>
@@ -383,7 +383,7 @@ export const StartProductionRequest = () => {
                 </CardContent>
 
                 {/* Footer */}
-                <div className="px-8 py-6 border-t border-zinc-100 bg-zinc-50/50 flex justify-between items-center rounded-b-2xl">
+                <div className="px-8 py-6 border-t border-border bg-muted/30 flex justify-between items-center rounded-b-2xl">
                     <Button
                         variant="outline"
                         onClick={() => navigate('/projects')}
@@ -413,7 +413,7 @@ export const StartProductionRequest = () => {
             </Card>
 
             {/* Bottom Decoration */}
-            <div className="mt-8 text-center text-sm text-zinc-400">
+            <div className="mt-8 text-center text-sm text-muted-foreground">
                 <p>Need help? Contact us at <a href="mailto:hello@motionify.studio" className="text-primary hover:underline">hello@motionify.studio</a></p>
             </div>
         </div>

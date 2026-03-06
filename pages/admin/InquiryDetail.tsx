@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   paid: 'bg-green-500/10 text-green-400 ring-green-500/20',
   converted: 'bg-emerald-600/10 text-emerald-600 ring-emerald-600/20',
   rejected: 'bg-red-500/10 text-red-400 ring-red-500/20',
-  archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
+  archived: 'bg-muted text-muted-foreground ring-border',
 };
 
 
