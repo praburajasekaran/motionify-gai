@@ -170,32 +170,14 @@ export const FileList: React.FC<FileListProps> = ({ files, onDelete }) => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                onClick={() => handleDownload(file)}
-                                                disabled={isDownloading}
-                                                title="Download"
-                                            >
-                                                {isDownloading ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Download className="h-4 w-4" />
-                                                )}
-                                            </Button>
-
+                                        <div className="flex items-center justify-end">
                                             <DropdownMenu trigger={
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                                    <MoreVertical className="h-4 w-4" />
+                                                <Button variant="ghost" size="sm" className="h-10 w-10 text-muted-foreground hover:text-foreground">
+                                                    <MoreVertical className="h-6 w-6" />
                                                 </Button>
                                             }>
                                                 <DropdownMenuItem onClick={() => handleDownload(file)}>
                                                     <Download className="h-4 w-4 mr-2" /> Download
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => window.open(storageService.getPublicUrl(file.key), '_blank')}>
-                                                    <ExternalLink className="h-4 w-4 mr-2" /> Open Public Link
                                                 </DropdownMenuItem>
                                                 {onDelete && (
                                                     <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(file)}>

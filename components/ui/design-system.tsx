@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import React, { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ChevronDown, Check, Loader2, X, Search, Command, AlertTriangle, FileQuestion } from 'lucide-react';
@@ -607,30 +608,57 @@ interface DropdownMenuProps {
 
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, align = 'right' }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current || !menuRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current.offsetHeight;
+    const menuWidth = menuRef.current.offsetWidth;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight + 8;
+
+    setPosition({
+      top: openUp ? rect.top - menuHeight - 4 : rect.bottom + 4,
+      left: align === 'right' ? rect.right - menuWidth : rect.left,
+    });
+  }, [align]);
 
   useEffect(() => {
+    if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(event.target as Node) &&
+        menuRef.current && !menuRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) updatePosition();
+  }, [open, updatePosition]);
 
   return (
-    <div className="relative inline-block text-left" ref={ref}>
+    <div className="relative inline-block text-left" ref={triggerRef}>
       <div onClick={() => setOpen(!open)} className="cursor-pointer active:scale-95 transition-transform">
         {trigger}
       </div>
-      {open && (
-        <div className={cn(
-          "absolute z-50 mt-2 w-56 origin-top-right rounded-lg bg-card border border-border focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100",
-          align === 'right' ? 'right-0' : 'left-0'
-        )}>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          onClick={() => setOpen(false)}
+          style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' as const }}
+          className="fixed z-[9999] w-56 rounded-lg bg-card border border-border shadow-lg focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100"
+        >
           {children}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
