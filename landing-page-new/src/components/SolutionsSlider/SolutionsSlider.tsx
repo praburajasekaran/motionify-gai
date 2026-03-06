@@ -235,9 +235,9 @@ export default function SolutionsSlider() {
             <style>{`#solutionsTrack::-webkit-scrollbar{display:none;}`}</style>
 
             {solutions.map((s, i) => (
-              <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm hover:shadow-xl transition ease-out hover:-translate-y-0.5 overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
+              <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm transition ease-out overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
                 {/* Solution image/illustration */}
-                <div className={`h-32 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}>
+                <div className={`h-32 flex items-center justify-center relative overflow-hidden transition-transform duration-500`}>
                   <Image
                     src={s.image}
                     alt={s.title}
@@ -245,10 +245,10 @@ export default function SolutionsSlider() {
                     height={200}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-black/5 transition-colors duration-300" />
 
                   {/* Icon overlay */}
-                  <div className={`h-12 w-12 rounded-xl backdrop-blur-md bg-white/90 ring-1 ring-white/50 flex items-center justify-center ${s.iconColor} shadow-lg relative z-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-300`}>
+                  <div className={`h-12 w-12 rounded-xl backdrop-blur-md bg-white/90 ring-1 ring-white/50 flex items-center justify-center ${s.iconColor} shadow-lg relative z-10 transition-transform duration-300`}>
                     <div className="scale-90">
                       {s.icon}
                     </div>
