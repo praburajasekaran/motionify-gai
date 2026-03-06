@@ -607,7 +607,9 @@ interface DropdownMenuProps {
 
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, align = 'right' }) => {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -619,16 +621,29 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, a
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (open && ref.current && menuRef.current) {
+      const triggerRect = ref.current.getBoundingClientRect();
+      const menuHeight = menuRef.current.offsetHeight;
+      const spaceBelow = window.innerHeight - triggerRect.bottom;
+      setOpenUpward(spaceBelow < menuHeight + 8);
+    }
+  }, [open]);
+
   return (
     <div className="relative inline-block text-left" ref={ref}>
       <div onClick={() => setOpen(!open)} className="cursor-pointer active:scale-95 transition-transform">
         {trigger}
       </div>
       {open && (
-        <div className={cn(
-          "absolute z-50 mt-2 w-56 origin-top-right rounded-lg bg-card border border-border focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100",
-          align === 'right' ? 'right-0' : 'left-0'
-        )}>
+        <div
+          ref={menuRef}
+          className={cn(
+            "absolute z-50 w-56 rounded-lg bg-card border border-border focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100",
+            align === 'right' ? 'right-0' : 'left-0',
+            openUpward ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-2 origin-top-right'
+          )}
+        >
           {children}
         </div>
       )}
