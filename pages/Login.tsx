@@ -108,7 +108,7 @@ export const Login: React.FC = () => {
             <img
               src={`${import.meta.env.BASE_URL}images/motionify-studio-dark-web.png`}
               alt="Motionify Studio"
-              className="h-12"
+              className="h-12 dark:invert"
             />
           </div>
 
