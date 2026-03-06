@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
     base: '/portal/',
     server: {
       port: 5173,
+      strictPort: true,
       host: '0.0.0.0',
       proxy: {
         '/.netlify/functions': {
