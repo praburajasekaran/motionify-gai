@@ -65,8 +65,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
             // Default fallback UI
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+                <div className="min-h-screen flex items-center justify-center bg-background px-4">
+                    <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8">
                         <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
                             <svg
                                 className="w-6 h-6 text-red-600"
@@ -83,20 +83,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
                             </svg>
                         </div>
 
-                        <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                        <h1 className="text-2xl font-bold text-foreground text-center mb-2">
                             Something went wrong
                         </h1>
 
-                        <p className="text-gray-600 text-center mb-6">
+                        <p className="text-muted-foreground text-center mb-6">
                             We're sorry for the inconvenience. An unexpected error occurred.
                         </p>
 
                         {process.env.NODE_ENV === 'development' && this.state.error && (
-                            <details className="mb-6 p-4 bg-gray-50 rounded border border-gray-200">
-                                <summary className="cursor-pointer font-semibold text-sm text-gray-700 mb-2">
+                            <details className="mb-6 p-4 bg-muted rounded border border-border">
+                                <summary className="cursor-pointer font-semibold text-sm text-foreground mb-2">
                                     Error Details (Development Only)
                                 </summary>
-                                <div className="text-xs text-gray-600 font-mono overflow-auto">
+                                <div className="text-xs text-muted-foreground font-mono overflow-auto">
                                     <p className="font-semibold mb-2">{this.state.error.toString()}</p>
                                     {this.state.errorInfo && (
                                         <pre className="whitespace-pre-wrap">
@@ -116,7 +116,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                             </button>
                             <button
                                 onClick={() => window.location.href = '/#/'}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors"
+                                className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded transition-colors"
                             >
                                 Go Home
                             </button>

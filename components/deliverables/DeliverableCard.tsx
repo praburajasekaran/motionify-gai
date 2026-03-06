@@ -62,7 +62,7 @@ const STATUS_CONFIG: Record<
   pending: {
     variant: 'secondary',
     label: 'Pending',
-    color: 'text-zinc-500',
+    color: 'text-muted-foreground',
   },
   in_progress: {
     variant: 'info',
@@ -440,7 +440,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           {isUploading && (
             <button
               onClick={handleCancel}
-              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-zinc-100 rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
               title="Cancel upload"
             >
               <X className="h-3.5 w-3.5" />
@@ -476,7 +476,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           {isUploading && (
             <button
               onClick={handleCancel}
-              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-zinc-100 rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
               title="Cancel upload"
             >
               <X className="h-3.5 w-3.5" />

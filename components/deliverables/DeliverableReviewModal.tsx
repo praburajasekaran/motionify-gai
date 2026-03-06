@@ -337,7 +337,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                           variant="outline"
                           size="lg"
                           className={`w-full gap-2 border-2 ${quota && quota.remaining === 0
-                            ? 'border-zinc-300 text-zinc-400 cursor-not-allowed opacity-60'
+                            ? 'border-input text-muted-foreground cursor-not-allowed opacity-60'
                             : 'border-amber-600 text-amber-700 hover:bg-amber-50'
                             }`}
                           onClick={onRequestRevision}

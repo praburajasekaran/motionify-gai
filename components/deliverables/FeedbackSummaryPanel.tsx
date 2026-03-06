@@ -84,7 +84,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
               </span>
             </div>
             {feedbackText ? (
-              <p className="text-xs text-foreground bg-white p-2 rounded border border-blue-100 line-clamp-3">
+              <p className="text-xs text-foreground bg-card p-2 rounded border border-border line-clamp-3">
                 {feedbackText}
               </p>
             ) : (
@@ -107,7 +107,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                   <button
                     key={comment.id}
                     onClick={() => onSeekToComment?.(comment.timestamp)}
-                    className="w-full text-left text-xs bg-white p-2 rounded border border-blue-100 flex items-start gap-2 hover:bg-blue-50 hover:border-blue-200 transition-colors group"
+                    className="w-full text-left text-xs bg-card p-2 rounded border border-border flex items-start gap-2 hover:bg-accent hover:border-border transition-colors group"
                   >
                     <span className="font-mono font-bold text-amber-700 shrink-0 group-hover:text-amber-800">
                       {formatTime(comment.timestamp)}
@@ -137,7 +137,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                 {issueCategories.map((category) => (
                   <span
                     key={category}
-                    className="text-xs px-2 py-1 bg-white border border-blue-100 rounded-full text-zinc-700"
+                    className="text-xs px-2 py-1 bg-card border border-border rounded-full text-foreground"
                   >
                     {category}
                   </span>
@@ -156,7 +156,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             </div>
             <span
               className={cn(
-                'inline-block text-xs px-3 py-1.5 bg-white border border-blue-100 rounded-full font-semibold',
+                'inline-block text-xs px-3 py-1.5 bg-card border border-border rounded-full font-semibold',
                 PRIORITY_CONFIG[priority].color
               )}
             >
@@ -178,7 +178,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
                 {attachments.map((file) => (
                   <div
                     key={file.id}
-                    className="text-xs bg-white p-2 rounded border border-blue-100 truncate"
+                    className="text-xs bg-card p-2 rounded border border-border truncate"
                   >
                     {file.fileName}
                   </div>
@@ -193,7 +193,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
 
       {/* Validation Checklist */}
       <div className="bg-muted border border-border rounded-lg p-4">
-        <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-3">
+        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
           Checklist
         </h4>
         <div className="space-y-2 text-xs">
@@ -201,7 +201,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             <div
               className={cn(
                 'w-4 h-4 rounded-full flex items-center justify-center',
-                meetsMinimum ? 'bg-emerald-500' : 'bg-zinc-300'
+                meetsMinimum ? 'bg-emerald-500' : 'bg-muted-foreground/40'
               )}
             >
               {meetsMinimum && <CheckCircle2 className="h-3 w-3 text-white" />}
@@ -214,7 +214,7 @@ export const FeedbackSummaryPanel: React.FC<FeedbackSummaryPanelProps> = ({
             <div
               className={cn(
                 'w-4 h-4 rounded-full flex items-center justify-center',
-                issueCategories.length > 0 ? 'bg-emerald-500' : 'bg-zinc-300'
+                issueCategories.length > 0 ? 'bg-emerald-500' : 'bg-muted-foreground/40'
               )}
             >
               {issueCategories.length > 0 && (

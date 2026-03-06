@@ -122,11 +122,11 @@ export const AdditionalRevisionRequestModal: React.FC<AdditionalRevisionRequestM
 
                     <div className="bg-muted border border-border rounded-lg p-4 space-y-2">
                         <div className="flex justify-between text-sm">
-                            <span className="text-zinc-600">Additional Revisions:</span>
+                            <span className="text-muted-foreground">Additional Revisions:</span>
                             <span className="font-semibold text-foreground">{requestedCount}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="text-zinc-600">Project:</span>
+                            <span className="text-muted-foreground">Project:</span>
                             <span className="font-semibold text-foreground">{projectName}</span>
                         </div>
                     </div>
@@ -253,13 +253,13 @@ export const AdditionalRevisionRequestModal: React.FC<AdditionalRevisionRequestM
                         disabled={hasPendingRequest}
                     />
                     <div className="flex items-center justify-between text-xs">
-                        <span className={isReasonValid ? 'text-emerald-600' : 'text-zinc-500'}>
+                        <span className={isReasonValid ? 'text-emerald-600' : 'text-muted-foreground'}>
                             {isReasonValid
                                 ? '✓ Meets minimum length'
                                 : `Minimum ${MIN_REASON_LENGTH} characters required`
                             }
                         </span>
-                        <span className={`font-mono ${reason.length >= MIN_REASON_LENGTH ? 'text-emerald-600' : 'text-zinc-500'}`}>
+                        <span className={`font-mono ${reason.length >= MIN_REASON_LENGTH ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                             {reason.length} / {MIN_REASON_LENGTH}
                         </span>
                     </div>

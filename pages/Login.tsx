@@ -142,14 +142,14 @@ export const Login: React.FC = () => {
           ) : (
             <form onSubmit={handleSendLink} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-1">Email Address</label>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">Email Address</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-background text-foreground"
                   required
                 />
               </div>
@@ -159,7 +159,7 @@ export const Login: React.FC = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-zinc-300 text-primary focus:ring-primary/20"
+                  className="rounded border-input text-primary focus:ring-primary/20"
                 />
                 Remember me for 30 days
               </label>

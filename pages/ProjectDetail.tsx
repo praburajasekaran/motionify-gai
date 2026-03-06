@@ -757,7 +757,7 @@ export const ProjectDetail = () => {
         switch (status) {
             case 'pending':
             case 'Todo':
-                return 'bg-slate-100 text-slate-600 border-slate-200';
+                return 'bg-secondary text-secondary-foreground border-border';
             case 'in_progress':
             case 'In Progress':
                 return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -1198,7 +1198,7 @@ export const ProjectDetail = () => {
                                                     </span>
                                                 )}
                                                 {assignee && (task.createdAt || creator || task.deadline) && (
-                                                    <span className="text-zinc-200">·</span>
+                                                    <span className="text-border">·</span>
                                                 )}
                                                 {task.createdAt && (
                                                     <span className="flex items-center gap-1" title={new Date(task.createdAt).toLocaleString()}>

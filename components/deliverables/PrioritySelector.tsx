@@ -146,7 +146,7 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
                     className={cn(
                       'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
                       isSelected
-                        ? `${priority.borderColor.replace('border-', 'border-')} bg-white`
+                        ? `${priority.borderColor.replace('border-', 'border-')} bg-card`
                         : 'border-border bg-card'
                     )}
                   >

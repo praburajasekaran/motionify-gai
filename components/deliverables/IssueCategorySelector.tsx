@@ -56,7 +56,7 @@ const CATEGORIES: Array<{
     value: 'other',
     label: 'Other',
     icon: AlertCircle,
-    color: 'text-zinc-600',
+    color: 'text-muted-foreground',
   },
 ];
 
