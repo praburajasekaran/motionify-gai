@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, DragEvent } from 'react';
-import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff, Loader2, Play, ChevronDown } from 'lucide-react';
+import { FileVideo, FileImage, FileText, FileAudio, File, Download, Upload, Trash2, Clock, EyeOff, Loader2, Play, ChevronDown, X } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { Deliverable } from '@/types/deliverable.types';
 import { storageService } from '@/services/storage';
@@ -18,6 +18,7 @@ export interface DeliverableFilesListProps {
     uploadingFileName?: string;
     activeFileKey?: string;
     onVideoFileSelect?: (fileKey: string, fileName: string) => void;
+    onCancelUpload?: () => void;
     videoPlayer?: React.ReactNode;
     reviewActions?: React.ReactNode;
 }
@@ -69,6 +70,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     uploadingFileName = '',
     activeFileKey,
     onVideoFileSelect,
+    onCancelUpload,
     videoPlayer,
     reviewActions,
 }) => {
@@ -283,8 +285,8 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                         {deliverable.status === 'pending'
                             ? 'This deliverable has not been started yet. Files will appear here once work begins.'
                             : deliverable.status === 'in_progress'
-                            ? 'This deliverable is currently being worked on. Files will appear here once ready for review.'
-                            : 'No files uploaded yet.'}
+                                ? 'This deliverable is currently being worked on. Files will appear here once ready for review.'
+                                : 'No files uploaded yet.'}
                     </p>
                 </div>
             ) : (
@@ -301,13 +303,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 return (
                                     <React.Fragment key={file.id}>
                                         <div
-                                            className={`p-4 flex items-center justify-between transition-colors ${
-                                                isActive
-                                                    ? 'bg-purple-50/60'
-                                                    : canPreview
+                                            className={`p-4 flex items-center justify-between transition-colors ${isActive
+                                                ? 'bg-purple-50/60'
+                                                : canPreview
                                                     ? 'hover:bg-muted cursor-pointer'
                                                     : 'hover:bg-muted'
-                                            }`}
+                                                }`}
                                             onClick={canPreview ? () => onVideoFileSelect(file.key, file.name) : undefined}
                                         >
                                             <div className="flex items-center gap-4">
@@ -373,8 +374,8 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 ${isUploading
                                     ? 'border-primary/40 bg-primary/5 pointer-events-none'
                                     : isDragging
-                                    ? 'border-primary bg-primary/5 scale-[1.01]'
-                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                        ? 'border-primary bg-primary/5 scale-[1.01]'
+                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
                                 }
                             `}
                             onClick={!isUploading ? handleUploadClick : undefined}
@@ -387,9 +388,24 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 <div className="flex items-center gap-4 px-5 py-4">
                                     <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between text-sm mb-1.5">
+                                        <div className="flex justify-between items-center text-sm mb-1.5">
                                             <span className="truncate text-foreground font-medium">{uploadingFileName}</span>
-                                            <span className="font-mono text-muted-foreground ml-3">{uploadProgress}%</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono text-muted-foreground">{uploadProgress}%</span>
+                                                {onCancelUpload && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onCancelUpload();
+                                                        }}
+                                                        className="p-1 hover:bg-zinc-200 rounded-md text-zinc-500 hover:text-zinc-700 transition-colors pointer-events-auto"
+                                                        title="Cancel upload"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                                             <div

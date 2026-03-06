@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { X, Upload, File as FileIcon, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Dialog, Button, Progress, cn } from '../ui/design-system';
 import { Deliverable } from '../../types/deliverable.types';
@@ -28,6 +28,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
     const [matches, setMatches] = useState<FileMatch[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     // Filter for pending deliverables only
     const pendingDeliverables = deliverables.filter(d =>
@@ -91,13 +92,25 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
         setMatches(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleCancelAll = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+    };
+
     const handleUploadAll = async () => {
         setIsUploading(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         // Filter valid matches
         const validMatches = matches.filter(m => m.deliverableId && m.status !== 'success');
 
         for (let i = 0; i < matches.length; i++) {
+            if (controller.signal.aborted) break;
+
             const match = matches[i];
             if (!match.deliverableId || match.status === 'success') continue;
 
@@ -117,22 +130,35 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                     folder,
                     (progress) => {
                         setMatches(prev => prev.map((m, idx) => idx === i ? { ...m, progress } : m));
-                    }
+                    },
+                    undefined,
+                    controller.signal
                 );
+
+                if (controller.signal.aborted) break;
 
                 // Helper to generate thumbnail if video
                 if (match.file.type.startsWith('video/')) {
                     try {
                         const { generateThumbnail } = await import('../../utils/thumbnail');
                         const thumbnailFile = await generateThumbnail(match.file);
-                        if (thumbnailFile) {
+                        if (thumbnailFile && !controller.signal.aborted) {
                             const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-                            await storageService.uploadFile(thumbnailFile, deliverable.projectId, folder, undefined, thumbKey);
+                            await storageService.uploadFile(
+                                thumbnailFile,
+                                deliverable.projectId,
+                                folder,
+                                undefined,
+                                thumbKey,
+                                controller.signal
+                            );
                         }
                     } catch (err) {
                         console.warn("Thumbnail failed", err);
                     }
                 }
+
+                if (controller.signal.aborted) break;
 
                 // Update DB
                 const updateData = folder === 'beta'
@@ -144,6 +170,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(updateData),
+                    signal: controller.signal
                 });
 
                 if (!updateResponse.ok) {
@@ -156,12 +183,18 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                 setMatches(prev => prev.map((m, idx) => idx === i ? { ...m, status: 'success', progress: 100 } : m));
 
             } catch (error) {
+                if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+                    console.log(`Upload of ${match.file.name} aborted`);
+                    setMatches(prev => prev.map((m, idx) => idx === i ? { ...m, status: 'pending', progress: 0 } : m));
+                    break;
+                }
                 console.error('Upload failed', error);
                 setMatches(prev => prev.map((m, idx) => idx === i ? { ...m, status: 'error' } : m));
             }
         }
 
         setIsUploading(false);
+        abortControllerRef.current = null;
 
         // Check if all done
         if (matches.every(m => m.status === 'success')) {
@@ -287,20 +320,22 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                 {/* Footer */}
                 <div className="p-6 border-t border-border flex justify-end gap-3 bg-muted">
                     <Button variant="ghost" onClick={onClose} disabled={isUploading}>Cancel</Button>
-                    <Button
-                        variant="primary"
-                        onClick={handleUploadAll}
-                        disabled={isUploading || matches.length === 0 || matches.every(m => !m.deliverableId)}
-                    >
-                        {isUploading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                Uploading...
-                            </>
-                        ) : (
-                            `Upload ${matches.filter(m => m.deliverableId).length} Files`
-                        )}
-                    </Button>
+                    {isUploading ? (
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancelAll}
+                        >
+                            Stop All
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="default"
+                            onClick={handleUploadAll}
+                            disabled={matches.length === 0 || matches.every(m => !m.deliverableId)}
+                        >
+                            Upload {matches.filter(m => m.deliverableId).length} Files
+                        </Button>
+                    )}
                 </div>
             </div>
         </Dialog>

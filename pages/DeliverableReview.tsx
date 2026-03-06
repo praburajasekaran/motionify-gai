@@ -58,6 +58,7 @@ const DeliverableReviewContent: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFileName, setUploadingFileName] = useState('');
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   // Active video file state (connects video player to files list)
   const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
@@ -98,9 +99,19 @@ const DeliverableReviewContent: React.FC = () => {
 
   // Shared helper: show error toast
   const showError = (error: unknown, fallback: string) => {
+    if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+      return;
+    }
     setErrorMessage(error instanceof Error ? error.message : fallback);
     setShowErrorMessage(true);
     setTimeout(() => setShowErrorMessage(false), 5000);
+  };
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   // Handle send for client review (beta_ready → awaiting_approval)
@@ -199,6 +210,9 @@ const DeliverableReviewContent: React.FC = () => {
   const handleUpload = async (file: File) => {
     if (!deliverable) return;
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // Track upload progress inline (shown in DeliverableFilesList)
       setIsUploading(true);
@@ -212,21 +226,32 @@ const DeliverableReviewContent: React.FC = () => {
         file,
         deliverable.projectId,
         folder,
-        (p) => setUploadProgress(p)
+        (p) => setUploadProgress(p),
+        undefined,
+        controller.signal
       );
 
       // Generate thumbnail if video
       if (file.type.startsWith('video/')) {
         try {
           const thumbnailFile = await generateThumbnail(file);
-          if (thumbnailFile) {
+          if (thumbnailFile && !controller.signal.aborted) {
             const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-            await storageService.uploadFile(thumbnailFile, deliverable.projectId, folder, undefined, thumbKey);
+            await storageService.uploadFile(
+              thumbnailFile,
+              deliverable.projectId,
+              folder,
+              undefined,
+              thumbKey,
+              controller.signal
+            );
           }
         } catch (err) {
           console.warn("Thumbnail failed", err);
         }
       }
+
+      if (controller.signal.aborted) return;
 
       // Determine file category from mime type
       const getFileCategory = (mimeType: string): string => {
@@ -252,6 +277,7 @@ const DeliverableReviewContent: React.FC = () => {
           file_category: getFileCategory(file.type),
           is_final: false,
         }),
+        signal: controller.signal
       });
 
       if (!fileResponse.ok) {
@@ -265,6 +291,7 @@ const DeliverableReviewContent: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ status: 'beta_ready' }),
+          signal: controller.signal
         });
       }
 
@@ -278,12 +305,17 @@ const DeliverableReviewContent: React.FC = () => {
 
       showSuccess('File uploaded successfully!');
     } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        console.log("Upload aborted by user");
+        return;
+      }
       console.error('Upload error:', error);
       showError(error, 'Failed to upload file');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
       setUploadingFileName('');
+      abortControllerRef.current = null;
     }
   };
 
@@ -417,6 +449,7 @@ const DeliverableReviewContent: React.FC = () => {
             deliverable={deliverable}
             canUploadBeta={permissions.canUploadBeta}
             onUpload={handleUpload}
+            onCancelUpload={handleCancelUpload}
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadingFileName={uploadingFileName}

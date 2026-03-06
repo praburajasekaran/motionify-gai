@@ -21,12 +21,16 @@ import {
   Eye,
   Clock,
   CheckCircle2,
+  Upload,
+  Loader2,
+  Play,
+  CreditCard,
+  X,
 } from 'lucide-react';
 import { cn, Badge, Progress, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { generateThumbnail } from '../../utils/thumbnail';
-import { Upload, Loader2, Play, CreditCard } from 'lucide-react';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface DeliverableCardProps {
@@ -107,6 +111,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const Icon = (deliverable.type && TYPE_ICONS[deliverable.type]) || FileVideo;
   const statusConfig = STATUS_CONFIG[deliverable.status];
@@ -123,6 +128,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       e.stopPropagation(); // Prevent double navigation if button inside card is clicked
     }
     navigate(`/projects/${deliverable.projectId}/deliverables/${deliverable.id}`);
+  };
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   // Load thumbnail if video
@@ -187,6 +200,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       return;
     }
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -196,7 +211,9 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         file,
         deliverable.projectId,
         folder,
-        (progress) => setUploadProgress(progress)
+        (progress) => setUploadProgress(progress),
+        undefined,
+        controller.signal
       );
 
       console.log(`Uploaded ${uploadTypeRef.current} file:`, key);
@@ -206,14 +223,15 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         try {
           console.log('Generating thumbnail...');
           const thumbnailFile = await generateThumbnail(file);
-          if (thumbnailFile) {
+          if (thumbnailFile && !controller.signal.aborted) {
             const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
             await storageService.uploadFile(
               thumbnailFile,
               deliverable.projectId,
               folder,
               undefined, // no progress tracking for thumb
-              thumbKey // Force specific key to match video
+              thumbKey, // Force specific key to match video
+              controller.signal
             );
             console.log('Thumbnail uploaded:', thumbKey);
 
@@ -225,6 +243,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           // Non-fatal error, proceed
         }
       }
+
+      if (controller.signal.aborted) return;
 
       // Save key to database
       const updateData = uploadTypeRef.current === 'beta'
@@ -238,6 +258,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         },
         credentials: 'include',
         body: JSON.stringify(updateData),
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -247,12 +268,17 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       alert(`${uploadTypeRef.current === 'beta' ? 'Beta' : 'Final'} file uploaded and saved successfully!`);
 
     } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        console.log("Upload aborted by user");
+        return;
+      }
       console.error('Upload failed:', error);
       alert('Upload failed. Check console for details.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      abortControllerRef.current = null;
     }
   };
 
@@ -391,50 +417,72 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     // Upload Beta when in progress or revision requested
     if (deliverable.status === 'in_progress' || deliverable.status === 'revision_requested') {
       return (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full mt-2"
-          onClick={(e) => handleUploadClick('beta', e)}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <div className="flex items-center gap-2 w-full justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{uploadProgress}%</span>
-            </div>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Upload Beta
-            </>
+        <div className="relative group/upload">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full mt-2"
+            onClick={(e) => handleUploadClick('beta', e)}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="flex items-center gap-2 w-full justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{uploadProgress}%</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload Beta
+              </>
+            )}
+          </Button>
+          {isUploading && (
+            <button
+              onClick={handleCancel}
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-zinc-100 rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              title="Cancel upload"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-        </Button>
+        </div>
       );
     }
 
     // Upload Final when approved or payment pending
     if (deliverable.status === 'approved' || deliverable.status === 'payment_pending') {
       return (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full mt-2"
-          onClick={(e) => handleUploadClick('final', e)}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <div className="flex items-center gap-2 w-full justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{uploadProgress}%</span>
-            </div>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Upload Final
-            </>
+        <div className="relative group/upload">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full mt-2"
+            onClick={(e) => handleUploadClick('final', e)}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="flex items-center gap-2 w-full justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{uploadProgress}%</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload Final
+              </>
+            )}
+          </Button>
+          {isUploading && (
+            <button
+              onClick={handleCancel}
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-zinc-100 rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              title="Cancel upload"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-        </Button>
+        </div>
       );
     }
 

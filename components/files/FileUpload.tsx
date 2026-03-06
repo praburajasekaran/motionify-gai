@@ -1,5 +1,5 @@
 import React, { useRef, useState, DragEvent } from 'react';
-import { Upload, Loader2, PlusCircle, FileVideo, FileImage, FileText, File as FileIcon } from 'lucide-react';
+import { Upload, Loader2, PlusCircle, FileVideo, FileImage, FileText, File as FileIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/design-system';
 import { storageService } from '@/services/storage';
 
@@ -28,13 +28,22 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     folder = 'misc' as const
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [uploadingFileName, setUploadingFileName] = useState<string>('');
 
     const handleClick = () => {
+        if (isUploading) return;
         fileInputRef.current?.click();
+    };
+
+    const handleCancel = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
     };
 
     const validateAndUpload = async (file: File) => {
@@ -68,16 +77,25 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         setProgress(0);
         setUploadingFileName(file.name);
 
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
             const key = await storageService.uploadFile(
                 file,
                 projectId,
                 folder,
-                (p) => setProgress(p)
+                (p) => setProgress(p),
+                undefined,
+                controller.signal
             );
 
             onUploadComplete(key, file);
         } catch (error) {
+            if (error instanceof Error && (error.message === 'Aborted' || error.name === 'AbortError')) {
+                console.log("Upload cancelled by user");
+                return;
+            }
             console.error("Upload failed", error);
             if (onError && error instanceof Error) onError(error);
             else alert("Upload failed");
@@ -85,6 +103,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             setIsUploading(false);
             setProgress(0);
             setUploadingFileName('');
+            abortControllerRef.current = null;
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
@@ -96,23 +115,27 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     };
 
     const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+        if (isUploading) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(true);
     };
 
     const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+        if (isUploading) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
     };
 
     const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        if (isUploading) return;
         e.preventDefault();
         e.stopPropagation();
     };
 
     const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+        if (isUploading) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
@@ -131,6 +154,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleFileChange}
+                disabled={isUploading}
             />
 
             <div
@@ -138,8 +162,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                     group flex flex-col items-center justify-center 
                     border-dashed border-2 
                     aspect-video rounded-xl
-                    cursor-pointer transition-all duration-200
-                    ${isUploading ? 'pointer-events-none opacity-80' : ''}
+                    transition-all duration-200
+                    ${isUploading ? 'cursor-default' : 'cursor-pointer'}
                     ${isDragging
                         ? 'bg-primary/5 border-primary scale-[1.02] shadow-lg'
                         : 'bg-muted/50 hover:bg-muted border-border hover:border-primary/50'
@@ -161,11 +185,23 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                                 </span>
                                 <span className="font-mono">{progress}%</span>
                             </div>
-                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
-                                    style={{ width: `${progress}%` }}
-                                />
+                            <div className="relative flex items-center gap-2">
+                                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancel();
+                                    }}
+                                    className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                                    title="Cancel upload"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
                     </div>
