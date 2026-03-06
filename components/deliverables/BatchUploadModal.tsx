@@ -204,7 +204,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">Video, Image, Documents (max 5GB)</p>
+                                <p className="text-xs text-muted-foreground">Video, Image, Documents (max 1GB per file)</p>
                             </div>
                             <input
                                 type="file"

@@ -74,7 +74,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   };
 
   const totalSize = attachments.reduce((sum, file) => sum + file.fileSize, 0);
-  const maxTotalSize = 10 * 1024 * 1024; // 10MB
+  const maxTotalSize = 5 * 1024 * 1024 * 1024; // 5GB Total (for 5 files)
   const canUploadMore = attachments.length < 5 && totalSize < maxTotalSize;
 
   return (
@@ -83,7 +83,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         Reference Attachments (Optional)
       </label>
       <p className="text-xs text-muted-foreground">
-        Upload images, documents, or videos to provide context (max 5 files, 10MB total)
+        Upload images, documents, or videos to provide context (max 5 files, 1GB per file)
       </p>
 
       {/* Upload Zone */}

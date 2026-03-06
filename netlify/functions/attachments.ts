@@ -47,7 +47,7 @@ const ALLOWED_FILE_TYPES = [
     'text/plain',
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
 const MAX_FILE_NAME_LENGTH = 255;
 
 // R2 configuration for download URL generation
@@ -67,7 +67,7 @@ const getR2Client = () => {
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
         return null;
     }
-    
+
     const endpoint = getR2Endpoint();
     return new S3Client({
         region: "auto",

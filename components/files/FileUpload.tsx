@@ -24,7 +24,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     onUploadComplete,
     onError,
     allowedTypes,
-    maxSizeInBytes = 500 * 1024 * 1024, // 500MB Default
+    maxSizeInBytes = 1024 * 1024 * 1024, // 1GB Default
     folder = 'misc' as const
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,7 +191,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                             {isDragging ? 'Drop file here' : 'Upload New Asset'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 max-w-[80%] text-center">
-                            Drag & drop or click to browse • Up to 500MB
+                            Drag & drop or click to browse • Up to 1GB
                         </p>
                     </>
                 )}

@@ -46,14 +46,14 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
             'text/plain',
         ];
 
-        const maxSize = 10 * 1024 * 1024;
+        const maxSize = 1024 * 1024 * 1024; // 1GB
 
         if (!allowedTypes.includes(file.type)) {
             return 'Invalid file type. Allowed: PNG, JPG, WebP, PDF, DOCX, DOC, TXT';
         }
 
         if (file.size > maxSize) {
-            return `File size must be 10MB or less (${formatFileSize(file.size)} detected)`;
+            return `File size must be 1GB or less (${formatFileSize(file.size)} detected)`;
         }
 
         return null;

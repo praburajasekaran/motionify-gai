@@ -89,7 +89,7 @@ export const updateCommentSchema = z.object({
 export const createAttachmentSchema = z.object({
     commentId: uuidSchema,
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max
+    fileSize: z.number().positive().max(1024 * 1024 * 1024), // 1GB max
     fileType: z.string().min(1).max(100),
     r2Key: z.string().min(1).max(500),
 });
@@ -324,7 +324,7 @@ export const requestInquiryVerificationSchema = z.object({
 export const r2PresignSchema = z.object({
     fileName: z.string().min(1).max(255),
     fileType: z.string().min(1).max(100),
-    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max for comments
+    fileSize: z.number().positive().max(1024 * 1024 * 1024), // 1GB max for comments
     commentId: uuidSchema.optional(),
 });
 
@@ -343,7 +343,7 @@ export const r2PresignDeliverableSchema = z.object({
     ),
     fileSize: z.number()
         .positive()
-        .max(100 * 1024 * 1024, 'File size cannot exceed 100MB'), // 100MB max
+        .max(1024 * 1024 * 1024, 'File size cannot exceed 1GB'), // 1GB max
     projectId: z.string().min(1).max(100).optional(), // Accept any string (UUID or numeric ID)
     folder: z.enum(['beta', 'final', 'misc']).optional(),
     customKey: z.string().max(500).optional(), // For thumbnail uploads
@@ -378,7 +378,7 @@ export const timestampedCommentSchema = z.object({
 
 export const revisionAttachmentSchema = z.object({
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().positive().max(10 * 1024 * 1024),
+    fileSize: z.number().positive().max(1024 * 1024 * 1024),
     fileType: z.string().min(1).max(100),
     r2Key: z.string().min(1).max(500),
 });

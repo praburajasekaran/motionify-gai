@@ -50,6 +50,8 @@ Direct client → R2 uploads require CORS configuration:
       "http://localhost:5173",
       "http://localhost:3000",
       "https://portal.motionify.studio",
+      "https://motionify.studio",
+      "https://www.motionify.studio",
       "https://*.netlify.app"
     ],
     "AllowedMethods": [

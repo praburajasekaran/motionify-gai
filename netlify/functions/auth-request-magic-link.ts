@@ -144,6 +144,11 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         const magicLink = `${portalUrl}/portal/login?token=${token}&email=${encodeURIComponent(email)}`;
         logger.info('Magic link generated', { portalUrl });
 
+        // Log full magic link in local development for easy access
+        if (portalUrl.includes('localhost')) {
+            console.log(`\n🔗 [DEV] Magic link for ${email}:\n${magicLink}\n`);
+        }
+
         // Send the magic link email
         const emailResult = await sendMagicLinkEmail({
             to: email,

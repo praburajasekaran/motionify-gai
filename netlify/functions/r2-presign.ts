@@ -29,15 +29,15 @@ const R2 = new S3Client({
 });
 
 const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
+    const DATABASE_URL = process.env.DATABASE_URL;
+    if (!DATABASE_URL) {
+        throw new Error('DATABASE_URL not configured');
+    }
 
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
+    return new Client({
+        connectionString: DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
+    });
 };
 
 export const handler = compose(
@@ -208,7 +208,7 @@ export const handler = compose(
                 Key: key,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
+            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 10800 });
             return {
                 statusCode: 200,
                 headers,
@@ -257,10 +257,9 @@ export const handler = compose(
                 Bucket: R2_BUCKET_NAME,
                 Key: key,
                 ContentType: fileType,
-                ContentLength: fileSize,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
+            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 10800 });
 
             console.log(`[R2] Presign upload for ${auth!.user!.email}: ${key} (${fileSize} bytes)`);
 
