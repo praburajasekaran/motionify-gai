@@ -36,15 +36,14 @@ export default function Header() {
           <div className="hidden sm:flex items-center gap-8">
             <Link href="/work" className="text-sm text-white/80 hover:text-white transition">Work</Link>
             <Link href="/work#approach" className="text-sm text-white/80 hover:text-white transition">Approach</Link>
-            <Link href="/work#pricing" className="text-sm text-white/80 hover:text-white transition">Pricing</Link>
             <Link href="/login" className={`inline-flex items-center gap-2 rounded-lg bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/30 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'
               }`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" x2="3" y1="12" y2="12"></line></svg>
               Login
             </Link>
-            <a href="#" className={`inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'
+            <a href="/#video-style-quiz" className={`inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'
               }`}>
-              Get in touch
+              Get Started
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
             </a>
           </div>
