@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import {
     MoreVertical,
     MoreHorizontal,
@@ -131,12 +132,12 @@ export const ProjectList = () => {
                         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h2>
                         <p className="text-sm text-muted-foreground mt-1">{filteredProjects.length} production{filteredProjects.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <Link to="/projects/new">
+                    <PrefetchLink to="/projects/new">
                         <Button className="gap-2 h-9 px-4" aria-label="Start New Production">
                             <Plus className="h-4 w-4" />
                             New Project
                         </Button>
-                    </Link>
+                    </PrefetchLink>
                 </div>
 
                 {/* Toolbar */}
@@ -203,9 +204,9 @@ export const ProjectList = () => {
                     description="Ready to create something amazing? Start your first production."
                     icon={FolderOpen}
                     action={
-                        <Link to="/projects/new">
+                        <PrefetchLink to="/projects/new">
                             <Button variant="outline" className="mt-4">Start a Production</Button>
-                        </Link>
+                        </PrefetchLink>
                     }
                 />
             ) : filteredProjects.length === 0 ? (
@@ -251,7 +252,7 @@ export const ProjectList = () => {
                                         selectedIndex === idx && "ring-2 ring-primary ring-offset-2 rounded-lg"
                                     )}
                                 >
-                                    <Link
+                                    <PrefetchLink
                                         to={`/projects/${project.id}`}
                                         className="group flex bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
                                     >
@@ -311,7 +312,7 @@ export const ProjectList = () => {
                                                 <DropdownMenuItem onClick={(e) => e.preventDefault()} className="text-destructive">Archive</DropdownMenuItem>
                                             </DropdownMenu>
                                         </div>
-                                    </Link>
+                                    </PrefetchLink>
                                 </div>
                             ))}
                         </div>
@@ -334,7 +335,7 @@ const getStatusColor = (status: ProjectStatus) => {
 };
 
 const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navigate: any }> = ({ project, getStatusVariant, navigate }) => (
-    <Link
+    <PrefetchLink
         to={`/projects/${project.id}`}
         className="group block bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
     >
@@ -400,5 +401,5 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
                 </div>
             </div>
         </div>
-    </Link>
+    </PrefetchLink>
 );

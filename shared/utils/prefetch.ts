@@ -1,8 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { API_BASE } from '@/lib/api-config';
 import { dashboardMetricsKeys, fetchDashboardMetrics } from '@/shared/hooks/useDashboardMetrics';
 import { dashboardActivityKeys, fetchDashboardActivities } from '@/shared/hooks/useDashboardActivities';
-import { projectKeys, fetchProjects } from '@/shared/hooks/useProjects';
+import { projectKeys, fetchProjects, fetchProject } from '@/shared/hooks/useProjects';
 
 /**
  * Route-specific prefetch functions.
@@ -37,11 +36,7 @@ export function prefetchProjectList(queryClient: QueryClient, userId?: string) {
 export function prefetchProjectDetail(queryClient: QueryClient, projectId: string) {
   queryClient.prefetchQuery({
     queryKey: projectKeys.detail(projectId),
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/projects/${projectId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch project');
-      return res.json();
-    },
+    queryFn: () => fetchProject(projectId),
   });
 }
 

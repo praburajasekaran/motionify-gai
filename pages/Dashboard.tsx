@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import {
   FolderOpen,
   FileText,
@@ -279,12 +279,12 @@ export const Dashboard = () => {
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-[14px]">
                         {contextLink ? (
-                          <Link
+                          <PrefetchLink
                             to={contextLink.to}
                             className="text-primary hover:text-primary/80 font-medium hover:underline underline-offset-2"
                           >
                             {contextLink.label}
-                          </Link>
+                          </PrefetchLink>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

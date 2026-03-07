@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import { useTheme } from 'next-themes';
 import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
@@ -13,7 +14,7 @@ import { isSuperAdmin, isClient, getRoleLabel } from '../lib/permissions';
 import { NotificationBell } from './notifications';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
-  <Link to={path}>
+  <PrefetchLink to={path}>
     <div
       className={cn(
         "group flex items-center justify-between w-full px-3 py-2 text-[14px] font-medium rounded-md transition-colors duration-150",
@@ -32,7 +33,7 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
         </span>
       )}
     </div>
-  </Link>
+  </PrefetchLink>
 );
 
 // Simplified RevisionBattery Component (no line graph)
@@ -226,7 +227,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         )}>
           {/* Logo */}
           <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
-            <Link to="/" className="flex items-center cursor-pointer">
+            <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark'
                   ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
@@ -234,7 +235,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 alt="Motionify Studio"
                 className="h-10 w-auto object-contain"
               />
-            </Link>
+            </PrefetchLink>
           </div>
 
           {/* Nav sections */}
@@ -319,10 +320,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/settings" onClick={() => setSidebarOpen(false)}>
+                  <PrefetchLink to="/settings" onClick={() => setSidebarOpen(false)}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
-                  </Link>
+                  </PrefetchLink>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
