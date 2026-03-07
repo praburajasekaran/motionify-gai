@@ -229,7 +229,7 @@ export const ProjectDetail = () => {
 
     // React Query hooks — fetch project, deliverables, tasks, activities, files in parallel
     const { data: project = null, isLoading: projectLoading } = useProject(id);
-    const { data: deliverables = [], isLoading: deliverablesLoading } = useDeliverables(id);
+    const { data: deliverables = [], isLoading: deliverablesLoading, isSuccess: deliverablesSuccess } = useDeliverables(id);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -264,7 +264,7 @@ export const ProjectDetail = () => {
 
     // Polling hooks for cross-user sync — use id directly for parallel fetching
     const queryClient = useQueryClient();
-    const { data: tasks = [] } = useTasks(id);
+    const { data: tasks = [], isSuccess: tasksSuccess } = useTasks(id);
     const { data: activities = [] } = useActivities(id);
     const { data: projectFiles = [] } = useProjectFiles(id);
     const deleteProjectFileMutation = useDeleteProjectFile(id);
@@ -866,7 +866,7 @@ export const ProjectDetail = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {!deliverablesLoading && deliverables.length === 0 && (
+                                        {deliverablesSuccess && deliverables.length === 0 && (
                                             <EmptyState
                                                 title="No deliverables"
                                                 description="This project doesn't have any active deliverables yet."
@@ -932,14 +932,14 @@ export const ProjectDetail = () => {
                                 <CardContent className="pt-3">
                                     <div className="space-y-3">
                                         {deliverablesLoading ? (
-                                            <p className="text-[14px] text-muted-foreground">Loading...</p>
+                                            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-6 bg-muted animate-pulse rounded" />)}</div>
                                         ) : deliverables.slice(0, 3).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-[14px] border-l-2 border-primary pl-3 py-1">
                                                 <span className="text-foreground truncate w-32 font-medium">{d.title}</span>
                                                 <span className="tabular-nums text-muted-foreground text-[13px]">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
-                                        {!deliverablesLoading && deliverables.length === 0 && (
+                                        {deliverablesSuccess && deliverables.length === 0 && (
                                             <p className="text-[14px] text-muted-foreground">No upcoming deadlines.</p>
                                         )}
                                     </div>
@@ -1169,7 +1169,7 @@ export const ProjectDetail = () => {
                                     )
                                 })}
 
-                            {tasks.length === 0 && (
+                            {tasksSuccess && tasks.length === 0 && (
                                 <EmptyState
                                     title="No tasks yet"
                                     description="Get started by adding a task."
