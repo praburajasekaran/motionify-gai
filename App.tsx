@@ -9,6 +9,7 @@ import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { QueryProvider } from './shared/providers/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ShimmerSkeleton, StatGridSkeleton, ActivityFeedSkeleton, CardGridSkeleton } from './components/ui/SkeletonLoaders';
 
 // Lazy-loaded page components for route-based code splitting
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -39,14 +40,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <Layout>
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 bg-muted rounded w-48" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-muted rounded-lg" />
-            ))}
+        <div className="space-y-6">
+          <ShimmerSkeleton className="h-8 w-48" />
+          <StatGridSkeleton />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ActivityFeedSkeleton count={5} />
+            <CardGridSkeleton count={2} columns={2} />
           </div>
-          <div className="h-64 bg-muted rounded-lg" />
         </div>
       </Layout>
     );

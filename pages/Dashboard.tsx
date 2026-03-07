@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import {
   FolderOpen,
   FileText,
@@ -14,55 +14,16 @@ import {
   Package,
   FolderPlus,
   Clock,
-  User,
   Mail,
 } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
+import { StatGridSkeleton, ActivityFeedSkeleton } from '../components/ui/SkeletonLoaders';
+import { useDashboardMetrics } from '../shared/hooks/useDashboardMetrics';
+import { useDashboardActivities, type Activity } from '../shared/hooks/useDashboardActivities';
 import { formatTimestamp, formatDateTime } from '../utils/dateFormatting';
-
-// Dashboard metrics type
-interface DashboardMetrics {
-  projects: {
-    total: number;
-    active: number;
-    completed: number;
-  };
-  proposals: {
-    total: number;
-    pending: number;
-    accepted: number;
-  };
-  revenue: {
-    total: number;
-    completed: number;
-    pending: number;
-  };
-  inquiries: {
-    total: number;
-    new: number;
-  };
-}
-
-// Activity type from activities API
-interface Activity {
-  id: string;
-  type: string;
-  userId: string;
-  userName: string;
-  targetUserId?: string;
-  targetUserName?: string;
-  inquiryId?: string;
-  proposalId?: string;
-  projectId?: string;
-  details: Record<string, string | number>;
-  timestamp: number;
-  // Enhanced fields from 09-01 (JOINs)
-  inquiryNumber?: string;
-  proposalName?: string;
-  projectName?: string;
-}
+import { API_BASE } from '../lib/api-config';
 
 // Map activity types to human-readable labels
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -81,25 +42,6 @@ const ACTIVITY_LABELS: Record<string, string> = {
   FILE_UPLOADED: 'File uploaded',
   TERMS_ACCEPTED: 'Terms accepted',
   INQUIRY_SUBMITTED: 'Inquiry submitted',
-};
-
-// Map activity types to icons
-const ACTIVITY_ICONS: Record<string, typeof Send> = {
-  PROPOSAL_SENT: Send,
-  PROPOSAL_ACCEPTED: CheckCircle,
-  PROPOSAL_REJECTED: CheckCircle,
-  PROPOSAL_CHANGES_REQUESTED: FileText,
-  PAYMENT_RECEIVED: CreditCard,
-  DELIVERABLE_APPROVED: Package,
-  DELIVERABLE_REJECTED: Package,
-  DELIVERABLE_UPLOADED: Package,
-  COMMENT_ADDED: MessageSquare,
-  PROJECT_CREATED: FolderPlus,
-  TASK_CREATED: CheckCircle,
-  TASK_STATUS_CHANGED: CheckCircle,
-  FILE_UPLOADED: FileText,
-  TERMS_ACCEPTED: CheckCircle,
-  INQUIRY_SUBMITTED: Mail,
 };
 
 // Metric card component
@@ -147,87 +89,26 @@ function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, on
 
 export const Dashboard = () => {
   const { user } = useAuthContext();
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const metricsQuery = useDashboardMetrics();
+  const activitiesQuery = useDashboardActivities();
+
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
-  const [loadingMetrics, setLoadingMetrics] = useState(true);
-  const [loadingActivities, setLoadingActivities] = useState(true);
-  const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
-  const [errorActivities, setErrorActivities] = useState<string | null>(null);
+  const [additionalActivities, setAdditionalActivities] = useState<Activity[]>([]);
   const [activityOffset, setActivityOffset] = useState(0);
   const [hasMoreActivities, setHasMoreActivities] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Fetch dashboard metrics
-  const fetchMetrics = async () => {
-    setLoadingMetrics(true);
-    setErrorMetrics(null);
-
-    try {
-      const response = await fetch('/.netlify/functions/dashboard-metrics', {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metrics: ${response.status}`);
-      }
-
-      const data = await response.json();
-      // Transform flat API response to nested structure
-      setMetrics({
-        projects: {
-          total: data.totalProjects ?? 0,
-          active: data.activeProjects ?? 0,
-          completed: (data.totalProjects ?? 0) - (data.activeProjects ?? 0),
-        },
-        proposals: {
-          total: data.totalProposals ?? 0,
-          pending: data.pendingProposals ?? 0,
-          accepted: data.acceptedProposals ?? 0,
-        },
-        revenue: {
-          total: data.totalRevenue ?? 0,
-          completed: data.totalRevenue ?? 0,
-          pending: data.pendingRevenue ?? 0,
-        },
-        inquiries: {
-          total: data.totalInquiries ?? 0,
-          new: data.newInquiries ?? 0,
-        },
-      });
-    } catch (error: any) {
-      console.error('Failed to fetch dashboard metrics:', error);
-      setErrorMetrics(error.message || 'Failed to load metrics');
-    } finally {
-      setLoadingMetrics(false);
-    }
-  };
-
-  // Fetch recent activities
-  const fetchActivities = async () => {
-    setLoadingActivities(true);
-    setErrorActivities(null);
-
-    try {
-      const response = await fetch('/.netlify/functions/activities?limit=10', {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch activities: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setActivities(data);
+  // Derive hasMoreActivities from initial query data
+  useEffect(() => {
+    if (activitiesQuery.data) {
+      setHasMoreActivities(activitiesQuery.data.length === 10);
+      // Reset appended pages when base data refreshes
+      setAdditionalActivities([]);
       setActivityOffset(0);
-      setHasMoreActivities(data.length === 10);
-    } catch (error: any) {
-      console.error('Failed to fetch activities:', error);
-      setErrorActivities(error.message || 'Failed to load recent activity');
-    } finally {
-      setLoadingActivities(false);
     }
-  };
+  }, [activitiesQuery.data]);
+
+  const allActivities = [...(activitiesQuery.data ?? []), ...additionalActivities];
 
   // Load more activities (append next page)
   const handleLoadMoreActivities = async () => {
@@ -235,12 +116,12 @@ export const Dashboard = () => {
     try {
       const newOffset = activityOffset + 10;
       const response = await fetch(
-        `/.netlify/functions/activities?limit=10&offset=${newOffset}`,
+        `${API_BASE}/activities?limit=10&offset=${newOffset}`,
         { credentials: 'include' }
       );
       if (!response.ok) throw new Error(`Failed to load more activities: ${response.status}`);
       const data: Activity[] = await response.json();
-      setActivities(prev => [...prev, ...data]);
+      setAdditionalActivities(prev => [...prev, ...data]);
       setActivityOffset(newOffset);
       setHasMoreActivities(data.length === 10);
     } catch (error: any) {
@@ -249,11 +130,6 @@ export const Dashboard = () => {
       setIsLoadingMore(false);
     }
   };
-
-  useEffect(() => {
-    fetchMetrics();
-    fetchActivities();
-  }, []);
 
   // Get context link for activity
   function getActivityContextLink(activity: Activity): { to: string; label: string } | null {
@@ -269,8 +145,7 @@ export const Dashboard = () => {
     return null;
   }
 
-  const isLoading = loadingMetrics || loadingActivities;
-  const hasError = errorMetrics || errorActivities;
+  const metrics = metricsQuery.data;
 
   return (
     <div className="space-y-6">
@@ -284,19 +159,15 @@ export const Dashboard = () => {
       </div>
 
       {/* Metric Cards — clean grid, no icons, data-forward */}
-      {errorMetrics ? (
+      {metricsQuery.error ? (
         <div className="bg-card rounded-lg border border-border">
-          <ErrorState error={errorMetrics} onRetry={fetchMetrics} />
+          <ErrorState
+            error={metricsQuery.error instanceof Error ? metricsQuery.error.message : 'Failed to load metrics'}
+            onRetry={() => metricsQuery.refetch()}
+          />
         </div>
-      ) : loadingMetrics ? (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-lg border border-border p-4 animate-pulse">
-              <div className="h-3 bg-muted rounded w-20 mb-3" />
-              <div className="h-7 bg-muted rounded w-14" />
-            </div>
-          ))}
-        </div>
+      ) : metricsQuery.isLoading ? (
+        <StatGridSkeleton />
       ) : metrics ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
@@ -355,19 +226,16 @@ export const Dashboard = () => {
           <h3 className="text-[15px] font-semibold text-foreground">Recent Activity</h3>
         </div>
 
-        {errorActivities ? (
-          <ErrorState error={errorActivities} onRetry={fetchActivities} />
-        ) : loadingActivities ? (
-          <div className="p-4 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="h-3 bg-muted rounded w-24" />
-                <div className="h-3 bg-muted rounded w-20" />
-                <div className="h-3 bg-muted rounded w-32" />
-              </div>
-            ))}
+        {activitiesQuery.error ? (
+          <ErrorState
+            error={activitiesQuery.error instanceof Error ? activitiesQuery.error.message : 'Failed to load recent activity'}
+            onRetry={() => activitiesQuery.refetch()}
+          />
+        ) : activitiesQuery.isLoading ? (
+          <div className="p-4">
+            <ActivityFeedSkeleton count={5} />
           </div>
-        ) : activities.length === 0 ? (
+        ) : activitiesQuery.isSuccess && allActivities.length === 0 ? (
           <EmptyState
             icon={Clock}
             title="No recent activity"
@@ -394,7 +262,7 @@ export const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {activities.map((activity) => {
+                {allActivities.map((activity) => {
                   const activityLabel = ACTIVITY_LABELS[activity.type] || activity.type.replace(/_/g, ' ').toLowerCase();
                   const contextLink = getActivityContextLink(activity);
 
@@ -411,12 +279,12 @@ export const Dashboard = () => {
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-[14px]">
                         {contextLink ? (
-                          <Link
+                          <PrefetchLink
                             to={contextLink.to}
                             className="text-primary hover:text-primary/80 font-medium hover:underline underline-offset-2"
                           >
                             {contextLink.label}
-                          </Link>
+                          </PrefetchLink>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

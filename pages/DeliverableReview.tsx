@@ -28,8 +28,9 @@ import { DeliverableReviewActions } from '@/components/deliverables/DeliverableR
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
 import { Project } from '@/types';
-import { dbStatusToDisplay } from '@/utils/projectStatusMapping';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useProject } from '@/shared/hooks';
+import { DetailPageHeaderSkeleton } from '@/components/ui/SkeletonLoaders';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
@@ -535,61 +536,10 @@ const DeliverableReviewContent: React.FC = () => {
 export const DeliverableReview: React.FC = () => {
   const { user } = useAuthContext();
   const { id: projectId } = useParams<{ id: string }>();
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadProject = async () => {
-      // Fetch project from API
-      try {
-        const response = await fetch(`/api/projects/${projectId}`, {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Transform API response to Project type
-          const project: Project = {
-            id: data.id,
-            title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
-            client: data.client_name || 'Client',
-            thumbnail: '',
-            status: dbStatusToDisplay(data.status),
-            dueDate: data.due_date || data.created_at || new Date().toISOString(),
-            startDate: data.start_date || data.created_at || new Date().toISOString(),
-            progress: 0,
-            description: '',
-            tasks: [],
-            team: [],
-            budget: 0,
-            deliverables: [],
-            files: [],
-            deliverablesCount: 0,
-            revisionCount: data.revisions_used || 0,
-            maxRevisions: data.total_revisions_allowed || 2,
-            activityLog: [],
-            termsAcceptedAt: data.terms_accepted_at,
-            termsAcceptedBy: data.terms_accepted_by,
-          };
-          setCurrentProject(project);
-        }
-      } catch (error) {
-        console.error('Failed to fetch project:', error);
-      }
-      setIsLoading(false);
-    };
-
-    if (projectId) {
-      loadProject();
-    }
-  }, [projectId]);
+  const { data: currentProject, isLoading } = useProject(projectId);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
-        <p>Loading...</p>
-      </div>
-    );
+    return <DetailPageHeaderSkeleton />;
   }
 
   if (!user || !currentProject) {

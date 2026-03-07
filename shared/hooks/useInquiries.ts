@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../utils/api.client';
 import type { Inquiry, CreateInquiryDto } from '../contracts';
 
@@ -14,6 +14,8 @@ export function useInquiries() {
   return useQuery({
     queryKey: inquiryKeys.lists(),
     queryFn: api.inquiries.list,
+    placeholderData: keepPreviousData,
+    throwOnError: false,
   });
 }
 
@@ -22,6 +24,8 @@ export function useInquiry(id: string | undefined) {
     queryKey: inquiryKeys.detail(id!),
     queryFn: () => api.inquiries.get(id!),
     enabled: !!id,
+    placeholderData: keepPreviousData,
+    throwOnError: false,
   });
 }
 

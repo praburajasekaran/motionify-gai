@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProcessTimeline from "@/components/ProcessTimeline/ProcessTimeline";
-import PricingSection from "@/components/PricingSection";
 import ReadyToTellYourStory from "@/components/ReadyToTellYourStory";
 
 export const metadata: Metadata = {
@@ -135,9 +134,6 @@ export default function WorkPage() {
       <div id="approach">
         <ProcessTimeline />
       </div>
-
-      {/* ── Pricing ─────────────────────────────────────────── */}
-      <PricingSection />
 
       {/* ── Final CTA ───────────────────────────────────────── */}
       <ReadyToTellYourStory />

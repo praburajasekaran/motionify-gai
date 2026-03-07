@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
@@ -13,8 +13,8 @@ import {
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
-import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import { ProjectStatus, Task, Project } from '../types';
+import { DetailPageHeaderSkeleton, TabNavigationSkeleton } from '../components/ui/SkeletonLoaders';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
 import { canEditTask, canDeleteTask, canCreateTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
@@ -25,7 +25,7 @@ import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
 import { Activity as ApiActivity } from '../services/activityApi';
-import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
+import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile, useProject, useDeliverables } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
@@ -226,8 +226,10 @@ export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthContext();
-    const [project, setProject] = useState<Project | null>(null);
-    const [projectLoading, setProjectLoading] = useState(true);
+
+    // React Query hooks — fetch project, deliverables, tasks, activities, files in parallel
+    const { data: project = null, isLoading: projectLoading } = useProject(id);
+    const { data: deliverables = [], isLoading: deliverablesLoading, isSuccess: deliverablesSuccess } = useDeliverables(id);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -252,17 +254,7 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
-    // Real deliverables from API (not mock data)
-    const [deliverables, setDeliverables] = useState<Array<{
-        id: string;
-        title: string;
-        type: string;
-        status: string;
-        progress: number;
-        dueDate: string;
-    }>>([]);
-    const [deliverablesLoading, setDeliverablesLoading] = useState(true);
+    const termsAccepted = !!project?.termsAcceptedAt;
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     // Expandable comments state
@@ -270,75 +262,19 @@ export const ProjectDetail = () => {
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
     const { addToast } = useToast();
 
-    // Polling hooks for cross-user sync
+    // Polling hooks for cross-user sync — use id directly for parallel fetching
     const queryClient = useQueryClient();
-    const { data: tasks = [] } = useTasks(project?.id);
-    const { data: activities = [] } = useActivities(project?.id);
-    const { data: projectFiles = [] } = useProjectFiles(project?.id);
-    const deleteProjectFileMutation = useDeleteProjectFile(project?.id);
+    const { data: tasks = [], isSuccess: tasksSuccess } = useTasks(id);
+    const { data: activities = [] } = useActivities(id);
+    const { data: projectFiles = [] } = useProjectFiles(id);
+    const deleteProjectFileMutation = useDeleteProjectFile(id);
     const invalidateActivities = useInvalidateActivities();
     const invalidateTasks = () => {
-        if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
+        if (id) queryClient.invalidateQueries({ queryKey: taskKeys.list(id) });
     };
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
-
-    // Fetch project from API
-    useEffect(() => {
-        if (!id) return;
-
-        const fetchProject = async () => {
-            try {
-                const response = await fetch(`/api/projects/${id}`, {
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    // Transform API response to match Project type
-                    const apiProject: Project = {
-                        id: data.id,
-                        title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
-                        client: data.client_name || data.client_company || 'Client',
-                        thumbnail: '',
-                        status: dbStatusToDisplay(data.status),
-                        startDate: data.start_date || data.created_at || new Date().toISOString(),
-                        dueDate: data.due_date || data.created_at || new Date().toISOString(),
-                        progress: 0,
-                        description: data.description || '',
-                        budget: 0,
-                        team: (data.team || []).map((m: any) => ({
-                            id: m.id,
-                            name: m.name || 'Unknown',
-                            email: m.email || '',
-                            avatar: m.avatar || '',
-                            role: m.role || 'team_member',
-                        })),
-                        tasks: [],
-                        deliverables: [],
-                        files: [],
-                        deliverablesCount: 0,
-                        revisionCount: data.revisions_used ?? 0,
-                        maxRevisions: data.total_revisions_allowed ?? 2,
-                        activityLog: [],
-                        termsAcceptedAt: data.terms_accepted_at,
-                        termsAcceptedBy: data.terms_accepted_by,
-                    };
-                    setProject(apiProject);
-                } else {
-                    console.error(`API returned ${response.status} for project ${id}`);
-                }
-            } catch (error) {
-                console.error('Failed to fetch project:', error);
-            } finally {
-                setProjectLoading(false);
-            }
-        };
-
-        fetchProject();
-    }, [id]);
-
 
     // Derive activityLog directly from the query data (avoids flash on refetch)
     const activityLog = useMemo(() => {
@@ -356,48 +292,6 @@ export const ProjectDetail = () => {
             };
         });
     }, [activities, user?.id]);
-
-    // Load deliverables from API (for Overview tab consistency with Deliverables tab)
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadDeliverables = async () => {
-            setDeliverablesLoading(true);
-            try {
-                const response = await fetch(`/api/deliverables?projectId=${project.id}`, {
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load deliverables');
-                }
-
-                const data = await response.json();
-
-                // Transform API response to match the display format
-                const transformed = (data || []).map((d: any) => ({
-                    id: d.id,
-                    title: d.name || d.title || 'Untitled',
-                    type: d.type || 'Video',
-                    status: d.status || 'pending',
-                    progress: d.progress || 0,
-                    dueDate: d.estimated_completion_week
-                        ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-                        : new Date().toISOString(),
-                }));
-
-                setDeliverables(transformed);
-            } catch (error) {
-                console.error('Failed to load deliverables:', error);
-                // Fallback to empty array - don't show mock data
-                setDeliverables([]);
-            } finally {
-                setDeliverablesLoading(false);
-            }
-        };
-
-        loadDeliverables();
-    }, [project?.id]);
 
     // Auto-analysis on load
     useEffect(() => {
@@ -427,8 +321,9 @@ export const ProjectDetail = () => {
 
     if (projectLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="space-y-6">
+                <DetailPageHeaderSkeleton />
+                <TabNavigationSkeleton />
             </div>
         );
     }
@@ -784,11 +679,13 @@ export const ProjectDetail = () => {
         { name: 'Payments', icon: CreditCard, index: 7 },
     ];
 
-    // Handle terms acceptance - update local state to hide banner
+    // Handle terms acceptance - invalidate project query to reflect acceptance
     const handleTermsAccepted = () => {
-        // In a real app using SWR/React Query, we'd invalidate the query.
-        // For mock setup, we use local state to immediately hide the banner
-        setTermsAccepted(true);
+        if (id) {
+            queryClient.setQueryData(['projects', 'detail', id], (old: Project | undefined) =>
+                old ? { ...old, termsAcceptedAt: new Date().toISOString() } : old
+            );
+        }
     };
 
     return (
@@ -969,7 +866,7 @@ export const ProjectDetail = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {!deliverablesLoading && deliverables.length === 0 && (
+                                        {deliverablesSuccess && deliverables.length === 0 && (
                                             <EmptyState
                                                 title="No deliverables"
                                                 description="This project doesn't have any active deliverables yet."
@@ -1035,14 +932,14 @@ export const ProjectDetail = () => {
                                 <CardContent className="pt-3">
                                     <div className="space-y-3">
                                         {deliverablesLoading ? (
-                                            <p className="text-[14px] text-muted-foreground">Loading...</p>
+                                            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-6 bg-muted animate-pulse rounded" />)}</div>
                                         ) : deliverables.slice(0, 3).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-[14px] border-l-2 border-primary pl-3 py-1">
                                                 <span className="text-foreground truncate w-32 font-medium">{d.title}</span>
                                                 <span className="tabular-nums text-muted-foreground text-[13px]">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
-                                        {!deliverablesLoading && deliverables.length === 0 && (
+                                        {deliverablesSuccess && deliverables.length === 0 && (
                                             <p className="text-[14px] text-muted-foreground">No upcoming deadlines.</p>
                                         )}
                                     </div>
@@ -1060,7 +957,13 @@ export const ProjectDetail = () => {
                         isPrimaryContact={isPrimaryContact}
                         isInviteModalOpen={isInviteModalOpen}
                         setIsInviteModalOpen={setIsInviteModalOpen}
-                        onTeamUpdated={(updatedTeam) => setProject(prev => prev ? { ...prev, team: updatedTeam } : prev)}
+                        onTeamUpdated={(updatedTeam) => {
+                            if (id) {
+                                queryClient.setQueryData(['projects', 'detail', id], (old: Project | undefined) =>
+                                    old ? { ...old, team: updatedTeam } : old
+                                );
+                            }
+                        }}
                         addToast={addToast}
                     />
                 </TabsContent>
@@ -1266,7 +1169,7 @@ export const ProjectDetail = () => {
                                     )
                                 })}
 
-                            {tasks.length === 0 && (
+                            {tasksSuccess && tasks.length === 0 && (
                                 <EmptyState
                                     title="No tasks yet"
                                     description="Get started by adding a task."
