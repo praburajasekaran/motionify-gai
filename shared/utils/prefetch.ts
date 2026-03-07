@@ -1,39 +1,42 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE } from '@/lib/api-config';
+import { dashboardMetricsKeys, fetchDashboardMetrics } from '@/shared/hooks/useDashboardMetrics';
+import { dashboardActivityKeys, fetchDashboardActivities } from '@/shared/hooks/useDashboardActivities';
+import { projectKeys, fetchProjects } from '@/shared/hooks/useProjects';
 
 /**
  * Route-specific prefetch functions.
  * Each function populates the React Query cache so that when the
  * user navigates, the page can render instantly from cache.
+ *
+ * Uses the same queryFn as the hooks to ensure transformed data
+ * is cached consistently (no raw vs transformed mismatch).
  */
 
 export function prefetchDashboard(queryClient: QueryClient) {
   queryClient.prefetchQuery({
-    queryKey: ['dashboard', 'metrics'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/dashboard-metrics`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch dashboard metrics');
-      return res.json();
-    },
+    queryKey: dashboardMetricsKeys.metrics(),
+    queryFn: fetchDashboardMetrics,
     staleTime: 2 * 60 * 1000,
+  });
+
+  queryClient.prefetchQuery({
+    queryKey: dashboardActivityKeys.list(),
+    queryFn: fetchDashboardActivities,
   });
 }
 
 export function prefetchProjectList(queryClient: QueryClient, userId?: string) {
   if (!userId) return;
   queryClient.prefetchQuery({
-    queryKey: ['projects', 'list', { userId }],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/projects?userId=${userId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch projects');
-      return res.json();
-    },
+    queryKey: projectKeys.list(userId),
+    queryFn: () => fetchProjects(userId),
   });
 }
 
 export function prefetchProjectDetail(queryClient: QueryClient, projectId: string) {
   queryClient.prefetchQuery({
-    queryKey: ['projects', 'detail', projectId],
+    queryKey: projectKeys.detail(projectId),
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/projects/${projectId}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch project');
