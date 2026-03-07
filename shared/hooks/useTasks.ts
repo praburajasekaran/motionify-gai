@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   fetchTasksForProject,
   createTask as createTaskApi,
@@ -23,6 +23,7 @@ export function useTasks(projectId: string | undefined) {
     refetchInterval: POLL_INTERVAL,
     refetchIntervalInBackground: false,
     staleTime: 5_000,
+    placeholderData: keepPreviousData,
     throwOnError: false,
   });
 }
