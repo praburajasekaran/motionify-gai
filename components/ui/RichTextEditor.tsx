@@ -37,7 +37,7 @@ function ToolbarButton({
       title={title}
       className={`p-1.5 rounded transition-colors ${
         isActive
-          ? 'bg-violet-500/20 text-violet-400'
+          ? 'bg-primary/20 text-primary'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
       }`}
     >
@@ -88,7 +88,7 @@ export function RichTextEditor({
   return (
     <div
       className={`bg-muted border border-border rounded-lg overflow-hidden transition-shadow ${
-        editable ? 'focus-within:ring-2 focus-within:ring-violet-500/50 focus-within:border-transparent' : ''
+        editable ? 'focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent' : ''
       }`}
     >
       {editable && (

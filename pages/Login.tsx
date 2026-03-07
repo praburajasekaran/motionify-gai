@@ -113,7 +113,7 @@ export const Login: React.FC = () => {
           </div>
 
           {verifyError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-200 mb-4">
+            <div className="bg-destructive/10 text-destructive p-3 rounded-lg border border-destructive/20 mb-4" role="alert">
               {verifyError}
             </div>
           )}
@@ -128,11 +128,11 @@ export const Login: React.FC = () => {
 
           {sendSuccess ? (
             <div className="text-center py-4">
-              <div className="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle className="h-6 w-6" />
+              <div className="bg-[var(--studio-teal)]/10 text-[var(--studio-teal)] w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h3 className="font-medium text-green-800">Check your inbox!</h3>
-              <p className="text-sm text-green-700 mt-1">We sent a magic link to <strong>{email}</strong></p>
+              <h3 className="font-medium text-foreground">Check your inbox!</h3>
+              <p className="text-sm text-secondary-foreground mt-1">We sent a magic link to <strong>{email}</strong></p>
               <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={() => setSendSuccess(false)}>
                   Use different email
@@ -149,7 +149,7 @@ export const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-background text-foreground"
+                  className="w-full px-3 py-2 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors bg-background text-foreground"
                   required
                 />
               </div>
@@ -165,7 +165,7 @@ export const Login: React.FC = () => {
               </label>
 
               {sendError && (
-                <p className="text-sm text-red-500">{sendError}</p>
+                <p className="text-sm text-destructive" role="alert">{sendError}</p>
               )}
 
               <Button

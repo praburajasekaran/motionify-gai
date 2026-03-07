@@ -25,7 +25,7 @@ export interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, icon: Icon = FileQuestion, action, className }) => (
   <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
     <div className="bg-muted p-4 rounded-lg mb-4 border border-border">
-      <Icon className="h-6 w-6 text-muted-foreground" />
+      <Icon className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
     </div>
     <h3 className="text-[15px] font-semibold text-foreground mb-1">{title}</h3>
     <p className="text-[14px] text-muted-foreground max-w-sm mb-5 leading-relaxed">{description}</p>
@@ -259,7 +259,7 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   return (
     <div className={cn(
-      "inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ring-1 ring-inset",
+      "inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-1 ring-inset",
       {
         'bg-primary/10 text-primary ring-primary/20': variant === 'default',
         'bg-secondary text-secondary-foreground ring-border': variant === 'secondary',
@@ -298,7 +298,7 @@ export const Switch: React.FC<{ checked: boolean; onCheckedChange: (c: boolean) 
   >
     <span
       className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform",
+        "pointer-events-none block h-5 w-5 rounded-full bg-background ring-1 ring-border ring-0 transition-transform",
         checked ? "translate-x-5" : "translate-x-0"
       )}
     />
@@ -332,12 +332,13 @@ export const Slider: React.FC<{ value: number[]; onValueChange: (v: number[]) =>
       aria-valuenow={value[0]}
       aria-valuemin={0}
       aria-valuemax={max}
+      aria-valuetext={`${value[0]} of ${max}`}
     >
       <div className="relative h-2 w-full grow overflow-hidden rounded-full bg-muted">
         <div className="absolute h-full bg-primary transition-all duration-100 ease-out" style={{ width: `${percentage}%` }} />
       </div>
       <div
-        className="absolute h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-md group-hover:scale-110 duration-200"
+        className="absolute h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-hover:scale-110 duration-200"
         style={{ left: `calc(${percentage}% - 10px)` }}
       />
     </div>
@@ -553,7 +554,7 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-card px-3 py-2 text-sm font-medium text-foreground ring-1 ring-inset ring-border hover:bg-muted transition-colors focus:ring-2 focus:ring-primary",
+          "inline-flex w-full justify-between items-center gap-x-1.5 rounded-md bg-card px-3 py-2 text-sm font-medium text-foreground ring-1 ring-inset ring-border hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-primary",
           triggerClassName
         )}
         onClick={(e) => {
@@ -569,7 +570,7 @@ export const Select: React.FC<SelectProps> = ({ value, onValueChange, placeholde
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-lg bg-card border border-border focus:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+          className="absolute left-0 min-w-full w-max z-[100] mt-2 origin-top rounded-lg bg-card border border-border focus-visible:outline-none max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="py-1">
             {options.map((opt) => (
@@ -654,7 +655,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, children, a
           ref={menuRef}
           onClick={() => setOpen(false)}
           style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' as const }}
-          className="fixed z-[9999] w-56 rounded-lg bg-card border border-border shadow-lg focus:outline-none py-1 animate-in fade-in zoom-in-95 duration-100"
+          className="fixed z-[9999] w-56 rounded-lg bg-card border border-border focus-visible:outline-none py-1 animate-in fade-in zoom-in-95 duration-100"
         >
           {children}
         </div>,
@@ -822,8 +823,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 <h5 className="text-sm font-bold">{toast.title}</h5>
                 {toast.description && <p className="text-xs text-muted-foreground opacity-90">{toast.description}</p>}
               </div>
-              <button onClick={() => removeToast(toast.id)} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted">
-                <X className="h-4 w-4" />
+              <button onClick={() => removeToast(toast.id)} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -863,7 +864,7 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttribut
 TableRow.displayName = "TableRow";
 
 export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
-  <th ref={ref} className={cn("h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)} {...props} />
+  <th ref={ref} className={cn("h-12 px-4 text-left align-middle font-medium text-secondary-foreground [&:has([role=checkbox])]:pr-0", className)} {...props} />
 ));
 TableHead.displayName = "TableHead";
 

@@ -64,7 +64,7 @@ function MetricCard({ title, value, icon: Icon, color, breakdown, isExpanded, on
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
         {breakdown && (
-          <div className="text-muted-foreground">
+          <div className="text-muted-foreground" aria-hidden="true">
             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </div>
         )}
@@ -247,16 +247,16 @@ export const Dashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-secondary-foreground uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-secondary-foreground uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-secondary-foreground uppercase tracking-wider">
                     Action
                   </th>
-                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-secondary-foreground uppercase tracking-wider">
                     Context
                   </th>
                 </tr>
@@ -300,6 +300,8 @@ export const Dashboard = () => {
               <button
                 onClick={handleLoadMoreActivities}
                 disabled={isLoadingMore}
+                aria-busy={isLoadingMore}
+                aria-label={isLoadingMore ? "Loading more activities" : "Load more activities"}
                 className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
                 {isLoadingMore

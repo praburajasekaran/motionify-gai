@@ -28,12 +28,12 @@ export function ConfirmDialog({
 
   const variantStyles = {
     warning: {
-      icon: 'bg-amber-100 text-amber-600',
-      button: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
+      icon: 'bg-primary/10 text-primary',
+      button: 'bg-primary hover:bg-[var(--studio-amber-hover)] focus-visible:ring-ring',
     },
     danger: {
-      icon: 'bg-red-100 text-red-600',
-      button: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+      icon: 'bg-destructive/10 text-destructive',
+      button: 'bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive',
     },
   };
 
@@ -55,7 +55,8 @@ export function ConfirmDialog({
             onClick={onClose}
             className="absolute right-4 top-4 p-1 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-accent transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
+            <span className="sr-only">Close</span>
           </button>
 
           <div className="bg-card px-6 py-6">
@@ -82,7 +83,7 @@ export function ConfirmDialog({
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className={`inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
+              className={`inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
             >
               {isLoading ? (
                 <>
