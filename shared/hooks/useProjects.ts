@@ -47,3 +47,56 @@ export function useProjects(userId: string | undefined) {
     throwOnError: false,
   });
 }
+
+/**
+ * Fetch a single project by ID (detail view).
+ * Returns a comprehensive Project with all fields (team, description, terms, etc.).
+ */
+export async function fetchProject(projectId: string): Promise<Project> {
+  const res = await fetch(`/api/projects/${projectId}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`Failed to fetch project: ${res.status}`);
+  const data = await res.json();
+
+  return {
+    id: data.id,
+    title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
+    client: data.client_name || data.client_company || 'Client',
+    clientEmail: data.client_email || '',
+    clientPhone: data.client_phone || '',
+    website: data.website || '',
+    thumbnail: '',
+    status: dbStatusToDisplay(data.status),
+    startDate: data.start_date || data.created_at || new Date().toISOString(),
+    dueDate: data.due_date || data.created_at || new Date().toISOString(),
+    progress: 0,
+    description: data.description || '',
+    budget: 0,
+    team: (data.team || []).map((m: any) => ({
+      id: m.id,
+      name: m.name || 'Unknown',
+      email: m.email || '',
+      avatar: m.avatar || '',
+      role: m.role || 'team_member',
+    })),
+    tasks: [],
+    deliverables: [],
+    files: [],
+    deliverablesCount: data.deliverables_count || 0,
+    revisionCount: data.revisions_used ?? 0,
+    maxRevisions: data.total_revisions_allowed ?? 2,
+    activityLog: [],
+    termsAcceptedAt: data.terms_accepted_at,
+    termsAcceptedBy: data.terms_accepted_by,
+    projectNumber: data.project_number || '',
+  };
+}
+
+export function useProject(id: string | undefined) {
+  return useQuery({
+    queryKey: projectKeys.detail(id!),
+    queryFn: () => fetchProject(id!),
+    enabled: !!id,
+    placeholderData: keepPreviousData,
+    throwOnError: false,
+  });
+}

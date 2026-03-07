@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
 import { validateProjectStatusTransition } from '../utils/projectStateTransitions';
-import { dbStatusToDisplay, displayStatusToDb } from '../utils/projectStatusMapping';
+import { displayStatusToDb } from '../utils/projectStatusMapping';
+import { useProject } from '../shared/hooks';
+import { useQueryClient } from '@tanstack/react-query';
+import { DetailPageHeaderSkeleton } from '../components/ui/SkeletonLoaders';
 
 /** Extract YYYY-MM-DD from a date value, avoiding timezone shift issues.
  *  PostgreSQL DATE columns come through as ISO strings like "2026-02-09T00:00:00.000Z".
@@ -88,60 +91,19 @@ export const ProjectSettings = () => {
     // Get current user for permission checks
     const { user } = useAuthContext();
     const isSuperAdmin = user?.role === 'super_admin';
+    const queryClient = useQueryClient();
 
-    const [project, setProject] = useState<Project | null>(null);
-    const [projectNumber, setProjectNumber] = useState('');
+    const { data: fetchedProject, isLoading: projectLoading } = useProject(id);
+    const [localEdits, setLocalEdits] = useState<Partial<Project>>({});
+
+    // Merge fetched data with local edits for display
+    const project = fetchedProject ? { ...fetchedProject, ...localEdits } as Project : null;
+    const projectNumber = fetchedProject?.projectNumber || '';
 
     // Check if project is archived (read-only mode)
     const isArchived = project?.status === 'Archived';
 
-    useEffect(() => {
-        const fetchProject = async () => {
-            if (!id) return;
-
-            try {
-                const response = await fetch(`/api/projects/${id}`, {
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const apiProject: Project = {
-                        id: data.id,
-                        title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
-                        client: data.client_name || data.client_company || 'Client',
-                        clientEmail: data.client_email || '',
-                        clientPhone: data.client_phone || '',
-                        website: data.website || '',
-                        thumbnail: '',
-                        status: dbStatusToDisplay(data.status),
-                        startDate: toDateString(data.start_date) || toDateString(data.created_at) || new Date().toISOString().split('T')[0],
-                        dueDate: toDateString(data.due_date) || toDateString(data.created_at) || new Date().toISOString().split('T')[0],
-                        progress: 0,
-                        description: data.description || '',
-                        budget: 0,
-                        team: [],
-                        tasks: [],
-                        deliverables: [],
-                        files: [],
-                        deliverablesCount: 0,
-                        revisionCount: data.revisions_used ?? 0,
-                        maxRevisions: data.total_revisions_allowed ?? 2,
-                        activityLog: [],
-                        termsAcceptedAt: data.terms_accepted_at,
-                        termsAcceptedBy: data.terms_accepted_by,
-                    };
-                    setProject(apiProject);
-                    setProjectNumber(data.project_number || '');
-                    setIsDirty(false);
-                }
-            } catch (error) {
-                console.error('Failed to fetch project:', error);
-            }
-        };
-
-        fetchProject();
-    }, [id]);
+    if (projectLoading) return <DetailPageHeaderSkeleton />;
 
     if (!project) return (
         <ErrorState
@@ -178,6 +140,8 @@ export const ProjectSettings = () => {
             }
 
             setIsDirty(false);
+            setLocalEdits({});
+            queryClient.invalidateQueries({ queryKey: ['projects', 'detail', id] });
             addToast({
                 title: "Settings Saved",
                 description: "Your project changes have been successfully updated.",
@@ -252,7 +216,8 @@ export const ProjectSettings = () => {
                 throw new Error(errorData.error || 'Failed to archive project');
             }
 
-            setProject({ ...project, status: 'Archived' });
+            queryClient.invalidateQueries({ queryKey: ['projects', 'detail', id] });
+            setLocalEdits({});
             setShowArchiveDialog(false);
             setArchiveConfirmInput('');
             addToast({
@@ -293,7 +258,7 @@ export const ProjectSettings = () => {
 
     const updateGeneral = (field: keyof Project, value: any) => {
         markDirty();
-        setProject(prev => prev ? { ...prev, [field]: value } : null);
+        setLocalEdits(prev => ({ ...prev, [field]: value }));
     };
 
     return (
