@@ -50,16 +50,16 @@ const SettingsNav = ({ active, onClick, icon: Icon, children, description, varia
             "group w-full flex items-start gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-left border border-transparent",
             active
                 ? variant === 'destructive'
-                    ? "bg-red-50 text-red-700 border-red-100 shadow-sm"
-                    : "bg-card text-primary border-border shadow-sm"
+                    ? "bg-destructive/5 text-destructive border-destructive/20"
+                    : "bg-card text-primary border-border"
                 : variant === 'destructive'
-                    ? "text-muted-foreground hover:bg-red-50/50 hover:text-red-600"
+                    ? "text-muted-foreground hover:bg-destructive/5 hover:text-destructive"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
     >
         <div className={cn("mt-0.5 p-1.5 rounded-lg transition-colors",
             active
-                ? variant === 'destructive' ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
+                ? variant === 'destructive' ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
                 : "bg-transparent text-muted-foreground group-hover:text-foreground group-hover:bg-muted/50"
         )}>
             <Icon className="h-4 w-4" />
@@ -297,7 +297,7 @@ export const ProjectSettings = () => {
             {/* Archive Project Dialog */}
             <Dialog open={showArchiveDialog} onOpenChange={(open) => { setShowArchiveDialog(open); if (!open) setArchiveConfirmInput(''); }}>
                 <DialogHeader>
-                    <CardTitle className="text-amber-700">Archive Project?</CardTitle>
+                    <CardTitle className="text-primary">Archive Project?</CardTitle>
                     <CardDescription>
                         This will hide <b>{project.title}</b> from the active project list. The project will be preserved in read-only mode and can be viewed via the "Archived" filter.
                     </CardDescription>
@@ -317,7 +317,7 @@ export const ProjectSettings = () => {
                     <Button variant="outline" onClick={() => { setShowArchiveDialog(false); setArchiveConfirmInput(''); }}>Cancel</Button>
                     <Button
                         variant="default"
-                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                        className="bg-primary hover:bg-[var(--studio-amber-hover)] text-primary-foreground"
                         onClick={handleArchiveProject}
                         disabled={archiveConfirmInput !== project.title}
                     >
@@ -342,18 +342,18 @@ export const ProjectSettings = () => {
                 </div>
 
                 {/* Actions Area */}
-                <div className="flex items-center gap-4 bg-card p-2 pr-2.5 rounded-2xl border border-border shadow-sm">
+                <div className="flex items-center gap-4 bg-card p-2 pr-2.5 rounded-2xl border border-border">
                     <div className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-                        isDirty ? "bg-amber-50 text-amber-700" : "bg-muted text-muted-foreground"
+                        isDirty ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                     )}>
-                        <div className={cn("h-1.5 w-1.5 rounded-full", isDirty ? "bg-amber-500 animate-pulse" : "bg-border")} />
+                        <div className={cn("h-1.5 w-1.5 rounded-full", isDirty ? "bg-primary animate-pulse" : "bg-border")} />
                         {isDirty ? 'Unsaved Changes' : 'Up to date'}
                     </div>
                     <Button
                         onClick={handleSave}
                         disabled={isLoading || !isDirty || isArchived}
-                        className={cn("shadow-sm transition-all h-9 rounded-xl px-5 font-semibold", isDirty ? "shadow-primary/20" : "")}
+                        className={cn("transition-all h-9 rounded-xl px-5 font-semibold")}
                     >
                         {isArchived ? 'Archived (Read-Only)' : isLoading ? 'Saving...' : 'Save Changes'}
                     </Button>
@@ -404,7 +404,7 @@ export const ProjectSettings = () => {
                     {activeTab === 'general' && (
                         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                             {/* Identity Card */}
-                            <Card className="border-border shadow-sm">
+                            <Card className="border-border">
                                 <CardHeader>
                                     <CardTitle>Project Identity</CardTitle>
                                     <CardDescription>Core information used to identify this project across the workspace.</CardDescription>
@@ -462,7 +462,7 @@ export const ProjectSettings = () => {
                             </Card>
 
                             {/* Logistics Card */}
-                            <Card className="border-border shadow-sm">
+                            <Card className="border-border">
                                 <CardHeader>
                                     <CardTitle>Logistics & Status</CardTitle>
                                     <CardDescription>Timeline and current operational state.</CardDescription>
@@ -498,20 +498,20 @@ export const ProjectSettings = () => {
                     )}
 
                     {activeTab === 'danger' && (
-                        <Card className="border-red-200 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-                            <CardHeader className="bg-red-50/30 border-b border-red-100 pb-4">
+                        <Card className="border-destructive/20 overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                            <CardHeader className="bg-destructive/5 border-b border-destructive/10 pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-red-100 text-red-600 rounded-lg">
+                                    <div className="p-2 bg-destructive/10 text-destructive rounded-lg">
                                         <ShieldAlert className="h-6 w-6" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-red-900">Danger Zone</CardTitle>
-                                        <CardDescription className="text-red-700/80">Irreversible actions. Proceed with caution.</CardDescription>
+                                        <CardTitle className="text-foreground">Danger Zone</CardTitle>
+                                        <CardDescription className="text-destructive/80">Irreversible actions. Proceed with caution.</CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="divide-y divide-red-100/50 p-0">
-                                <div className="flex items-center justify-between p-6 hover:bg-red-50/10 transition-colors">
+                            <CardContent className="divide-y divide-destructive/10 p-0">
+                                <div className="flex items-center justify-between p-6 hover:bg-destructive/5 transition-colors">
                                     <div className="space-y-1">
                                         <h4 className="font-medium text-foreground">Archive Project</h4>
                                         <p className="text-sm text-muted-foreground max-w-md">
@@ -524,16 +524,16 @@ export const ProjectSettings = () => {
                                         variant="outline"
                                         onClick={() => setShowArchiveDialog(true)}
                                         disabled={isArchived}
-                                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300 disabled:opacity-50"
+                                        className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive hover:border-destructive/40 disabled:opacity-50"
                                     >
                                         <Archive className="h-4 w-4 mr-2" /> {isArchived ? 'Already Archived' : 'Archive Project'}
                                     </Button>
                                 </div>
                                 {isSuperAdmin && (
-                                    <div className="flex items-center justify-between p-6 bg-red-50/20">
+                                    <div className="flex items-center justify-between p-6 bg-destructive/5">
                                         <div className="space-y-1">
-                                            <h4 className="font-medium text-red-900">Delete Project</h4>
-                                            <p className="text-sm text-red-700/70 max-w-md">
+                                            <h4 className="font-medium text-foreground">Delete Project</h4>
+                                            <p className="text-sm text-destructive/70 max-w-md">
                                                 {isArchived
                                                     ? "Permanently remove this archived project and all its data. This action cannot be undone."
                                                     : "Only archived projects can be deleted. Archive this project first."}
@@ -541,7 +541,7 @@ export const ProjectSettings = () => {
                                         </div>
                                         <Button
                                             variant="destructive"
-                                            className="bg-red-600 hover:bg-red-700 shadow-sm shadow-red-200"
+                                            className=""
                                             onClick={() => setShowDeleteProjectDialog(true)}
                                             disabled={!isArchived}
                                         >

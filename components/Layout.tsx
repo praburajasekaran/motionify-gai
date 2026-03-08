@@ -42,18 +42,18 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
   const percentage = Math.round((remaining / max) * 100);
 
   // Determine color based on remaining percentage
-  let colorClass = "bg-emerald-500";
-  let textColor = "text-emerald-700";
+  let colorClass = "bg-[var(--studio-teal)]";
+  let textColor = "text-[var(--studio-teal)]";
   if (percentage <= 20) {
-    colorClass = "bg-red-500";
-    textColor = "text-red-700";
+    colorClass = "bg-destructive";
+    textColor = "text-destructive";
   } else if (percentage <= 50) {
-    colorClass = "bg-amber-500";
-    textColor = "text-amber-700";
+    colorClass = "bg-primary";
+    textColor = "text-primary";
   }
 
   return (
-    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg shadow-sm">
+    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg">
       {/* Label */}
       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         Revisions
@@ -203,7 +203,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Accessibility: Skip to content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:ring-2 focus:ring-primary transition-all"
       >
         Skip to content
       </a>
@@ -301,8 +301,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="p-3 border-t border-border shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div
-                  className="flex items-center gap-2.5 p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 w-full p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group text-left"
                   aria-label="User menu"
                 >
                   <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
@@ -310,8 +311,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
                     <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
                   </div>
-                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                </div>
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56">
                 <DropdownMenuLabel className="font-normal">
