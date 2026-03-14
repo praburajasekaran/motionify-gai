@@ -153,7 +153,7 @@ export const handler = compose(
                     false as "isEdited",
                     created_at as "createdAt",
                     updated_at as "updatedAt"`,
-                [proposalId, user.id, authorType, user.fullName, trimmedContent]
+                [proposalId, user.userId, authorType, user.fullName, trimmedContent]
             );
 
             const comment: Comment = {
@@ -232,7 +232,7 @@ export const handler = compose(
                 // ========================================================================
                 // Create in-app notification record
                 // ========================================================================
-                if (recipientUserId && recipientUserId !== user.id) {
+                if (recipientUserId && recipientUserId !== user.userId) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
                         const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/portal/admin/proposals/${proposalId}`;
@@ -247,7 +247,7 @@ export const handler = compose(
                                 'New Comment',
                                 `"${user.fullName}" commented: "${commentPreview}"`,
                                 proposalUrl,
-                                user.id,
+                                user.userId,
                                 user.fullName,
                             ]
                         );
@@ -275,7 +275,7 @@ export const handler = compose(
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
                     [
                         'COMMENT_ADDED',
-                        user.id,
+                        user.userId,
                         user.fullName,
                         null,
                         null,
@@ -327,7 +327,7 @@ export const handler = compose(
                 };
             }
 
-            if (commentCheck.rows[0].author_id !== user.id) {
+            if (commentCheck.rows[0].author_id !== user.userId) {
                 return {
                     statusCode: 403,
                     headers,
