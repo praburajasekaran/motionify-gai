@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DeliverableProvider, useDeliverables } from './DeliverableContext';
 import { RevisionQuotaIndicator } from './RevisionQuotaIndicator';
 import { DeliverablesList } from './DeliverablesList';
@@ -27,6 +28,7 @@ const DeliverablesTabContent: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [approveConfirm, setApproveConfirm] = useState(false);
 
   const handleReviewDeliverable = (deliverable: Deliverable) => {
     dispatch({ type: 'OPEN_REVIEW_MODAL', deliverable });
@@ -39,27 +41,25 @@ const DeliverablesTabContent: React.FC = () => {
 
   const handleApprove = () => {
     if (!state.selectedDeliverable) return;
+    setApproveConfirm(true);
+  };
 
-    // Show confirmation and approve
-    const confirmed = window.confirm(
-      `Are you sure you want to approve "${state.selectedDeliverable.title}"?\n\nAfter approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours.`
-    );
+  const handleApproveConfirmed = () => {
+    if (!state.selectedDeliverable) return;
+    setApproveConfirm(false);
+    try {
+      // Use permission-aware approve method
+      approveDeliverable(state.selectedDeliverable.id);
 
-    if (confirmed) {
-      try {
-        // Use permission-aware approve method
-        approveDeliverable(state.selectedDeliverable.id);
-
-        // Show success message
-        setSuccessMessage('Deliverable approved successfully! Payment link will be sent to your email.');
-        setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 5000);
-      } catch (error) {
-        // Show error message if permission denied
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to approve deliverable');
-        setShowErrorMessage(true);
-        setTimeout(() => setShowErrorMessage(false), 5000);
-      }
+      // Show success message
+      setSuccessMessage('Deliverable approved successfully! Payment link will be sent to your email.');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 5000);
+    } catch (error) {
+      // Show error message if permission denied
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to approve deliverable');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 5000);
     }
   };
 
@@ -141,6 +141,16 @@ const DeliverablesTabContent: React.FC = () => {
         currentUserName={currentUser?.name || ''}
         currentUserEmail={currentUser?.email || ''}
         currentUserAvatar={currentUser?.avatar}
+      />
+
+      <ConfirmDialog
+        isOpen={approveConfirm}
+        onClose={() => setApproveConfirm(false)}
+        onConfirm={handleApproveConfirmed}
+        title="Approve Deliverable"
+        message={`Are you sure you want to approve "${state.selectedDeliverable?.title}"?\n\nAfter approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours.`}
+        confirmLabel="Approve"
+        variant="warning"
       />
     </div>
   );

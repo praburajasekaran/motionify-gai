@@ -27,6 +27,7 @@ import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfoll
 import { Activity as ApiActivity } from '../services/activityApi';
 import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile, useProject, useDeliverables } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { formatTimestamp } from '../utils/dateFormatting';
@@ -257,6 +258,7 @@ export const ProjectDetail = () => {
     const termsAccepted = !!project?.termsAcceptedAt;
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{ open: boolean; taskId: string | null }>({ open: false, taskId: null });
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
@@ -437,10 +439,14 @@ export const ProjectDetail = () => {
         }
     };
 
-    const handleDeleteTask = async (taskId: string) => {
-        if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-            return;
-        }
+    const handleDeleteTask = (taskId: string) => {
+        setDeleteTaskConfirm({ open: true, taskId });
+    };
+
+    const handleDeleteTaskConfirmed = async () => {
+        if (!deleteTaskConfirm.taskId) return;
+        const taskId = deleteTaskConfirm.taskId;
+        setDeleteTaskConfirm({ open: false, taskId: null });
 
         try {
             await deleteTask(taskId);
@@ -1321,6 +1327,16 @@ export const ProjectDetail = () => {
                     <PaymentHistory project={project} />
                 </TabsContent>
             </Tabs>
+
+            <ConfirmDialog
+                isOpen={deleteTaskConfirm.open}
+                onClose={() => setDeleteTaskConfirm({ open: false, taskId: null })}
+                onConfirm={handleDeleteTaskConfirmed}
+                title="Delete Task"
+                message="Are you sure you want to delete this task? This action cannot be undone."
+                confirmLabel="Delete"
+                variant="danger"
+            />
         </div>
     );
 };
