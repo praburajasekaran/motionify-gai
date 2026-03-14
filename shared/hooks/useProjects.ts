@@ -88,6 +88,7 @@ export async function fetchProject(projectId: string): Promise<Project> {
     termsAcceptedAt: data.terms_accepted_at,
     termsAcceptedBy: data.terms_accepted_by,
     projectNumber: data.project_number || '',
+    proposal_id: data.proposal_id || undefined,
   };
 }
 

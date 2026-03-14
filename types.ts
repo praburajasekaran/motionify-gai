@@ -139,6 +139,7 @@ export interface Project {
   maxRevisions: number;
   activityLog: ActivityLog[];
   projectNumber?: string;
+  proposal_id?: string;
   // Terms acceptance tracking
   termsAcceptedAt?: string; // ISO date string
   termsAcceptedBy?: string; // User ID

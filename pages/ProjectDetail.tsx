@@ -35,6 +35,7 @@ import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
+import { CommentThread } from '../components/proposals/CommentThread';
 
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
@@ -952,6 +953,15 @@ export const ProjectDetail = () => {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {project.proposal_id && (
+                            <CommentThread
+                                proposalId={project.proposal_id}
+                                currentUserId={user?.id}
+                                currentUserName={user?.name}
+                                isAuthenticated={!!user}
+                            />
+                        )}
                     </div>
                 </TabsContent>
 
