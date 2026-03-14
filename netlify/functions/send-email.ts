@@ -419,7 +419,7 @@ export async function sendCommentNotificationEmail(data: {
 }) {
   const roleLabel = data.commenterRole === 'client' ? 'Client' : 'Admin';
   const proposalDisplay = data.proposalNumber ? `Proposal ${data.proposalNumber}` : 'your proposal';
-  const proposalUrl = `${process.env.URL || 'http://localhost:3000'}/proposal/${data.proposalId}`;
+  const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/portal/admin/proposals/${data.proposalId}`;
 
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">New Comment on Your Proposal</h2>

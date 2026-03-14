@@ -163,6 +163,18 @@ export const handler = compose(
                 updatedAt: new Date(result.rows[0].updatedAt).toISOString(),
             };
 
+            // Look up project_id for this proposal (used in notifications and activity log)
+            let projectId: string | null = null;
+            try {
+                const projectLookup = await client.query(
+                    `SELECT project_id FROM proposals WHERE id = $1`,
+                    [proposalId]
+                );
+                projectId = projectLookup.rows[0]?.project_id ?? null;
+            } catch (lookupError) {
+                console.error('❌ Failed to look up project_id for proposal:', lookupError);
+            }
+
             // ========================================================================
             // Send comment notification email
             // ========================================================================
@@ -223,14 +235,14 @@ export const handler = compose(
                 if (recipientUserId && recipientUserId !== user.id) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
-                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/proposal/${proposalId}`;
+                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/portal/admin/proposals/${proposalId}`;
 
                         await client.query(
                             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                             [
                                 recipientUserId,
-                                proposalId,
+                                projectId,
                                 'comment_created',
                                 'New Comment',
                                 `"${user.fullName}" commented: "${commentPreview}"`,
@@ -248,6 +260,35 @@ export const handler = compose(
             } catch (emailError) {
                 // Log but don't fail the comment creation
                 console.error('❌ Failed to send comment notification email:', emailError);
+            }
+
+            // ========================================================================
+            // Write activity log entry
+            // ========================================================================
+            try {
+                await client.query(
+                    `INSERT INTO activities (
+                        type, user_id, user_name,
+                        target_user_id, target_user_name,
+                        inquiry_id, proposal_id, project_id,
+                        details
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                    [
+                        'COMMENT_ADDED',
+                        user.id,
+                        user.fullName,
+                        null,
+                        null,
+                        null,
+                        proposalId,
+                        projectId,
+                        JSON.stringify({ commentPreview: trimmedContent.substring(0, 100) }),
+                    ]
+                );
+                console.log(`✅ Activity logged for comment on proposal ${proposalId}`);
+            } catch (activityError) {
+                // Log but don't fail the comment creation
+                console.error('❌ Failed to log comment activity:', activityError);
             }
 
             return {
