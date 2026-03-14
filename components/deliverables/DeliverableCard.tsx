@@ -10,7 +10,9 @@
  * - Action button (Review/Download)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 import {
   FileVideo,
@@ -109,6 +111,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
+  const [paymentConfirm, setPaymentConfirm] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
   const abortControllerRef = React.useRef<AbortController | null>(null);
@@ -312,23 +315,22 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       if (legacyUrl) {
         window.open(legacyUrl, '_blank');
       } else {
-        alert('No file available');
+        toast.error('No file available');
       }
     } catch (err) {
       console.error("Download error", err);
-      alert("Failed to get download URL");
+      toast.error('Failed to get download URL');
     }
   };
 
   const handlePayment = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const confirmPayment = window.confirm(
-      "Simulate payment for remaining 50% balance?\n\nThis will mark the deliverable as paid and release final files."
-    );
+    setPaymentConfirm(true);
+  };
 
-    if (!confirmPayment) return;
-
+  const handlePaymentConfirmed = async () => {
+    setPaymentConfirm(false);
     setIsUploading(true); // Reuse loading state for payment processing
 
     try {
@@ -348,13 +350,13 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         throw new Error('Payment processing failed');
       }
 
-      alert('Payment successful! Final files are now available for download.');
+      toast.success('Payment successful! Final files are now available for download.');
       // Ideally trigger a refresh, but strict React might require context update or key change
       window.location.reload();
 
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Payment failed. Please try again.');
+      toast.error('Payment failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -644,6 +646,16 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={paymentConfirm}
+        onClose={() => setPaymentConfirm(false)}
+        onConfirm={handlePaymentConfirmed}
+        title="Simulate Payment"
+        message="Simulate payment for remaining 50% balance? This will mark the deliverable as paid and release final files."
+        confirmLabel="Confirm Payment"
+        variant="warning"
+      />
     </div>
   );
 };
