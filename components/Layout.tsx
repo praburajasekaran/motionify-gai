@@ -215,18 +215,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+            className="fixed top-14 inset-x-0 bottom-0 bg-black/30 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar — same bg as canvas, border-only separation */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col h-full",
+          "fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto lg:inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          {/* Logo */}
-          <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-border">
+          {/* Logo — desktop only; on mobile the header is always visible above the sidebar */}
+          <div className="h-14 hidden lg:flex items-center px-4 shrink-0 border-b border-border">
             <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark'
@@ -236,9 +236,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 className="h-10 w-auto object-contain"
               />
             </PrefetchLink>
-            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setSidebarOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Nav sections */}
@@ -349,10 +346,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
           {/* Top bar — minimal, functional */}
-          <header className="h-14 border-b border-border z-40 shrink-0 sticky top-0 bg-background">
+          <header className="h-14 border-b border-border z-[60] shrink-0 sticky top-0 bg-background">
             <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
+                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(prev => !prev)} id="mobile-menu-btn">
                   <Menu className="h-4 w-4" />
                 </Button>
 
