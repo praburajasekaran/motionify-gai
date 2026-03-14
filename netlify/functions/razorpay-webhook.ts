@@ -19,6 +19,7 @@ import {
   sendPaymentSuccessEmail,
   sendPaymentFailureNotificationEmail,
 } from './send-email';
+import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
 
 /**
  * Razorpay webhook payload structure
@@ -162,6 +163,14 @@ async function handlePaymentCaptured(
     console.log('[Webhook] Payment already completed, sending email anyway:', paymentId);
   } else {
     paymentId = result.rows[0].id;
+  }
+
+  // Accept proposal and create project (idempotent — safe if verify already ran)
+  try {
+    await acceptProposalAndCreateProject(client, paymentId);
+  } catch (projectError) {
+    console.error('[Webhook] Failed to accept proposal/create project:', projectError);
+    // Non-fatal: payment is already marked completed; log and continue
   }
 
   // Send success email (non-blocking)

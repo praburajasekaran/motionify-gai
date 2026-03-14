@@ -102,5 +102,8 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "zod-to-json-schema": "^3.24.1"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.59.0"
   }
 }
