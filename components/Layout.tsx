@@ -353,6 +353,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <Menu className="h-4 w-4" />
                 </Button>
 
+                {/* Logo — mobile only (sidebar logo is hidden on mobile) */}
+                <PrefetchLink to="/" className="lg:hidden mr-3">
+                  <img
+                    src={mounted && resolvedTheme === 'dark'
+                      ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
+                      : `${import.meta.env.BASE_URL}motionify-studio-dark.png`}
+                    alt="Motionify Studio"
+                    className="h-8 w-auto object-contain"
+                  />
+                </PrefetchLink>
+
                 <nav className="hidden md:flex items-center text-[14px] text-muted-foreground">
                   <span className="hover:text-foreground cursor-pointer transition-colors">Workspace</span>
                   <ChevronRight className="h-3.5 w-3.5 mx-1.5 text-muted-foreground/50" />
