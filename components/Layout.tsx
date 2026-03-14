@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { PrefetchLink } from '../shared/components/PrefetchLink';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { TAB_INDEX_MAP } from '../constants';
@@ -226,7 +226,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           {/* Logo */}
-          <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
+          <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-border">
             <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark'
@@ -236,6 +236,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 className="h-10 w-auto object-contain"
               />
             </PrefetchLink>
+            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setSidebarOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Nav sections */}

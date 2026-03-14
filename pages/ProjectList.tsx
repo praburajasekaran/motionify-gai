@@ -31,6 +31,7 @@ import { CardGridSkeleton } from '../components/ui/SkeletonLoaders';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { useAuthContext } from '../contexts/AuthContext';
+import { isClient } from '../lib/permissions';
 import { useProjects } from '../shared/hooks/useProjects';
 
 export const ProjectList = () => {
@@ -132,12 +133,14 @@ export const ProjectList = () => {
                         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h2>
                         <p className="text-sm text-muted-foreground mt-1">{filteredProjects.length} production{filteredProjects.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <PrefetchLink to="/projects/new">
-                        <Button className="gap-2 h-9 px-4" aria-label="Start New Production">
-                            <Plus className="h-4 w-4" />
-                            New Project
-                        </Button>
-                    </PrefetchLink>
+                    {!isClient(user) && (
+                        <PrefetchLink to="/projects/new">
+                            <Button className="gap-2 h-9 px-4" aria-label="Start New Production">
+                                <Plus className="h-4 w-4" />
+                                New Project
+                            </Button>
+                        </PrefetchLink>
+                    )}
                 </div>
 
                 {/* Toolbar */}
