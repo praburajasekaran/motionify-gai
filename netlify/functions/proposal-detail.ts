@@ -155,6 +155,26 @@ export const handler = compose(
         };
       }
 
+      // Block direct acceptance — proposal can only become 'accepted' after payment
+      if (status === 'accepted') {
+        const paymentCheck = await client.query(
+          `SELECT id FROM payments
+           WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
+           LIMIT 1`,
+          [id]
+        );
+        if (paymentCheck.rows.length === 0) {
+          return {
+            statusCode: 402,
+            headers,
+            body: JSON.stringify({
+              error: 'Payment required',
+              message: 'Proposal can only be accepted after advance payment is completed.',
+            }),
+          };
+        }
+      }
+
       const updateFields = ['status = $1', 'updated_at = NOW()'];
       const params: any[] = [status];
       let paramIndex = 2;

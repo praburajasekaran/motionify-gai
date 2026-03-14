@@ -6,6 +6,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendPaymentReminderEmail } from './send-email';
+import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
 
 const { Client } = pg;
 
@@ -332,119 +333,17 @@ export const handler = compose(
 
         const payment = result.rows[0];
 
-        if (payment.payment_type === 'advance') {
-          // Get proposal details for project creation
-          const proposalResult = await client.query(
-            'SELECT * FROM proposals WHERE id = $1',
-            [payment.proposal_id]
-          );
+        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
 
-          if (proposalResult.rows.length > 0) {
-            const proposal = proposalResult.rows[0];
-
-            // Get inquiry details
-            const inquiryResult = await client.query(
-              'SELECT * FROM inquiries WHERE proposal_id = $1',
-              [payment.proposal_id]
-            );
-
-            if (inquiryResult.rows.length > 0) {
-              const inquiry = inquiryResult.rows[0];
-
-              // Generate project number
-              const year = new Date().getFullYear();
-              const projectNumResult = await client.query(
-                `SELECT project_number FROM projects 
-                 WHERE project_number LIKE $1 
-                 ORDER BY project_number DESC LIMIT 1`,
-                [`PROJ-${year}-%`]
-              );
-
-              let maxNumber = 0;
-              if (projectNumResult.rows.length > 0) {
-                const match = projectNumResult.rows[0].project_number.match(/PROJ-\d{4}-(\d+)/);
-                if (match) {
-                  maxNumber = parseInt(match[1], 10);
-                }
-              }
-              const projectNumber = `PROJ-${year}-${String(maxNumber + 1).padStart(3, '0')}`;
-
-              // Get or create client user
-              let clientUserId = proposal.client_user_id;
-              if (!clientUserId) {
-                const userResult = await client.query(
-                  'SELECT id FROM users WHERE email = $1',
-                  [inquiry.contact_email]
-                );
-                if (userResult.rows.length > 0) {
-                  clientUserId = userResult.rows[0].id;
-                } else {
-                  const newUserResult = await client.query(
-                    `INSERT INTO users (email, full_name, role) 
-                     VALUES ($1, $2, 'client') 
-                     RETURNING id`,
-                    [inquiry.contact_email, inquiry.contact_name]
-                  );
-                  clientUserId = newUserResult.rows[0].id;
-                }
-              }
-
-              // Create project
-              const projectResult = await client.query(
-                `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
-                ) VALUES ($1, $2, $3, $4, 'active', $5)
-                RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId, proposal.revisions_included ?? 2]
-              );
-
-              const project = projectResult.rows[0];
-
-              // Create deliverables from proposal
-              const deliverables = typeof proposal.deliverables === 'string'
-                ? JSON.parse(proposal.deliverables)
-                : proposal.deliverables;
-
-              for (const deliverable of deliverables) {
-                await client.query(
-                  `INSERT INTO deliverables (
-                    id, project_id, name, description, estimated_completion_week, status
-                  ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
-                  [
-                    deliverable.id,
-                    project.id,
-                    deliverable.name,
-                    deliverable.description,
-                    deliverable.estimatedCompletionWeek
-                  ]
-                );
-              }
-
-              // Update inquiry status to converted
-              await client.query(
-                `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-                [inquiry.id]
-              );
-
-              // Link payment to project
-              await client.query(
-                `UPDATE payments SET project_id = $1 WHERE id = $2`,
-                [project.id, payment.id]
-              );
-
-              // Log project created activity
-              await logActivity(client, {
-                type: 'PROJECT_CREATED',
-                userId: auth?.user?.userId || clientUserId || '',
-                userName: auth?.user?.fullName || inquiry.contact_name || 'System',
-                projectId: project.id,
-                inquiryId: inquiry.id,
-                details: { projectNumber },
-              });
-
-              console.log(`✅ Project ${projectNumber} created from payment verification`);
-            }
-          }
+        if (newProjectId) {
+          await logActivity(client, {
+            type: 'PROJECT_CREATED',
+            userId: auth?.user?.userId || '',
+            userName: auth?.user?.fullName || 'System',
+            projectId: newProjectId,
+            proposalId: payment.proposal_id || null,
+            details: {},
+          });
         }
 
         // Log payment received activity
@@ -475,6 +374,15 @@ export const handler = compose(
       }
 
       if (action === 'manual-complete') {
+        const adminRoles = ['super_admin', 'support'];
+        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Admin access required' }),
+          };
+        }
+
         const validation = validateRequest(event.body, SCHEMAS.payment.manualComplete, origin);
         if (!validation.success) return validation.response;
         const { paymentId } = validation.data;
@@ -499,119 +407,17 @@ export const handler = compose(
 
         const payment = result.rows[0];
 
-        if (payment.payment_type === 'advance') {
-          // Get proposal details for project creation
-          const proposalResult = await client.query(
-            'SELECT * FROM proposals WHERE id = $1',
-            [payment.proposal_id]
-          );
+        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
 
-          if (proposalResult.rows.length > 0) {
-            const proposal = proposalResult.rows[0];
-
-            // Get inquiry details
-            const inquiryResult = await client.query(
-              'SELECT * FROM inquiries WHERE proposal_id = $1',
-              [payment.proposal_id]
-            );
-
-            if (inquiryResult.rows.length > 0) {
-              const inquiry = inquiryResult.rows[0];
-
-              // Generate project number
-              const year = new Date().getFullYear();
-              const projectNumResult = await client.query(
-                `SELECT project_number FROM projects 
-                 WHERE project_number LIKE $1 
-                 ORDER BY project_number DESC LIMIT 1`,
-                [`PROJ-${year}-%`]
-              );
-
-              let maxNumber = 0;
-              if (projectNumResult.rows.length > 0) {
-                const match = projectNumResult.rows[0].project_number.match(/PROJ-\d{4}-(\d+)/);
-                if (match) {
-                  maxNumber = parseInt(match[1], 10);
-                }
-              }
-              const projectNumber = `PROJ-${year}-${String(maxNumber + 1).padStart(3, '0')}`;
-
-              // Get or create client user
-              let clientUserId = proposal.client_user_id;
-              if (!clientUserId) {
-                const userResult = await client.query(
-                  'SELECT id FROM users WHERE email = $1',
-                  [inquiry.contact_email]
-                );
-                if (userResult.rows.length > 0) {
-                  clientUserId = userResult.rows[0].id;
-                } else {
-                  const newUserResult = await client.query(
-                    `INSERT INTO users (email, full_name, role) 
-                     VALUES ($1, $2, 'client') 
-                     RETURNING id`,
-                    [inquiry.contact_email, inquiry.contact_name]
-                  );
-                  clientUserId = newUserResult.rows[0].id;
-                }
-              }
-
-              // Create project
-              const projectResult = await client.query(
-                `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
-                ) VALUES ($1, $2, $3, $4, 'active', $5)
-                RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId, proposal.revisions_included ?? 2]
-              );
-
-              const project = projectResult.rows[0];
-
-              // Create deliverables from proposal
-              const deliverables = typeof proposal.deliverables === 'string'
-                ? JSON.parse(proposal.deliverables)
-                : proposal.deliverables;
-
-              for (const deliverable of deliverables) {
-                await client.query(
-                  `INSERT INTO deliverables (
-                    id, project_id, name, description, estimated_completion_week, status
-                  ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
-                  [
-                    deliverable.id,
-                    project.id,
-                    deliverable.name,
-                    deliverable.description,
-                    deliverable.estimatedCompletionWeek
-                  ]
-                );
-              }
-
-              // Update inquiry status to converted
-              await client.query(
-                `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-                [inquiry.id]
-              );
-
-              // Link payment to project
-              await client.query(
-                `UPDATE payments SET project_id = $1 WHERE id = $2`,
-                [project.id, payment.id]
-              );
-
-              // Log project created activity
-              await logActivity(client, {
-                type: 'PROJECT_CREATED',
-                userId: auth?.user?.userId || clientUserId || '',
-                userName: auth?.user?.fullName || inquiry.contact_name || 'System',
-                projectId: project.id,
-                inquiryId: inquiry.id,
-                details: { projectNumber },
-              });
-
-              console.log(`✅ Project ${projectNumber} created from manual payment completion`);
-            }
-          }
+        if (newProjectId) {
+          await logActivity(client, {
+            type: 'PROJECT_CREATED',
+            userId: auth?.user?.userId || '',
+            userName: auth?.user?.fullName || 'Admin',
+            projectId: newProjectId,
+            proposalId: payment.proposal_id || null,
+            details: {},
+          });
         }
 
         // Log payment received activity
