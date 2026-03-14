@@ -225,8 +225,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           "fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto lg:inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          {/* Logo — desktop only; on mobile the header is always visible above the sidebar */}
-          <div className="h-14 hidden lg:flex items-center px-4 shrink-0 border-b border-border">
+          {/* Logo */}
+          <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-border">
             <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark'
@@ -236,6 +236,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 className="h-10 w-auto object-contain"
               />
             </PrefetchLink>
+            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setSidebarOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Nav sections */}
