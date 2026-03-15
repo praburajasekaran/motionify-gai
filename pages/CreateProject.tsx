@@ -1,36 +1,39 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ChevronLeft, 
-    ChevronRight, 
-    Check, 
-    Plus, 
-    X, 
+import {
+    ChevronLeft,
+    ChevronRight,
+    Check,
+    Plus,
+    X,
     GripVertical,
     Calendar,
     Users,
     Briefcase,
     Layers,
-    ShieldAlert
 } from 'lucide-react';
-import { 
-    Card, 
-    CardContent, 
-    CardHeader, 
-    CardTitle, 
-    Button, 
-    Input, 
-    Label, 
-    Textarea, 
-    Select, 
+import {
+    Card,
+    CardContent,
+    Button,
+    Input,
+    Label,
+    Textarea,
+    Select,
     Avatar,
-    Switch,
     Badge,
     Separator,
     cn
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS } from '../constants';
+import { api } from '../lib/api-config';
+
+interface ClientUser {
+    id: string;
+    full_name: string;
+    email: string;
+}
 
 const STEPS = [
     { id: 'details', title: 'Details', icon: Briefcase },
@@ -43,33 +46,50 @@ export const CreateProject = () => {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-    // Form State
+    // Client users fetched from the API
+    const [clients, setClients] = useState<ClientUser[]>([]);
+    const [clientsLoading, setClientsLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/users-list?role=client&status=active')
+            .then(res => {
+                if (res.success && Array.isArray(res.data)) {
+                    setClients(res.data);
+                }
+            })
+            .finally(() => setClientsLoading(false));
+    }, []);
+
+    // Form State — aligned with createProjectDirectSchema
     const [formData, setFormData] = useState({
         title: '',
-        client: '',
+        clientUserId: '',
         website: '',
         description: '',
         startDate: '',
         dueDate: '',
-        budget: '',
-        maxRevisions: 3,
-        priority: 'Medium',
+        maxRevisions: 2,
         deliverables: [
-            { id: '1', title: '', type: 'Video', format: '16:9' }
+            { id: '1', title: '' }
         ],
-        team: [TEAM_MEMBERS[0].id] // Current user selected by default
+        team: [TEAM_MEMBERS[0].id]
     });
 
     const updateField = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+        if (validationErrors[field]) {
+            setValidationErrors(prev => ({ ...prev, [field]: '' }));
+        }
     };
 
     // Deliverable Actions
     const addDeliverable = () => {
         setFormData(prev => ({
             ...prev,
-            deliverables: [...prev.deliverables, { id: Math.random().toString(), title: '', type: 'Video', format: '16:9' }]
+            deliverables: [...prev.deliverables, { id: Math.random().toString(), title: '' }]
         }));
     };
 
@@ -80,11 +100,14 @@ export const CreateProject = () => {
         }));
     };
 
-    const updateDeliverable = (id: string, field: string, value: string) => {
+    const updateDeliverable = (id: string, value: string) => {
         setFormData(prev => ({
             ...prev,
-            deliverables: prev.deliverables.map(d => d.id === id ? { ...d, [field]: value } : d)
+            deliverables: prev.deliverables.map(d => d.id === id ? { ...d, title: value } : d)
         }));
+        if (validationErrors.deliverables) {
+            setValidationErrors(prev => ({ ...prev, deliverables: '' }));
+        }
     };
 
     // Team Actions
@@ -93,7 +116,7 @@ export const CreateProject = () => {
             const isSelected = prev.team.includes(userId);
             return {
                 ...prev,
-                team: isSelected 
+                team: isSelected
                     ? prev.team.filter(id => id !== userId)
                     : [...prev.team, userId]
             };
@@ -109,11 +132,36 @@ export const CreateProject = () => {
         if (currentStep > 0) setCurrentStep(c => c - 1);
     };
 
+    // Validation
+    const validate = (): boolean => {
+        const errors: Record<string, string> = {};
+        if (!formData.title.trim()) errors.title = 'Project name is required';
+        if (!formData.clientUserId) errors.clientUserId = 'Please select a client';
+        const validDeliverables = formData.deliverables.filter(d => d.title.trim());
+        if (validDeliverables.length === 0) errors.deliverables = 'At least one deliverable is required';
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSubmit = async () => {
+        if (!validate()) return;
+
         setIsSubmitting(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        navigate('/projects');
+        setSubmitError(null);
+
+        const result = await api.post('/projects', {
+            name: formData.title.trim(),
+            clientUserId: formData.clientUserId,
+            deliverables: formData.deliverables.map(d => d.title.trim()).filter(Boolean),
+            totalRevisions: formData.maxRevisions,
+        });
+
+        if (result.success) {
+            navigate('/projects');
+        } else {
+            setSubmitError(result.error?.message || 'Failed to create project. Please try again.');
+            setIsSubmitting(false);
+        }
     };
 
     // Step Content Renderers
@@ -121,56 +169,61 @@ export const CreateProject = () => {
         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
             <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                    <Label htmlFor="title">Project Title</Label>
-                    <Input 
-                        id="title" 
-                        placeholder="e.g. Summer Brand Campaign" 
+                    <Label htmlFor="title">Project Title <span className="text-destructive">*</span></Label>
+                    <Input
+                        id="title"
+                        placeholder="e.g. Summer Brand Campaign"
                         value={formData.title}
                         onChange={e => updateField('title', e.target.value)}
+                        className={validationErrors.title ? 'border-destructive' : ''}
                     />
+                    {validationErrors.title && (
+                        <p className="text-xs text-destructive">{validationErrors.title}</p>
+                    )}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="client">Client Name</Label>
-                    <Input 
-                        id="client" 
-                        placeholder="e.g. Acme Corp" 
-                        value={formData.client}
-                        onChange={e => updateField('client', e.target.value)}
+                    <Label htmlFor="clientUserId">Client <span className="text-destructive">*</span></Label>
+                    <Select
+                        value={formData.clientUserId}
+                        onValueChange={v => updateField('clientUserId', v)}
+                        options={[
+                            { label: clientsLoading ? 'Loading clients...' : 'Select a client', value: '' },
+                            ...clients.map(c => ({
+                                label: `${c.full_name} (${c.email})`,
+                                value: c.id,
+                            }))
+                        ]}
                     />
+                    {validationErrors.clientUserId && (
+                        <p className="text-xs text-destructive">{validationErrors.clientUserId}</p>
+                    )}
+                    {!clientsLoading && clients.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No client accounts found. Create a client user first.</p>
+                    )}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="website">Client Website (for logo)</Label>
-                    <Input 
-                        id="website" 
-                        placeholder="e.g. acme.com" 
+                    <Input
+                        id="website"
+                        placeholder="e.g. acme.com"
                         value={formData.website}
                         onChange={e => updateField('website', e.target.value)}
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="budget">Budget ($)</Label>
-                    <Input 
-                        id="budget" 
-                        type="number"
-                        placeholder="10000" 
-                        value={formData.budget}
-                        onChange={e => updateField('budget', e.target.value)}
-                    />
-                </div>
-                <div className="space-y-2">
                     <Label htmlFor="start">Start Date</Label>
-                    <Input 
-                        id="start" 
-                        type="date" 
+                    <Input
+                        id="start"
+                        type="date"
                         value={formData.startDate}
                         onChange={e => updateField('startDate', e.target.value)}
                     />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="due">Due Date</Label>
-                    <Input 
-                        id="due" 
-                        type="date" 
+                    <Input
+                        id="due"
+                        type="date"
                         value={formData.dueDate}
                         onChange={e => updateField('dueDate', e.target.value)}
                     />
@@ -178,17 +231,17 @@ export const CreateProject = () => {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea 
-                    id="description" 
-                    placeholder="Describe the project goals and requirements..." 
+                <Textarea
+                    id="description"
+                    placeholder="Describe the project goals and requirements..."
                     className="min-h-[120px]"
                     value={formData.description}
                     onChange={e => updateField('description', e.target.value)}
                 />
             </div>
-            
+
             <Separator />
-            
+
             <div className="space-y-4">
                  <div className="flex items-center justify-between">
                      <div className="space-y-0.5">
@@ -221,64 +274,41 @@ export const CreateProject = () => {
     const renderDeliverables = () => (
         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
              <div className="flex justify-between items-center">
-                 <h3 className="text-lg font-medium">Project Deliverables</h3>
+                 <div>
+                     <h3 className="text-lg font-medium">Project Deliverables</h3>
+                     {validationErrors.deliverables && (
+                         <p className="text-xs text-destructive mt-1">{validationErrors.deliverables}</p>
+                     )}
+                 </div>
                  <Button onClick={addDeliverable} size="sm" variant="outline" className="gap-2">
                      <Plus className="h-4 w-4" /> Add Item
                  </Button>
              </div>
-             
+
              <div className="space-y-3">
                  {formData.deliverables.map((item, index) => (
-                     <div key={item.id} className="flex gap-3 items-start p-4 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors group">
-                         <div className="mt-3 text-muted-foreground cursor-grab active:cursor-grabbing">
+                     <div key={item.id} className="flex gap-3 items-center p-4 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors group">
+                         <div className="text-muted-foreground cursor-grab active:cursor-grabbing">
                              <GripVertical className="h-4 w-4" />
                          </div>
-                         <div className="flex-1 grid gap-4 md:grid-cols-3">
-                             <div className="space-y-1">
-                                 <Label className="text-xs">Title</Label>
-                                 <Input 
-                                    value={item.title} 
-                                    onChange={e => updateDeliverable(item.id, 'title', e.target.value)}
-                                    placeholder={`Deliverable ${index + 1}`} 
-                                />
-                             </div>
-                             <div className="space-y-1">
-                                 <Label className="text-xs">Type</Label>
-                                 <Select 
-                                    value={item.type}
-                                    onValueChange={v => updateDeliverable(item.id, 'type', v)}
-                                    options={[
-                                        { label: 'Video', value: 'Video' },
-                                        { label: 'Image', value: 'Image' },
-                                        { label: 'Document', value: 'Document' }
-                                    ]}
-                                 />
-                             </div>
-                             <div className="space-y-1">
-                                 <Label className="text-xs">Format</Label>
-                                 <Select 
-                                    value={item.format}
-                                    onValueChange={v => updateDeliverable(item.id, 'format', v)}
-                                    options={[
-                                        { label: '16:9 (Landscape)', value: '16:9' },
-                                        { label: '9:16 (Vertical)', value: '9:16' },
-                                        { label: '1:1 (Square)', value: '1:1' },
-                                        { label: '4:5 (Portrait)', value: '4:5' }
-                                    ]}
-                                 />
-                             </div>
+                         <div className="flex-1">
+                             <Input
+                                value={item.title}
+                                onChange={e => updateDeliverable(item.id, e.target.value)}
+                                placeholder={`Deliverable ${index + 1} — e.g. Hero Video 16:9`}
+                            />
                          </div>
-                         <Button 
-                            variant="ghost" 
-                            size="icon" 
+                         <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => removeDeliverable(item.id)}
-                            className="text-muted-foreground hover:text-destructive mt-4"
+                            className="text-muted-foreground hover:text-destructive shrink-0"
                         >
                              <X className="h-4 w-4" />
                          </Button>
                      </div>
                  ))}
-                 
+
                  {formData.deliverables.length === 0 && (
                      <div className="text-center p-8 border-2 border-dashed border-border rounded-lg text-muted-foreground">
                          No deliverables added yet.
@@ -294,13 +324,13 @@ export const CreateProject = () => {
                 {TEAM_MEMBERS.map(user => {
                     const isSelected = formData.team.includes(user.id);
                     return (
-                        <div 
-                            key={user.id} 
+                        <div
+                            key={user.id}
                             onClick={() => toggleTeamMember(user.id)}
                             className={cn(
                                 "flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all",
-                                isSelected 
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                                isSelected
+                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
                                     : "border-border bg-card hover:border-primary/50"
                             )}
                         >
@@ -323,25 +353,33 @@ export const CreateProject = () => {
         </div>
     );
 
+    const selectedClient = clients.find(c => c.id === formData.clientUserId);
+
     const renderReview = () => (
         <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="p-6 border-b border-border bg-muted/20">
                     <h2 className="text-2xl font-bold text-foreground">{formData.title || 'Untitled Project'}</h2>
-                    <p className="text-muted-foreground">{formData.client}</p>
+                    <p className="text-muted-foreground">
+                        {selectedClient ? `${selectedClient.full_name} — ${selectedClient.email}` : 'No client selected'}
+                    </p>
                 </div>
                 <div className="p-6 grid gap-6 md:grid-cols-3">
                     <div>
                         <Label className="text-muted-foreground mb-1 block">Timeline</Label>
-                        <p className="font-medium">{formData.startDate} - {formData.dueDate}</p>
-                    </div>
-                    <div>
-                        <Label className="text-muted-foreground mb-1 block">Budget</Label>
-                        <p className="font-medium">${formData.budget}</p>
+                        <p className="font-medium">
+                            {formData.startDate && formData.dueDate
+                                ? `${formData.startDate} → ${formData.dueDate}`
+                                : formData.startDate || formData.dueDate || 'Not set'}
+                        </p>
                     </div>
                     <div>
                         <Label className="text-muted-foreground mb-1 block">Revisions</Label>
                         <p className="font-medium">{formData.maxRevisions} Included</p>
+                    </div>
+                    <div>
+                        <Label className="text-muted-foreground mb-1 block">Deliverables</Label>
+                        <p className="font-medium">{formData.deliverables.filter(d => d.title.trim()).length} items</p>
                     </div>
                     <div className="md:col-span-3">
                         <Label className="text-muted-foreground mb-1 block">Description</Label>
@@ -354,12 +392,14 @@ export const CreateProject = () => {
                 <div className="space-y-3">
                     <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Deliverables</h4>
                     <div className="space-y-2">
-                        {formData.deliverables.map((d, i) => (
-                            <div key={i} className="flex justify-between p-3 rounded-lg border border-border bg-background">
-                                <span className="font-medium">{d.title || 'Untitled'}</span>
-                                <Badge variant="secondary">{d.type}</Badge>
+                        {formData.deliverables.filter(d => d.title.trim()).map((d, i) => (
+                            <div key={i} className="flex items-center p-3 rounded-lg border border-border bg-background">
+                                <span className="font-medium">{d.title}</span>
                             </div>
                         ))}
+                        {formData.deliverables.filter(d => d.title.trim()).length === 0 && (
+                            <p className="text-sm text-muted-foreground">No deliverables added.</p>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-3">
@@ -388,15 +428,15 @@ export const CreateProject = () => {
             <div className="mb-10">
                 <div className="relative flex justify-between">
                     <div className="absolute top-1/2 left-0 w-full h-0.5 bg-secondary -z-10 -translate-y-1/2" />
-                    <div className="absolute top-1/2 left-0 h-0.5 bg-primary -z-10 -translate-y-1/2 transition-all duration-500" 
-                         style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }} 
+                    <div className="absolute top-1/2 left-0 h-0.5 bg-primary -z-10 -translate-y-1/2 transition-all duration-500"
+                         style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
                     />
-                    
+
                     {STEPS.map((step, index) => {
                         const Icon = step.icon;
                         const isActive = index <= currentStep;
                         const isCurrent = index === currentStep;
-                        
+
                         return (
                             <div key={step.id} className="flex flex-col items-center gap-2 bg-background px-2">
                                 <div className={cn(
@@ -426,31 +466,36 @@ export const CreateProject = () => {
                     {currentStep === 2 && renderTeam()}
                     {currentStep === 3 && renderReview()}
                 </CardContent>
-                
-                <div className="p-6 border-t border-border flex justify-between bg-muted/20">
-                    <Button 
-                        variant="outline" 
-                        onClick={prevStep} 
-                        disabled={currentStep === 0 || isSubmitting}
-                        className="w-32"
-                    >
-                        Back
-                    </Button>
-                    
-                    {currentStep < STEPS.length - 1 ? (
-                        <Button onClick={nextStep} className="w-32 gap-2">
-                            Next <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    ) : (
-                        <Button 
-                            onClick={handleSubmit} 
-                            disabled={isSubmitting} 
-                            className="w-40 gap-2 shadow-lg shadow-primary/25"
-                        >
-                            {isSubmitting ? 'Creating...' : 'Create Project'}
-                            {!isSubmitting && <Check className="h-4 w-4" />}
-                        </Button>
+
+                <div className="p-6 border-t border-border bg-muted/20 space-y-3">
+                    {submitError && (
+                        <p className="text-sm text-destructive text-center">{submitError}</p>
                     )}
+                    <div className="flex justify-between">
+                        <Button
+                            variant="outline"
+                            onClick={prevStep}
+                            disabled={currentStep === 0 || isSubmitting}
+                            className="w-32"
+                        >
+                            Back
+                        </Button>
+
+                        {currentStep < STEPS.length - 1 ? (
+                            <Button onClick={nextStep} className="w-32 gap-2">
+                                Next <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                className="w-40 gap-2 shadow-lg shadow-primary/25"
+                            >
+                                {isSubmitting ? 'Creating...' : 'Create Project'}
+                                {!isSubmitting && <Check className="h-4 w-4" />}
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </Card>
         </div>
