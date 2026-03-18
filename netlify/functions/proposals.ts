@@ -584,24 +584,22 @@ export const handler = compose(
       // Format price for email (convert from smallest unit if needed)
       const formattedPrice = (payload.totalPrice / 100).toLocaleString('en-IN');
 
-      try {
-        await sendProposalNotificationEmail({
-          to: contact_email,
-          clientName: contact_name,
-          inquiryNumber: inquiry.inquiry_number,
-          proposalUrl: proposalUrl,
-          totalPrice: formattedPrice,
-          currency: payload.currency === 'INR' ? '₹' : '$',
-          deliverableCount: payload.deliverables.length,
-        });
+      sendProposalNotificationEmail({
+        to: contact_email,
+        clientName: contact_name,
+        inquiryNumber: inquiry.inquiry_number,
+        proposalUrl: proposalUrl,
+        totalPrice: formattedPrice,
+        currency: payload.currency === 'INR' ? '₹' : '$',
+        deliverableCount: payload.deliverables.length,
+      }).then(() => {
         console.log(`✅ Proposal notification email sent to ${contact_email}`);
-      } catch (emailError) {
+      }).catch((emailError) => {
         console.error('❌ Failed to send proposal notification email:', emailError);
-        // Don't fail the request if email fails
-      }
+      });
 
-      // Log activity
-      await logActivity(client, {
+      // Log activity (fire-and-forget)
+      logActivity(client, {
         type: 'PROPOSAL_SENT',
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -610,6 +608,8 @@ export const handler = compose(
         targetUserId: clientUserId || undefined,
         targetUserName: contact_name,
         details: { inquiryNumber: inquiry.inquiry_number },
+      }).catch((err) => {
+        console.error('❌ Failed to log activity:', err);
       });
 
       return {
