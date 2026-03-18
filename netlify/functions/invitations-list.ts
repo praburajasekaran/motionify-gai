@@ -1,21 +1,7 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-  
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['GET', 'OPTIONS']),
@@ -39,13 +25,9 @@ export const handler = compose(
 
   const { status } = event.queryStringParameters || {};
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // Build query with optional status filter
-    let query = `
+    let sql = `
       SELECT pi.*, u.full_name as invited_by_name
       FROM project_invitations pi
       LEFT JOIN users u ON pi.invited_by = u.id
@@ -54,13 +36,13 @@ export const handler = compose(
     const params: any[] = [projectId];
 
     if (status) {
-      query += ' AND pi.status = $2';
+      sql += ' AND pi.status = $2';
       params.push(status);
     }
 
-    query += ' ORDER BY pi.created_at DESC';
+    sql += ' ORDER BY pi.created_at DESC';
 
-    const result = await client.query(query, params);
+    const result = await dbQuery(sql, params);
 
     // Format response
     const invitations = result.rows.map((row) => ({
@@ -90,9 +72,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Failed to list invitations',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

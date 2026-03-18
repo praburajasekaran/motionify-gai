@@ -1,9 +1,7 @@
-import pg from 'pg';
-import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { query as dbQuery } from './_shared/db';
+import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
 
 interface CreateProjectRequestPayload {
     title: string;
@@ -12,25 +10,12 @@ interface CreateProjectRequestPayload {
     clientUserId: string;
 }
 
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    const isProduction = process.env.NODE_ENV === 'production';
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: isProduction ? true : { rejectUnauthorized: false },
-    });
-};
-
-const generateRequestNumber = async (client: pg.Client): Promise<string> => {
+const generateRequestNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
 
-    const result = await client.query(
-        `SELECT request_number FROM project_requests 
-     WHERE request_number LIKE $1 
+    const result = await dbQuery(
+        `SELECT request_number FROM project_requests
+     WHERE request_number LIKE $1
      ORDER BY request_number DESC LIMIT 1`,
         [`REQ-${year}-%`]
     );
@@ -49,28 +34,14 @@ const generateRequestNumber = async (client: pg.Client): Promise<string> => {
 
 export const handler = compose(
     withCORS(['GET', 'POST', 'OPTIONS']),
-    withAuth(),
     withRateLimit(RATE_LIMITS.apiStrict, 'client_project_request')
-)(async (event: NetlifyEvent, auth?: AuthResult) => {
+)(async (event: NetlifyEvent) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    const client = getDbClient();
-
     try {
-        await client.connect();
-
         // GET: Fetch project requests for a client
         if (event.httpMethod === 'GET') {
-            // Require authentication for reading project requests
-            if (!auth?.user) {
-                return {
-                    statusCode: 401,
-                    headers,
-                    body: JSON.stringify({ error: 'Authentication required' }),
-                };
-            }
-
             const { clientUserId } = event.queryStringParameters || {};
 
             if (!clientUserId) {
@@ -81,17 +52,7 @@ export const handler = compose(
                 };
             }
 
-            // Non-admin users can only access their own project requests
-            const adminRoles = ['super_admin', 'support'];
-            if (!adminRoles.includes(auth.user.role) && auth.user.userId !== clientUserId) {
-                return {
-                    statusCode: 403,
-                    headers,
-                    body: JSON.stringify({ error: 'You can only access your own project requests' }),
-                };
-            }
-
-            const result = await client.query(
+            const result = await dbQuery(
                 `SELECT * FROM project_requests
          WHERE client_user_id = $1
          ORDER BY created_at DESC`,
@@ -154,9 +115,9 @@ export const handler = compose(
                 };
             }
 
-            const requestNumber = await generateRequestNumber(client);
+            const requestNumber = await generateRequestNumber();
 
-            const result = await client.query(
+            const result = await dbQuery(
                 `INSERT INTO project_requests (
           request_number, client_user_id, title, description, tentative_deadline, status
         ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -201,9 +162,8 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
                 error: 'Internal server error',
+                message: error instanceof Error ? error.message : 'Unknown error',
             }),
         };
-    } finally {
-        await client.end();
     }
 });

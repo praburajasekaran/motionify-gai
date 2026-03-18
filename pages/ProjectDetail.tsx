@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
@@ -13,8 +13,8 @@ import {
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
+import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import { ProjectStatus, Task, Project } from '../types';
-import { DetailPageHeaderSkeleton, TabNavigationSkeleton } from '../components/ui/SkeletonLoaders';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
 import { canEditTask, canDeleteTask, canCreateTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
@@ -25,17 +25,15 @@ import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
 import { Activity as ApiActivity } from '../services/activityApi';
-import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile, useProject, useDeliverables } from '../shared/hooks';
+import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { formatTimestamp } from '../utils/dateFormatting';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
-import { CommentThread } from '../components/proposals/CommentThread';
 
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
@@ -229,10 +227,6 @@ export const ProjectDetail = () => {
     const navigate = useNavigate();
     const { user } = useAuthContext();
 
-    // React Query hooks — fetch project, deliverables, tasks, activities, files in parallel
-    const { data: project = null, isLoading: projectLoading } = useProject(id);
-    const { data: deliverables = [], isLoading: deliverablesLoading, isSuccess: deliverablesSuccess } = useDeliverables(id);
-
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
     const getActiveTab = (): TabName => {
@@ -256,28 +250,99 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const termsAccepted = !!project?.termsAcceptedAt;
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-    const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{ open: boolean; taskId: string | null }>({ open: false, taskId: null });
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
     const { addToast } = useToast();
 
-    // Polling hooks for cross-user sync — use id directly for parallel fetching
+    // Parallel data fetching with React Query cache
     const queryClient = useQueryClient();
-    const { data: tasks = [], isSuccess: tasksSuccess } = useTasks(id);
-    const { data: activities = [] } = useActivities(id);
-    const { data: projectFiles = [] } = useProjectFiles(id);
-    const deleteProjectFileMutation = useDeleteProjectFile(id);
+
+    const { data: project = null, isLoading: projectLoading } = useQuery<Project | null>({
+        queryKey: ['project', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/projects/${id}`, { credentials: 'include' });
+            if (!response.ok) {
+                console.error(`API returned ${response.status} for project ${id}`);
+                return null;
+            }
+            const data = await response.json();
+            return {
+                id: data.id,
+                title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
+                client: data.client_name || data.client_company || 'Client',
+                thumbnail: '',
+                status: dbStatusToDisplay(data.status),
+                startDate: data.start_date || data.created_at || new Date().toISOString(),
+                dueDate: data.due_date || data.created_at || new Date().toISOString(),
+                progress: 0,
+                description: data.description || '',
+                budget: 0,
+                team: (data.team || []).map((m: any) => ({
+                    id: m.id,
+                    name: m.name || 'Unknown',
+                    email: m.email || '',
+                    avatar: m.avatar || '',
+                    role: m.role || 'team_member',
+                })),
+                tasks: [],
+                deliverables: [],
+                files: [],
+                deliverablesCount: 0,
+                revisionCount: data.revisions_used ?? 0,
+                maxRevisions: data.total_revisions_allowed ?? 2,
+                activityLog: [],
+                termsAcceptedAt: data.terms_accepted_at,
+                termsAcceptedBy: data.terms_accepted_by,
+            };
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    const { data: deliverables = [], isLoading: deliverablesLoading } = useQuery({
+        queryKey: ['deliverables', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/deliverables?projectId=${id}`, { credentials: 'include' });
+            if (!response.ok) return [];
+            const data = await response.json();
+            return (data || []).map((d: any) => ({
+                id: d.id,
+                title: d.name || d.title || 'Untitled',
+                type: d.type || 'Video',
+                status: d.status || 'pending',
+                progress: d.progress || 0,
+                dueDate: d.estimated_completion_week
+                    ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+                    : new Date().toISOString(),
+            }));
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    // Polling hooks for cross-user sync
+    const { data: tasks = [] } = useTasks(project?.id);
+    const { data: activities = [] } = useActivities(project?.id);
+    const { data: projectFiles = [] } = useProjectFiles(project?.id);
+    const deleteProjectFileMutation = useDeleteProjectFile(project?.id);
     const invalidateActivities = useInvalidateActivities();
     const invalidateTasks = () => {
-        if (id) queryClient.invalidateQueries({ queryKey: taskKeys.list(id) });
+        if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
     };
+
+    // Sync termsAccepted from project data once it loads
+    useEffect(() => {
+        if (project?.termsAcceptedAt) setTermsAccepted(true);
+    }, [project?.termsAcceptedAt]);
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
+
+
 
     // Derive activityLog directly from the query data (avoids flash on refetch)
     const activityLog = useMemo(() => {
@@ -295,6 +360,7 @@ export const ProjectDetail = () => {
             };
         });
     }, [activities, user?.id]);
+
 
     // Auto-analysis on load
     useEffect(() => {
@@ -324,9 +390,8 @@ export const ProjectDetail = () => {
 
     if (projectLoading) {
         return (
-            <div className="space-y-6">
-                <DetailPageHeaderSkeleton />
-                <TabNavigationSkeleton />
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -440,14 +505,10 @@ export const ProjectDetail = () => {
         }
     };
 
-    const handleDeleteTask = (taskId: string) => {
-        setDeleteTaskConfirm({ open: true, taskId });
-    };
-
-    const handleDeleteTaskConfirmed = async () => {
-        if (!deleteTaskConfirm.taskId) return;
-        const taskId = deleteTaskConfirm.taskId;
-        setDeleteTaskConfirm({ open: false, taskId: null });
+    const handleDeleteTask = async (taskId: string) => {
+        if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+            return;
+        }
 
         try {
             await deleteTask(taskId);
@@ -659,7 +720,7 @@ export const ProjectDetail = () => {
         switch (status) {
             case 'pending':
             case 'Todo':
-                return 'bg-secondary text-secondary-foreground border-border';
+                return 'bg-slate-100 text-slate-600 border-slate-200';
             case 'in_progress':
             case 'In Progress':
                 return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -686,13 +747,11 @@ export const ProjectDetail = () => {
         { name: 'Payments', icon: CreditCard, index: 7 },
     ];
 
-    // Handle terms acceptance - invalidate project query to reflect acceptance
+    // Handle terms acceptance - update local state to hide banner
     const handleTermsAccepted = () => {
-        if (id) {
-            queryClient.setQueryData(['projects', 'detail', id], (old: Project | undefined) =>
-                old ? { ...old, termsAcceptedAt: new Date().toISOString() } : old
-            );
-        }
+        // In a real app using SWR/React Query, we'd invalidate the query.
+        // For mock setup, we use local state to immediately hide the banner
+        setTermsAccepted(true);
     };
 
     return (
@@ -873,7 +932,7 @@ export const ProjectDetail = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {deliverablesSuccess && deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <EmptyState
                                                 title="No deliverables"
                                                 description="This project doesn't have any active deliverables yet."
@@ -939,29 +998,20 @@ export const ProjectDetail = () => {
                                 <CardContent className="pt-3">
                                     <div className="space-y-3">
                                         {deliverablesLoading ? (
-                                            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-6 bg-muted animate-pulse rounded" />)}</div>
+                                            <p className="text-[14px] text-muted-foreground">Loading...</p>
                                         ) : deliverables.slice(0, 3).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-[14px] border-l-2 border-primary pl-3 py-1">
                                                 <span className="text-foreground truncate w-32 font-medium">{d.title}</span>
                                                 <span className="tabular-nums text-muted-foreground text-[13px]">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
-                                        {deliverablesSuccess && deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <p className="text-[14px] text-muted-foreground">No upcoming deadlines.</p>
                                         )}
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {project.proposal_id && (
-                            <CommentThread
-                                proposalId={project.proposal_id}
-                                currentUserId={user?.id}
-                                currentUserName={user?.name}
-                                isAuthenticated={!!user}
-                            />
-                        )}
                     </div>
                 </TabsContent>
 
@@ -973,13 +1023,7 @@ export const ProjectDetail = () => {
                         isPrimaryContact={isPrimaryContact}
                         isInviteModalOpen={isInviteModalOpen}
                         setIsInviteModalOpen={setIsInviteModalOpen}
-                        onTeamUpdated={(updatedTeam) => {
-                            if (id) {
-                                queryClient.setQueryData(['projects', 'detail', id], (old: Project | undefined) =>
-                                    old ? { ...old, team: updatedTeam } : old
-                                );
-                            }
-                        }}
+                        onTeamUpdated={(updatedTeam) => queryClient.setQueryData<Project | null>(['project', id], (prev) => prev ? { ...prev, team: updatedTeam } : prev)}
                         addToast={addToast}
                     />
                 </TabsContent>
@@ -1117,7 +1161,7 @@ export const ProjectDetail = () => {
                                                     </span>
                                                 )}
                                                 {assignee && (task.createdAt || creator || task.deadline) && (
-                                                    <span className="text-border">·</span>
+                                                    <span className="text-zinc-200">·</span>
                                                 )}
                                                 {task.createdAt && (
                                                     <span className="flex items-center gap-1" title={new Date(task.createdAt).toLocaleString()}>
@@ -1185,7 +1229,7 @@ export const ProjectDetail = () => {
                                     )
                                 })}
 
-                            {tasksSuccess && tasks.length === 0 && (
+                            {tasks.length === 0 && (
                                 <EmptyState
                                     title="No tasks yet"
                                     description="Get started by adding a task."
@@ -1337,16 +1381,6 @@ export const ProjectDetail = () => {
                     <PaymentHistory project={project} />
                 </TabsContent>
             </Tabs>
-
-            <ConfirmDialog
-                isOpen={deleteTaskConfirm.open}
-                onClose={() => setDeleteTaskConfirm({ open: false, taskId: null })}
-                onConfirm={handleDeleteTaskConfirmed}
-                title="Delete Task"
-                message="Are you sure you want to delete this task? This action cannot be undone."
-                confirmLabel="Delete"
-                variant="danger"
-            />
         </div>
     );
 };

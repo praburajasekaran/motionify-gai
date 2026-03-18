@@ -8,27 +8,13 @@
  * - File attachments (stored in R2)
  */
 
-import pg from 'pg';
+import { query as dbQuery, transaction } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendEmail } from './send-email';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['GET', 'POST']),
@@ -38,11 +24,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // GET: Fetch revision history for a deliverable
     if (event.httpMethod === 'GET') {
       const { deliverableId } = event.queryStringParameters || {};
@@ -56,7 +38,7 @@ export const handler = compose(
       }
 
       // Verify user can access this deliverable
-      const deliverableResult = await client.query(
+      const deliverableResult = await dbQuery(
         `SELECT d.id, d.project_id, p.client_user_id
          FROM deliverables d
          JOIN projects p ON d.project_id = p.id
@@ -88,7 +70,7 @@ export const handler = compose(
       }
 
       // Fetch revision requests with attachments
-      const revisionsResult = await client.query(
+      const revisionsResult = await dbQuery(
         `SELECT
            rr.id,
            rr.deliverable_id,
@@ -114,7 +96,7 @@ export const handler = compose(
       // Fetch attachments for each revision request
       const revisions = await Promise.all(
         revisionsResult.rows.map(async (revision) => {
-          const attachmentsResult = await client.query(
+          const attachmentsResult = await dbQuery(
             `SELECT id, file_name, file_size, file_type, r2_key, created_at
              FROM revision_request_attachments
              WHERE revision_request_id = $1
@@ -153,7 +135,7 @@ export const handler = compose(
       const userRole = auth?.user?.role;
 
       // Verify deliverable exists and is awaiting_approval
-      const deliverableResult = await client.query(
+      const deliverableResult = await dbQuery(
         `SELECT d.id, d.name, d.status, d.project_id, p.client_user_id,
                 p.revisions_used, p.total_revisions_allowed, p.project_number
          FROM deliverables d
@@ -209,12 +191,13 @@ export const handler = compose(
         };
       }
 
-      // Begin transaction
-      await client.query('BEGIN');
+      const projectUrl = `${process.env.URL || 'http://localhost:5173'}/projects/${deliverable.project_number}?tab=deliverables`;
+      const userName = auth?.user?.fullName || auth?.user?.email || 'Client';
 
-      try {
+      // Execute all DB writes in a transaction
+      const { revisionRequestId, revisionCreatedAt, adminsRows } = await transaction(async (txClient) => {
         // 1. Create revision request
-        const revisionResult = await client.query(
+        const revisionResult = await txClient.query(
           `INSERT INTO revision_requests
              (deliverable_id, project_id, requested_by, feedback_text, timestamped_comments, issue_categories, status)
            VALUES ($1, $2, $3, $4, $5, $6, 'pending')
@@ -234,7 +217,7 @@ export const handler = compose(
         // 2. Insert attachments
         if (attachments && attachments.length > 0) {
           for (const attachment of attachments) {
-            await client.query(
+            await txClient.query(
               `INSERT INTO revision_request_attachments
                  (revision_request_id, file_name, file_size, file_type, r2_key, uploaded_by)
                VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -251,28 +234,25 @@ export const handler = compose(
         }
 
         // 3. Update deliverable status
-        await client.query(
+        await txClient.query(
           `UPDATE deliverables SET status = 'revision_requested', updated_at = NOW() WHERE id = $1`,
           [deliverableId]
         );
 
         // 4. Increment revisions_used on project
-        await client.query(
+        await txClient.query(
           `UPDATE projects SET revisions_used = revisions_used + 1, updated_at = NOW() WHERE id = $1`,
           [deliverable.project_id]
         );
 
         // 5. Create notifications for admins/PMs
-        const adminsResult = await client.query(
+        const adminsResult = await txClient.query(
           `SELECT id, full_name, email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`
         );
 
-        const projectUrl = `${process.env.URL || 'http://localhost:5173'}/projects/${deliverable.project_number}?tab=deliverables`;
-        const userName = auth?.user?.fullName || auth?.user?.email || 'Client';
-
         for (const admin of adminsResult.rows) {
           if (admin.id !== userId) {
-            await client.query(
+            await txClient.query(
               `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
               [
@@ -289,70 +269,69 @@ export const handler = compose(
           }
         }
 
-        // Commit transaction
-        await client.query('COMMIT');
-
-        // 6. Send email notification to admins (outside transaction)
-        try {
-          for (const admin of adminsResult.rows) {
-            if (admin.id !== userId) {
-              await sendEmail({
-                to: admin.email,
-                subject: `Revision Requested: ${deliverable.name}`,
-                html: `
-                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-                    <h2 style="color: #7c3aed;">Revision Request</h2>
-                    <p><strong>${userName}</strong> has requested revisions for deliverable <strong>${deliverable.name}</strong> in project <strong>${deliverable.project_number}</strong>.</p>
-
-                    <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
-                      <h3 style="margin-top: 0; color: #111827;">Feedback:</h3>
-                      <p style="white-space: pre-wrap;">${feedbackText}</p>
-                      ${issueCategories && issueCategories.length > 0 ? `
-                        <p style="margin-top: 16px;"><strong>Issue Categories:</strong> ${issueCategories.join(', ')}</p>
-                      ` : ''}
-                      ${timestampedComments && timestampedComments.length > 0 ? `
-                        <p style="margin-top: 16px;"><strong>Timeline Comments:</strong> ${timestampedComments.length} comment(s)</p>
-                      ` : ''}
-                      ${attachments && attachments.length > 0 ? `
-                        <p style="margin-top: 16px;"><strong>Attachments:</strong> ${attachments.length} file(s)</p>
-                      ` : ''}
-                    </div>
-
-                    <div style="margin: 30px 0; text-align: center;">
-                      <a href="${projectUrl}" style="background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Deliverable</a>
-                    </div>
-
-                    <p style="color: #6b7280; font-size: 14px;">
-                      Revision ${deliverable.revisions_used + 1} of ${deliverable.total_revisions_allowed} used.
-                    </p>
-                  </div>
-                `,
-              });
-            }
-          }
-          console.log('✅ Revision request notification emails sent');
-        } catch (emailError) {
-          console.error('❌ Failed to send revision request emails:', emailError);
-          // Don't fail the request if email fails
-        }
-
         return {
-          statusCode: 201,
-          headers,
-          body: JSON.stringify({
-            id: revisionRequestId,
-            deliverableId,
-            status: 'pending',
-            createdAt: revisionResult.rows[0].created_at,
-            revisionsUsed: deliverable.revisions_used + 1,
-            revisionsAllowed: deliverable.total_revisions_allowed,
-          }),
+          revisionRequestId,
+          revisionCreatedAt: revisionResult.rows[0].created_at,
+          adminsRows: adminsResult.rows,
         };
+      });
 
-      } catch (txError) {
-        await client.query('ROLLBACK');
-        throw txError;
+      // 6. Send email notification to admins (outside transaction)
+      try {
+        for (const admin of adminsRows) {
+          if (admin.id !== userId) {
+            await sendEmail({
+              to: admin.email,
+              subject: `Revision Requested: ${deliverable.name}`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+                  <h2 style="color: #7c3aed;">Revision Request</h2>
+                  <p><strong>${userName}</strong> has requested revisions for deliverable <strong>${deliverable.name}</strong> in project <strong>${deliverable.project_number}</strong>.</p>
+
+                  <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+                    <h3 style="margin-top: 0; color: #111827;">Feedback:</h3>
+                    <p style="white-space: pre-wrap;">${feedbackText}</p>
+                    ${issueCategories && issueCategories.length > 0 ? `
+                      <p style="margin-top: 16px;"><strong>Issue Categories:</strong> ${issueCategories.join(', ')}</p>
+                    ` : ''}
+                    ${timestampedComments && timestampedComments.length > 0 ? `
+                      <p style="margin-top: 16px;"><strong>Timeline Comments:</strong> ${timestampedComments.length} comment(s)</p>
+                    ` : ''}
+                    ${attachments && attachments.length > 0 ? `
+                      <p style="margin-top: 16px;"><strong>Attachments:</strong> ${attachments.length} file(s)</p>
+                    ` : ''}
+                  </div>
+
+                  <div style="margin: 30px 0; text-align: center;">
+                    <a href="${projectUrl}" style="background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Deliverable</a>
+                  </div>
+
+                  <p style="color: #6b7280; font-size: 14px;">
+                    Revision ${deliverable.revisions_used + 1} of ${deliverable.total_revisions_allowed} used.
+                  </p>
+                </div>
+              `,
+            });
+          }
+        }
+        console.log('✅ Revision request notification emails sent');
+      } catch (emailError) {
+        console.error('❌ Failed to send revision request emails:', emailError);
+        // Don't fail the request if email fails
       }
+
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify({
+          id: revisionRequestId,
+          deliverableId,
+          status: 'pending',
+          createdAt: revisionCreatedAt,
+          revisionsUsed: deliverable.revisions_used + 1,
+          revisionsAllowed: deliverable.total_revisions_allowed,
+        }),
+      };
     }
 
     return {
@@ -368,9 +347,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

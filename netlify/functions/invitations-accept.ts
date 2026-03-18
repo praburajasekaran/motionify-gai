@@ -1,21 +1,7 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
@@ -37,19 +23,15 @@ export const handler = compose(
     };
   }
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // Find and validate invitation
     // Must be pending and not expired
-    const result = await client.query(
+    const result = await dbQuery(
       `SELECT pi.*, p.id as project_id, p.title as project_name, p.project_number
        FROM project_invitations pi
        JOIN projects p ON pi.project_id = p.id
-       WHERE pi.token = $1 
-       AND pi.status = 'pending' 
+       WHERE pi.token = $1
+       AND pi.status = 'pending'
        AND pi.expires_at > NOW()`,
       [token]
     );
@@ -65,7 +47,7 @@ export const handler = compose(
     const invitation = result.rows[0];
 
     // Check if user already exists
-    const userCheck = await client.query(
+    const userCheck = await dbQuery(
       'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [invitation.email]
     );
@@ -74,7 +56,7 @@ export const handler = compose(
     const acceptedByUserId = userCheck.rows[0]?.id || null;
 
     // Mark invitation as accepted
-    await client.query(
+    await dbQuery(
       `UPDATE project_invitations
        SET status = 'accepted', accepted_at = NOW(), accepted_by = $2
        WHERE id = $1`,
@@ -83,7 +65,7 @@ export const handler = compose(
 
     // If user exists, add them to project_team
     if (acceptedByUserId) {
-      await client.query(
+      await dbQuery(
         `INSERT INTO project_team (user_id, project_id, role, invitation_id)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (user_id, project_id) DO UPDATE SET
@@ -93,8 +75,8 @@ export const handler = compose(
 
       // Log activity
       try {
-        const userName = await client.query('SELECT full_name FROM users WHERE id = $1', [acceptedByUserId]);
-        await client.query(
+        const userName = await dbQuery('SELECT full_name FROM users WHERE id = $1', [acceptedByUserId]);
+        await dbQuery(
           `INSERT INTO activities (type, user_id, user_name, project_id, details)
            VALUES ('TEAM_MEMBER_ADDED', $1, $2, $3, $4)`,
           [
@@ -129,9 +111,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Failed to accept invitation',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

@@ -1,23 +1,9 @@
-import pg from 'pg';
 import { randomUUID } from 'crypto';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { z } from 'zod';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 // Validation schema for creating a deliverable file
 const createFileSchema = z.object({
@@ -39,10 +25,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
     const userRole = auth?.user?.role;
     const userId = auth?.user?.userId;
 
@@ -58,7 +41,7 @@ export const handler = compose(
       }
 
       // First validate user can access this deliverable
-      const deliverableResult = await client.query(
+      const deliverableResult = await dbQuery(
         `SELECT d.id, d.project_id, p.client_user_id
          FROM deliverables d
          JOIN projects p ON d.project_id = p.id
@@ -87,7 +70,7 @@ export const handler = compose(
         }
 
         if (userRole === 'team_member') {
-          const taskResult = await client.query(
+          const taskResult = await dbQuery(
             `SELECT 1 FROM tasks
              WHERE project_id = $1
              AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -106,7 +89,7 @@ export const handler = compose(
       }
 
       // Fetch files for this deliverable
-      const filesResult = await client.query(
+      const filesResult = await dbQuery(
         `SELECT id, deliverable_id, file_key, file_name, file_size, mime_type,
                 file_category, is_final, label, sort_order, uploaded_at, uploaded_by
          FROM deliverable_files
@@ -158,7 +141,7 @@ export const handler = compose(
       const data = validation.data;
 
       // Verify deliverable exists
-      const deliverableResult = await client.query(
+      const deliverableResult = await dbQuery(
         `SELECT id FROM deliverables WHERE id = $1`,
         [data.deliverable_id]
       );
@@ -172,7 +155,7 @@ export const handler = compose(
       }
 
       // Get current max sort_order
-      const sortResult = await client.query(
+      const sortResult = await dbQuery(
         `SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order
          FROM deliverable_files WHERE deliverable_id = $1`,
         [data.deliverable_id]
@@ -181,7 +164,7 @@ export const handler = compose(
 
       // Insert the file
       const fileId = randomUUID();
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO deliverable_files
          (id, deliverable_id, file_key, file_name, file_size, mime_type, file_category, is_final, label, sort_order, uploaded_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -229,7 +212,7 @@ export const handler = compose(
         };
       }
 
-      const result = await client.query(
+      const result = await dbQuery(
         `DELETE FROM deliverable_files WHERE id = $1 RETURNING id`,
         [fileId]
       );
@@ -262,9 +245,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

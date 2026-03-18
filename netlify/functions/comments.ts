@@ -1,4 +1,4 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
 import { sendCommentNotificationEmail } from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
@@ -6,8 +6,6 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
-
-const { Client } = pg;
 
 interface Comment {
     id: string;
@@ -19,18 +17,6 @@ interface Comment {
     createdAt: string;
     updatedAt: string;
 }
-
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-    });
-};
 
 const isValidUUID = (id: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -48,12 +34,7 @@ export const handler = compose(
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    let client;
-
     try {
-        client = getDbClient();
-        await client.connect();
-
         if (event.httpMethod === 'GET') {
             const params = event.queryStringParameters || {};
             const { proposalId, since } = params;
@@ -70,7 +51,7 @@ export const handler = compose(
             }
 
             // Build query with optional since filter for efficient polling
-            let query = `SELECT
+            let sql = `SELECT
                 pc.id,
                 pc.proposal_id as "proposalId",
                 pc.author_id as "userId",
@@ -98,13 +79,13 @@ export const handler = compose(
                         }),
                     };
                 }
-                query += ` AND pc.created_at > $2`;
+                sql += ` AND pc.created_at > $2`;
                 queryParams.push(sinceDate.toISOString());
             }
 
-            query += ` ORDER BY pc.created_at ASC`;
+            sql += ` ORDER BY pc.created_at ASC`;
 
-            const result = await client.query(query, queryParams);
+            const result = await dbQuery(sql, queryParams);
 
             const requesterRole = auth?.user?.role || '';
             const comments: Comment[] = result.rows.map(row => ({
@@ -141,10 +122,10 @@ export const handler = compose(
             // Determine author_type based on user role
             const authorType = user.role === 'client' ? 'CLIENT' : 'ADMIN';
 
-            const result = await client.query(
+            const result = await dbQuery(
                 `INSERT INTO proposal_comments (proposal_id, author_id, author_type, user_name, content)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING 
+                RETURNING
                     id,
                     proposal_id as "proposalId",
                     author_id as "userId",
@@ -153,7 +134,7 @@ export const handler = compose(
                     false as "isEdited",
                     created_at as "createdAt",
                     updated_at as "updatedAt"`,
-                [proposalId, user.userId, authorType, user.fullName, trimmedContent]
+                [proposalId, user.id, authorType, user.fullName, trimmedContent]
             );
 
             const comment: Comment = {
@@ -162,18 +143,6 @@ export const handler = compose(
                 createdAt: new Date(result.rows[0].createdAt).toISOString(),
                 updatedAt: new Date(result.rows[0].updatedAt).toISOString(),
             };
-
-            // Look up project_id for this proposal (used in notifications and activity log)
-            let projectId: string | null = null;
-            try {
-                const projectLookup = await client.query(
-                    `SELECT project_id FROM proposals WHERE id = $1`,
-                    [proposalId]
-                );
-                projectId = projectLookup.rows[0]?.project_id ?? null;
-            } catch (lookupError) {
-                console.error('❌ Failed to look up project_id for proposal:', lookupError);
-            }
 
             // ========================================================================
             // Send comment notification email
@@ -189,8 +158,7 @@ export const handler = compose(
 
                 if (user.role === 'client') {
                     // Client posted comment - notify superadmin(s)
-                    // Get superadmin email and user ID for this proposal
-                    const adminResult = await client.query(
+                    const adminResult = await dbQuery(
                         `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') ORDER BY created_at ASC LIMIT 1`
                     );
                     if (adminResult.rows.length > 0) {
@@ -199,10 +167,10 @@ export const handler = compose(
                     }
                 } else {
                     // Admin posted comment - notify client
-                    const proposalResult = await client.query(
-                        `SELECT p.id, i.contact_email, i.inquiry_number, p.client_user_id 
-                         FROM proposals p 
-                         JOIN inquiries i ON p.inquiry_id = i.id 
+                    const proposalResult = await dbQuery(
+                        `SELECT p.id, i.contact_email, i.inquiry_number, p.client_user_id
+                         FROM proposals p
+                         JOIN inquiries i ON p.inquiry_id = i.id
                          WHERE p.id = $1`,
                         [proposalId]
                     );
@@ -232,22 +200,22 @@ export const handler = compose(
                 // ========================================================================
                 // Create in-app notification record
                 // ========================================================================
-                if (recipientUserId && recipientUserId !== user.userId) {
+                if (recipientUserId && recipientUserId !== user.id) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
-                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/portal/admin/proposals/${proposalId}`;
+                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/proposal/${proposalId}`;
 
-                        await client.query(
+                        await dbQuery(
                             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                             [
                                 recipientUserId,
-                                projectId,
+                                proposalId,
                                 'comment_created',
                                 'New Comment',
                                 `"${user.fullName}" commented: "${commentPreview}"`,
                                 proposalUrl,
-                                user.userId,
+                                user.id,
                                 user.fullName,
                             ]
                         );
@@ -260,35 +228,6 @@ export const handler = compose(
             } catch (emailError) {
                 // Log but don't fail the comment creation
                 console.error('❌ Failed to send comment notification email:', emailError);
-            }
-
-            // ========================================================================
-            // Write activity log entry
-            // ========================================================================
-            try {
-                await client.query(
-                    `INSERT INTO activities (
-                        type, user_id, user_name,
-                        target_user_id, target_user_name,
-                        inquiry_id, proposal_id, project_id,
-                        details
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                    [
-                        'COMMENT_ADDED',
-                        user.userId,
-                        user.fullName,
-                        null,
-                        null,
-                        null,
-                        proposalId,
-                        projectId,
-                        JSON.stringify({ commentPreview: trimmedContent.substring(0, 100) }),
-                    ]
-                );
-                console.log(`✅ Activity logged for comment on proposal ${proposalId}`);
-            } catch (activityError) {
-                // Log but don't fail the comment creation
-                console.error('❌ Failed to log comment activity:', activityError);
             }
 
             return {
@@ -311,7 +250,7 @@ export const handler = compose(
 
             const trimmedContent = content.trim();
 
-            const commentCheck = await client.query(
+            const commentCheck = await dbQuery(
                 'SELECT author_id, content FROM proposal_comments WHERE id = $1',
                 [id]
             );
@@ -327,7 +266,7 @@ export const handler = compose(
                 };
             }
 
-            if (commentCheck.rows[0].author_id !== user.userId) {
+            if (commentCheck.rows[0].author_id !== user.id) {
                 return {
                     statusCode: 403,
                     headers,
@@ -338,11 +277,11 @@ export const handler = compose(
                 };
             }
 
-            const result = await client.query(
+            const result = await dbQuery(
                 `UPDATE proposal_comments
                 SET content = $1, updated_at = NOW()
                 WHERE id = $2
-                RETURNING 
+                RETURNING
                     id,
                     proposal_id as "proposalId",
                     author_id as "userId",
@@ -390,7 +329,5 @@ export const handler = compose(
                 error: 'Internal server error',
             }),
         };
-    } finally {
-        if (client) await client.end();
     }
 });
