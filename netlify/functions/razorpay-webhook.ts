@@ -191,7 +191,7 @@ async function handlePaymentCaptured(
     if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
       const info = paymentInfo.rows[0];
       const baseUrl = process.env.URL || 'http://localhost:5173';
-      const projectUrl = `${baseUrl}/#/portal/projects`;
+      const projectUrl = `${baseUrl}/portal/projects`;
 
       console.log('[Webhook] Sending payment success email for payment:', paymentId);
 

@@ -394,7 +394,7 @@ export async function sendNewInquiryNotificationEmail(data: {
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${data.portalUrl}/#/admin/inquiries" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View in Portal</a>
+      <a href="${data.portalUrl}/admin/inquiries" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View in Portal</a>
     </div>
 
     <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0;">
@@ -452,8 +452,8 @@ export async function sendPaymentFailureNotificationEmail(data: {
 }) {
   const portalUrl = process.env.URL || 'http://localhost:5173';
   const actionUrl = data.proposalId
-    ? `${portalUrl}/#/admin/proposals/${data.proposalId}`
-    : `${portalUrl}/#/admin/payments`;
+    ? `${portalUrl}/admin/proposals/${data.proposalId}`
+    : `${portalUrl}/admin/payments`;
 
   const content = `
     <h2 style="color: #dc2626; text-align: center; margin: 0 0 16px;">Payment Verification Failed</h2>
