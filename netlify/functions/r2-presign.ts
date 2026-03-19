@@ -105,10 +105,8 @@ export const handler = compose(
                     // Key not found in deliverables OR attachments
                     if (key.startsWith(`uploads/${auth?.user?.userId}/`)) {
                         // Allow - user's own upload
-                    } else if (!key.startsWith('uploads/')) {
-                        // Unknown key pattern - allow for backward compatibility
                     } else {
-                        // It's an upload belonging to another user
+                        console.warn(`R2 presign denied: unrecognized key pattern "${key}" for user ${auth?.user?.userId}`);
                         return {
                             statusCode: 403,
                             headers,
