@@ -7,6 +7,7 @@ import { Layout } from './components/Layout';
 import { isClient } from './lib/permissions';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { SentryUserSync } from './components/SentryUserSync';
 import { QueryProvider } from './shared/providers/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShimmerSkeleton, StatGridSkeleton, ActivityFeedSkeleton, CardGridSkeleton } from './components/ui/SkeletonLoaders';
@@ -78,9 +79,10 @@ function App() {
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary onReset={reset}>
-              <BrowserRouter basename="/portal">
+              <BrowserRouter basename={import.meta.env.DEV ? '/' : '/portal'}>
                 <AuthProvider>
                   <NotificationProvider>
+                    <SentryUserSync />
                     <React.Suspense fallback={
                       <div className="min-h-screen flex items-center justify-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
