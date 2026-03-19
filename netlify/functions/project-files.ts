@@ -1,42 +1,9 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { z } from 'zod';
-
-const { Client } = pg;
-
-async function logActivity(dbClient: pg.Client, params: {
-  type: string;
-  userId: string;
-  userName: string;
-  projectId?: string;
-  details?: Record<string, string | number>;
-}) {
-  try {
-    await dbClient.query(
-      `INSERT INTO activities (type, user_id, user_name, project_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [params.type, params.userId, params.userName,
-       params.projectId || null,
-       JSON.stringify(params.details || {})]
-    );
-  } catch (err) {
-    console.error('Failed to log activity:', err);
-  }
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 const createProjectFileSchema = z.object({
   projectId: z.string().uuid(),
@@ -68,10 +35,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
     const userRole = auth?.user?.role;
     const userId = auth?.user?.userId;
 
@@ -90,7 +54,7 @@ export const handler = compose(
       }
 
       // Verify user has access to this project
-      const projectResult = await client.query(
+      const projectResult = await dbQuery(
         `SELECT id FROM projects WHERE id = $1`,
         [projectId]
       );
@@ -103,7 +67,7 @@ export const handler = compose(
         };
       }
 
-      const filesResult = await client.query(
+      const filesResult = await dbQuery(
         `SELECT pf.*, u.full_name as uploaded_by_name
          FROM project_files pf
          LEFT JOIN users u ON pf.uploaded_by = u.id
@@ -148,7 +112,7 @@ export const handler = compose(
 
       const data = validation.data;
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO project_files (project_id, file_name, file_type, file_size, r2_key, uploaded_by)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
@@ -163,7 +127,7 @@ export const handler = compose(
       );
 
       // Log activity
-      await logActivity(client, {
+      await logActivity({
         type: 'FILE_UPLOADED',
         userId: userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -194,7 +158,7 @@ export const handler = compose(
       }
 
       // Only allow the uploader, admins, or PMs to delete
-      const fileResult = await client.query(
+      const fileResult = await dbQuery(
         `SELECT uploaded_by, file_name, project_id FROM project_files WHERE id = $1`,
         [fileId]
       );
@@ -218,10 +182,10 @@ export const handler = compose(
       }
 
       const deletedFile = fileResult.rows[0];
-      await client.query(`DELETE FROM project_files WHERE id = $1`, [fileId]);
+      await dbQuery(`DELETE FROM project_files WHERE id = $1`, [fileId]);
 
       // Log activity
-      await logActivity(client, {
+      await logActivity({
         type: 'FILE_DELETED',
         userId: userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -249,9 +213,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

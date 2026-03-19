@@ -4,9 +4,7 @@ import { compose, withCORS, withAuth, withRateLimit, withValidation, type Netlif
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { getCorsHeaders } from "./_shared/cors";
-import pg from 'pg';
-
-const { Client } = pg;
+import { query as dbQuery } from './_shared/db';
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -27,18 +25,6 @@ const R2 = new S3Client({
     },
     forcePathStyle: true,
 });
-
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-    });
-};
 
 export const handler = compose(
     withCORS(['GET', 'POST']),
@@ -62,11 +48,7 @@ export const handler = compose(
         };
     }
 
-    const client = getDbClient();
-
     try {
-        await client.connect();
-
         // GET: Generate Download URL
         if (event.httpMethod === "GET") {
             const key = event.queryStringParameters?.key;
@@ -98,8 +80,7 @@ export const handler = compose(
             }
 
             // Security: Validate key ownership before generating presigned URL
-            // Check if key belongs to a deliverable and user has access
-            const keyOwnershipResult = await client.query(`
+            const keyOwnershipResult = await dbQuery(`
                 SELECT d.id, d.project_id, d.status, p.client_user_id
                 FROM deliverables d
                 JOIN projects p ON d.project_id = p.id
@@ -108,7 +89,7 @@ export const handler = compose(
 
             // If key not found in deliverables, check comment_attachments
             if (keyOwnershipResult.rows.length === 0) {
-                const attachmentResult = await client.query(`
+                const attachmentResult = await dbQuery(`
                     SELECT ca.id, pc.proposal_id
                     FROM comment_attachments ca
                     JOIN proposal_comments pc ON ca.comment_id = pc.id
@@ -119,25 +100,13 @@ export const handler = compose(
                 if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'support') {
                     // Allow
                 } else if (attachmentResult.rows.length > 0) {
-                    // Comment attachments: If user is authenticated and attachment exists, allow access.
-                    // Rationale: Comments are already permission-checked when created. The comment
-                    // visibility itself enforces who can see the attachment. Duplicating the full
-                    // proposal ownership check here would be redundant and couples this endpoint
-                    // to proposal access logic. Any authenticated user who knows the attachment key
-                    // and the attachment exists is allowed to access it.
-                    // This is acceptable for v1 since:
-                    // 1. Keys are generated server-side with timestamps (not guessable)
-                    // 2. Comments are only visible to project participants
-                    // 3. Attachments have no value without comment context
-                    // Allow access - user is authenticated and attachment exists
+                    // Allow - user is authenticated and attachment exists
                 } else {
                     // Key not found in deliverables OR attachments
-                    // For user uploads (uploads/{userId}/...) allow only the owner
                     if (key.startsWith(`uploads/${auth?.user?.userId}/`)) {
                         // Allow - user's own upload
                     } else if (!key.startsWith('uploads/')) {
                         // Unknown key pattern - allow for backward compatibility
-                        // (old files without structured paths)
                     } else {
                         // It's an upload belonging to another user
                         return {
@@ -179,8 +148,7 @@ export const handler = compose(
                 }
                 // Team members can access project files if they're on the project team
                 else if (auth?.user?.role === 'team_member') {
-                    // Check if team member is assigned to any task on this project
-                    const teamMemberResult = await client.query(`
+                    const teamMemberResult = await dbQuery(`
                         SELECT 1 FROM tasks
                         WHERE project_id = $1
                         AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -199,7 +167,6 @@ export const handler = compose(
                             }),
                         };
                     }
-                    // Team member has access via task assignment
                 }
             }
 
@@ -208,7 +175,7 @@ export const handler = compose(
                 Key: key,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 10800 });
+            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
             return {
                 statusCode: 200,
                 headers,
@@ -257,9 +224,10 @@ export const handler = compose(
                 Bucket: R2_BUCKET_NAME,
                 Key: key,
                 ContentType: fileType,
+                ContentLength: fileSize,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 10800 });
+            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
 
             console.log(`[R2] Presign upload for ${auth!.user!.email}: ${key} (${fileSize} bytes)`);
 
@@ -293,11 +261,9 @@ export const handler = compose(
             body: JSON.stringify({
                 error: {
                     code: 'R2_ERROR',
-                    message: 'File storage error',
+                    message: error.message || 'File storage error',
                 },
             }),
         };
-    } finally {
-        await client.end();
     }
 });
