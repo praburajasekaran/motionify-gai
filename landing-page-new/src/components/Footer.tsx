@@ -59,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">© 2025 Motionify.Studio. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© 2026 Motionify.Studio. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Terms and Conditions</Link>
             <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</Link>
