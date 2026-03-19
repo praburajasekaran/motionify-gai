@@ -180,8 +180,8 @@ export const handler = compose(
         const result = await dbQuery(
           `INSERT INTO inquiries (
             inquiry_number, contact_name, contact_email, company_name,
-            contact_phone, project_notes, quiz_answers, recommended_video_type
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            contact_phone, project_notes, quiz_answers, recommended_video_type, client_user_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *`,
           [
             inquiryNumber,
@@ -192,6 +192,7 @@ export const handler = compose(
             payload.projectNotes || null,
             JSON.stringify(payload.quizAnswers),
             payload.recommendedVideoType,
+            payload.clientUserId || null,
           ]
         );
 
