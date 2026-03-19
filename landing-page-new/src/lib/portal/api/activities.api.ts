@@ -6,51 +6,8 @@
  */
 
 import { getApiBase } from '../utils/api-config';
-
-export type ActivityType =
-  // Task activities
-  | 'TASK_STATUS_CHANGED'
-  | 'TASK_CREATED'
-  | 'TASK_UPDATED'
-  | 'REVISION_REQUESTED'
-  | 'COMMENT_ADDED'
-  // File activities
-  | 'FILE_UPLOADED'
-  | 'FILE_RENAMED'
-  | 'FILE_DOWNLOADED'
-  // Team activities
-  | 'TEAM_MEMBER_INVITED'
-  | 'TEAM_MEMBER_REMOVED'
-  | 'TEAM_UPDATED'
-  // Proposal activities
-  | 'PROPOSAL_SENT'
-  | 'PROPOSAL_ACCEPTED'
-  | 'PROPOSAL_REJECTED'
-  | 'PROPOSAL_CHANGES_REQUESTED'
-  // Deliverable activities
-  | 'DELIVERABLE_APPROVED'
-  | 'DELIVERABLE_REJECTED'
-  | 'DELIVERABLE_UPLOADED'
-  // Payment activities
-  | 'PAYMENT_RECEIVED'
-  | 'PAYMENT_REMINDER_SENT'
-  // Project activities
-  | 'PROJECT_CREATED'
-  | 'TERMS_ACCEPTED';
-
-export interface Activity {
-  id: string;
-  type: ActivityType;
-  userId: string;
-  userName: string;
-  targetUserId?: string;
-  targetUserName?: string;
-  inquiryId?: string;
-  proposalId?: string;
-  projectId?: string;
-  details: Record<string, string | number>;
-  timestamp: number;
-}
+import { Activity, ActivityType } from '../types';
+export type { Activity, ActivityType };
 
 export interface CreateActivityParams {
   type: ActivityType;
@@ -144,7 +101,7 @@ export async function logProposalSent(params: {
   proposalName?: string;
 }): Promise<Activity | null> {
   return createActivity({
-    type: 'PROPOSAL_SENT',
+    type: ActivityType.PROPOSAL_SENT,
     userId: params.senderId,
     userName: params.senderName,
     targetUserId: params.recipientId,
@@ -170,7 +127,7 @@ export async function logProposalAccepted(params: {
   proposalName?: string;
 }): Promise<Activity | null> {
   return createActivity({
-    type: 'PROPOSAL_ACCEPTED',
+    type: ActivityType.PROPOSAL_ACCEPTED,
     userId: params.accepterId,
     userName: params.accepterName,
     targetUserId: params.senderId,
@@ -197,7 +154,7 @@ export async function logProposalRejected(params: {
   reason?: string;
 }): Promise<Activity | null> {
   return createActivity({
-    type: 'PROPOSAL_REJECTED',
+    type: ActivityType.PROPOSAL_REJECTED,
     userId: params.rejecterId,
     userName: params.rejecterName,
     targetUserId: params.senderId,
@@ -225,7 +182,7 @@ export async function logProposalChangesRequested(params: {
   feedback?: string;
 }): Promise<Activity | null> {
   return createActivity({
-    type: 'PROPOSAL_CHANGES_REQUESTED',
+    type: ActivityType.PROPOSAL_CHANGES_REQUESTED,
     userId: params.requesterId,
     userName: params.requesterName,
     targetUserId: params.senderId,
