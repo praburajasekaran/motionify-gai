@@ -14,29 +14,14 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Navigation Links - 2 Columns */}
-          <div className="lg:col-span-5 grid grid-cols-2 gap-8 sm:gap-12">
-            {/* Column 1 */}
+          {/* Navigation Links */}
+          <div className="lg:col-span-5">
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Company</h3>
               <nav className="flex flex-col gap-3">
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Works</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Approach</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Pricing</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Case Studies</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Contact</a>
-              </nav>
-            </div>
-
-            {/* Column 2 */}
-            <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Resources</h3>
-              <nav className="flex flex-col gap-3">
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Blog</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Portfolio</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">FAQs</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">About Us</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Careers</a>
+                <a href="/about" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">About Us</a>
+                <a href="/work" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Works</a>
+                <a href="/contact" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Contact</a>
               </nav>
             </div>
           </div>
