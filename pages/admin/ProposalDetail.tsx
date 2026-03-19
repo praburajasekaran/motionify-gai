@@ -4,10 +4,9 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare, Lock, Send } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { CommentThread } from '../../components/proposals';
 import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PromptDialog } from '../../components/ui/PromptDialog';
@@ -969,16 +968,6 @@ export function ProposalDetail() {
               </div>
             )}
           </div>
-        )}
-
-        {/* Comments Section */}
-        {proposal && user && (
-          <CommentThread
-            proposalId={proposal.id}
-            currentUserId={user.id}
-            currentUserName={user.name}
-            isAuthenticated={!!user}
-          />
         )}
 
         {/* Response Tracking */}
