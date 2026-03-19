@@ -28,7 +28,7 @@
 
   /* --- Muted: Warm grey — not cold, not loud --- */
   --muted: #f2f0ed;
-  --muted-foreground: #78716c;
+  --muted-foreground: #57534e;
 
   /* --- Accent surface: Warm-tinted for hover/active states --- */
   --accent: #f5f0e8;
@@ -217,7 +217,7 @@
   --secondary: #2a2825;
   --secondary-foreground: #e7e5e0;
   --muted: #242220;
-  --muted-foreground: #8a8580;
+  --muted-foreground: #ada8a3;
   --accent: #2a2520;
   --accent-foreground: #d4a03a;
   --destructive: #d45a42;
