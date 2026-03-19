@@ -316,8 +316,7 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
               error: 'Payment verification failed',
-              details: verifyError.message || 'Unknown error',
-              stack: verifyError.stack,
+              details: 'Please retry or contact support',
             }),
           };
         }
@@ -620,7 +619,7 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: 'An unexpected error occurred',
       }),
     };
   }
