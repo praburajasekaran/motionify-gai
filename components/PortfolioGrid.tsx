@@ -68,7 +68,7 @@ export default function PortfolioGrid() {
                   <div className="p-3 sm:p-4 bg-gray-900/95 backdrop-blur">
                     <p className="text-sm font-medium tracking-tight text-white">{v.title}</p>
                     {"type" in v && v.type ? (
-                      <p className="text-xs text-gray-400 mt-0.5">{v.type}</p>
+                      <p className="text-xs text-gray-300 mt-0.5">{v.type}</p>
                     ) : null}
                   </div>
                 </div>
