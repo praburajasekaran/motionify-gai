@@ -6,20 +6,7 @@ import type { Inquiry } from '@/lib/inquiries';
 import { Building2, Calendar, CheckCircle2, Clock, FileText, RotateCcw, User } from 'lucide-react';
 import { StatusTimeline } from './StatusTimeline';
 import { getStatusConfig } from '@/lib/status-config';
-
-/**
- * Sanitize HTML to prevent XSS attacks.
- * Strips script tags, event handlers, and dangerous attributes.
- */
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/data\s*:\s*text\/html/gi, '');
-}
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface ProposalReviewProps {
   proposal: Proposal;
