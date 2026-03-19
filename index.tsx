@@ -3,6 +3,10 @@ import './index.css';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { initWebVitals } from './lib/vitals';
+import { initSentry } from './lib/sentry';
+
+// Initialize Sentry before React renders
+initSentry();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
