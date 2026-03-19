@@ -229,26 +229,34 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        const dbField = fieldMapping[key] || key;
-        if (allowedFields.includes(dbField)) {
-          let value = updates[key];
+      // Build reverse mapping: snake_case DB field -> camelCase input key
+      const reverseMapping: Record<string, string> = {};
+      for (const [inputKey, dbField] of Object.entries(fieldMapping)) {
+        reverseMapping[dbField] = inputKey;
+      }
+
+      for (const dbField of allowedFields) {
+        // Check both the DB field name and the camelCase input key
+        const inputKey = reverseMapping[dbField] || dbField;
+        if (inputKey in updates) {
+          let value = (updates as any)[inputKey];
           if (dbField === 'deliverables' || dbField === 'edit_history') {
             value = JSON.stringify(value);
           }
           updateFields.push(`${dbField} = $${paramIndex}`);
           updateValues.push(value);
           paramIndex++;
-        }
-        // Handle status timestamps
-        if (key === 'status') {
-          if (updates[key] === 'accepted') {
-            updateFields.push(`accepted_at = NOW()`);
-          } else if (updates[key] === 'rejected') {
-            updateFields.push(`rejected_at = NOW()`);
+
+          // Handle status timestamps
+          if (dbField === 'status') {
+            if (value === 'accepted') {
+              updateFields.push(`accepted_at = NOW()`);
+            } else if (value === 'rejected') {
+              updateFields.push(`rejected_at = NOW()`);
+            }
           }
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {

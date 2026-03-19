@@ -72,14 +72,14 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          const value = key === 'deliverables' ? JSON.stringify(updates[key]) : updates[key];
-          updateFields.push(`${key} = $${paramIndex}`);
+      for (const field of allowedFields) {
+        if (field in updates) {
+          const value = field === 'deliverables' ? JSON.stringify(updates[field]) : updates[field];
+          updateFields.push(`${field} = $${paramIndex}`);
           updateValues.push(value);
           paramIndex++;
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {

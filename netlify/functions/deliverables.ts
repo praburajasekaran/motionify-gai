@@ -291,13 +291,13 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          updateFields.push(`${key} = $${paramIndex}`);
-          updateValues.push(updates[key]);
+      for (const field of allowedFields) {
+        if (field in updates) {
+          updateFields.push(`${field} = $${paramIndex}`);
+          updateValues.push(updates[field]);
           paramIndex++;
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {

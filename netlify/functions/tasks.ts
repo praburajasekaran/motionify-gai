@@ -722,20 +722,22 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          // Convert camelCase to snake_case for DB
-          const dbKey = key === 'visibleToClient' ? 'is_client_visible' :
-            key === 'assignedTo' ? 'assigned_to' :
-              key === 'dueDate' ? 'due_date' :
-                key === 'status' ? 'stage' :
-                  key;
+      // Map camelCase input keys to snake_case DB columns
+      const fieldMapping: Record<string, string> = {
+        visibleToClient: 'is_client_visible',
+        assignedTo: 'assigned_to',
+        dueDate: 'due_date',
+        status: 'stage',
+      };
 
+      for (const field of allowedFields) {
+        if (field in updates) {
+          const dbKey = fieldMapping[field] || field;
           updateFields.push(`${dbKey} = $${paramIndex}`);
-          updateValues.push(updates[key]);
+          updateValues.push(updates[field]);
           paramIndex++;
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {
