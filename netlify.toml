@@ -54,3 +54,10 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Block sourcemap access — return 404 for .map files (sourcemaps for Sentry upload only)
+[[redirects]]
+  from = "/portal/assets/*.map"
+  to = "/404"
+  status = 404
+  force = true
