@@ -68,6 +68,13 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
       }
     }
 
+    if (field === 'projectNotes') {
+      if (!value || value.trim() === '') {
+        setErrors(prev => ({ ...prev, [field]: 'Project details are required' }));
+        return false;
+      }
+    }
+
     setErrors(prev => ({ ...prev, [field]: undefined }));
     return true;
   };
@@ -76,8 +83,9 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
     const nameValid = validateField('contactName');
     const emailValid = validateField('contactEmail');
     const phoneValid = formData.contactPhone ? validateField('contactPhone') : true;
+    const notesValid = validateField('projectNotes');
 
-    return nameValid && emailValid && phoneValid;
+    return nameValid && emailValid && phoneValid && notesValid;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -88,6 +96,7 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
       contactName: true,
       contactEmail: true,
       contactPhone: !!formData.contactPhone,
+      projectNotes: true,
     });
 
     if (!validateForm()) {
@@ -216,10 +225,10 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
           </div>
         </div>
 
-        {/* Phone (Optional) */}
+        {/* Phone */}
         <div>
           <label htmlFor="contactPhone" className="block text-sm font-medium text-white/90 mb-2">
-            Phone Number <span className="text-white/40 text-xs">(Optional)</span>
+            Phone Number
           </label>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
@@ -245,10 +254,10 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
           )}
         </div>
 
-        {/* Project Notes (Optional) */}
+        {/* Project Notes (Required) */}
         <div>
           <label htmlFor="projectNotes" className="block text-sm font-medium text-white/90 mb-2">
-            Tell us more about your project <span className="text-white/40 text-xs">(Optional)</span>
+            Tell us more about your project <span className="text-red-400">*</span>
           </label>
           <div className="relative">
             <div className="absolute left-3 top-3 text-white/40">
@@ -258,12 +267,20 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
               id="projectNotes"
               value={formData.projectNotes}
               onChange={(e) => handleChange('projectNotes', e.target.value)}
+              onBlur={() => handleBlur('projectNotes')}
               disabled={isSubmitting}
               placeholder="Share any additional details about your video needs, goals, or timeline..."
               rows={4}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-violet-400/50 transition resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border text-white placeholder-white/30 focus:outline-none focus:ring-2 transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                touched.projectNotes && errors.projectNotes
+                  ? 'border-red-400/50 focus:ring-red-400/30'
+                  : 'border-white/10 focus:ring-violet-400/50'
+              }`}
             />
           </div>
+          {touched.projectNotes && errors.projectNotes && (
+            <p className="text-xs text-red-400 mt-1">{errors.projectNotes}</p>
+          )}
           {formData.projectNotes && (
             <p className="text-xs text-white/40 mt-1">
               {formData.projectNotes.length} / 2000 characters
