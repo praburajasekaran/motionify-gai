@@ -2,7 +2,7 @@
  * Shared Modules Index
  *
  * Re-exports all shared functionality for easy importing:
- * import { query, getCorsHeaders, requireAuth } from './_shared';
+ * import { query, getCorsHeaders, requireAuthFromCookie } from './_shared';
  */
 
 // Database
@@ -27,22 +27,17 @@ export {
 
 // Authentication
 export {
-    createJWT,
-    verifyJWT,
-    extractToken,
-    authenticateRequest,
-    hasRole,
-    createUnauthorizedResponse,
-    createForbiddenResponse,
-    requireAuth,
-    requireRole,
-    requireAuthAndRole,
+    requireAuthFromCookie,
+    requireSuperAdmin,
+    requireSupport,
+    createUnauthorizedResponseForCookie,
 } from './auth';
 export type {
     UserRole,
     JwtPayload,
     AuthenticatedUser,
-    AuthResult,
+    CookieAuthResult,
+    NetlifyEvent,
 } from './auth';
 
 // Rate Limiting

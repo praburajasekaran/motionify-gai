@@ -13,7 +13,6 @@ import crypto from 'crypto';
 import {
     query,
     getCorsHeaders,
-    requireAuthAndRole,
     validateRequest,
     createUserSchema,
     createLogger,

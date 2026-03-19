@@ -12,7 +12,6 @@
 import {
     query,
     getCorsHeaders,
-    requireAuthAndRole,
     createLogger,
     getCorrelationId,
     z,
