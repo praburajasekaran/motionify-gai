@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: false,
+      sourcemap: 'hidden',
       rollupOptions: {
         output: {
           manualChunks: {
@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
             'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-checkbox'],
             'vendor-editor': ['@tiptap/react', '@tiptap/starter-kit'],
             'vendor-charts': ['d3'],
+            'vendor-sentry': ['@sentry/react'],
           },
         },
       },
