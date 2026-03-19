@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: mode === 'development' ? '/' : '/portal/',
+    base: '/portal/',
     server: {
       port: 5173,
       strictPort: true,

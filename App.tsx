@@ -79,7 +79,7 @@ function App() {
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary onReset={reset}>
-              <BrowserRouter basename={import.meta.env.DEV ? '/' : '/portal'}>
+              <BrowserRouter basename="/portal">
                 <AuthProvider>
                   <NotificationProvider>
                     <SentryUserSync />
