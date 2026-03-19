@@ -32,7 +32,7 @@ export default function Footer() {
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Get Started</h3>
               <a href="#" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium text-sm shadow-[0_8px_24px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_32px_rgba(249,115,22,0.45)] transition-all duration-300 ring-2 ring-orange-400/30">
-                <span>Start Your Project</span>
+                <span>Get Started</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
               </a>
             </div>
