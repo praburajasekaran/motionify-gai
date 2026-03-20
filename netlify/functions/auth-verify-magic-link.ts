@@ -13,7 +13,6 @@ import {
     transaction,
     validateCors,
     getCorsHeaders,
-    createJWT,
     validateRequest,
     magicLinkVerifySchema,
     rateLimitLogin,

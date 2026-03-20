@@ -54,6 +54,7 @@ export async function apiRequest<T = any>(
     // Build headers
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'fetch',  // CSRF protection — triggers CORS preflight on cross-origin
         ...(fetchOptions.headers as Record<string, string>),
     };
 

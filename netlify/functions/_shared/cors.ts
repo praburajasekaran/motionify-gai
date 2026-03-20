@@ -94,7 +94,7 @@ export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
 
     return {
         'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id, X-Requested-With',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours

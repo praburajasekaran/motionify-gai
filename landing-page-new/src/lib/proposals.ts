@@ -1,6 +1,7 @@
 'use client';
 
 import { getApiBase } from '@/lib/portal/utils/api-config';
+import { CSRF_HEADERS } from './csrf';
 
 export type ProposalStatus =
   | 'sent'
@@ -230,7 +231,7 @@ export async function updateProposalStatus(
     const netlifyBase = getApiBase();
     await fetch(`${netlifyBase}/proposal-detail/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
       credentials: 'include',
       body: JSON.stringify({ status, feedback }),
     });

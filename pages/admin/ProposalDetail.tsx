@@ -11,20 +11,7 @@ import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PromptDialog } from '../../components/ui/PromptDialog';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
-
-/**
- * Sanitize HTML to prevent XSS attacks.
- * Strips script tags, event handlers, and dangerous attributes.
- */
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/data\s*:\s*text\/html/gi, '');
-}
+import { sanitizeHtml } from '../../lib/sanitize';
 
 interface DeliverableInput {
   id: string;

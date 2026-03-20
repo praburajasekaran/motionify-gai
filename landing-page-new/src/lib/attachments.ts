@@ -1,3 +1,5 @@
+import { CSRF_HEADERS } from './csrf';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/.netlify/functions';
 
 export interface Attachment {
@@ -44,6 +46,7 @@ export async function createAttachment(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...CSRF_HEADERS,
             },
             credentials: 'include',
             body: JSON.stringify({ commentId, fileName, fileType, fileSize, r2Key }),
@@ -65,7 +68,7 @@ export async function getPresignedUploadUrl(
     try {
         const response = await fetch(`${API_BASE}/r2-presign`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
             credentials: 'include',
             body: JSON.stringify({ fileName, fileType, projectId, folder: 'comment-attachments' }),
         });

@@ -1,24 +1,29 @@
 import type { Config, Context } from "@netlify/functions";
-import pg from "pg";
-
-const { Pool } = pg;
+import { getPool, createLogger, generateCorrelationId } from './_shared';
 
 // Scheduled function to check for expired file deliverables (365+ days old)
 // Runs daily at 2:00 AM UTC
 export default async function handler(req: Request, context: Context) {
-    console.log("🕐 Running scheduled file expiry check...");
+    const correlationId = generateCorrelationId();
+    const logger = createLogger('scheduled-file-expiry', correlationId);
 
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? true : undefined,
-    });
+    // Validate invocation source (defense-in-depth)
+    const body = await req.json().catch(() => ({}));
+    if (!body.next_run) {
+        logger.warn('Scheduled function invoked without next_run — possible unauthorized call');
+        return new Response('Unauthorized', { status: 403 });
+    }
+
+    logger.info('Running scheduled file expiry check');
+
+    const pool = getPool();
 
     try {
         // Find deliverables that are final_delivered and older than 365 days
         const result = await pool.query(`
-      UPDATE deliverables 
+      UPDATE deliverables
       SET files_expired = true, updated_at = NOW()
-      WHERE status = 'final_delivered' 
+      WHERE status = 'final_delivered'
         AND final_delivered_at IS NOT NULL
         AND final_delivered_at < NOW() - INTERVAL '365 days'
         AND files_expired = false
@@ -28,12 +33,11 @@ export default async function handler(req: Request, context: Context) {
         const expiredCount = result.rowCount || 0;
 
         if (expiredCount > 0) {
-            console.log(`✅ Marked ${expiredCount} deliverable(s) as expired:`);
-            result.rows.forEach((row) => {
-                console.log(`  - ${row.name} (ID: ${row.id})`);
+            logger.info(`Marked ${expiredCount} deliverable(s) as expired`, {
+                deliverables: result.rows.map(r => ({ id: r.id, name: r.name })),
             });
         } else {
-            console.log("✅ No deliverables expired today");
+            logger.info('No deliverables expired today');
         }
 
         return new Response(
@@ -48,7 +52,7 @@ export default async function handler(req: Request, context: Context) {
             }
         );
     } catch (error) {
-        console.error("❌ Error in file expiry check:", error);
+        logger.error('Error in file expiry check', error);
         return new Response(
             JSON.stringify({
                 success: false,
@@ -59,8 +63,6 @@ export default async function handler(req: Request, context: Context) {
                 headers: { "Content-Type": "application/json" }
             }
         );
-    } finally {
-        await pool.end();
     }
 }
 

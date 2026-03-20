@@ -67,8 +67,28 @@ export const handler = compose(
 
       const updates = validation.data;
 
-      // Build dynamic update query
-      const fields = Object.keys(updates);
+      // Build dynamic update query using allowlist pattern (defense-in-depth)
+      const allowedFields = [
+        'email_task_assignment',
+        'email_mention',
+        'email_project_update',
+        'email_marketing',
+        'notification_sound',
+        'notification_desktop',
+      ] as const;
+
+      const fields: string[] = [];
+      const values: any[] = [userId];
+      let paramIndex = 2;
+
+      for (const field of allowedFields) {
+        if (field in updates) {
+          fields.push(field);
+          values.push((updates as any)[field]);
+          paramIndex++;
+        }
+      }
+
       if (fields.length === 0) {
         return {
           statusCode: 400,
@@ -82,8 +102,7 @@ export const handler = compose(
         };
       }
 
-      const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
-      const values = [userId, ...fields.map(field => updates[field as keyof typeof updates])];
+      const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
 
       // Upsert settings
       const result = await query(
