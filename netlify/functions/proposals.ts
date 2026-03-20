@@ -1,21 +1,12 @@
 import pg from 'pg';
-import { sendProposalNotificationEmail } from './send-email';
+import { sendProposalNotificationEmail, sendProposalStatusChangeEmail } from './send-email';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 interface ProposalDeliverable {
   id: string;
@@ -47,19 +38,150 @@ const getDbClient = () => {
   });
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Content-Type': 'application/json',
-  };
+/**
+ * Send status change notifications (email + in-app) when proposal status changes
+ * Notifies clients on admin actions, notifies admins on client responses
+ */
+async function notifyStatusChange(
+  client: pg.Client,
+  proposalId: string,
+  newStatus: 'sent' | 'accepted' | 'rejected' | 'changes_requested',
+  changedByUserId: string,
+  feedback?: string
+) {
+  try {
+    // Fetch proposal with inquiry details and client info
+    const proposalResult = await client.query(
+      `SELECT
+        p.id,
+        p.inquiry_id,
+        p.client_user_id,
+        i.inquiry_number,
+        i.contact_name as client_name,
+        i.contact_email as client_email,
+        u.full_name as changed_by_name,
+        u.role as changed_by_role
+      FROM proposals p
+      JOIN inquiries i ON p.inquiry_id = i.id
+      LEFT JOIN users u ON u.id = $2
+      WHERE p.id = $1`,
+      [proposalId, changedByUserId]
+    );
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
+    if (proposalResult.rows.length === 0) {
+      console.warn(`⚠️ Proposal ${proposalId} not found for notification`);
+      return;
+    }
+
+    const proposal = proposalResult.rows[0];
+    const proposalTitle = `Proposal ${proposal.inquiry_number}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const proposalUrl = `${appUrl}/proposal/${proposalId}`;
+
+    const isAdminChange = proposal.changed_by_role !== 'client';
+
+    // Determine who to notify
+    if (isAdminChange) {
+      // Admin changed status → notify client
+      try {
+        await sendProposalStatusChangeEmail({
+          to: proposal.client_email,
+          recipientName: proposal.client_name,
+          proposalId,
+          proposalTitle,
+          newStatus,
+          isClientRecipient: true,
+          changedBy: proposal.changed_by_name,
+          feedback,
+        });
+        console.log(`✅ Status change email sent to client: ${proposal.client_email}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send status change email to client:', emailError);
+      }
+
+      // Create in-app notification for client
+      if (proposal.client_user_id) {
+        try {
+          await client.query(
+            `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              proposal.client_user_id,
+              proposalId,
+              'proposal_status_changed',
+              'Proposal Status Updated',
+              `Your proposal status is now: ${newStatus.replace(/_/g, ' ')}`,
+              proposalUrl,
+              changedByUserId,
+              proposal.changed_by_name || 'Admin',
+            ]
+          );
+          console.log(`✅ In-app notification created for client: ${proposal.client_user_id}`);
+        } catch (notificationError) {
+          console.error('❌ Failed to create in-app notification for client:', notificationError);
+        }
+      }
+    } else {
+      // Client changed status → notify all admins (super_admin and project_manager)
+      const adminsResult = await client.query(
+        `SELECT id, email, full_name
+         FROM users
+         WHERE role IN ('super_admin', 'project_manager')`
+      );
+
+      for (const admin of adminsResult.rows) {
+        // Send email to each admin
+        try {
+          await sendProposalStatusChangeEmail({
+            to: admin.email,
+            recipientName: admin.full_name,
+            proposalId,
+            proposalTitle,
+            newStatus,
+            isClientRecipient: false,
+            changedBy: proposal.client_name,
+            feedback,
+          });
+          console.log(`✅ Status change email sent to admin: ${admin.email}`);
+        } catch (emailError) {
+          console.error(`❌ Failed to send status change email to admin ${admin.email}:`, emailError);
+        }
+
+        // Create in-app notification for each admin
+        try {
+          await client.query(
+            `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              admin.id,
+              proposalId,
+              'proposal_status_changed',
+              '[Client Response] Proposal Status Updated',
+              `${proposal.client_name} responded with: ${newStatus.replace(/_/g, ' ')}`,
+              proposalUrl,
+              changedByUserId,
+              proposal.client_name,
+            ]
+          );
+          console.log(`✅ In-app notification created for admin: ${admin.id}`);
+        } catch (notificationError) {
+          console.error(`❌ Failed to create in-app notification for admin ${admin.id}:`, notificationError);
+        }
+      }
+    }
+  } catch (error) {
+    // Log error but don't throw - notifications should not fail the request
+    console.error('❌ Error in notifyStatusChange:', error);
   }
+}
+
+export const handler = compose(
+  withCORS(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'proposals')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -74,7 +196,9 @@ export const handler = async (
 
     // Handle PUT request for updating a proposal
     if (event.httpMethod === 'PUT' && proposalId) {
-      const updates = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
@@ -155,6 +279,17 @@ export const handler = async (
         );
       }
 
+      // Send notifications if status changed
+      if (updates.status && auth?.user?.userId) {
+        await notifyStatusChange(
+          client,
+          proposalId,
+          updates.status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
+          auth.user.userId,
+          updates.feedback as string | undefined
+        );
+      }
+
       return {
         statusCode: 200,
         headers,
@@ -164,24 +299,9 @@ export const handler = async (
 
     // Handle PATCH request for updating proposal status
     if (event.httpMethod === 'PATCH' && proposalId) {
-      const { status, feedback } = JSON.parse(event.body || '{}');
-
-      if (!status) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'status is required' }),
-        };
-      }
-
-      const validStatuses = ['sent', 'accepted', 'rejected', 'changes_requested'];
-      if (!validStatuses.includes(status)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: `status must be one of: ${validStatuses.join(', ')}` }),
-        };
-      }
+      const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
+      if (!validation.success) return validation.response;
+      const { status, feedback } = validation.data;
 
       const updateFields = ['status = $1', 'updated_at = NOW()'];
       const params: any[] = [status];
@@ -222,6 +342,17 @@ export const handler = async (
         await client.query(
           `UPDATE inquiries SET status = 'accepted' WHERE proposal_id = $1`,
           [proposalId]
+        );
+      }
+
+      // Send notifications on status change
+      if (status && auth?.user?.userId) {
+        await notifyStatusChange(
+          client,
+          proposalId,
+          status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
+          auth.user.userId,
+          feedback as string | undefined
         );
       }
 
@@ -275,23 +406,9 @@ export const handler = async (
     }
 
     if (event.httpMethod === 'POST') {
-      const payload: CreateProposalPayload = JSON.parse(event.body || '{}');
-
-      if (!payload.inquiryId || !payload.description || !payload.deliverables || payload.deliverables.length === 0) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'inquiryId, description, and deliverables are required' }),
-        };
-      }
-
-      if (![40, 50, 60].includes(payload.advancePercentage)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'advancePercentage must be 40, 50, or 60' }),
-        };
-      }
+      const validation = validateRequest(event.body, SCHEMAS.proposal.create, origin);
+      if (!validation.success) return validation.response;
+      const payload = validation.data;
 
       const inquiryResult = await client.query(
         'SELECT id, inquiry_number, contact_email, contact_name FROM inquiries WHERE id = $1',
@@ -402,4 +519,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

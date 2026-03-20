@@ -21,6 +21,8 @@ import {
   canDeleteDeliverable,
   canViewBetaFiles,
   canCommentOnDeliverable,
+  canDeleteTask,
+  canCreateTask,
   getPermissionDeniedReason,
   isClientPrimaryContact,
   isMotionifyTeam,
@@ -55,6 +57,8 @@ export function useDeliverablePermissions({
         canDelete: false,
         canViewBeta: false,
         canComment: false,
+        canDeleteTask: false,
+        canCreateTask: false,
         isClientPM: false,
         isTeamMember: false,
         getDeniedReason: (action: string) => 'You must be logged in',
@@ -86,13 +90,17 @@ export function useDeliverablePermissions({
       // Comment permissions
       canComment: deliverable ? canCommentOnDeliverable(user, deliverable, project) : false,
 
+      // Task permissions
+      canDeleteTask: canDeleteTask(user),
+      canCreateTask: canCreateTask(user),
+
       // Role checks
       isClientPM: isClientPrimaryContact(user, project.id),
       isTeamMember: isMotionifyTeam(user),
 
       // Get reason for denied action
       getDeniedReason: (
-        action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete'
+        action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task'
       ) => getPermissionDeniedReason(action, user, deliverable, project),
     };
   }, [user, deliverable, project, task]);

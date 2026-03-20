@@ -30,16 +30,16 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     if (!files) return;
 
     Array.from(files).forEach((file) => {
-      // Simulate file upload - in real app, would upload to server
       const attachment: FeedbackAttachment = {
         id: `att-${Date.now()}-${Math.random()}`,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-        url: URL.createObjectURL(file), // In real app, would be server URL
+        url: URL.createObjectURL(file), // Local preview URL
         thumbnailUrl: file.type.startsWith('image/')
           ? URL.createObjectURL(file)
           : undefined,
+        file: file,  // Store raw file for upload to R2
       };
 
       onAddAttachment(attachment);

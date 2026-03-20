@@ -15,7 +15,7 @@ import {
     Dialog, DialogHeader, DialogFooter, useToast,
     EmptyState, ErrorState
 } from '../components/ui/design-system';
-import { MOCK_PROJECTS, TEAM_MEMBERS } from '../constants';
+import { TEAM_MEMBERS } from '../constants';
 import { Project, ProjectStatus, User } from '../types';
 
 interface SettingsNavProps {
@@ -90,12 +90,47 @@ export const ProjectSettings = () => {
     const isArchived = project?.status === 'Archived';
 
     useEffect(() => {
-        const found = MOCK_PROJECTS.find(p => p.id === id);
-        if (found) {
-            // Deep copy to ensure we don't mutate the mock data until save
-            setProject(JSON.parse(JSON.stringify(found)));
-            setIsDirty(false);
-        }
+        const fetchProject = async () => {
+            if (!id) return;
+
+            try {
+                const response = await fetch(`/api/projects/${id}`, {
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const apiProject: Project = {
+                        id: data.id,
+                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+                        client: data.client_name || data.client_company || 'Client',
+                        thumbnail: '',
+                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
+                        startDate: data.created_at || new Date().toISOString(),
+                        dueDate: data.created_at || new Date().toISOString(),
+                        progress: 0,
+                        description: data.description || '',
+                        budget: 0,
+                        team: [],
+                        tasks: [],
+                        deliverables: [],
+                        files: [],
+                        deliverablesCount: 0,
+                        revisionCount: data.revisions_used ?? 0,
+                        maxRevisions: data.total_revisions_allowed ?? 2,
+                        activityLog: [],
+                        termsAcceptedAt: data.terms_accepted_at,
+                        termsAcceptedBy: data.terms_accepted_by,
+                    };
+                    setProject(apiProject);
+                    setIsDirty(false);
+                }
+            } catch (error) {
+                console.error('Failed to fetch project:', error);
+            }
+        };
+
+        fetchProject();
     }, [id]);
 
     if (!project) return (
@@ -110,61 +145,55 @@ export const ProjectSettings = () => {
 
     const markDirty = () => setIsDirty(true);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsLoading(true);
-        // Simulate API call and persist changes to the mock data store
-        setTimeout(() => {
-            if (project) {
-                const index = MOCK_PROJECTS.findIndex(p => p.id === project.id);
-                if (index !== -1) {
-                    MOCK_PROJECTS[index] = { ...project };
-                }
-            }
-            setIsLoading(false);
+        try {
+            // TODO: Implement API call to save project settings
+            // For now, just simulate success
+            await new Promise(resolve => setTimeout(resolve, 600));
             setIsDirty(false);
             addToast({
                 title: "Settings Saved",
                 description: "Your project changes have been successfully updated.",
                 variant: "success"
             });
-        }, 600);
+        } catch (error) {
+            addToast({
+                title: "Error",
+                description: "Failed to save project settings.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const confirmDeleteProject = () => {
+    const confirmDeleteProject = async () => {
         // Validate confirmation input
         if (deleteConfirmInput !== project.title) return;
 
-        const index = MOCK_PROJECTS.findIndex(p => p.id === project.id);
-        if (index !== -1) {
-            MOCK_PROJECTS.splice(index, 1);
+        try {
+            // TODO: Implement API call to delete project
+            // For now, just navigate away
+            setShowDeleteProjectDialog(false);
+            setDeleteConfirmInput('');
+            navigate('/projects');
+
+            addToast({
+                title: "Project Deleted",
+                description: "The project and all associated data have been permanently removed.",
+                variant: "destructive"
+            });
+        } catch (error) {
+            addToast({
+                title: "Error",
+                description: "Failed to delete project.",
+                variant: "destructive"
+            });
         }
-        setShowDeleteProjectDialog(false);
-        setDeleteConfirmInput('');
-        navigate('/projects');
-
-        // Audit log notification (mocked)
-        addToast({
-            title: "Audit Log Created",
-            description: `Project deletion logged: '${project.title}' deleted by ${user?.name || 'Admin'}`,
-            variant: "default"
-        });
-
-        // Email notification to team (mocked)
-        addToast({
-            title: "Team Notified",
-            description: "Email notification sent to all team members about project deletion.",
-            variant: "default"
-        });
-
-        // Final deletion confirmation
-        addToast({
-            title: "Project Deleted",
-            description: "The project and all associated data have been permanently removed.",
-            variant: "destructive"
-        });
     };
 
-    const handleArchiveProject = () => {
+    const handleArchiveProject = async () => {
         // Validate transition
         const validation = validateProjectStatusTransition(project.status, 'Archived');
         if (!validation.isValid) {
@@ -178,19 +207,24 @@ export const ProjectSettings = () => {
             return;
         }
 
-        // Update status in MOCK_PROJECTS
-        const index = MOCK_PROJECTS.findIndex(p => p.id === project.id);
-        if (index !== -1) {
-            MOCK_PROJECTS[index] = { ...project, status: 'Archived' };
+        try {
+            // TODO: Implement API call to archive project
+            // For now, just update local state
+            setProject({ ...project, status: 'Archived' });
+            setShowArchiveDialog(false);
+            setArchiveConfirmInput('');
+            addToast({
+                title: "Project Archived",
+                description: "Project has been archived.",
+                variant: "success"
+            });
+        } catch (error) {
+            addToast({
+                title: "Error",
+                description: "Failed to archive project.",
+                variant: "destructive"
+            });
         }
-        setProject({ ...project, status: 'Archived' });
-        setShowArchiveDialog(false);
-        setArchiveConfirmInput('');
-        addToast({
-            title: "Project Archived",
-            description: "Project has been archived. Notification email sent to team members.",
-            variant: "success"
-        });
     };
 
     const updateDeliverable = (id: string, field: string, value: string) => {

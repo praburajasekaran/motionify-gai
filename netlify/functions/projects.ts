@@ -1,20 +1,11 @@
 import pg from 'pg';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -50,19 +41,13 @@ const generateProjectNumber = async (client: pg.Client): Promise<string> => {
   return `PROJ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'projects')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -70,6 +55,98 @@ export const handler = async (
     await client.connect();
 
     if (event.httpMethod === 'GET') {
+      // Check if requesting a single project by ID from path: /api/projects/{id}
+      const pathParts = event.path.split('/');
+      const lastSegment = pathParts[pathParts.length - 1];
+      const isIdRequest = lastSegment && lastSegment !== 'projects' && !lastSegment.includes('?');
+
+      if (isIdRequest) {
+        // Fetch single project by ID
+        const projectId = lastSegment;
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        // Fetch project from main projects table
+        const result = await client.query(
+          `SELECT p.*, u.full_name as client_name, u.email as client_email
+           FROM projects p
+           LEFT JOIN users u ON p.client_user_id = u.id
+           WHERE p.id = $1`,
+          [projectId]
+        );
+
+        if (result.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Project not found' }),
+          };
+        }
+
+        const project = result.rows[0];
+
+        // Fetch team members for this project
+        const teamResult = await client.query(
+          `SELECT pt.id as membership_id, pt.role as team_role, pt.is_primary_contact, pt.added_at,
+                  u.id as user_id, u.full_name, u.email, u.profile_picture_url
+           FROM project_team pt
+           JOIN users u ON pt.user_id = u.id
+           WHERE pt.project_id = $1 AND pt.removed_at IS NULL
+           ORDER BY pt.is_primary_contact DESC, pt.added_at ASC`,
+          [projectId]
+        );
+
+        project.team = teamResult.rows.map((row: any) => ({
+          id: row.user_id,
+          name: row.full_name || 'Unknown',
+          email: row.email || '',
+          avatar: row.profile_picture_url || '',
+          role: row.team_role,
+          isPrimaryContact: row.is_primary_contact,
+        }));
+
+        // Permission check
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          if (userRole === 'client' && project.client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view this project'
+              }),
+            };
+          }
+
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [projectId, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
+        }
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(project),
+        };
+      }
+
       // First check if this is a schema check request
       if (event.queryStringParameters?.checkSchema === 'true') {
         const schemaResult = await client.query(`
@@ -123,21 +200,32 @@ export const handler = async (
       if (userRole === 'project_manager') {
         // Project Manager: Only see projects linked to inquiries assigned to them
         query = `
-          SELECT p.* 
-          FROM vertical_slice_projects p
-          JOIN inquiries i ON p.inquiry_id = i.id
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
+          LEFT JOIN inquiries i ON p.inquiry_id = i.id
           WHERE i.assigned_to_admin_id = $1
           ORDER BY p.created_at DESC
         `;
         params.push(effectiveUserId);
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
-        // Note: checking multiple client role variations to be safe, though DB check is 'client'
-        query = 'SELECT * FROM vertical_slice_projects WHERE client_user_id = $1 ORDER BY created_at DESC';
+        query = `
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
+          WHERE p.client_user_id = $1
+          ORDER BY p.created_at DESC
+        `;
         params.push(effectiveUserId);
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
-        query = 'SELECT * FROM vertical_slice_projects ORDER BY created_at DESC';
+        query = `
+          SELECT p.*, u.full_name as client_name, u.email as client_email
+          FROM projects p
+          LEFT JOIN users u ON p.client_user_id = u.id
+          ORDER BY p.created_at DESC
+        `;
       } else {
         // Unknown or unauthorized role
         return {
@@ -157,15 +245,10 @@ export const handler = async (
     }
 
     if (event.httpMethod === 'POST') {
-      const { inquiryId, proposalId } = JSON.parse(event.body || '{}');
-
-      if (!inquiryId || !proposalId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'inquiryId and proposalId are required' }),
-        };
-      }
+      // Validate request body using Zod schema
+      const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
+      if (!validation.success) return validation.response;
+      const { inquiryId, proposalId } = validation.data;
 
       const proposalResult = await client.query(
         'SELECT * FROM proposals WHERE id = $1',
@@ -258,6 +341,26 @@ export const handler = async (
         [inquiryId]
       );
 
+      // Auto-populate project team: add client as primary contact
+      if (assignedClientUserId) {
+        await client.query(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, 'client', true, $3)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [assignedClientUserId, project.id, auth?.user?.userId || null]
+        );
+      }
+
+      // Auto-populate project team: add creator (the authenticated user)
+      if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
+        await client.query(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, $3, false, $1)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [auth.user.userId, project.id, auth.user.role || 'super_admin']
+        );
+      }
+
       return {
         statusCode: 201,
         headers,
@@ -284,4 +387,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

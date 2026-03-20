@@ -4,7 +4,7 @@ import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { AppContext } from '@/lib/portal/AppContext';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
-import { Task } from '@/lib/portal/types';
+import { Task, UserRole } from '@/lib/portal/types';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -13,7 +13,13 @@ interface TaskModalProps {
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit }) => {
-  const { project, addTask, updateTask } = useContext(AppContext);
+  const { project, currentUser, addTask, updateTask } = useContext(AppContext);
+
+  const isClientUser = useMemo(() => {
+    if (!currentUser?.role) return false;
+    const clientRoleValues = [UserRole.PRIMARY_CONTACT, UserRole.TEAM_MEMBER, 'client', 'client_primary', 'client_team'];
+    return clientRoleValues.includes(currentUser.role as UserRole);
+  }, [currentUser]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibleToClient, setVisibleToClient] = useState(false);
@@ -116,6 +122,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit }) =>
               ))}
             </select>
           </div>
+          {!isClientUser && (
            <div>
             <label htmlFor="task-assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Assign To (Optional)
@@ -132,6 +139,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit }) =>
               ))}
             </select>
           </div>
+          )}
           <div>
             <label htmlFor="task-deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Deadline (Optional)
@@ -144,6 +152,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit }) =>
               className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
           </div>
+          {!isClientUser && (
           <div className="flex items-start">
             <div className="flex items-center h-5">
               <input
@@ -161,6 +170,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit }) =>
               </label>
             </div>
           </div>
+          )}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel

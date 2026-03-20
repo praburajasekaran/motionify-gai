@@ -125,7 +125,7 @@ export async function fetchActivities(params: {
 export async function logProposalSent(params: {
   senderId: string;
   senderName: string;
-  recipientId: string;
+  recipientId?: string;
   recipientName: string;
   inquiryId: string;
   proposalId: string;
@@ -135,7 +135,7 @@ export async function logProposalSent(params: {
     type: 'PROPOSAL_SENT',
     userId: params.senderId,
     userName: params.senderName,
-    targetUserId: params.recipientId,
+    ...(params.recipientId && { targetUserId: params.recipientId }),
     targetUserName: params.recipientName,
     inquiryId: params.inquiryId,
     proposalId: params.proposalId,

@@ -20,6 +20,7 @@ import { ProposalBuilder } from './pages/admin/ProposalBuilder';
 import { ProposalDetail } from './pages/admin/ProposalDetail';
 import { UserManagement } from './pages/admin/UserManagement';
 import { ActivityLogs } from './pages/admin/ActivityLogs';
+import { Payments } from './pages/admin/Payments';
 import { Settings } from './pages/Settings';
 import { Payment } from './pages/client/Payment';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
@@ -78,6 +79,7 @@ function App() {
                     <Route path="/admin/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
                     <Route path="/admin/proposals/:proposalId" element={<ProtectedRoute><ProposalDetail /></ProtectedRoute>} />
                     <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                    <Route path="/admin/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                     <Route path="/admin/activity-logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
 
                     {/* Client Routes */}

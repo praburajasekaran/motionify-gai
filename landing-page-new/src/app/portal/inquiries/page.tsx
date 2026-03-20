@@ -7,6 +7,9 @@ import { fetchInquiries, fetchInquiriesByClientUserId, Inquiry } from '@/lib/inq
 import { fetchProposalsByInquiryId, updateProposalStatus, ProposalStatus } from '@/lib/proposals';
 import Button from '@/lib/portal/components/ui/Button';
 import Card from '@/lib/portal/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FileText } from 'lucide-react';
 import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 const statusColors: Record<string, string> = {
@@ -30,17 +33,40 @@ const proposalStatusColors: Record<string, string> = {
   changes_requested: 'bg-orange-100 text-orange-800',
 };
 
+// Client-friendly status labels (instead of admin terminology)
+const clientFriendlyStatusLabels: Record<string, string> = {
+  // Inquiry statuses
+  new: 'Submitted',
+  reviewing: 'Under Review',
+  proposal_sent: 'Proposal Received',
+  negotiating: 'In Discussion',
+  accepted: 'Accepted',
+  project_setup: 'Project Starting',
+  payment_pending: 'Payment Due',
+  paid: 'Paid',
+  converted: 'Active Project',
+  rejected: 'Declined',
+  archived: 'Archived',
+  // Proposal statuses
+  sent: 'Awaiting Response',
+  changes_requested: 'Changes Requested',
+};
+
 interface InquiryWithProposal extends Inquiry {
   proposalStatus?: ProposalStatus;
   proposalId?: string;
   proposalFeedback?: string;
 }
 
-function StatusBadge({ status, colors }: { status: string; colors: Record<string, string> }) {
+function StatusBadge({ status, colors, useClientLabels = false }: { status: string; colors: Record<string, string>; useClientLabels?: boolean }) {
   const colorClass = colors[status] || 'bg-gray-100 text-gray-800';
+  // Use client-friendly label if available and requested, otherwise format the raw status
+  const displayLabel = useClientLabels && clientFriendlyStatusLabels[status]
+    ? clientFriendlyStatusLabels[status]
+    : status.replace(/_/g, ' ');
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-      {status.replace(/_/g, ' ')}
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${colorClass}`}>
+      {displayLabel}
     </span>
   );
 }
@@ -49,6 +75,7 @@ export default function InquiriesPage() {
   const { currentUser, isLoading } = useContext(AppContext);
   const [inquiries, setInquiries] = useState<InquiryWithProposal[]>([]);
   const [loadingInquiries, setLoadingInquiries] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [feedbackText, setFeedbackText] = useState<Record<string, string>>({});
   const [showFeedbackModal, setShowFeedbackModal] = useState<string | null>(null);
@@ -64,6 +91,7 @@ export default function InquiriesPage() {
 
     try {
       setLoadingInquiries(true);
+      setLoadError(null);
       let data: Inquiry[] = [];
 
       const isAdmin = currentUser.role === UserRole.PROJECT_MANAGER || currentUser.role === UserRole.MOTIONIFY_MEMBER;
@@ -98,6 +126,7 @@ export default function InquiriesPage() {
       setInquiries(inquiriesWithProposals);
     } catch (error) {
       console.error('Error loading inquiries:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load inquiries');
     } finally {
       setLoadingInquiries(false);
     }
@@ -180,9 +209,17 @@ export default function InquiriesPage() {
           </p>
         </div>
 
-        {inquiries.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-[var(--todoist-gray-600)]">No inquiries found</p>
+        {loadError ? (
+          <Card className="p-0 overflow-hidden">
+            <ErrorState error={loadError} onRetry={loadInquiries} />
+          </Card>
+        ) : inquiries.length === 0 ? (
+          <Card className="p-0 overflow-hidden">
+            <EmptyState
+              icon={FileText}
+              title="No inquiries yet"
+              description="You'll see your inquiries and proposals here when they're submitted."
+            />
           </Card>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -226,11 +263,11 @@ export default function InquiriesPage() {
                         {inquiry.companyName || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={inquiry.status} colors={statusColors} />
+                        <StatusBadge status={inquiry.status} colors={statusColors} useClientLabels={!isAdmin} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {inquiry.proposalStatus ? (
-                          <StatusBadge status={inquiry.proposalStatus} colors={proposalStatusColors} />
+                          <StatusBadge status={inquiry.proposalStatus} colors={proposalStatusColors} useClientLabels={!isAdmin} />
                         ) : (
                           <span className="text-sm text-gray-400">No proposal</span>
                         )}

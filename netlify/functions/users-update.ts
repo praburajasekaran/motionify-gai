@@ -10,7 +10,6 @@
 
 import {
     query,
-    validateCors,
     getCorsHeaders,
     requireAuthAndRole,
     validateRequest,
@@ -19,6 +18,8 @@ import {
     createLogger,
     getCorrelationId,
 } from './_shared';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -33,26 +34,15 @@ interface NetlifyResponse {
     body: string;
 }
 
-export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
+export const handler = compose(
+    withCORS(['PATCH']),
+    withSuperAdmin(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'users_update')
+)(async (event: NetlifyEvent) => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-update', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    // Handle CORS
-    const corsResult = validateCors(event);
-    if (corsResult) {
-        return corsResult;
-    }
-
-    // Only allow PATCH
-    if (event.httpMethod !== 'PATCH') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-        };
-    }
 
     // Extract user ID from path
     const pathParts = event.path.split('/');
@@ -66,13 +56,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             headers,
             body: JSON.stringify({ success: false, error: 'Valid user ID is required' }),
         };
-    }
-
-    // Require Super Admin role
-    const authResult = await requireAuthAndRole(event, ['super_admin']);
-    if (!authResult.success) {
-        logger.warn('Unauthorized user update attempt', { targetUserId: userId });
-        return authResult.response;
     }
 
     // Validate request body
@@ -135,7 +118,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
         logger.info('User updated', {
             userId,
-            updatedBy: authResult.user.email,
             fields: Object.keys(validation.data).filter((k) => (validation.data as any)[k] !== undefined),
         });
 
@@ -158,4 +140,4 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }),
         };
     }
-};
+});

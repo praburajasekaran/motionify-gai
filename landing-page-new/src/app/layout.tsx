@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import WebVitals from "@/components/WebVitals";
 
 export default function RootLayout({
   children,
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${openSans.variable} ${fraunces.variable} ${ibmPlexSans.variable} antialiased`}>
+        <WebVitals />
         <AuthProvider>
           <NotificationProvider>
             {children}

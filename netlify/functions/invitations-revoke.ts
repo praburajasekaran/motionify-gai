@@ -1,56 +1,15 @@
-import pg from 'pg';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { query } from './_shared/db';
+import { getCorsHeaders } from './_shared/cors';
 
-const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-  
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
-
-  // Only allow DELETE
-  if (event.httpMethod !== 'DELETE') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
+export const handler = compose(
+  withCORS(['DELETE']),
+  withSuperAdmin(),
+  withRateLimit(RATE_LIMITS.apiStrict, 'invitation_revoke')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   // Extract invitationId from path
   const pathParts = event.path.split('/');
@@ -60,18 +19,19 @@ export const handler = async (
     return {
       statusCode: 400,
       headers,
-      body: JSON.stringify({ error: 'Invitation ID is required' }),
+      body: JSON.stringify({
+        error: {
+          code: 'MISSING_ID',
+          message: 'Invitation ID is required',
+        },
+      }),
     };
   }
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // Check if invitation exists and is pending
-    const check = await client.query(
-      `SELECT id, email, status FROM project_invitations WHERE id = $1`,
+    const check = await query(
+      `SELECT id, email, status FROM user_invitations WHERE id = $1`,
       [invitationId]
     );
 
@@ -79,7 +39,12 @@ export const handler = async (
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({ error: 'Invitation not found' }),
+        body: JSON.stringify({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Invitation not found',
+          },
+        }),
       };
     }
 
@@ -89,19 +54,24 @@ export const handler = async (
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invitation has already been processed' }),
+        body: JSON.stringify({
+          error: {
+            code: 'ALREADY_PROCESSED',
+            message: 'Invitation has already been processed',
+          },
+        }),
       };
     }
 
     // Revoke invitation
-    await client.query(
-      `UPDATE project_invitations 
-       SET status = 'revoked', revoked_at = NOW() 
-       WHERE id = $1`,
-      [invitationId]
+    await query(
+      `UPDATE user_invitations
+       SET status = 'revoked', revoked_at = NOW(), revoked_by = $1
+       WHERE id = $2`,
+      [auth!.user!.userId, invitationId]
     );
 
-    console.log(`Invitation revoked for ${invitation.email}`);
+    console.log(`[Invitation] Revoked for ${invitation.email} by ${auth!.user!.email}`);
 
     return {
       statusCode: 200,
@@ -114,11 +84,11 @@ export const handler = async (
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: 'Failed to revoke invitation',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to revoke invitation',
+        },
       }),
     };
-  } finally {
-    await client.end();
   }
-};
+});

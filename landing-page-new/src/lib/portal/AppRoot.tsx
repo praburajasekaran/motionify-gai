@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project, User, UserRole, Task, TaskStatus, ProjectStatus, Deliverable, Client, Notification, Comment, ProjectFile, Milestone } from './types';
-import { MOCK_PROJECTS } from './data';
+// Mock data removed - using API data only
 import { AppContext } from './AppContext';
 import Header from './components/Header';
 import LoginScreen from './components/LoginScreen';
@@ -64,7 +64,7 @@ type AddFileData = {
 
 const AppRoot: React.FC = () => {
   const router = useRouter();
-  const [projectsData, setProjectsData] = useState<Project[]>(MOCK_PROJECTS);
+  const [projectsData, setProjectsData] = useState<Project[]>([]); // Loaded from API
   // Initialize as null to prevent hydration mismatch - load from localStorage in useEffect
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);

@@ -4,27 +4,18 @@ import { formatCurrencyWithConversion, formatDate } from '@/lib/proposals';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { Building2, Calendar, CheckCircle2, Clock, FileText, User } from 'lucide-react';
+import { StatusTimeline } from './StatusTimeline';
+import { getStatusConfig } from '@/lib/status-config';
 
 interface ProposalReviewProps {
   proposal: Proposal;
   inquiry: Inquiry;
 }
 
-const STATUS_COLORS: Record<Proposal['status'], string> = {
-  sent: 'bg-purple-500/10 text-purple-700 ring-purple-500/20',
-  accepted: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
-  rejected: 'bg-red-500/10 text-red-700 ring-red-500/20',
-  changes_requested: 'bg-orange-500/10 text-orange-700 ring-orange-500/20',
-};
-
-const STATUS_LABELS: Record<Proposal['status'], string> = {
-  sent: 'Awaiting Response',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-  changes_requested: 'Changes Requested',
-};
-
 export default function ProposalReview({ proposal, inquiry }: ProposalReviewProps) {
+  const statusConfig = getStatusConfig(proposal.status);
+  const StatusIcon = statusConfig.icon;
+
   const pricing = {
     total: formatCurrencyWithConversion(proposal.totalPrice, proposal.currency),
     advance: formatCurrencyWithConversion(proposal.advanceAmount, proposal.currency),
@@ -49,8 +40,9 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
               For {inquiry.companyName || inquiry.contactName}
             </p>
           </div>
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[proposal.status]}`}>
-            {STATUS_LABELS[proposal.status]}
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${statusConfig.colorClass}`}>
+            <StatusIcon className={`w-4 h-4 ${statusConfig.iconColorClass}`} />
+            {statusConfig.label}
           </span>
         </div>
 
@@ -186,6 +178,11 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Status Timeline */}
+      <div className="mt-8">
+        <StatusTimeline proposalId={proposal.id} />
       </div>
 
       {/* Response Information (if already responded) */}

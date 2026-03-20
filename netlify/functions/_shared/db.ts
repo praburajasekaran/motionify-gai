@@ -5,6 +5,10 @@
  * - SSL verification based on environment
  * - Connection pooling for better performance
  * - Proper error handling
+ *
+ * Note: Neon serverless HTTP driver (@neondatabase/serverless) is available
+ * for new code that doesn't need transaction support. Existing code continues
+ * to use pg Pool for backward compatibility.
  */
 
 import pg from 'pg';
@@ -16,22 +20,31 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 // SSL configuration based on environment
-// Production: require SSL with certificate validation
-// Development: configurable via env var, defaults to no SSL
+// Production: ALWAYS enforce SSL with certificate validation
+// Development/Staging: Configurable SSL via DATABASE_SSL env var
 function getSSLConfig(): boolean | { rejectUnauthorized: boolean } {
     if (isProduction) {
-        // In production, enable SSL with certificate validation
-        // Set DISABLE_SSL_VALIDATION=true only if your DB provider requires it
-        const disableValidation = process.env.DISABLE_SSL_VALIDATION === 'true';
-        return disableValidation ? { rejectUnauthorized: false } : true;
+        // Production: ALWAYS enforce SSL certificate validation
+        // This ensures encrypted connections with proper certificate verification
+        return true;
     }
 
-    // In development, check if SSL should be enabled
+    // Development/Staging: Configurable SSL
+    // Set DATABASE_SSL=true to enable SSL (useful for staging environments)
+    // Set DATABASE_SSL=false to disable SSL (local development only)
     if (process.env.DATABASE_SSL === 'true') {
+        // Enable SSL but allow self-signed certificates in development
         return { rejectUnauthorized: false };
     }
 
-    return false;
+    if (process.env.DATABASE_SSL === 'false') {
+        // Explicitly disable SSL (local development only)
+        return false;
+    }
+
+    // Default in development: SSL enabled with self-signed cert support
+    // This is safer than completely disabling SSL
+    return { rejectUnauthorized: false };
 }
 
 // Validate DATABASE_URL exists

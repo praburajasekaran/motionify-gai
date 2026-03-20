@@ -13,9 +13,14 @@ cd landing-page-new
 npm run dev &
 NEXTJS_PID=$!
 
+# Start Netlify Functions in background
+netlify functions:serve -p 8888 &
+FUNCTIONS_PID=$!
+
 echo "✅ Servers started!"
 echo "Vite (Admin): PID $VITE_PID (port 5173)"
 echo "Next.js (Main): PID $NEXTJS_PID (port 5174)"
+echo "Netlify Functions: PID $FUNCTIONS_PID (port 8888)"
 echo ""
 echo "Access admin: http://localhost:5174/admin/inquiries"
 echo "Access landing: http://localhost:5174/"

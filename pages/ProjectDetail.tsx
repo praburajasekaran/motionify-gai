@@ -2,32 +2,82 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles, PlusCircle,
-    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox, Mail, Crown,
+    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
-    Bell, BellOff, Settings, Share2, CreditCard
+    Bell, BellOff, Settings, Share2, CreditCard, Trash2
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
     Avatar, Input, ClientLogo, Progress, Tabs, TabsList, TabsTrigger,
     TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast, Switch
 } from '../components/ui/design-system';
-import { MOCK_PROJECTS, TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
+import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
-import { ProjectStatus, Task } from '../types';
+import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskEditModal } from '../components/tasks/TaskEditModal';
-import { canEditTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
+import { canEditTask, canDeleteTask, canCreateTask, canUploadProjectFile, canDeleteProjectFile, isClient, isClientPrimaryContact } from '../utils/deliverablePermissions';
 import { InviteModal } from '../components/team/InviteModal';
+import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
 import { ProjectFile } from '../types';
-import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { fetchActivities, Activity as ApiActivity } from '../services/activityApi';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
+
+// --- Activity formatting helpers ---
+// isCurrentUser: true when the activity's userId matches the logged-in user
+// This enables first-person ("you sent") vs third-person ("Alice sent") phrasing
+function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean): string {
+    const me = !!isCurrentUser;
+    switch (type) {
+        // Proposal lifecycle
+        case 'PROPOSAL_SENT':              return me ? 'sent a proposal'              : 'sent a proposal';
+        case 'PROPOSAL_ACCEPTED':          return me ? 'accepted the proposal'        : 'accepted the proposal';
+        case 'PROPOSAL_REJECTED':          return me ? 'rejected the proposal'        : 'rejected the proposal';
+        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on'         : 'requested changes on';
+        // Tasks
+        case 'TASK_CREATED':        return me ? 'created task'                          : 'created task';
+        case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
+        case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
+        case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
+        case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
+        // Files
+        case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
+        case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
+        // Team
+        case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
+        case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
+        // Deliverables
+        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable'  : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable'  : 'approved deliverable';
+        // Payments — the userId is the client who paid
+        case 'PAYMENT_RECEIVED': {
+            const label = details.paymentLabel || 'payment';
+            return me ? `made ${label} of` : `received ${label} of`;
+        }
+        // Project
+        case 'PROJECT_CREATED': return 'created the project';
+        case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
+        default: return type.toLowerCase().replace(/_/g, ' ');
+    }
+}
+
+function formatActivityTarget(type: string, details: Record<string, string | number>, targetUserName?: string): string {
+    if (type === 'PAYMENT_RECEIVED' && details.amount) return String(details.amount);
+    if (details.taskTitle) return String(details.taskTitle);
+    if (details.proposalName) return String(details.proposalName);
+    if (details.fileName) return String(details.fileName);
+    if (details.deliverableName) return String(details.deliverableName);
+    if (targetUserName) return targetUserName;
+    return '';
+}
 
 // --- Battery Component ---
 const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
@@ -94,7 +144,8 @@ export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthContext();
-    const project = MOCK_PROJECTS.find(p => p.id === id);
+    const [project, setProject] = useState<Project | null>(null);
+    const [projectLoading, setProjectLoading] = useState(true);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -123,6 +174,16 @@ export const ProjectDetail = () => {
     const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
     const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
     const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
+    // Real deliverables from API (not mock data)
+    const [deliverables, setDeliverables] = useState<Array<{
+        id: string;
+        title: string;
+        type: string;
+        status: string;
+        progress: number;
+        dueDate: string;
+    }>>([]);
+    const [deliverablesLoading, setDeliverablesLoading] = useState(true);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -133,6 +194,61 @@ export const ProjectDetail = () => {
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
+
+    // Fetch project from API
+    useEffect(() => {
+        if (!id) return;
+
+        const fetchProject = async () => {
+            try {
+                const response = await fetch(`/api/projects/${id}`, {
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Transform API response to match Project type
+                    const apiProject: Project = {
+                        id: data.id,
+                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
+                        client: data.client_name || data.client_company || 'Client',
+                        thumbnail: '',
+                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
+                        startDate: data.created_at || new Date().toISOString(),
+                        dueDate: data.created_at || new Date().toISOString(),
+                        progress: 0,
+                        description: data.description || '',
+                        budget: 0,
+                        team: (data.team || []).map((m: any) => ({
+                            id: m.id,
+                            name: m.name || 'Unknown',
+                            email: m.email || '',
+                            avatar: m.avatar || '',
+                            role: m.role || 'team_member',
+                        })),
+                        tasks: [],
+                        deliverables: [],
+                        files: [],
+                        deliverablesCount: 0,
+                        revisionCount: data.revisions_used ?? 0,
+                        maxRevisions: data.total_revisions_allowed ?? 2,
+                        activityLog: [],
+                        termsAcceptedAt: data.terms_accepted_at,
+                        termsAcceptedBy: data.terms_accepted_by,
+                    };
+                    setProject(apiProject);
+                } else {
+                    console.error(`API returned ${response.status} for project ${id}`);
+                }
+            } catch (error) {
+                console.error('Failed to fetch project:', error);
+            } finally {
+                setProjectLoading(false);
+            }
+        };
+
+        fetchProject();
+    }, [id]);
 
     // Load tasks from backend when project loads
     useEffect(() => {
@@ -151,6 +267,78 @@ export const ProjectDetail = () => {
 
         loadTasks();
         setProjectFiles(project.files || []);
+    }, [project?.id]);
+
+    // Load activities from API when project loads
+    useEffect(() => {
+        if (!project?.id) return;
+
+        const loadActivities = async () => {
+            try {
+                const activities = await fetchActivities({ projectId: project.id, limit: 50 });
+
+                // Map API Activity to ActivityLog shape used by the template
+                const activityLog = activities.map((a: ApiActivity) => {
+                    const isCurrentUser = !!(user && a.userId === user.id);
+                    return {
+                        id: a.id,
+                        userId: a.userId,
+                        userName: a.userName,
+                        action: formatActivityAction(a.type, a.details, isCurrentUser),
+                        target: formatActivityTarget(a.type, a.details, a.targetUserName),
+                        timestamp: new Date(a.timestamp).toISOString(),
+                    };
+                });
+
+                setProject(prev => prev ? { ...prev, activityLog } : prev);
+            } catch (error) {
+                console.error('Failed to load activities:', error);
+            }
+        };
+
+        loadActivities();
+    }, [project?.id, user?.id]);
+
+    // Load deliverables from API (for Overview tab consistency with Deliverables tab)
+    useEffect(() => {
+        if (!project?.id) return;
+
+        const loadDeliverables = async () => {
+            setDeliverablesLoading(true);
+            try {
+                const response = await fetch(`/api/deliverables?projectId=${project.id}`, {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load deliverables');
+                }
+
+                const data = await response.json();
+
+                // Transform API response to match the display format
+                const transformed = (data || []).map((d: any) => ({
+                    id: d.id,
+                    title: d.name || d.title || 'Untitled',
+                    type: d.type || 'Video',
+                    status: d.status || 'pending',
+                    progress: d.progress || 0,
+                    dueDate: d.estimated_completion_week
+                        ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+                        : new Date().toISOString(),
+                }));
+
+                setDeliverables(transformed);
+            } catch (error) {
+                console.error('Failed to load deliverables:', error);
+                // Fallback to empty array - don't show mock data
+                setDeliverables([]);
+            } finally {
+                setDeliverablesLoading(false);
+            }
+        };
+
+        loadDeliverables();
     }, [project?.id]);
 
     // Auto-analysis on load
@@ -179,6 +367,14 @@ export const ProjectDetail = () => {
         }
     }, [tab, id, navigate]);
 
+    if (projectLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
     if (!project) {
         return (
             <ErrorState
@@ -196,17 +392,19 @@ export const ProjectDetail = () => {
     const handleAddTask = async () => {
         if (!newTaskInput.trim() || !project) return;
 
+        const userIsClient = user && isClient(user);
+
         try {
-            // Parse natural language input
-            const parsed = parseTaskInput(newTaskInput, project.team);
+            // Parse natural language input (clients don't get assignee parsing)
+            const parsed = parseTaskInput(newTaskInput, userIsClient ? [] : project.team);
 
             const newTask = await createTask({
                 project_id: project.id,
                 title: parsed.title,
                 description: parsed.title, // Use title as description for now
-                visible_to_client: true,
+                visible_to_client: userIsClient ? true : false,
                 status: 'pending',
-                assignee_id: parsed.assigneeId,
+                assignee_id: userIsClient ? undefined : parsed.assigneeId,
                 deadline: parsed.deadline
             });
 
@@ -277,6 +475,29 @@ export const ProjectDetail = () => {
             addToast({
                 title: 'Error',
                 description: 'Failed to update task. Please try again.',
+                variant: 'destructive'
+            });
+        }
+    };
+
+    const handleDeleteTask = async (taskId: string) => {
+        if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await deleteTask(taskId);
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+            addToast({
+                title: 'Task Deleted',
+                description: 'Task has been deleted successfully',
+                variant: 'success'
+            });
+        } catch (err) {
+            console.error('Failed to delete task:', err);
+            addToast({
+                title: 'Error',
+                description: 'Failed to delete task. Please try again.',
                 variant: 'destructive'
             });
         }
@@ -468,7 +689,41 @@ export const ProjectDetail = () => {
         }
     };
 
+    // Task Status Helpers
+    const getTaskStatusLabel = (status: string) => {
+        const labels: Record<string, string> = {
+            'pending': 'To Do',
+            'in_progress': 'In Progress',
+            'awaiting_approval': 'Awaiting Approval',
+            'completed': 'Completed',
+            'revision_requested': 'Revision Requested',
+            // Legacy values
+            'Todo': 'To Do',
+            'In Progress': 'In Progress',
+            'Done': 'Completed',
+        };
+        return labels[status] || status;
+    };
 
+    const getTaskStatusStyle = (status: string) => {
+        switch (status) {
+            case 'pending':
+            case 'Todo':
+                return 'bg-slate-100 text-slate-600 border-slate-200';
+            case 'in_progress':
+            case 'In Progress':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'awaiting_approval':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'completed':
+            case 'Done':
+                return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'revision_requested':
+                return 'bg-rose-100 text-rose-700 border-rose-200';
+            default:
+                return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+        }
+    };
 
     // Tab configuration for project pages
     const tabConfig = [
@@ -542,7 +797,18 @@ export const ProjectDetail = () => {
                                 {project.team.slice(0, 4).map((member, index) => (
                                     <Avatar key={`${member.id}-${index}`} src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
                                 ))}
-                                <button className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10">
+                                {project.team.length > 4 && (
+                                    <button
+                                        onClick={() => navigate(`/projects/${id}/5`)}
+                                        className="h-8 w-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-primary hover:border-primary transition-colors ring-2 ring-white z-10"
+                                    >
+                                        +{project.team.length - 4}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => navigate(`/projects/${id}/5`)}
+                                    className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10"
+                                >
                                     <Users className="h-4 w-4" />
                                 </button>
                             </div>
@@ -623,16 +889,22 @@ export const ProjectDetail = () => {
                                 </CardContent>
                             </Card>
 
-                            {/* Recent Deliverables Table */}
+                            {/* Recent Deliverables Table - Now uses real API data */}
                             <Card className="border-zinc-200/60 shadow-sm">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
                                     <CardTitle className="text-lg">Active Deliverables</CardTitle>
-                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary">View All</Button>
+                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-zinc-100">
-                                        {project.deliverables.slice(0, 3).map(del => (
-                                            <div key={del.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                                        {deliverablesLoading ? (
+                                            <div className="p-8 text-center text-zinc-400 text-sm">Loading deliverables...</div>
+                                        ) : deliverables.slice(0, 3).map(del => (
+                                            <div
+                                                key={del.id}
+                                                className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`/projects/${id}/deliverables/${del.id}`)}
+                                            >
                                                 <div className="flex items-center gap-4">
                                                     <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 shadow-inner">
                                                         {del.type === 'Video' ? <FileVideo className="h-5 w-5" /> : <FileBox className="h-5 w-5" />}
@@ -651,12 +923,12 @@ export const ProjectDetail = () => {
                                                         <Progress value={del.progress} className="h-1.5" />
                                                     </div>
                                                     <Badge variant={del.status === 'approved' ? 'success' : del.status === 'awaiting_approval' ? 'warning' : 'secondary'}>
-                                                        {del.status.replace('_', ' ')}
+                                                        {del.status.replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
                                             </div>
                                         ))}
-                                        {project.deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <EmptyState
                                                 title="No deliverables"
                                                 description="This project doesn't have any active deliverables yet."
@@ -678,31 +950,35 @@ export const ProjectDetail = () => {
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     <div className="space-y-0">
-                                        {project.activityLog.map((log, i) => {
-                                            const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                        {project.activityLog.length > 0 ? project.activityLog.map((log, i) => {
+                                            const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                            const isCurrentUser = user && log.userId === user.id;
+                                            const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                             return (
                                                 <div key={log.id} className="flex gap-3 pb-6 relative last:pb-0 group">
                                                     {i !== project.activityLog.length - 1 && (
                                                         <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
                                                     )}
-                                                    <Avatar src={user.avatar} fallback={user.name[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
+                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
                                                     <div>
                                                         <p className="text-xs text-zinc-500 mb-0.5 group-hover:text-zinc-700 transition-colors">
-                                                            <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                         </p>
                                                         <p className="text-[10px] text-zinc-400 flex items-center gap-1 font-medium">
                                                             <Clock className="h-3 w-3" />
-                                                            {new Date(log.timestamp).toLocaleDateString()}
+                                                            {formatTimeAgo(log.timestamp)}
                                                         </p>
                                                     </div>
                                                 </div>
                                             )
-                                        })}
+                                        }) : (
+                                            <p className="text-sm text-zinc-400 italic">No activity yet.</p>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Deadlines */}
+                            {/* Deadlines - Now uses real API data */}
                             <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white shadow-lg shadow-black/10 border-zinc-700">
                                 <CardContent className="p-6">
                                     <div className="flex items-center gap-2 mb-5">
@@ -710,13 +986,15 @@ export const ProjectDetail = () => {
                                         <h3 className="font-bold tracking-tight">Upcoming Deadlines</h3>
                                     </div>
                                     <div className="space-y-4">
-                                        {project.deliverables.slice(0, 2).map(d => (
+                                        {deliverablesLoading ? (
+                                            <p className="text-sm text-zinc-500 italic">Loading...</p>
+                                        ) : deliverables.slice(0, 2).map(d => (
                                             <div key={d.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-4 py-1">
                                                 <span className="text-zinc-200 truncate w-32 font-medium">{d.title}</span>
                                                 <span className="font-mono text-zinc-400 text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
-                                        {project.deliverables.length === 0 && (
+                                        {!deliverablesLoading && deliverables.length === 0 && (
                                             <p className="text-sm text-zinc-500 italic">No upcoming deadlines.</p>
                                         )}
                                     </div>
@@ -728,71 +1006,14 @@ export const ProjectDetail = () => {
 
                 {/* --- TEAM TAB --- */}
                 <TabsContent value="team">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-bold text-zinc-900">Project Team</h3>
-                            <p className="text-sm text-zinc-500">Manage members and permissions for this project.</p>
-                        </div>
-                        {(isPrimaryContact || user?.role === 'project_manager' || user?.role === 'super_admin') && (
-                            <Button
-                                className="gap-2 shadow-sm"
-                                aria-label="Add Member"
-                                onClick={() => setIsInviteModalOpen(true)}
-                            >
-                                <Users className="h-4 w-4" /> Add Member
-                            </Button>
-                        )}
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {project.team.map((member) => (
-                            <Card key={member.id} hoverable className="group relative border-zinc-200/60">
-                                {member.role === 'project_manager' && (
-                                    <div className="absolute top-3 right-3 text-amber-600 bg-amber-50 border border-amber-100 p-1.5 rounded-full shadow-sm" title="Primary Contact">
-                                        <Crown className="h-3.5 w-3.5" />
-                                    </div>
-                                )}
-                                <CardContent className="p-8 flex flex-col items-center text-center">
-                                    <div className="relative mb-5">
-                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-20 w-20 ring-4 ring-zinc-50 shadow-md group-hover:ring-primary/10 transition-all" />
-                                        <div className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 border-4 border-white rounded-full"></div>
-                                    </div>
-                                    <h4 className="font-bold text-lg text-zinc-900">{member.name}</h4>
-                                    <p className="text-sm text-zinc-500 font-medium mb-1">{member.role}</p>
-                                    <p className="text-xs text-zinc-400 mb-6 font-mono">{member.email}</p>
-
-                                    <div className="flex gap-2 w-full">
-                                        <Button variant="outline" size="sm" className="flex-1 text-xs h-9 bg-zinc-50/50">Profile</Button>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
-                                            <Mail className="h-4 w-4" />
-                                        </Button>
-                                        <DropdownMenu trigger={
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        }>
-                                            <DropdownMenuItem>Change Role</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                                        </DropdownMenu>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-
-                    {/* Invite Modal */}
-                    <InviteModal
-                        isOpen={isInviteModalOpen}
-                        onClose={() => setIsInviteModalOpen(false)}
-                        projectId={project.id}
-                        currentUserRole={user?.role}
-                        onInviteSent={() => {
-                            addToast({
-                                title: 'Invitation Sent',
-                                description: 'Team member has been invited to the project.',
-                                variant: 'success'
-                            });
-                        }}
+                    <TeamTab
+                        project={project}
+                        user={user}
+                        isPrimaryContact={isPrimaryContact}
+                        isInviteModalOpen={isInviteModalOpen}
+                        setIsInviteModalOpen={setIsInviteModalOpen}
+                        onTeamUpdated={(updatedTeam) => setProject(prev => prev ? { ...prev, team: updatedTeam } : prev)}
+                        addToast={addToast}
                     />
                 </TabsContent>
 
@@ -848,7 +1069,7 @@ export const ProjectDetail = () => {
                                                             <span className="hidden sm:inline">{assignee.name}</span>
                                                         </div>
                                                     )}
-                                                    <Badge variant="secondary" className="bg-zinc-100 text-zinc-500 font-normal border border-zinc-200">{task.status}</Badge>
+                                                    <Badge variant="secondary" className={cn("font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
 
                                                     <Button
                                                         size="sm"
@@ -891,6 +1112,18 @@ export const ProjectDetail = () => {
                                                         >
                                                             <Edit2 className="h-3.5 w-3.5" />
                                                             <span className="hidden sm:inline text-xs font-medium">Edit</span>
+                                                        </Button>
+                                                    )}
+
+                                                    {user && canDeleteTask(user) && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleDeleteTask(task.id)}
+                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                            title="Delete task"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                     )}
                                                 </div>
@@ -974,26 +1207,30 @@ export const ProjectDetail = () => {
                             )}
                         </div>
 
-                        {/* Add Task Input */}
-                        <div className="space-y-2 pt-2">
-                            <div className="flex gap-3 items-center">
-                                <div className="relative flex-1">
-                                    <Input
-                                        placeholder="Add a task... (e.g., 'Review design @john tomorrow')"
-                                        value={newTaskInput}
-                                        onChange={(e) => setNewTaskInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                                        className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
-                                    />
+                        {/* Add Task Input - Visible to all authenticated users */}
+                        {user && canCreateTask(user) && (
+                            <div className="space-y-2 pt-2">
+                                <div className="flex gap-3 items-center">
+                                    <div className="relative flex-1">
+                                        <Input
+                                            placeholder={isClient(user) ? "Add a task..." : "Add a task... (e.g., 'Review design @john tomorrow')"}
+                                            value={newTaskInput}
+                                            onChange={(e) => setNewTaskInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                                            className="pl-4 pr-10 h-11 bg-white shadow-sm border-zinc-200 focus-visible:ring-primary/20"
+                                        />
+                                    </div>
+                                    <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
+                                        <PlusCircle className="h-4 w-4 mr-2" /> Add Task
+                                    </Button>
                                 </div>
-                                <Button onClick={handleAddTask} size="default" className="h-11 px-6 shadow-sm">
-                                    <PlusCircle className="h-4 w-4 mr-2" /> Add Task
-                                </Button>
+                                {!isClient(user) && (
+                                    <p className="text-xs text-zinc-400 pl-1">
+                                        Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
+                                    </p>
+                                )}
                             </div>
-                            <p className="text-xs text-zinc-400 pl-1">
-                                Tip: Use <span className="font-medium">@name</span> to assign and words like <span className="font-medium">tomorrow</span> for deadlines.
-                            </p>
-                        </div>
+                        )}
 
                         <TaskEditModal
                             isOpen={isEditModalOpen}
@@ -1078,16 +1315,18 @@ export const ProjectDetail = () => {
                                                 </h4>
                                                 <div className="space-y-0">
                                                     {project.activityLog.slice(0, 3).map((log, i) => {
-                                                        const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                                        const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                                        const isCurrentUser = user && log.userId === user.id;
+                                                        const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                                         return (
                                                             <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
                                                                 {i !== 2 && (
                                                                     <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                 )}
-                                                                <Avatar src={user.avatar} fallback={user.name[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
                                                                 <div className="flex-1 pt-1">
                                                                     <p className="text-sm text-zinc-600 mb-1">
-                                                                        <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                        <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                                     </p>
                                                                     <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
                                                                         <Clock className="h-3 w-3" />
@@ -1110,16 +1349,18 @@ export const ProjectDetail = () => {
                                                     </h4>
                                                     <div className="space-y-0">
                                                         {project.activityLog.slice(3).map((log, i, arr) => {
-                                                            const user = TEAM_MEMBERS.find(u => u.id === log.userId) || TEAM_MEMBERS[0];
+                                                            const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
+                                                            const isCurrentUser = user && log.userId === user.id;
+                                                            const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
                                                             return (
                                                                 <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
                                                                     {i !== arr.length - 1 && (
                                                                         <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
                                                                     )}
-                                                                    <Avatar src={user.avatar} fallback={user.name[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
                                                                     <div className="flex-1 pt-1">
                                                                         <p className="text-sm text-zinc-600 mb-1">
-                                                                            <span className="font-bold text-zinc-900">{user.name}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
                                                                         </p>
                                                                         <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
                                                                             <Clock className="h-3 w-3" />

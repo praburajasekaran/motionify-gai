@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import type { Handler } from '@netlify/functions';
 
 // Initialize Resend with API key from environment
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -490,3 +491,311 @@ export async function sendCommentNotificationEmail(data: {
     html,
   });
 }
+
+export async function sendPaymentFailureNotificationEmail(data: {
+  to: string;
+  orderId: string;
+  paymentId?: string;
+  errorCode?: string;
+  errorDescription?: string;
+  proposalId?: string;
+}) {
+  const portalUrl = process.env.URL || 'http://localhost:5173';
+  const actionUrl = data.proposalId
+    ? `${portalUrl}/#/admin/proposals/${data.proposalId}`
+    : `${portalUrl}/#/admin/payments`;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: #dc2626; text-align: center;">Payment Verification Failed</h2>
+      <p>A payment verification has failed and requires attention.</p>
+
+      <div style="background-color: #fef2f2; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #dc2626;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Order ID:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.orderId}</td>
+          </tr>
+          ${data.paymentId ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Payment ID:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.paymentId}</td>
+          </tr>
+          ` : ''}
+          ${data.errorCode ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Error Code:</td>
+            <td style="padding: 8px 0; color: #dc2626; font-weight: bold;">${data.errorCode}</td>
+          </tr>
+          ` : ''}
+          ${data.errorDescription ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Error:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.errorDescription}</td>
+          </tr>
+          ` : ''}
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Time:</td>
+            <td style="padding: 8px 0; color: #111827;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${actionUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View in Admin Portal</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        This is an automated notification. Please investigate the failed payment.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Admin Notifications
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `[ALERT] Payment Failed - Order ${data.orderId}`,
+    html,
+  });
+}
+
+export async function sendPaymentSuccessEmail(data: {
+  to: string;
+  clientName: string;
+  projectNumber: string;
+  amount: string;
+  currency: string;
+  paymentType: 'advance' | 'balance';
+  projectUrl: string;
+}) {
+  const paymentTypeLabel = data.paymentType === 'advance' ? 'Advance Payment' : 'Balance Payment';
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: #16a34a; text-align: center;">Payment Successful!</h2>
+      <p>Hi <strong>${data.clientName}</strong>,</p>
+      <p>Thank you! Your ${paymentTypeLabel.toLowerCase()} for project <strong>${data.projectNumber}</strong> has been received.</p>
+
+      <div style="background-color: #f0fdf4; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #16a34a;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Amount Paid:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #166534; font-size: 18px;">${data.currency} ${data.amount}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Payment Type:</td>
+            <td style="padding: 8px 0; color: #111827;">${paymentTypeLabel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Project:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.projectNumber}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${data.projectUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Project</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        If you have any questions, please contact us at <a href="mailto:billing@motionify.studio" style="color: #7c3aed;">billing@motionify.studio</a>.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Studio<br>
+        <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: `Payment Confirmed - ${data.projectNumber} (${data.currency} ${data.amount})`,
+    html,
+  });
+}
+
+export async function sendProposalStatusChangeEmail(data: {
+  to: string;
+  recipientName: string;
+  proposalId: string;
+  proposalTitle: string;
+  newStatus: 'sent' | 'accepted' | 'rejected' | 'changes_requested';
+  isClientRecipient: boolean;
+  changedBy?: string;
+  feedback?: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const proposalUrl = `${appUrl}/proposal/${data.proposalId}`;
+
+  // Map status to user-friendly labels
+  const statusLabels = {
+    sent: 'Awaiting Review',
+    accepted: 'Accepted',
+    rejected: 'Declined',
+    changes_requested: 'Revision Requested',
+  };
+
+  // Define status-specific colors and messages
+  const statusInfo = {
+    sent: { color: '#f59e0b', bgColor: '#fef3c7', greeting: 'Your proposal has been sent' },
+    accepted: { color: '#16a34a', bgColor: '#dcfce7', greeting: 'Great news!' },
+    rejected: { color: '#dc2626', bgColor: '#fee2e2', greeting: 'Update on your proposal' },
+    changes_requested: { color: '#ea580c', bgColor: '#ffedd5', greeting: 'Feedback received' },
+  };
+
+  const info = statusInfo[data.newStatus];
+  const statusLabel = statusLabels[data.newStatus];
+
+  // Email subject - prefix with [Client Response] for admin recipients
+  const subjectPrefix = data.isClientRecipient ? '' : '[Client Response] ';
+  const subject = `${subjectPrefix}Proposal ${statusLabel}: ${data.proposalTitle}`;
+
+  // Dynamic message based on recipient and status
+  let message = '';
+  if (data.isClientRecipient) {
+    // Client receiving notification about admin status change
+    if (data.newStatus === 'sent') {
+      message = 'Your proposal is ready for review.';
+    } else {
+      message = `Your proposal status has been updated to <strong>${statusLabel}</strong>.`;
+    }
+  } else {
+    // Admin receiving notification about client response
+    message = `<strong>${data.changedBy || 'Client'}</strong> has responded to the proposal with status: <strong>${statusLabel}</strong>.`;
+  }
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+        </div>
+      </div>
+
+      <h2 style="color: ${info.color}; text-align: center;">${info.greeting}</h2>
+      <p>Hi <strong>${data.recipientName}</strong>,</p>
+      <p>${message}</p>
+
+      <div style="background-color: ${info.bgColor}; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid ${info.color};">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 140px;">Proposal:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #111827;">${data.proposalTitle}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">New Status:</td>
+            <td style="padding: 8px 0; color: ${info.color}; font-weight: bold;">${statusLabel}</td>
+          </tr>
+          ${data.feedback ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; vertical-align: top;">Feedback:</td>
+            <td style="padding: 8px 0; color: #111827;">${data.feedback}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${proposalUrl}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Proposal</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        Have questions? Reply to this email or contact us at <a href="mailto:hello@motionify.studio" style="color: #7c3aed;">hello@motionify.studio</a>.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        Motionify Studio<br>
+        <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    html,
+  });
+}
+
+/**
+ * POST handler for cross-service email sending
+ * Called by webhook handlers to send payment emails
+ */
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const { type, ...data } = body;
+
+    let result;
+    switch (type) {
+      case 'payment_failure':
+        result = await sendPaymentFailureNotificationEmail({
+          to: data.to || process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com',
+          orderId: data.data?.orderId || 'unknown',
+          paymentId: data.data?.paymentId,
+          errorCode: data.data?.errorCode,
+          errorDescription: data.data?.errorDescription,
+          proposalId: data.data?.proposalId,
+        });
+        break;
+
+      case 'payment_success':
+        result = await sendPaymentSuccessEmail({
+          to: data.to,
+          clientName: data.clientName,
+          projectNumber: data.projectNumber,
+          amount: data.amount,
+          currency: data.currency,
+          paymentType: data.paymentType,
+          projectUrl: data.projectUrl,
+        });
+        break;
+
+      default:
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: `Unknown email type: ${type}` }),
+        };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, emailId: result?.id }),
+    };
+  } catch (error) {
+    console.error('Send email handler error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to send email' }),
+    };
+  }
+};

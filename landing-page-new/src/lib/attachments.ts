@@ -20,7 +20,9 @@ export interface PendingAttachment {
 
 export async function getAttachments(commentId: string): Promise<Attachment[]> {
     try {
-        const response = await fetch(`${API_BASE}/attachments?commentId=${encodeURIComponent(commentId)}`);
+        const response = await fetch(`${API_BASE}/attachments?commentId=${encodeURIComponent(commentId)}`, {
+            credentials: 'include',
+        });
         if (!response.ok) return [];
         const data = await response.json();
         return data.attachments || [];
@@ -45,6 +47,7 @@ export async function createAttachment(
                 'Content-Type': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
+            credentials: 'include',
             body: JSON.stringify({ commentId, fileName, fileType, fileSize, r2Key }),
         });
         if (!response.ok) return null;
@@ -65,6 +68,7 @@ export async function getPresignedUploadUrl(
         const response = await fetch(`${API_BASE}/r2-presign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ fileName, fileType, projectId, folder: 'comment-attachments' }),
         });
         if (!response.ok) return null;
@@ -82,6 +86,7 @@ export async function getAttachmentDownloadUrl(attachmentId: string): Promise<{ 
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
+            credentials: 'include',
         });
         if (!response.ok) return null;
         const data = await response.json();

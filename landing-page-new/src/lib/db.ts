@@ -20,9 +20,15 @@ export function getPool(): Pool {
             throw new Error('DATABASE_URL environment variable is not set');
         }
 
+        const isProduction = process.env.NODE_ENV === 'production';
+
         pool = new Pool({
             connectionString: databaseUrl,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+            ssl: isProduction
+                ? true // Production: enforce SSL with certificate validation
+                : process.env.DATABASE_SSL === 'true'
+                    ? { rejectUnauthorized: false } // Development: SSL with self-signed support
+                    : undefined, // Development: no SSL
             max: 20, // Maximum number of clients in the pool
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,

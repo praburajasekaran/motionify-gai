@@ -1,16 +1,12 @@
 import pg from 'pg';
-import { requireAuth } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { sendCommentNotificationEmail } from './send-email';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-    queryStringParameters: Record<string, string> | null;
-}
 
 interface Comment {
     id: string;
@@ -43,19 +39,13 @@ const isValidUUID = (id: string): boolean => {
 const MAX_CONTENT_LENGTH = 10000;
 const MIN_CONTENT_LENGTH = 1;
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<{
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}> => {
+export const handler = compose(
+    withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+    withAuth(),
+    withRateLimit(RATE_LIMITS.api, 'comments')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
 
     let client;
 
@@ -135,49 +125,14 @@ export const handler = async (
         }
 
         if (event.httpMethod === 'POST') {
-            const authResult = await requireAuth(event);
+            // After withAuth() middleware, auth is guaranteed
+            const user = auth!.user;
 
-            if (!('user' in authResult)) {
-                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
-            }
-
-            const user = authResult.user;
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { proposalId, content } = body;
-
-            if (!proposalId || !isValidUUID(proposalId)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Valid proposalId is required',
-                    }),
-                };
-            }
-
-            if (!content || typeof content !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Content is required and must be a string',
-                    }),
-                };
-            }
+            const validation = validateRequest(event.body, SCHEMAS.comment.create, origin);
+            if (!validation.success) return validation.response;
+            const { proposalId, content } = validation.data;
 
             const trimmedContent = content.trim();
-            if (trimmedContent.length < MIN_CONTENT_LENGTH || trimmedContent.length > MAX_CONTENT_LENGTH) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `Content must be between ${MIN_CONTENT_LENGTH} and ${MAX_CONTENT_LENGTH} characters`,
-                    }),
-                };
-            }
 
             // Determine author_type based on user role
             const authorType = user.role === 'client' ? 'CLIENT' : 'ADMIN';
@@ -302,49 +257,14 @@ export const handler = async (
         }
 
         if (event.httpMethod === 'PUT') {
-            const authResult = await requireAuth(event);
+            // After withAuth() middleware, auth is guaranteed
+            const user = auth!.user;
 
-            if (!('user' in authResult)) {
-                return (authResult as { success: false; response: { statusCode: number; headers: Record<string, string>; body: string } }).response;
-            }
-
-            const user = authResult.user;
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { id, content } = body;
-
-            if (!id || !isValidUUID(id)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Valid comment ID is required',
-                    }),
-                };
-            }
-
-            if (!content || typeof content !== 'string') {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Content is required and must be a string',
-                    }),
-                };
-            }
+            const validation = validateRequest(event.body, SCHEMAS.comment.update, origin);
+            if (!validation.success) return validation.response;
+            const { id, content } = validation.data;
 
             const trimmedContent = content.trim();
-            if (trimmedContent.length < MIN_CONTENT_LENGTH || trimmedContent.length > MAX_CONTENT_LENGTH) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: `Content must be between ${MIN_CONTENT_LENGTH} and ${MAX_CONTENT_LENGTH} characters`,
-                    }),
-                };
-            }
 
             const commentCheck = await client.query(
                 'SELECT author_id, content FROM proposal_comments WHERE id = $1',
@@ -428,4 +348,4 @@ export const handler = async (
     } finally {
         if (client) await client.end();
     }
-};
+});

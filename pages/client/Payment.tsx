@@ -80,13 +80,17 @@ export function Payment() {
                     proposalId: proposal.id,
                     paymentType: 'advance' // Hardcoded for now based on UI
                 }),
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
             });
 
             const orderData = await response.json();
 
             if (!response.ok) {
-                throw new Error(orderData.error || 'Failed to create order');
+                const errorMsg = orderData.details
+                    ? `${orderData.error}: ${orderData.details}`
+                    : orderData.error || 'Failed to create order';
+                throw new Error(errorMsg);
             }
 
             // 2. Initialize Razorpay
@@ -99,21 +103,31 @@ export function Payment() {
                 order_id: orderData.razorpayOrderId,
                 handler: async function (response: any) {
                     try {
+                        console.log('Razorpay response:', response);
+                        const verifyPayload = {
+                            paymentId: orderData.id,
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature
+                        };
+                        console.log('Verify payload:', verifyPayload);
                         const verifyResponse = await fetch('/.netlify/functions/payments/verify', {
                             method: 'POST',
-                            body: JSON.stringify({
-                                paymentId: orderData.id,
-                                razorpayOrderId: response.razorpay_order_id,
-                                razorpayPaymentId: response.razorpay_payment_id,
-                                razorpaySignature: response.razorpay_signature
-                            }),
-                            headers: { 'Content-Type': 'application/json' }
+                            body: JSON.stringify(verifyPayload),
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include'
                         });
 
                         if (verifyResponse.ok) {
                             setPaymentComplete(true);
                         } else {
-                            alert('Payment verification failed. Please contact support.');
+                            const errorData = await verifyResponse.json().catch(() => ({}));
+                            console.error('Verification failed:', errorData);
+                            const errorDetails = errorData.error?.details?.map((d: any) => d.message).join(', ')
+                                || errorData.error?.message
+                                || errorData.error
+                                || 'Unknown error';
+                            alert(`Payment verification failed: ${errorDetails}`);
                             setIsProcessing(false);
                         }
                     } catch (error) {

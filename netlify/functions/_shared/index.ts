@@ -2,7 +2,7 @@
  * Shared Modules Index
  *
  * Re-exports all shared functionality for easy importing:
- * import { getPool, getCorsHeaders, requireAuth } from './_shared';
+ * import { query, getCorsHeaders, requireAuth } from './_shared';
  */
 
 // Database
@@ -101,3 +101,27 @@ export {
     logResponse,
 } from './logger';
 export type { LogLevel } from './logger';
+
+// Sentry Error Monitoring
+export {
+    initSentry,
+    captureError,
+    addBreadcrumb,
+    flushSentry,
+    setUser,
+    clearUser,
+    generateErrorId,
+} from './sentry';
+
+// Environment Validation
+export {
+    env,
+    envWarnings,
+    envValid,
+    isProduction,
+    isDevelopment,
+    isDeployPreview,
+    isBranchDeploy,
+    validateEnv,
+} from './env';
+export type { Env } from './env';

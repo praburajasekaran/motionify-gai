@@ -11,7 +11,6 @@
 import {
     query,
     transaction,
-    validateCors,
     getCorsHeaders,
     requireAuthAndRole,
     uuidSchema,
@@ -20,6 +19,8 @@ import {
     createLogger,
     getCorrelationId,
 } from './_shared';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -39,26 +40,15 @@ const deleteUserSchema = z.object({
     reason: z.string().max(500).optional(),
 });
 
-export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
+export const handler = compose(
+    withCORS(['DELETE']),
+    withSuperAdmin(),
+    withRateLimit(RATE_LIMITS.apiStrict, 'users_delete')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-delete', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
-
-    // Handle CORS
-    const corsResult = validateCors(event);
-    if (corsResult) {
-        return corsResult;
-    }
-
-    // Only allow DELETE
-    if (event.httpMethod !== 'DELETE') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-        };
-    }
 
     // Extract user ID from path
     const pathParts = event.path.split('/');
@@ -74,15 +64,8 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         };
     }
 
-    // Require Super Admin role
-    const authResult = await requireAuthAndRole(event, ['super_admin']);
-    if (!authResult.success) {
-        logger.warn('Unauthorized user deletion attempt', { targetUserId: userId });
-        return authResult.response;
-    }
-
     // Prevent self-deactivation
-    if (authResult.user.id === userId) {
+    if (auth?.user?.userId === userId) {
         return {
             statusCode: 400,
             headers,
@@ -144,7 +127,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             logger.info('User deactivated', {
                 userId,
                 email: user.email.slice(0, 3) + '***',
-                deactivatedBy: authResult.user.email,
                 reason,
             });
         });
@@ -176,4 +158,4 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }),
         };
     }
-};
+});

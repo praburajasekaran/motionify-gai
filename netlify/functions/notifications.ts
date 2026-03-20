@@ -10,21 +10,13 @@
  */
 
 import pg from 'pg';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest, uuidSchema } from './_shared/validation';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string | null;
-    queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
 
 const getDbClient = () => {
     const DATABASE_URL = process.env.DATABASE_URL;
@@ -38,25 +30,13 @@ const getDbClient = () => {
     });
 };
 
-const isValidUUID = (id: string): boolean => {
-    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-    return uuidRegex.test(id);
-};
-
-export const handler = async (
-    event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
-        'Content-Type': 'application/json',
-    };
-
-    // Handle CORS preflight
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
+export const handler = compose(
+    withCORS(['GET', 'PATCH', 'OPTIONS']),
+    withAuth(),
+    withRateLimit(RATE_LIMITS.api, 'notifications')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+    const origin = event.headers.origin || event.headers.Origin;
+    const headers = getCorsHeaders(origin);
 
     let client;
 
@@ -69,7 +49,9 @@ export const handler = async (
             const params = event.queryStringParameters || {};
             const { userId, limit = '20' } = params;
 
-            if (!userId || !isValidUUID(userId)) {
+            // Validate userId using Zod schema
+            const userIdResult = uuidSchema.safeParse(userId);
+            if (!userIdResult.success) {
                 return {
                     statusCode: 400,
                     headers,
@@ -131,22 +113,18 @@ export const handler = async (
         // PATCH - Mark notification(s) as read
         if (event.httpMethod === 'PATCH') {
             const params = event.queryStringParameters || {};
-            const body = event.body ? JSON.parse(event.body) : {};
-            const { userId, notificationId } = body;
             const markAll = params.markAll === 'true';
 
-            if (!userId || !isValidUUID(userId)) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ success: false, error: 'Valid userId is required' }),
-                };
-            }
+            // Use appropriate schema based on operation
+            const schema = markAll ? SCHEMAS.notification.markAllRead : SCHEMAS.notification.markRead;
+            const validation = validateRequest(event.body, schema, origin);
+            if (!validation.success) return validation.response;
+            const { userId, notificationId } = validation.data;
 
             if (markAll) {
                 // Mark all as read
                 const result = await client.query(
-                    `UPDATE notifications 
+                    `UPDATE notifications
            SET is_read = true, read_at = NOW()
            WHERE user_id = $1 AND is_read = false
            RETURNING id`,
@@ -163,17 +141,9 @@ export const handler = async (
                     }),
                 };
             } else {
-                // Mark single notification as read
-                if (!notificationId || !isValidUUID(notificationId)) {
-                    return {
-                        statusCode: 400,
-                        headers,
-                        body: JSON.stringify({ success: false, error: 'Valid notificationId is required' }),
-                    };
-                }
-
+                // Mark single notification as read - notificationId validated by schema
                 const result = await client.query(
-                    `UPDATE notifications 
+                    `UPDATE notifications
            SET is_read = true, read_at = NOW()
            WHERE id = $1 AND user_id = $2
            RETURNING id`,
@@ -218,4 +188,4 @@ export const handler = async (
     } finally {
         if (client) await client.end();
     }
-};
+});

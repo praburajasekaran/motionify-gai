@@ -12,6 +12,7 @@
  *   npx tsx database/migrate.ts status  # Show migration status
  */
 
+import 'dotenv/config';
 import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
@@ -59,9 +60,15 @@ function getPool(): pg.Pool {
         throw new Error('DATABASE_URL environment variable is required');
     }
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     return new Pool({
         connectionString: DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        ssl: isProduction
+            ? true // Production: enforce SSL with certificate validation
+            : process.env.DATABASE_SSL === 'true'
+                ? { rejectUnauthorized: false } // Development: SSL with self-signed support
+                : false, // Development: no SSL
     });
 }
 

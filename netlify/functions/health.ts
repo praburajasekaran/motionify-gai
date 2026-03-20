@@ -30,6 +30,7 @@ interface HealthStatus {
     status: 'healthy' | 'degraded' | 'unhealthy';
     timestamp: string;
     version: string;
+    environment: string;
     checks: {
         database: { status: 'pass' | 'fail'; latencyMs?: number; error?: string };
         environment: { status: 'pass' | 'fail'; missing?: string[] };
@@ -37,6 +38,7 @@ interface HealthStatus {
             email: { status: 'pass' | 'warn' | 'fail'; configured: boolean };
             storage: { status: 'pass' | 'warn' | 'fail'; configured: boolean };
             payment: { status: 'pass' | 'warn' | 'fail'; configured: boolean };
+            errorTracking: { status: 'pass' | 'warn' | 'fail'; configured: boolean };
         };
     };
 }
@@ -76,6 +78,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         status: 'healthy',
         timestamp: new Date().toISOString(),
         version: process.env.npm_package_version || '1.0.0',
+        environment: process.env.CONTEXT || 'development',
         checks: {
             database: { status: 'pass' },
             environment: { status: 'pass' },
@@ -83,6 +86,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 email: { status: 'pass', configured: false },
                 storage: { status: 'pass', configured: false },
                 payment: { status: 'pass', configured: false },
+                errorTracking: { status: 'pass', configured: false },
             },
         },
     };
@@ -151,6 +155,16 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         configured: razorpayConfigured,
     };
     if (!razorpayConfigured && healthStatus.status === 'healthy') {
+        healthStatus.status = 'degraded';
+    }
+
+    // Check error tracking service (Sentry)
+    const sentryConfigured = !!process.env.SENTRY_DSN;
+    healthStatus.checks.services.errorTracking = {
+        status: sentryConfigured ? 'pass' : 'warn',
+        configured: sentryConfigured,
+    };
+    if (!sentryConfigured && healthStatus.status === 'healthy') {
         healthStatus.status = 'degraded';
     }
 

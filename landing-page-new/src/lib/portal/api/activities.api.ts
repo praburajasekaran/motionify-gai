@@ -73,6 +73,7 @@ export async function createActivity(params: CreateActivityParams): Promise<Acti
     const response = await fetch(`${apiBase}/activities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         ...params,
         details: params.details || {},
@@ -111,7 +112,9 @@ export async function fetchActivities(params: {
     if (params.limit) searchParams.set('limit', params.limit.toString());
 
     const apiBase = getApiBase();
-    const response = await fetch(`${apiBase}/activities?${searchParams.toString()}`);
+    const response = await fetch(`${apiBase}/activities?${searchParams.toString()}`, {
+      credentials: 'include',
+    });
 
     if (!response.ok) {
       const error = await response.json();

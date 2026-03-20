@@ -1,162 +1,132 @@
-import pg from 'pg';
+import { compose, withCORS, withAuth, withRateLimit, withValidation, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { query } from './_shared/db';
+import { getCorsHeaders } from './_shared/cors';
 
-const { Client } = pg;
+export const handler = compose(
+  withCORS(['GET', 'PUT']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'user_settings')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    body: string;
-    queryStringParameters: Record<string, string> | null;
-}
+  const userId = auth!.user!.userId;
 
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
+  try {
+    if (event.httpMethod === 'GET') {
+      // Fetch settings
+      const result = await query(
+        `SELECT * FROM user_preferences WHERE user_id = $1`,
+        [userId]
+      );
 
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
+      // If no settings exist, return defaults
+      if (result.rows.length === 0) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            preferences: {
+              user_id: userId,
+              email_task_assignment: true,
+              email_mention: true,
+              email_project_update: true,
+              email_marketing: false,
+              notification_sound: true,
+              notification_desktop: true,
+            },
+          }),
+        };
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          preferences: result.rows[0],
+        }),
+      };
     }
 
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-};
+    // PUT - Update settings with validation
+    if (event.httpMethod === 'PUT') {
+      // Validate request body
+      const validation = (await import('./_shared/validation')).validateRequest(
+        event.body,
+        SCHEMAS.userSettings.update,
+        origin
+      );
 
-export const handler = async (
-    event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-        'Content-Type': 'application/json',
+      if (!validation.success) {
+        return validation.response;
+      }
+
+      const updates = validation.data;
+
+      // Build dynamic update query
+      const fields = Object.keys(updates);
+      if (fields.length === 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            error: {
+              code: 'NO_UPDATES',
+              message: 'No fields to update',
+            },
+          }),
+        };
+      }
+
+      const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
+      const values = [userId, ...fields.map(field => updates[field as keyof typeof updates])];
+
+      // Upsert settings
+      const result = await query(
+        `INSERT INTO user_preferences (user_id, ${fields.join(', ')})
+         VALUES ($1, ${fields.map((_, i) => `$${i + 2}`).join(', ')})
+         ON CONFLICT (user_id)
+         DO UPDATE SET ${setClause}, updated_at = NOW()
+         RETURNING *`,
+        values
+      );
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          preferences: result.rows[0],
+        }),
+      };
+    }
+
+    // Should never reach here due to withCORS middleware
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({
+        error: {
+          code: 'METHOD_NOT_ALLOWED',
+          message: 'Method not allowed',
+        },
+      }),
     };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers, body: '' };
-    }
-
-    const { userId } = event.queryStringParameters || {};
-
-    if (!userId) {
-        return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ success: false, error: 'User ID is required' }),
-        };
-    }
-
-    const client = getDbClient();
-
-    try {
-        await client.connect();
-
-        if (event.httpMethod === 'GET') {
-            // Fetch settings
-            const result = await client.query(
-                `SELECT * FROM user_preferences WHERE user_id = $1`,
-                [userId]
-            );
-
-            // If no settings exist, return defaults (all true based on typical requirements, or use generic defaults)
-            if (result.rows.length === 0) {
-                // Consider creating default row here or just returning defaults
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({
-                        success: true,
-                        preferences: {
-                            email_task_assignment: true,
-                            email_mention: true,
-                            email_project_update: true,
-                            email_marketing: false
-                        }
-                    }),
-                };
-            }
-
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({
-                    success: true,
-                    preferences: result.rows[0],
-                }),
-            };
-
-        } else if (event.httpMethod === 'PUT') {
-            // Update settings
-            const body = JSON.parse(event.body || '{}');
-            const {
-                email_task_assignment,
-                email_mention,
-                email_project_update,
-                email_marketing
-            } = body;
-
-            // Upsert / Insert or Update
-            const query = `
-                INSERT INTO user_preferences (
-                    user_id, 
-                    email_task_assignment, 
-                    email_mention, 
-                    email_project_update, 
-                    email_marketing,
-                    updated_at
-                )
-                VALUES ($1, $2, $3, $4, $5, NOW())
-                ON CONFLICT (user_id) DO UPDATE SET
-                    email_task_assignment = EXCLUDED.email_task_assignment,
-                    email_mention = EXCLUDED.email_mention,
-                    email_project_update = EXCLUDED.email_project_update,
-                    email_marketing = EXCLUDED.email_marketing,
-                    updated_at = NOW()
-                RETURNING *;
-            `;
-
-            const result = await client.query(query, [
-                userId,
-                // Use existing values if not provided, or default to true/false logic if strictly typed
-                // But for simplicity assume body has boolean values or undefined
-                email_task_assignment ?? true,
-                email_mention ?? true,
-                email_project_update ?? true,
-                email_marketing ?? false
-            ]);
-
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({
-                    success: true,
-                    preferences: result.rows[0],
-                }),
-            };
-        } else {
-            return {
-                statusCode: 405,
-                headers,
-                body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-            };
-        }
-
-    } catch (error) {
-        console.error('users-settings error:', error);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({
-                success: false,
-                error: 'Failed to process settings request',
-            }),
-        };
-    } finally {
-        await client.end();
-    }
-};
+  } catch (error) {
+    console.error('User settings error:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to process user settings',
+        },
+      }),
+    };
+  }
+});

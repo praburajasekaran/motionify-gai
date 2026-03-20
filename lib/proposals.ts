@@ -41,7 +41,9 @@ export interface Proposal {
 
 export async function getProposals(): Promise<Proposal[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposals`);
+    const response = await fetch(`${API_BASE_URL}/proposals`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -70,7 +72,9 @@ export async function getProposals(): Promise<Proposal[]> {
 
 export async function getProposalById(id: string): Promise<Proposal | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`);
+    const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -100,7 +104,9 @@ export async function getProposalById(id: string): Promise<Proposal | null> {
 
 export async function getProposalsByInquiryId(inquiryId: string): Promise<Proposal[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/proposals?inquiryId=${inquiryId}`);
+    const response = await fetch(`${API_BASE_URL}/proposals?inquiryId=${inquiryId}`, {
+      credentials: 'include',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -161,11 +167,15 @@ export async function createProposal(data: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include',
   });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to create proposal');
+    // Surface detailed validation errors
+    const details = error.error?.details?.map((d: any) => `${d.field}: ${d.message}`).join(', ');
+    const errorMessage = details || error.error?.message || error.message || 'Failed to create proposal';
+    throw new Error(errorMessage);
   }
 
   const result = await response.json();
@@ -204,6 +214,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snakeCaseUpdates),
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -241,6 +252,7 @@ export async function updateProposalStatus(
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, feedback: additionalData?.feedback }),
+    credentials: 'include',
   });
 
   if (!response.ok) {

@@ -2,7 +2,7 @@
  * Shared Authentication Module
  *
  * Provides centralized authentication with:
- * - JWT verification and creation
+ * - JWT verification and creation (both Bearer token and cookie-based)
  * - Role-based authorization middleware
  * - Session validation
  */
@@ -10,6 +10,10 @@
 import crypto from 'crypto';
 import { query } from './db';
 import { getCorsHeaders } from './cors';
+import { verifyJWT as verifyJWTFromLib, extractTokenFromCookie } from './jwt';
+import { createLogger } from './logger';
+
+const logger = createLogger('auth-middleware');
 
 // JWT secret - MUST be set in production
 function getJwtSecret(): string {
@@ -344,5 +348,133 @@ export async function requireAuthAndRole(
     return {
         success: true,
         user: authResult.user,
+    };
+}
+
+// ==========================================
+// Cookie-Based Authentication (New)
+// ==========================================
+
+export interface CookieAuthResult {
+    authorized: boolean;
+    user?: {
+        userId: string;
+        email: string;
+        role: string;
+        fullName: string;
+    };
+    error?: string;
+    statusCode?: number;
+}
+
+export interface NetlifyEvent {
+    headers: Record<string, string>;
+    [key: string]: any;
+}
+
+/**
+ * Extract and verify JWT from request cookies (httpOnly cookie-based auth)
+ */
+export async function requireAuthFromCookie(event: NetlifyEvent): Promise<CookieAuthResult> {
+    const cookieHeader = event.headers.cookie || event.headers.Cookie;
+    const token = extractTokenFromCookie(cookieHeader);
+
+    if (!token) {
+        return {
+            authorized: false,
+            error: 'No authentication token provided',
+            statusCode: 401,
+        };
+    }
+
+    const result = verifyJWTFromLib(token);
+
+    if (!result.valid) {
+        return {
+            authorized: false,
+            error: result.error || 'Invalid authentication token',
+            statusCode: 401,
+        };
+    }
+
+    return {
+        authorized: true,
+        user: {
+            userId: result.payload!.userId,
+            email: result.payload!.email,
+            role: result.payload!.role,
+            fullName: result.payload!.fullName,
+        },
+    };
+}
+
+/**
+ * Verify user is Super Admin (cookie-based)
+ */
+export async function requireSuperAdmin(event: NetlifyEvent): Promise<CookieAuthResult> {
+    const auth = await requireAuthFromCookie(event);
+
+    if (!auth.authorized) {
+        return auth;
+    }
+
+    if (auth.user!.role !== 'super_admin') {
+        logger.warn('Forbidden: Super Admin required', {
+            userId: auth.user!.userId,
+            role: auth.user!.role,
+        });
+
+        return {
+            authorized: false,
+            error: 'Forbidden: Super Admin access required',
+            statusCode: 403,
+        };
+    }
+
+    return auth;
+}
+
+/**
+ * Verify user is Project Manager or Super Admin (cookie-based)
+ */
+export async function requireProjectManager(event: NetlifyEvent): Promise<CookieAuthResult> {
+    const auth = await requireAuthFromCookie(event);
+
+    if (!auth.authorized) {
+        return auth;
+    }
+
+    const allowedRoles = ['super_admin', 'project_manager'];
+    if (!allowedRoles.includes(auth.user!.role)) {
+        logger.warn('Forbidden: Project Manager required', {
+            userId: auth.user!.userId,
+            role: auth.user!.role,
+        });
+
+        return {
+            authorized: false,
+            error: 'Forbidden: Project Manager or Super Admin access required',
+            statusCode: 403,
+        };
+    }
+
+    return auth;
+}
+
+/**
+ * Create standardized unauthorized response for cookie-based auth
+ */
+export function createUnauthorizedResponseForCookie(auth: CookieAuthResult, origin?: string) {
+    const headers = getCorsHeaders(origin);
+
+    return {
+        statusCode: auth.statusCode || 401,
+        headers,
+        body: JSON.stringify({
+            error: {
+                code: auth.statusCode === 403 ? 'FORBIDDEN' : 'UNAUTHORIZED',
+                message: auth.error || 'Authentication required',
+            },
+        }),
     };
 }

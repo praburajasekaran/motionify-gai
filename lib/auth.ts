@@ -33,7 +33,7 @@ export interface MagicLinkVerifyResponse {
     success: boolean;
     data?: {
         user: User;
-        token: string;
+        token?: string;  // Optional - only for backwards compatibility
         expiresAt: string;
         inquiryCreated?: boolean;
         inquiryId?: string;
@@ -45,7 +45,7 @@ export interface MagicLinkVerifyResponse {
 
 export interface AuthSession {
     user: User;
-    token: string;
+    token?: string;  // Optional - now using httpOnly cookies
     expiresAt: string;
 }
 
@@ -120,7 +120,9 @@ export function getStoredUser(): User | null {
  */
 export function storeAuthSession(session: AuthSession): void {
     try {
-        localStorage.setItem(TOKEN_KEY, session.token);
+        if (session.token) {
+            localStorage.setItem(TOKEN_KEY, session.token);
+        }
         localStorage.setItem(USER_KEY, JSON.stringify(session.user));
         localStorage.setItem(EXPIRES_KEY, session.expiresAt);
     } catch (error) {
@@ -209,6 +211,7 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',  // Required for browser to accept Set-Cookie
             body: JSON.stringify({ token, email }),
         });
 
@@ -226,18 +229,14 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
         const responseData = data.data || data;
         const user = transformUser(responseData.user);
 
-        // Store the session
-        storeAuthSession({
-            user,
-            token: responseData.token,
-            expiresAt: responseData.expiresAt,
-        });
+        // Store user info in localStorage (token is now in httpOnly cookie)
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        localStorage.setItem(EXPIRES_KEY, responseData.expiresAt);
 
         return {
             success: true,
             data: {
                 user,
-                token: responseData.token,
                 expiresAt: responseData.expiresAt,
                 inquiryCreated: responseData.inquiryCreated,
                 inquiryId: responseData.inquiryId,
@@ -260,63 +259,4 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
  */
 export function logout(): void {
     clearAuthSession();
-}
-
-// ============================================================================
-// Development Mode Support
-// ============================================================================
-
-// Mock users for development/testing
-export const MOCK_USERS: Record<string, User> = {
-    superAdmin: {
-        id: '9959a830-6a67-4fbc-96b0-da09ed9d58fe',
-        name: 'Super Admin',
-        email: 'admin@motionify.co',
-        role: 'super_admin',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-        projectTeamMemberships: {},
-    },
-    motionifySupport: {
-        id: 'f81e3f1c-218d-4a61-a607-f1e7fb8d1479',
-        name: 'Dana S',
-        email: 'dana.s@motionify.io',
-        role: 'project_manager',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=dana',
-        projectTeamMemberships: {},
-    },
-    client: {
-        id: 'e1e1e3de-fae9-4684-8bab-2fb03826029e',
-        name: 'Alex Client',
-        email: 'alex@acmecorp.com',
-        role: 'client',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
-        projectTeamMemberships: {
-            'c0d3d714-440a-4578-baee-7dfc0d780436': {
-                projectId: 'c0d3d714-440a-4578-baee-7dfc0d780436',
-                isPrimaryContact: true,
-                joinedAt: '2025-01-01',
-            },
-        },
-    },
-};
-
-/**
- * Development helper: Set a mock user for testing
- * This should only be used in development/testing
- */
-export function setMockUser(user: User): void {
-    if (!isDevelopment) {
-        console.warn('setMockUser should only be used in development');
-    }
-
-    // Create a mock session that expires in 30 days
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    storeAuthSession({
-        user,
-        token: 'mock-dev-token',
-        expiresAt,
-    });
-
-    window.location.reload();
 }

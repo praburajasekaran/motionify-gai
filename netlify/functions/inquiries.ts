@@ -1,20 +1,12 @@
 import pg from 'pg';
+import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
+import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 interface QuizSelections {
   niche?: string | null;
@@ -69,27 +61,42 @@ const generateInquiryNumber = async (client: pg.Client): Promise<string> => {
   return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+  withRateLimit(RATE_LIMITS.api, 'inquiries')
+)(async (event: NetlifyEvent) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
   try {
     await client.connect();
 
+    // Conditional authentication: GET and PUT require auth, POST is public
+    let auth: CookieAuthResult | null = null;
+    if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
+      auth = await requireAuthFromCookie(event);
+
+      if (!auth.authorized) {
+        return {
+          statusCode: auth.statusCode || 401,
+          headers,
+          body: JSON.stringify({
+            error: auth.error || 'Authentication required'
+          }),
+        };
+      }
+    }
+    // POST requests proceed without auth (public contact form)
+
     if (event.httpMethod === 'GET') {
       const { clientUserId } = event.queryStringParameters || {};
+
+      // auth is guaranteed to be non-null and authorized for GET
+      const userRole = auth!.user?.role;
+      const userId = auth!.user?.userId;
+      const isAdmin = userRole === 'super_admin' || userRole === 'project_manager';
 
       // Check if we're fetching a specific inquiry by ID
       const pathParts = event.path.split('/');
@@ -113,14 +120,44 @@ export const handler = async (
           };
         }
 
+        const inquiry = result.rows[0];
+
+        // Ownership check for individual lookup: admins can access any, clients only their own
+        if (!isAdmin && inquiry.client_user_id && inquiry.client_user_id !== userId) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Cannot access this inquiry' }),
+          };
+        }
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows[0]),
+          body: JSON.stringify(inquiry),
         };
       }
 
-      // Otherwise, list all inquiries
+      // Listing inquiries - apply role-based access control
+      // Listing all inquiries (no clientUserId filter) requires admin role
+      if (!clientUserId && !isAdmin) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Admin access required to list all inquiries' }),
+        };
+      }
+
+      // If client is filtering by clientUserId, verify it matches their own ID
+      if (clientUserId && !isAdmin && clientUserId !== userId) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Cannot access other users inquiries' }),
+        };
+      }
+
+      // Build query based on filters
       let query = 'SELECT * FROM inquiries ORDER BY created_at DESC';
       const params: any[] = [];
 
@@ -144,42 +181,83 @@ export const handler = async (
     }
 
     if (event.httpMethod === 'POST') {
-      const payload: CreateInquiryPayload = JSON.parse(event.body || '{}');
+      const body = JSON.parse(event.body || '{}');
 
-      if (!payload.contactName || !payload.contactEmail) {
+      // Detect if this is an admin-created inquiry (has contactName) or public form (has name)
+      const isAdminPayload = 'contactName' in body;
+
+      if (isAdminPayload) {
+        // Admin-created inquiry (from NewInquiryModal)
+        const validation = validateRequest(event.body, SCHEMAS.inquiry.createAdmin, origin);
+        if (!validation.success) return validation.response;
+        const payload = validation.data;
+
+        const inquiryNumber = await generateInquiryNumber(client);
+
+        const result = await client.query(
+          `INSERT INTO inquiries (
+            inquiry_number, contact_name, contact_email, company_name,
+            contact_phone, project_notes, quiz_answers, recommended_video_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *`,
+          [
+            inquiryNumber,
+            payload.contactName,
+            payload.contactEmail,
+            payload.companyName || null,
+            payload.contactPhone || null,
+            payload.projectNotes || null,
+            JSON.stringify(payload.quizAnswers),
+            payload.recommendedVideoType,
+          ]
+        );
+
         return {
-          statusCode: 400,
+          statusCode: 201,
           headers,
-          body: JSON.stringify({ error: 'contactName and contactEmail are required' }),
+          body: JSON.stringify(result.rows[0]),
+        };
+      } else {
+        // Public contact form inquiry
+        const validation = validateRequest(event.body, SCHEMAS.inquiry.create, origin);
+        if (!validation.success) return validation.response;
+        const payload = validation.data;
+
+        const inquiryNumber = await generateInquiryNumber(client);
+
+        // Create default quiz answers for public form submissions
+        const defaultQuizAnswers = {
+          niche: payload.projectType || 'General',
+          audience: 'General',
+          style: 'Professional',
+          mood: 'Informative',
+          duration: 'Medium (1-3 min)',
+        };
+
+        const result = await client.query(
+          `INSERT INTO inquiries (
+            inquiry_number, contact_name, contact_email, company_name,
+            contact_phone, project_notes, quiz_answers, recommended_video_type
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *`,
+          [
+            inquiryNumber,
+            payload.name,
+            payload.email,
+            payload.company || null,
+            null, // contact_phone - schema doesn't include phone
+            payload.message || null,
+            JSON.stringify(defaultQuizAnswers),
+            payload.projectType || 'Explainer Video',
+          ]
+        );
+
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(result.rows[0]),
         };
       }
-
-      const inquiryNumber = await generateInquiryNumber(client);
-
-      const result = await client.query(
-        `INSERT INTO inquiries (
-          inquiry_number, contact_name, contact_email, company_name,
-          contact_phone, project_notes, quiz_answers, recommended_video_type, client_user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *`,
-        [
-          inquiryNumber,
-          payload.contactName,
-          payload.contactEmail.toLowerCase(),
-          payload.companyName || null,
-          payload.contactPhone || null,
-          payload.projectNotes || null,
-          JSON.stringify(payload.quizAnswers),
-          payload.recommendedVideoType,
-          payload.clientUserId || null,
-        ]
-      );
-
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify(result.rows[0]),
-      };
     }
 
     if (event.httpMethod === 'PUT') {
@@ -273,4 +351,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

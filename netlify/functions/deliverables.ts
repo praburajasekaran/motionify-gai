@@ -1,21 +1,14 @@
 import pg from 'pg';
+import { randomUUID } from 'crypto';
 import { sendDeliverableReadyEmail, sendFinalDeliverablesEmail } from './send-email';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
+import { SCHEMAS } from './_shared/schemas';
+import { validateRequest } from './_shared/validation';
+import { deleteMultipleFromR2 } from './_shared/r2';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -29,19 +22,13 @@ const getDbClient = () => {
   });
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
+export const handler = compose(
+  withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
+  withAuth(),
+  withRateLimit(RATE_LIMITS.api, 'deliverables')
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   const client = getDbClient();
 
@@ -52,8 +39,12 @@ export const handler = async (
       const { projectId, id } = event.queryStringParameters || {};
 
       if (id) {
+        // Fetch deliverable with project info for permission check
         const result = await client.query(
-          `SELECT * FROM deliverables WHERE id = $1`,
+          `SELECT d.*, p.client_user_id
+           FROM deliverables d
+           JOIN projects p ON d.project_id = p.id
+           WHERE d.id = $1`,
           [id]
         );
 
@@ -66,19 +57,74 @@ export const handler = async (
         }
 
         const deliverable = result.rows[0];
+        const { client_user_id } = deliverable;
 
-        // Check if files have expired (365+ days after final delivery)
-        if (deliverable.files_expired) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({
-              error: 'Files have expired',
-              message: 'Download links for this deliverable have expired after 365 days. Contact support to restore access.',
-              code: 'FILES_EXPIRED'
-            }),
-          };
+        // Permission check
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        // Admin and PM can view all
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          // Client can only view their own project's deliverables
+          if (userRole === 'client' && client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view this deliverable'
+              }),
+            };
+          }
+
+          // Team member: check task assignment on project
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [deliverable.project_id, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
         }
+
+        // Dynamic expiry check (more accurate than relying on files_expired column)
+        if (deliverable.status === 'final_delivered' && deliverable.final_delivered_at) {
+          const deliveryDate = new Date(deliverable.final_delivered_at);
+          const expiryDate = new Date(deliveryDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+          const isExpired = new Date() > expiryDate;
+
+          if (isExpired && userRole !== 'super_admin') {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Files have expired',
+                message: 'Download links for this deliverable have expired after 365 days. Contact support to restore access.',
+                code: 'FILES_EXPIRED'
+              }),
+            };
+          }
+
+          // Add computed expiry info to response
+          deliverable.expires_at = expiryDate.toISOString();
+          deliverable.files_expired = isExpired;
+        }
+
+        // Remove internal fields before sending
+        delete deliverable.client_user_id;
 
         return {
           statusCode: 200,
@@ -88,15 +134,86 @@ export const handler = async (
       }
 
       if (projectId) {
+        // First validate user can access this project
+        const projectResult = await client.query(
+          `SELECT client_user_id FROM projects WHERE id = $1`,
+          [projectId]
+        );
+
+        if (projectResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Project not found' }),
+          };
+        }
+
+        const { client_user_id } = projectResult.rows[0];
+        const userRole = auth?.user?.role;
+        const userId = auth?.user?.userId;
+
+        // Permission check
+        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+          if (userRole === 'client' && client_user_id !== userId) {
+            return {
+              statusCode: 403,
+              headers,
+              body: JSON.stringify({
+                error: 'Access denied',
+                message: 'You do not have permission to view deliverables for this project'
+              }),
+            };
+          }
+
+          if (userRole === 'team_member') {
+            const taskResult = await client.query(
+              `SELECT 1 FROM tasks
+               WHERE project_id = $1
+               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
+               LIMIT 1`,
+              [projectId, userId]
+            );
+
+            if (taskResult.rows.length === 0) {
+              return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                  error: 'Access denied',
+                  message: 'You are not assigned to tasks on this project'
+                }),
+              };
+            }
+          }
+        }
+
+        // Fetch deliverables
         const result = await client.query(
           `SELECT * FROM deliverables WHERE project_id = $1 ORDER BY estimated_completion_week`,
           [projectId]
         );
 
+        // Add computed expiry to each deliverable
+        const deliverables = result.rows.map(d => {
+          if (d.status === 'final_delivered' && d.final_delivered_at) {
+            const deliveryDate = new Date(d.final_delivered_at);
+            const expiryDate = new Date(deliveryDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+            d.expires_at = expiryDate.toISOString();
+            d.files_expired = new Date() > expiryDate;
+          }
+          return d;
+        });
+
+        // For clients, filter out deliverables not yet ready for viewing
+        const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'revision_requested', 'payment_pending', 'final_delivered'];
+        const filteredDeliverables = userRole === 'client'
+          ? deliverables.filter(d => viewableStatuses.includes(d.status))
+          : deliverables;
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows),
+          body: JSON.stringify(filteredDeliverables),
         };
       }
 
@@ -104,6 +221,54 @@ export const handler = async (
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'projectId or id parameter is required' }),
+      };
+    }
+
+    if (event.httpMethod === 'POST') {
+      // Permission check: Only super_admin and project_manager can create deliverables
+      const userRole = auth?.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Access denied',
+            message: 'Only Motionify Support and Admins can create deliverables'
+          }),
+        };
+      }
+
+      const validation = validateRequest(event.body, SCHEMAS.deliverable.create, origin);
+      if (!validation.success) return validation.response;
+      const { project_id, name, description, estimated_completion_week } = validation.data;
+
+      // Verify project exists
+      const projectResult = await client.query(
+        `SELECT id FROM projects WHERE id = $1`,
+        [project_id]
+      );
+
+      if (projectResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Project not found' }),
+        };
+      }
+
+      // Create deliverable with generated UUID
+      const deliverableId = randomUUID();
+      const result = await client.query(
+        `INSERT INTO deliverables (id, project_id, name, description, status, estimated_completion_week, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+        [deliverableId, project_id, name, description || '', 'pending', estimated_completion_week || 1]
+      );
+
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify(result.rows[0]),
       };
     }
 
@@ -119,7 +284,9 @@ export const handler = async (
         };
       }
 
-      const updates = JSON.parse(event.body || '{}');
+      const validation = validateRequest(event.body, SCHEMAS.deliverable.update, origin);
+      if (!validation.success) return validation.response;
+      const updates = validation.data;
 
       const allowedFields = [
         'status',
@@ -272,6 +439,88 @@ export const handler = async (
       };
     }
 
+    if (event.httpMethod === 'DELETE') {
+      // Extract ID from path: /api/deliverables/{id}
+      const pathParts = event.path.split('/');
+      const id = pathParts[pathParts.length - 1];
+
+      if (!id || id === 'deliverables') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable ID is required' }),
+        };
+      }
+
+      // Permission check: Only super_admin and project_manager can delete deliverables
+      const userRole = auth?.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Access denied',
+            message: 'Only administrators and project managers can delete deliverables',
+          }),
+        };
+      }
+
+      // Verify deliverable exists
+      const deliverableResult = await client.query(
+        'SELECT * FROM deliverables WHERE id = $1',
+        [id]
+      );
+
+      if (deliverableResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable not found' }),
+        };
+      }
+
+      const deliverable = deliverableResult.rows[0];
+
+      // Collect all file keys for R2 cleanup
+      const fileKeysToDelete: string[] = [];
+
+      // Add beta and final file keys from deliverable
+      if (deliverable.beta_file_key) fileKeysToDelete.push(deliverable.beta_file_key);
+      if (deliverable.final_file_key) fileKeysToDelete.push(deliverable.final_file_key);
+
+      // Fetch all associated files from deliverable_files table
+      const filesResult = await client.query(
+        'SELECT file_key FROM deliverable_files WHERE deliverable_id = $1',
+        [id]
+      );
+
+      for (const file of filesResult.rows) {
+        if (file.file_key) fileKeysToDelete.push(file.file_key);
+      }
+
+      // Delete files from R2 storage
+      if (fileKeysToDelete.length > 0) {
+        try {
+          await deleteMultipleFromR2(fileKeysToDelete);
+          console.log(`[Deliverables] Deleted ${fileKeysToDelete.length} files from R2 for deliverable ${id}`);
+        } catch (r2Error) {
+          console.error('[Deliverables] R2 cleanup error:', r2Error);
+          // Continue with database deletion even if R2 cleanup fails
+        }
+      }
+
+      // Delete deliverable (CASCADE handles deliverable_files and revision_requests)
+      await client.query('DELETE FROM deliverables WHERE id = $1', [id]);
+
+      console.log(`[Deliverables] Deleted deliverable ${id} by user ${auth?.user?.email}`);
+
+      return {
+        statusCode: 204,
+        headers,
+        body: '',
+      };
+    }
+
     return {
       statusCode: 405,
       headers,
@@ -291,4 +540,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

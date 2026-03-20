@@ -21,16 +21,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   isLoading = false,
 }) => {
   const [title, setTitle] = useState('');
-  const [status, setStatus] = useState<'Todo' | 'In Progress' | 'Done'>('Todo');
+  const [status, setStatus] = useState<'pending' | 'in_progress' | 'awaiting_approval' | 'completed' | 'revision_requested'>('pending');
   const [assigneeId, setAssigneeId] = useState('');
-  const [visibleToClient, setVisibleToClient] = useState(true);
+  const [visibleToClient, setVisibleToClient] = useState(false);
 
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setStatus(task.status);
       setAssigneeId(task.assignee?.id || '');
-      setVisibleToClient(task.visibleToClient ?? true);
+      setVisibleToClient(task.visibleToClient ?? false);
     }
   }, [task, isOpen]);
 
@@ -52,9 +52,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
   const statusOptions = [
-    { value: 'Todo', label: 'To Do' },
-    { value: 'In Progress', label: 'In Progress' },
-    { value: 'Done', label: 'Done' },
+    { value: 'pending', label: 'To Do' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'awaiting_approval', label: 'Awaiting Approval' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'revision_requested', label: 'Revision Requested' },
   ];
 
   return (

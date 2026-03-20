@@ -19,9 +19,13 @@ const testConnection = async () => {
 
     console.log('DATABASE_URL is set.');
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     const client = new Client({
         connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
+        ssl: isProduction
+            ? true // Production: enforce SSL with certificate validation
+            : { rejectUnauthorized: false }, // Development: SSL with self-signed support
         connectionTimeoutMillis: 5000, // Fail fast
     });
 

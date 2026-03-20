@@ -31,11 +31,11 @@ export function getApiBase(): string {
     }
 
     // In development on localhost, use the Netlify Dev server
-    // Default Netlify Dev runs on port 9999
-    return 'http://localhost:9999/.netlify/functions';
+    // Default Netlify Dev runs on port 8888
+    return 'http://localhost:8888/.netlify/functions';
 }
 
 // Export as a function call for client-side
 export const API_BASE = typeof window !== 'undefined'
     ? getApiBase()
-    : 'http://localhost:9999/.netlify/functions'; // Default to Netlify Dev on server-side
+    : 'http://localhost:8888/.netlify/functions'; // Default to Netlify Dev on server-side

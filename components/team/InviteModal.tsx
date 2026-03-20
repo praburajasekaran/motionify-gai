@@ -58,9 +58,10 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         setIsSending(true);
 
         try {
-            // Call the invitation API
-            const response = await fetch(`/.netlify/functions/invitations-create/${projectId}`, {
+            // Call the project-level invitation API
+            const response = await fetch(`/.netlify/functions/project-invitations-create/${projectId}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },

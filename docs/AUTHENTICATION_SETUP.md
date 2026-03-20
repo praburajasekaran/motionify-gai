@@ -211,6 +211,16 @@ This script will:
    - Open `http://localhost:3000`
    - Go to `/login` and enter your email
    - Check Mailtrap for the magic link
+   - **Note:** Magic link URL will also be logged to terminal in development
+
+### Important: Mock Authentication Removed
+
+As of January 2026, mock authentication has been removed from the codebase for security reasons. Previously, development mode allowed setting mock users directly, bypassing authentication. This has been removed to prevent accidental production deployment of authentication bypass code.
+
+**All environments now use the real magic link flow.** In development:
+- Magic links are logged to the terminal for convenience
+- No need to check Mailtrap - just copy the URL from terminal
+- This ensures development and production authentication work identically
 
 ### Project Structure
 

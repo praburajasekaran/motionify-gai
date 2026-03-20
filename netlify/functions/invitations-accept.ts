@@ -1,56 +1,28 @@
 import pg from 'pg';
+import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { getCorsHeaders } from './_shared/cors';
+import { RATE_LIMITS } from './_shared/rateLimit';
 
 const { Client } = pg;
-
-interface NetlifyEvent {
-  httpMethod: string;
-  headers: Record<string, string>;
-  body: string | null;
-  path: string;
-  queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
 
 const getDbClient = () => {
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
     throw new Error('DATABASE_URL not configured');
   }
-  
+
   return new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
 };
 
-export const handler = async (
-  event: NetlifyEvent
-): Promise<NetlifyResponse> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
-
-  // Only allow POST
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
+export const handler = compose(
+  withCORS(['POST', 'OPTIONS']),
+  withRateLimit(RATE_LIMITS.apiStrict, 'invitation_accept')
+)(async (event: NetlifyEvent) => {
+  const origin = event.headers.origin || event.headers.Origin;
+  const headers = getCorsHeaders(origin);
 
   // Extract token from path
   // Path format: /.netlify/functions/invitations-accept/{token}
@@ -92,21 +64,50 @@ export const handler = async (
 
     const invitation = result.rows[0];
 
-    // Mark invitation as accepted
-    await client.query(
-      `UPDATE project_invitations 
-       SET status = 'accepted', accepted_at = NOW() 
-       WHERE id = $1`,
-      [invitation.id]
-    );
-
     // Check if user already exists
     const userCheck = await client.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
       [invitation.email]
     );
 
     const requiresSignup = userCheck.rows.length === 0;
+    const acceptedByUserId = userCheck.rows[0]?.id || null;
+
+    // Mark invitation as accepted
+    await client.query(
+      `UPDATE project_invitations
+       SET status = 'accepted', accepted_at = NOW(), accepted_by = $2
+       WHERE id = $1`,
+      [invitation.id, acceptedByUserId]
+    );
+
+    // If user exists, add them to project_team
+    if (acceptedByUserId) {
+      await client.query(
+        `INSERT INTO project_team (user_id, project_id, role, invitation_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, project_id) DO UPDATE SET
+           removed_at = NULL, removed_by = NULL, invitation_id = $4`,
+        [acceptedByUserId, invitation.project_id, invitation.role, invitation.id]
+      );
+
+      // Log activity
+      try {
+        const userName = await client.query('SELECT full_name FROM users WHERE id = $1', [acceptedByUserId]);
+        await client.query(
+          `INSERT INTO activities (type, user_id, user_name, project_id, details)
+           VALUES ('TEAM_MEMBER_ADDED', $1, $2, $3, $4)`,
+          [
+            acceptedByUserId,
+            userName.rows[0]?.full_name || 'Unknown',
+            invitation.project_id,
+            JSON.stringify({ role: invitation.role, viaInvitation: true }),
+          ]
+        );
+      } catch (logError) {
+        console.error('Failed to log activity:', logError);
+      }
+    }
 
     return {
       statusCode: 200,
@@ -117,7 +118,7 @@ export const handler = async (
           id: invitation.project_id,
           name: invitation.project_name,
         },
-        user_id: userCheck.rows[0]?.id,
+        user_id: acceptedByUserId,
         requires_signup: requiresSignup,
       }),
     };
@@ -134,4 +135,4 @@ export const handler = async (
   } finally {
     await client.end();
   }
-};
+});

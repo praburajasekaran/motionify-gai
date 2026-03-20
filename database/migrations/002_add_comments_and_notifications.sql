@@ -1,5 +1,5 @@
 -- Migration 002: Comments, Attachments, and Notifications
--- Adds core tables for the comment thread system
+-- Adds core tables for comment thread system
 
 -- Create proposal_comments table
 CREATE TABLE IF NOT EXISTS proposal_comments (
@@ -31,15 +31,24 @@ CREATE TABLE IF NOT EXISTS comment_attachments (
 CREATE INDEX IF NOT EXISTS idx_comment_attachments_comment_id ON comment_attachments(comment_id);
 
 -- Create notifications table
+-- Schema matches API expectations from comments.ts and notifications.ts
 CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
-    link TEXT,
-    is_read BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    is_read BOOLEAN DEFAULT FALSE,
+    action_url VARCHAR(500),
+    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_name VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_at TIMESTAMPTZ
 );
 
 -- Create composite index for user notification queries
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_project_id ON notifications(project_id);

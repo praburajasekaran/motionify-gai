@@ -1,0 +1,16 @@
+config:
+  target: "http://localhost:8888"
+  engines:
+    playwright:
+      aggregateByName: true
+  phases:
+    - duration: 120
+      arrivalRate: 5
+      name: "Browser load test"
+  processor: "./scenarios/proposal-flow.js"
+
+scenarios:
+  - name: "Proposal browsing flow"
+    engine: playwright
+    flowFunction: "proposalFlowTest"
+    think: 3

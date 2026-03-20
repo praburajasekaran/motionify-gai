@@ -12,6 +12,8 @@ interface PaymentButtonProps {
   currency: 'INR' | 'USD';
   clientEmail: string;
   clientName: string;
+  onPaymentSuccess?: () => void;  // Callback for page refresh after payment
+  variant?: 'default' | 'compact'; // Variant for different contexts
 }
 
 export default function PaymentButton({
@@ -20,6 +22,8 @@ export default function PaymentButton({
   currency,
   clientEmail,
   clientName,
+  onPaymentSuccess,
+  variant = 'default',
 }: PaymentButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -145,7 +149,14 @@ export default function PaymentButton({
         timestamp: new Date().toISOString(),
       });
 
-      // Redirect to success page with project ID
+      // Call the success callback if provided (for portal refresh)
+      if (onPaymentSuccess) {
+        onPaymentSuccess();
+        setLoading(false);
+        return;
+      }
+
+      // Redirect to success page with project ID (default behavior for proposal page)
       router.push(`/payment/success?projectId=${project.id}&projectNumber=${project.projectNumber}&paymentId=${paymentRecord.id}`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Payment processing failed';
@@ -154,9 +165,11 @@ export default function PaymentButton({
     }
   };
 
+  const isCompact = variant === 'compact';
+
   return (
-    <div className="space-y-4">
-      {error && (
+    <div className={isCompact ? '' : 'space-y-4'}>
+      {error && !isCompact && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
@@ -169,24 +182,31 @@ export default function PaymentButton({
       <button
         onClick={handlePaymentClick}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        title={error || undefined}
+        className={
+          isCompact
+            ? 'inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+            : 'w-full flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+        }
       >
         {loading ? (
           <>
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Processing...
+            <div className={`${isCompact ? 'w-4 h-4' : 'w-5 h-5'} border-2 border-white/30 border-t-white rounded-full animate-spin`} />
+            {isCompact ? '' : 'Processing...'}
           </>
         ) : (
           <>
-            <Zap className="w-5 h-5" />
+            <Zap className={isCompact ? 'w-4 h-4' : 'w-5 h-5'} />
             Pay Now
           </>
         )}
       </button>
 
-      <p className="text-xs text-gray-500 text-center">
-        * Final amount will be calculated by Razorpay at checkout
-      </p>
+      {!isCompact && (
+        <p className="text-xs text-gray-500 text-center">
+          * Final amount will be calculated by Razorpay at checkout
+        </p>
+      )}
     </div>
   );
 }

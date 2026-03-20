@@ -22,9 +22,14 @@ const ALLOWED_ORIGINS_DEV = [
     'http://localhost:3000',
     'http://localhost:3003',
     'http://localhost:5173',
+    'http://localhost:5174',
     'http://localhost:8888',
+    'http://localhost:9999',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://192.168.0.116:5173',
+    'http://192.168.0.116:5174',
 ];
 
 // Get additional allowed origins from environment
@@ -71,6 +76,11 @@ export function isOriginAllowed(origin: string | undefined): boolean {
         return true;
     }
 
+    // In development/preview, allow any localhost origin
+    if (!isProduction && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
+        return true;
+    }
+
     return false;
 }
 
@@ -89,6 +99,7 @@ export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Private-Network': 'true',
     };
 }
 
