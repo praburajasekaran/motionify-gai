@@ -44,7 +44,7 @@ export default function ReadyToTellYourStory() {
               </a>
 
               <a
-                href="#"
+                href="/contact"
                 className="group inline-flex items-center gap-3 px-8 py-4 rounded-lg bg-white/80 backdrop-blur text-gray-900 font-semibold text-lg ring-2 ring-gray-300 hover:ring-gray-400 hover:bg-white transition-all duration-300"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
