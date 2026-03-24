@@ -46,5 +46,5 @@ DOMPurify.addHook('afterSanitizeAttributes', (node: Element) => {
 });
 
 export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, TIPTAP_CONFIG);
+  return DOMPurify.sanitize(dirty, TIPTAP_CONFIG as Parameters<typeof DOMPurify.sanitize>[1]);
 }
