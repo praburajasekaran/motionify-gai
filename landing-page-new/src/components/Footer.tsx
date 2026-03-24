@@ -40,16 +40,16 @@ export default function Footer() {
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Follow Us</h3>
               <div className="flex items-center gap-4">
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.instagram.com/motionifyco/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">IN</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.linkedin.com/company/motionify/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">LI</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.facebook.com/motionify/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">FB</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.youtube.com/channel/UCK9Ja6n4m4cRbZKo5I2zDOw" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">YT</span>
                 </a>
               </div>
