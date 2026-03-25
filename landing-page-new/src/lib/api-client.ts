@@ -7,7 +7,7 @@
  * - Consistent error handling
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '/.netlify/functions';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/.netlify/functions';
 
 interface ApiResponse<T = any> {
     success: boolean;
