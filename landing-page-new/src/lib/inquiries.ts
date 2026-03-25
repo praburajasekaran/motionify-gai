@@ -351,7 +351,7 @@ export async function requestInquiryVerification(data: {
   quizAnswers: QuizSelections;
   contactInfo: ContactInfo;
   recommendedVideoType: string;
-}): Promise<{ success: boolean; message: string }> {
+}): Promise<{ success: boolean; message: string; magicLink?: string }> {
   if (!data.contactInfo.contactName || !data.contactInfo.contactEmail) {
     throw new Error('Name and email are required');
   }

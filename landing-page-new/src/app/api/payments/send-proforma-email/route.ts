@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readJSON, STORAGE_FILES } from '@/lib/storage';
 import { generateInvoicePDF } from '@/lib/invoice/pdfGenerator';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_ORIGINS = [
+  'https://portal.motionify.studio',
+  'https://motionify.studio',
+  'https://www.motionify.studio',
+];
+
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('origin') || '';
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+    origin.match(/^https:\/\/[a-z0-9-]+--motionify-pm-portal\.netlify\.app$/) ||
+    (process.env.NODE_ENV !== 'production' && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')));
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 const MOTIONIFY_COMPANY_DETAILS = {
   name: 'Motionify',
@@ -154,7 +167,7 @@ export async function POST(request: NextRequest) {
     if (!to || !proposalId) {
       return NextResponse.json(
         { error: 'Missing required fields: to and proposalId are required' },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -164,7 +177,7 @@ export async function POST(request: NextRequest) {
     if (!proposal) {
       return NextResponse.json(
         { error: 'Proposal not found' },
-        { status: 404, headers: corsHeaders }
+        { status: 404, headers: getCorsHeaders(request) }
       );
     }
 
@@ -174,7 +187,7 @@ export async function POST(request: NextRequest) {
     if (!inquiry) {
       return NextResponse.json(
         { error: 'Inquiry not found' },
-        { status: 404, headers: corsHeaders }
+        { status: 404, headers: getCorsHeaders(request) }
       );
     }
 
@@ -238,7 +251,7 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send proforma email:', result.error);
       return NextResponse.json(
         { error: 'Failed to send email', details: result.error?.message },
-        { status: 500, headers: corsHeaders }
+        { status: 500, headers: getCorsHeaders(request) }
       );
     }
 
@@ -252,18 +265,18 @@ export async function POST(request: NextRequest) {
       success: true,
       messageId: result.messageId,
       invoiceNumber,
-    }, { status: 200, headers: corsHeaders });
+    }, { status: 200, headers: getCorsHeaders(request) });
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error sending proforma email:', message);
     return NextResponse.json(
       { error: 'Failed to send proforma email', message },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(request: NextRequest) {
+  return NextResponse.json({}, { headers: getCorsHeaders(request) });
 }

@@ -12,23 +12,23 @@ import { createLogger } from './logger';
 
 const logger = createLogger('jwt');
 
-// JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
+// JWT Configuration - secret is required in all environments
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_ISSUER = 'motionify-platform';
 const JWT_AUDIENCE = 'motionify-users';
 
-if (!process.env.JWT_SECRET) {
-    logger.warn('JWT_SECRET not set - using default (INSECURE for production)');
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required. Set it in your .env file.');
 }
 
 // Token expiration times
 const TOKEN_EXPIRY_DEFAULT = '24h';      // 24 hours
-const TOKEN_EXPIRY_REMEMBER = '7d';      // 7 days
+const TOKEN_EXPIRY_REMEMBER = '30d';     // 30 days
 
 export interface JWTPayload {
     userId: string;
     email: string;
-    role: 'super_admin' | 'project_manager' | 'client' | 'team';
+    role: 'super_admin' | 'support' | 'client' | 'team';
     fullName: string;
 }
 
@@ -109,14 +109,13 @@ export function extractTokenFromCookie(cookieHeader: string | undefined): string
  * Create Set-Cookie header value for auth token
  */
 export function createAuthCookie(token: string, rememberMe: boolean): string {
-    const maxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // seconds
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // seconds
     const isProduction = process.env.NODE_ENV === 'production';
 
     const cookieAttributes = [
         `auth_token=${token}`,
         'HttpOnly',
         'Path=/',
-        `Max-Age=${maxAge}`,
         `Max-Age=${maxAge}`,
         `SameSite=${isProduction ? 'Strict' : 'Lax'}`,
     ];
@@ -134,5 +133,15 @@ export function createAuthCookie(token: string, rememberMe: boolean): string {
  */
 export function createClearAuthCookie(): string {
     const isProduction = process.env.NODE_ENV === 'production';
-    return `auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=${isProduction ? 'Strict' : 'Lax'}`;
+    const cookieAttributes = [
+        'auth_token=',
+        'HttpOnly',
+        'Path=/',
+        'Max-Age=0',
+        `SameSite=${isProduction ? 'Strict' : 'Lax'}`,
+    ];
+    if (isProduction) {
+        cookieAttributes.push('Secure');
+    }
+    return cookieAttributes.join('; ');
 }

@@ -1,12 +1,20 @@
-import { GoogleGenAI, Type } from "@google/genai";
+// Lazy-load @google/genai to keep it out of the main bundle
+let aiInstance: any = null;
+let TypeRef: any = null;
 
-// Initialize Gemini Client
-// Note: In a real environment, ensure process.env.API_KEY is available.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+async function getAI() {
+  if (!aiInstance) {
+    const { GoogleGenAI, Type } = await import("@google/genai");
+    TypeRef = Type;
+    aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  }
+  return { ai: aiInstance, Type: TypeRef };
+}
 
 export const generateProjectTasks = async (projectDescription: string, projectTitle: string): Promise<string[]> => {
   if (!process.env.API_KEY) return [];
   try {
+    const { ai, Type } = await getAI();
     const model = 'gemini-2.5-flash';
     const prompt = `
       I am a project manager for a video production agency.
@@ -50,6 +58,7 @@ export const generateProjectTasks = async (projectDescription: string, projectTi
 export const analyzeProjectRisk = async (projectData: any): Promise<string> => {
   if (!process.env.API_KEY) return "Risk assessment unavailable (Missing API Key)";
   try {
+    const { ai } = await getAI();
     const model = 'gemini-2.5-flash';
     const prompt = `
           Analyze the following project status and provide a 1-sentence risk assessment.

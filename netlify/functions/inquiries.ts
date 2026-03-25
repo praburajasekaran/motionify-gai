@@ -1,12 +1,11 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
-
-const { Client } = pg;
 
 interface QuizSelections {
   niche?: string | null;
@@ -27,24 +26,12 @@ interface CreateInquiryPayload {
   clientUserId?: string;
 }
 
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
-const generateInquiryNumber = async (client: pg.Client): Promise<string> => {
+const generateInquiryNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
 
-  const result = await client.query(
-    `SELECT inquiry_number FROM inquiries 
-     WHERE inquiry_number LIKE $1 
+  const result = await dbQuery(
+    `SELECT inquiry_number FROM inquiries
+     WHERE inquiry_number LIKE $1
      ORDER BY inquiry_number DESC LIMIT 1`,
     [`INQ-${year}-%`]
   );
@@ -68,11 +55,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // Conditional authentication: GET and PUT require auth, POST is public
     let auth: CookieAuthResult | null = null;
     if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
@@ -96,7 +79,7 @@ export const handler = compose(
       // auth is guaranteed to be non-null and authorized for GET
       const userRole = auth!.user?.role;
       const userId = auth!.user?.userId;
-      const isAdmin = userRole === 'super_admin' || userRole === 'project_manager';
+      const isAdmin = userRole === 'super_admin' || userRole === 'support';
 
       // Check if we're fetching a specific inquiry by ID
       const pathParts = event.path.split('/');
@@ -107,7 +90,7 @@ export const handler = compose(
         const isInquiryNumber = potentialId.startsWith('INQ-');
         const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
 
-        const result = await client.query(
+        const result = await dbQuery(
           `SELECT * FROM inquiries WHERE ${lookupColumn} = $1`,
           [potentialId]
         );
@@ -158,11 +141,11 @@ export const handler = compose(
       }
 
       // Build query based on filters
-      let query = 'SELECT * FROM inquiries ORDER BY created_at DESC';
+      let sql = 'SELECT * FROM inquiries ORDER BY created_at DESC';
       const params: any[] = [];
 
       if (clientUserId) {
-        query = `
+        sql = `
           SELECT i.* FROM inquiries i
           LEFT JOIN proposals p ON i.id = p.inquiry_id
           WHERE i.client_user_id = $1 OR (p.client_user_id = $1 AND i.client_user_id IS NULL)
@@ -171,7 +154,7 @@ export const handler = compose(
         params.push(clientUserId);
       }
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       return {
         statusCode: 200,
@@ -192,13 +175,13 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const payload = validation.data;
 
-        const inquiryNumber = await generateInquiryNumber(client);
+        const inquiryNumber = await generateInquiryNumber();
 
-        const result = await client.query(
+        const result = await dbQuery(
           `INSERT INTO inquiries (
             inquiry_number, contact_name, contact_email, company_name,
-            contact_phone, project_notes, quiz_answers, recommended_video_type
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            contact_phone, project_notes, quiz_answers, recommended_video_type, client_user_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           RETURNING *`,
           [
             inquiryNumber,
@@ -209,8 +192,23 @@ export const handler = compose(
             payload.projectNotes || null,
             JSON.stringify(payload.quizAnswers),
             payload.recommendedVideoType,
+            payload.clientUserId || null,
           ]
         );
+
+        // Log activity - try to get admin auth context
+        let adminAuth: CookieAuthResult | null = null;
+        try {
+          adminAuth = await requireAuthFromCookie(event);
+        } catch { /* public form, no auth */ }
+
+        await logActivity({
+          type: 'INQUIRY_CREATED',
+          userId: adminAuth?.user?.userId || '',
+          userName: adminAuth?.user?.fullName || payload.contactName,
+          inquiryId: result.rows[0].id,
+          details: { inquiryNumber, source: 'admin' },
+        });
 
         return {
           statusCode: 201,
@@ -223,7 +221,7 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const payload = validation.data;
 
-        const inquiryNumber = await generateInquiryNumber(client);
+        const inquiryNumber = await generateInquiryNumber();
 
         // Create default quiz answers for public form submissions
         const defaultQuizAnswers = {
@@ -234,7 +232,7 @@ export const handler = compose(
           duration: 'Medium (1-3 min)',
         };
 
-        const result = await client.query(
+        const result = await dbQuery(
           `INSERT INTO inquiries (
             inquiry_number, contact_name, contact_email, company_name,
             contact_phone, project_notes, quiz_answers, recommended_video_type
@@ -251,6 +249,15 @@ export const handler = compose(
             payload.projectType || 'Explainer Video',
           ]
         );
+
+        // Log activity for public form
+        await logActivity({
+          type: 'INQUIRY_CREATED',
+          userId: '',
+          userName: payload.name,
+          inquiryId: result.rows[0].id,
+          details: { inquiryNumber, source: 'public' },
+        });
 
         return {
           statusCode: 201,
@@ -275,6 +282,17 @@ export const handler = compose(
 
       const updates = JSON.parse(event.body || '{}');
 
+      // Pre-fetch old status for activity logging
+      const isInquiryNumberLookup = id.startsWith('INQ-');
+      const lookupCol = isInquiryNumberLookup ? 'inquiry_number' : 'id';
+      const oldInquiryResult = await dbQuery(
+        `SELECT status, inquiry_number, id FROM inquiries WHERE ${lookupCol} = $1`,
+        [id]
+      );
+      const oldInquiryStatus = oldInquiryResult.rows[0]?.status;
+      const inquiryNumber = oldInquiryResult.rows[0]?.inquiry_number;
+      const inquiryUuid = oldInquiryResult.rows[0]?.id;
+
       const allowedFields = [
         'status', 'contact_name', 'contact_email', 'company_name',
         'contact_phone', 'project_notes', 'proposal_id', 'assigned_to_admin_id'
@@ -284,13 +302,13 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          updateFields.push(`${key} = $${paramIndex}`);
-          updateValues.push(updates[key]);
+      for (const field of allowedFields) {
+        if (field in updates) {
+          updateFields.push(`${field} = $${paramIndex}`);
+          updateValues.push(updates[field]);
           paramIndex++;
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {
@@ -306,8 +324,8 @@ export const handler = compose(
       const isInquiryNumber = id.startsWith('INQ-');
       const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
 
-      const query = `
-        UPDATE inquiries 
+      const sql = `
+        UPDATE inquiries
         SET ${updateFields.join(', ')}
         WHERE ${lookupColumn} = $${paramIndex}
         RETURNING *
@@ -315,7 +333,7 @@ export const handler = compose(
 
       updateValues.push(id);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -323,6 +341,17 @@ export const handler = compose(
           headers,
           body: JSON.stringify({ error: 'Inquiry not found' }),
         };
+      }
+
+      // Log activity if status changed
+      if (updates.status && oldInquiryStatus !== updates.status) {
+        await logActivity({
+          type: 'INQUIRY_STATUS_CHANGED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: inquiryUuid || result.rows[0].id,
+          details: { oldStatus: oldInquiryStatus || '', newStatus: updates.status, inquiryNumber: inquiryNumber || '' },
+        });
       }
 
       return {
@@ -348,7 +377,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

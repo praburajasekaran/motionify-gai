@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 import type { PaymentVerificationRequest } from '@/lib/payment.types';
 
 // Admin email for payment failure notifications
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@motionify.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
 
 /**
  * Log a payment attempt to the database
@@ -58,7 +58,7 @@ async function notifyAdminPaymentFailure(data: {
   try {
     // Get admin users for in-app notification
     const adminResult = await query(
-      `SELECT id, email FROM users WHERE role IN ('super_admin', 'project_manager') AND is_active = true`
+      `SELECT id, email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`
     );
 
     // Create in-app notification for each admin
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     console.error('Error verifying payment:', errorMessage);
 
     return NextResponse.json(
-      { error: 'Failed to verify payment', details: errorMessage, verified: false },
+      { error: 'Failed to verify payment', verified: false },
       { status: 500 }
     );
   }

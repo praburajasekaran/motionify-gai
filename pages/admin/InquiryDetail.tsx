@@ -6,6 +6,7 @@ import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, Plus, Chec
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { encodeBase64 } from '../../utils/encoding';
+import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -18,36 +19,10 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   paid: 'bg-green-500/10 text-green-400 ring-green-500/20',
   converted: 'bg-emerald-600/10 text-emerald-600 ring-emerald-600/20',
   rejected: 'bg-red-500/10 text-red-400 ring-red-500/20',
-  archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
+  archived: 'bg-muted text-muted-foreground ring-border',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Reviewing',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'Negotiating',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up',
-  payment_pending: 'Payment Pending',
-  paid: 'Paid',
-  converted: 'Converted',
-  rejected: 'Rejected',
-  archived: 'Archived',
-};
 
-const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'Submitted',
-  reviewing: 'Under Review',
-  proposal_sent: 'Proposal Received',
-  negotiating: 'In Discussion',
-  accepted: 'Accepted',
-  project_setup: 'Project Starting',
-  payment_pending: 'Payment Due',
-  paid: 'Paid',
-  converted: 'Project Started',
-  rejected: 'Declined',
-  archived: 'Archived',
-};
 
 export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -227,7 +202,7 @@ export function InquiryDetail() {
                 {inquiry.inquiryNumber}
               </code>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                {isClient ? CLIENT_STATUS_LABELS[inquiry.status] : STATUS_LABELS[inquiry.status]}
+                {isClient ? INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel : INQUIRY_STATUS_CONFIG[inquiry.status].adminLabel}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

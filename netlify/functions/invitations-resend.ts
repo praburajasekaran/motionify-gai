@@ -1,21 +1,7 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
@@ -38,14 +24,10 @@ export const handler = compose(
     };
   }
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // Find pending invitation
-    const result = await client.query(
-      `SELECT id, email, token, expires_at FROM project_invitations 
+    const result = await dbQuery(
+      `SELECT id, email, token, expires_at FROM project_invitations
        WHERE id = $1 AND status = 'pending'`,
       [invitationId]
     );
@@ -82,7 +64,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

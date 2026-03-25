@@ -6,14 +6,13 @@
  * Body:
  * - email: string (required)
  * - full_name: string (required)
- * - role: 'super_admin' | 'project_manager' | 'client' | 'team' (required)
+ * - role: 'super_admin' | 'support' | 'client' | 'team' (required)
  */
 
 import crypto from 'crypto';
 import {
     query,
     getCorsHeaders,
-    requireAuthAndRole,
     validateRequest,
     createUserSchema,
     createLogger,
@@ -85,9 +84,27 @@ export const handler = compose(
             [email.toLowerCase(), token, expiresAt]
         );
 
-        // Build magic link URL - points to /login which handles token verification
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
-        const magicLink = `${appUrl}/#/login?token=${token}&email=${encodeURIComponent(email)}`;
+        // Build magic link URL - points to /auth/verify which handles token verification
+        const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
+        const appUrl = rawAppUrl.replace(/\/(api|portal)\/?$/, '');
+        const magicLink = `${appUrl}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+
+        // If the new user is support, auto-add them to all existing projects
+        if (role === 'support') {
+            const allProjects = await query(`SELECT id FROM projects`);
+            for (const proj of allProjects.rows) {
+                await query(
+                    `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_at)
+                     VALUES ($1, $2, 'support', false, NOW())
+                     ON CONFLICT (user_id, project_id) DO NOTHING`,
+                    [newUser.id, proj.id]
+                );
+            }
+            logger.info('Auto-added support user to all projects', {
+                userId: newUser.id,
+                projectCount: allProjects.rows.length,
+            });
+        }
 
         logger.info('User created', {
             userId: newUser.id,

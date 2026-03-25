@@ -169,3 +169,7 @@ createActivity({ ... })
 - API clients: `landing-page-new/src/lib/portal/api/activities.api.ts`, `services/activityApi.ts`
 - Backend: `netlify/functions/activities.ts`
 - Admin dashboard: `pages/Dashboard.tsx` (fetches `GET /activities?limit=10`)
+
+## Related Issues
+
+- See also: [project-creation-not-persisted-missing-api-call-SuperAdmin-20260221.md](../integration-issues/project-creation-not-persisted-missing-api-call-SuperAdmin-20260221.md) — same pattern of local React state update without API call, on the project creation form

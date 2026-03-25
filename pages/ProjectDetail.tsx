@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
-    Edit2, Clock, CheckCircle2, AlertTriangle, MoreVertical, FileBox,
+    Edit2, Clock, CheckCircle2, AlertTriangle, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
-    Bell, BellOff, Settings, Share2, CreditCard, Trash2
+    Bell, BellOff, Settings, CreditCard, Trash2
 } from 'lucide-react';
 import {
     Button, Card, CardContent, CardHeader, CardTitle, Badge, Separator,
@@ -13,6 +13,7 @@ import {
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
 import { analyzeProjectRisk } from '../services/geminiService';
+import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
 import { TaskCreateForm, TaskEditForm } from '../components/tasks/TaskCreateForm';
@@ -22,10 +23,13 @@ import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
-import { ProjectFile } from '../types';
-import { fetchTasksForProject, createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
-import { fetchActivities, createActivity, Activity as ApiActivity } from '../services/activityApi';
+import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { Activity as ApiActivity } from '../services/activityApi';
+import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
+import { createProjectFile } from '../services/projectFileApi';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
+import { formatTimestamp } from '../utils/dateFormatting';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
@@ -34,37 +38,45 @@ import { TermsBanner } from '../components/project/TermsBanner';
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
 // This enables first-person ("you sent") vs third-person ("Alice sent") phrasing
-function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean): string {
+function formatActivityAction(type: string, details: Record<string, string | number>, isCurrentUser?: boolean, isClientUser?: boolean): string {
     const me = !!isCurrentUser;
     switch (type) {
         // Proposal lifecycle
-        case 'PROPOSAL_SENT':              return me ? 'sent a proposal'              : 'sent a proposal';
-        case 'PROPOSAL_ACCEPTED':          return me ? 'accepted the proposal'        : 'accepted the proposal';
-        case 'PROPOSAL_REJECTED':          return me ? 'rejected the proposal'        : 'rejected the proposal';
-        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on'         : 'requested changes on';
+        case 'PROPOSAL_SENT': return me ? 'sent a proposal' : 'sent a proposal';
+        case 'PROPOSAL_ACCEPTED': return me ? 'accepted the proposal' : 'accepted the proposal';
+        case 'PROPOSAL_REJECTED': return isClientUser ? 'declined the proposal' : 'rejected the proposal';
+        case 'PROPOSAL_CHANGES_REQUESTED': return me ? 'requested changes on' : 'requested changes on';
         // Tasks
-        case 'TASK_CREATED':        return me ? 'created task'                          : 'created task';
-        case 'TASK_UPDATED':        return me ? 'updated task'                          : 'updated task';
+        case 'TASK_CREATED': return me ? 'created task' : 'created task';
+        case 'TASK_UPDATED': return me ? 'updated task' : 'updated task';
         case 'TASK_STATUS_CHANGED': return `changed status to ${details.newStatus || 'updated'}`;
-        case 'COMMENT_ADDED':       return me ? 'commented on'                          : 'commented on';
-        case 'REVISION_REQUESTED':  return me ? 'requested a revision on'               : 'requested a revision on';
+        case 'COMMENT_ADDED': return me ? 'commented on' : 'commented on';
+        case 'TASK_DELETED': return 'deleted task';
+        case 'REVISION_REQUESTED': return me ? 'requested a revision on' : 'requested a revision on';
         // Files
-        case 'FILE_UPLOADED':  return me ? 'uploaded'  : 'uploaded';
-        case 'FILE_RENAMED':   return me ? 'renamed'   : 'renamed';
+        case 'FILE_UPLOADED': return me ? 'uploaded' : 'uploaded';
+        case 'FILE_DELETED': return 'deleted file';
+        case 'FILE_RENAMED': return me ? 'renamed' : 'renamed';
         // Team
-        case 'TEAM_MEMBER_INVITED': return me ? 'invited'  : 'invited';
-        case 'TEAM_MEMBER_REMOVED': return me ? 'removed'  : 'removed';
+        case 'TEAM_MEMBER_INVITED': return me ? 'invited' : 'invited';
+        case 'TEAM_MEMBER_REMOVED': return me ? 'removed' : 'removed';
         // Deliverables
-        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable'  : 'uploaded deliverable';
-        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable'  : 'approved deliverable';
+        case 'DELIVERABLE_CREATED': return 'created deliverable';
+        case 'DELIVERABLE_UPLOADED': return me ? 'uploaded deliverable' : 'uploaded deliverable';
+        case 'DELIVERABLE_APPROVED': return me ? 'approved deliverable' : 'approved deliverable';
+        case 'DELIVERABLE_DELETED': return 'deleted deliverable';
+        case 'DELIVERABLE_STATUS_CHANGED': return `changed deliverable status to ${details.newStatus || 'updated'}`;
         // Payments — the userId is the client who paid
         case 'PAYMENT_RECEIVED': {
             const label = details.paymentLabel || 'payment';
             return me ? `made ${label} of` : `received ${label} of`;
         }
+        // Inquiry
+        case 'INQUIRY_CREATED': return 'submitted an inquiry';
+        case 'INQUIRY_STATUS_CHANGED': return `changed inquiry status to ${details.newStatus || 'updated'}`;
         // Project
         case 'PROJECT_CREATED': return 'created the project';
-        case 'TERMS_ACCEPTED':  return me ? 'accepted the terms' : 'accepted the terms';
+        case 'TERMS_ACCEPTED': return me ? 'accepted the terms' : 'accepted the terms';
         default: return type.toLowerCase().replace(/_/g, ' ');
     }
 }
@@ -77,6 +89,76 @@ function formatActivityTarget(type: string, details: Record<string, string | num
     if (details.deliverableName) return String(details.deliverableName);
     if (targetUserName) return targetUserName;
     return '';
+}
+
+// Date grouping helpers for activity feed
+function getDateGroup(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (activityDate.getTime() === today.getTime()) return 'Today';
+    if (activityDate.getTime() === yesterday.getTime()) return 'Yesterday';
+
+    // Check if within the last 7 days
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (activityDate > weekAgo) {
+        return date.toLocaleDateString(undefined, { weekday: 'long' });
+    }
+
+    // Older than a week - show month/day
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+interface GroupedActivities {
+    label: string;
+    activities: Array<{
+        id: string;
+        type: string;
+        userId: string;
+        userName: string;
+        action: string;
+        target: string;
+        timestamp: number;
+        details: Record<string, string | number>;
+    }>;
+}
+
+function groupActivitiesByDate(activities: Array<{
+    id: string;
+    type: string;
+    userId: string;
+    userName: string;
+    action: string;
+    target: string;
+    timestamp: number;
+    details: Record<string, string | number>;
+}>): GroupedActivities[] {
+    const groups: Map<string, GroupedActivities> = new Map();
+
+    for (const activity of activities) {
+        const label = getDateGroup(activity.timestamp);
+        if (!groups.has(label)) {
+            groups.set(label, { label, activities: [] });
+        }
+        groups.get(label)!.activities.push(activity);
+    }
+
+    return Array.from(groups.values());
+}
+
+function getActivityLink(projectId: string, type: string, details?: Record<string, string | number>): string | null {
+    if (type.startsWith('DELIVERABLE_') && details?.deliverableId && type !== 'DELIVERABLE_DELETED') {
+        return `/projects/${projectId}/deliverables/${details.deliverableId}`;
+    }
+    if (type.startsWith('TASK_') || type === 'COMMENT_ADDED' || type === 'REVISION_REQUESTED') return `/projects/${projectId}/${TAB_INDEX_MAP.tasks}`;
+    if (type.startsWith('FILE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.files}`;
+    if (type.startsWith('DELIVERABLE_')) return `/projects/${projectId}/${TAB_INDEX_MAP.deliverables}`;
+    if (type.startsWith('TEAM_')) return `/projects/${projectId}/${TAB_INDEX_MAP.team}`;
+    if (type.startsWith('PAYMENT_')) return `/projects/${projectId}/${TAB_INDEX_MAP.payments}`;
+    return null;
 }
 
 // --- Battery Component ---
@@ -96,9 +178,9 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
     }
 
     return (
-        <div className="flex items-center gap-3 bg-white border border-zinc-200/80 px-4 py-2 rounded-full shadow-sm" role="progressbar" aria-valuenow={remaining} aria-valuemax={max} aria-label={`${remaining} of ${max} revisions remaining`}>
+        <div className="flex items-center gap-3 bg-card border border-border px-4 py-2 rounded-full shadow-sm" role="progressbar" aria-valuenow={remaining} aria-valuemax={max} aria-label={`${remaining} of ${max} revisions remaining`}>
             {/* Label */}
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Revisions
             </span>
 
@@ -113,14 +195,14 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
             <div className="flex items-center gap-2">
                 {/* Battery Icon */}
                 <div className="relative flex items-center">
-                    <div className="h-5 w-9 rounded-[3px] border-2 border-zinc-300 p-0.5 relative flex items-center bg-white">
+                    <div className="h-5 w-9 rounded-[3px] border-2 border-border p-0.5 relative flex items-center bg-card">
                         <div
                             className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
                             style={{ width: `${percentage}%` }}
                         />
                     </div>
                     {/* Battery Nub */}
-                    <div className="h-2 w-0.5 bg-zinc-300 rounded-r-[1px] absolute -right-1" />
+                    <div className="h-2 w-0.5 bg-border rounded-r-[1px] absolute -right-1" />
 
                     {/* Charging Bolt */}
                     {percentage > 0 && (
@@ -129,7 +211,7 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
                 </div>
 
                 {/* Mini Progress Bar */}
-                <div className="w-16 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                         className={cn("h-full transition-all duration-500", colorClass)}
                         style={{ width: `${percentage}%` }}
@@ -144,8 +226,6 @@ export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const { user } = useAuthContext();
-    const [project, setProject] = useState<Project | null>(null);
-    const [projectLoading, setProjectLoading] = useState(true);
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
@@ -170,175 +250,117 @@ export const ProjectDetail = () => {
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
     const [riskAssessment, setRiskAssessment] = useState<string>('');
-    const [tasks, setTasks] = useState<Task[]>(project ? project.tasks : []);
-    const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(project?.files || []);
-    const [termsAccepted, setTermsAccepted] = useState(!!project?.termsAcceptedAt);
-    // Real deliverables from API (not mock data)
-    const [deliverables, setDeliverables] = useState<Array<{
-        id: string;
-        title: string;
-        type: string;
-        status: string;
-        progress: number;
-        dueDate: string;
-    }>>([]);
-    const [deliverablesLoading, setDeliverablesLoading] = useState(true);
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     // Expandable comments state
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const [newCommentInput, setNewCommentInput] = useState<Record<string, string>>({});
-    const [activityRefreshKey, setActivityRefreshKey] = useState(0);
     const { addToast } = useToast();
+
+    // Parallel data fetching with React Query cache
+    const queryClient = useQueryClient();
+
+    const { data: project = null, isLoading: projectLoading } = useQuery<Project | null>({
+        queryKey: ['project', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/projects/${id}`, { credentials: 'include' });
+            if (!response.ok) {
+                console.error(`API returned ${response.status} for project ${id}`);
+                return null;
+            }
+            const data = await response.json();
+            return {
+                id: data.id,
+                title: data.name || data.project_number || `Project ${data.id.slice(0, 8)}`,
+                client: data.client_name || data.client_company || 'Client',
+                thumbnail: '',
+                status: dbStatusToDisplay(data.status),
+                startDate: data.start_date || data.created_at || new Date().toISOString(),
+                dueDate: data.due_date || data.created_at || new Date().toISOString(),
+                progress: 0,
+                description: data.description || '',
+                budget: 0,
+                team: (data.team || []).map((m: any) => ({
+                    id: m.id,
+                    name: m.name || 'Unknown',
+                    email: m.email || '',
+                    avatar: m.avatar || '',
+                    role: m.role || 'team_member',
+                })),
+                tasks: [],
+                deliverables: [],
+                files: [],
+                deliverablesCount: 0,
+                revisionCount: data.revisions_used ?? 0,
+                maxRevisions: data.total_revisions_allowed ?? 2,
+                activityLog: [],
+                termsAcceptedAt: data.terms_accepted_at,
+                termsAcceptedBy: data.terms_accepted_by,
+            };
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    const { data: deliverables = [], isLoading: deliverablesLoading } = useQuery({
+        queryKey: ['deliverables', id],
+        queryFn: async () => {
+            const response = await fetch(`/api/deliverables?projectId=${id}`, { credentials: 'include' });
+            if (!response.ok) return [];
+            const data = await response.json();
+            return (data || []).map((d: any) => ({
+                id: d.id,
+                title: d.name || d.title || 'Untitled',
+                type: d.type || 'Video',
+                status: d.status || 'pending',
+                progress: d.progress || 0,
+                dueDate: d.estimated_completion_week
+                    ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+                    : new Date().toISOString(),
+            }));
+        },
+        enabled: !!id,
+        staleTime: 30_000,
+    });
+
+    // Polling hooks for cross-user sync
+    const { data: tasks = [] } = useTasks(project?.id);
+    const { data: activities = [] } = useActivities(project?.id);
+    const { data: projectFiles = [] } = useProjectFiles(project?.id);
+    const deleteProjectFileMutation = useDeleteProjectFile(project?.id);
+    const invalidateActivities = useInvalidateActivities();
+    const invalidateTasks = () => {
+        if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
+    };
+
+    // Sync termsAccepted from project data once it loads
+    useEffect(() => {
+        if (project?.termsAcceptedAt) setTermsAccepted(true);
+    }, [project?.termsAcceptedAt]);
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
 
-    // Fetch project from API
-    useEffect(() => {
-        if (!id) return;
 
-        const fetchProject = async () => {
-            try {
-                const response = await fetch(`/api/projects/${id}`, {
-                    credentials: 'include',
-                });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    // Transform API response to match Project type
-                    const apiProject: Project = {
-                        id: data.id,
-                        title: data.project_number || `Project ${data.id.slice(0, 8)}`,
-                        client: data.client_name || data.client_company || 'Client',
-                        thumbnail: '',
-                        status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
-                        startDate: data.created_at || new Date().toISOString(),
-                        dueDate: data.created_at || new Date().toISOString(),
-                        progress: 0,
-                        description: data.description || '',
-                        budget: 0,
-                        team: (data.team || []).map((m: any) => ({
-                            id: m.id,
-                            name: m.name || 'Unknown',
-                            email: m.email || '',
-                            avatar: m.avatar || '',
-                            role: m.role || 'team_member',
-                        })),
-                        tasks: [],
-                        deliverables: [],
-                        files: [],
-                        deliverablesCount: 0,
-                        revisionCount: data.revisions_used ?? 0,
-                        maxRevisions: data.total_revisions_allowed ?? 2,
-                        activityLog: [],
-                        termsAcceptedAt: data.terms_accepted_at,
-                        termsAcceptedBy: data.terms_accepted_by,
-                    };
-                    setProject(apiProject);
-                } else {
-                    console.error(`API returned ${response.status} for project ${id}`);
-                }
-            } catch (error) {
-                console.error('Failed to fetch project:', error);
-            } finally {
-                setProjectLoading(false);
-            }
-        };
+    // Derive activityLog directly from the query data (avoids flash on refetch)
+    const activityLog = useMemo(() => {
+        return activities.map((a: ApiActivity) => {
+            const isCurrentUser = !!(user && a.userId === user.id);
+            return {
+                id: a.id,
+                type: a.type,
+                userId: a.userId,
+                userName: a.userName,
+                action: formatActivityAction(a.type, a.details, isCurrentUser, !!(user && isClient(user))),
+                target: formatActivityTarget(a.type, a.details, a.targetUserName),
+                timestamp: new Date(a.timestamp).toISOString(),
+                details: a.details,
+            };
+        });
+    }, [activities, user?.id]);
 
-        fetchProject();
-    }, [id]);
-
-    // Load tasks from backend when project loads
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadTasks = async () => {
-            try {
-                const backendTasks = await fetchTasksForProject(project.id, true);
-                setTasks(backendTasks);
-            } catch (error) {
-                console.error('Failed to load tasks:', error);
-                // Fallback to mock data if API fails
-                setTasks(project.tasks || []);
-            }
-        };
-
-        loadTasks();
-        setProjectFiles(project.files || []);
-    }, [project?.id]);
-
-    // Load activities from API when project loads
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadActivities = async () => {
-            try {
-                const activities = await fetchActivities({ projectId: project.id, limit: 50 });
-
-                // Map API Activity to ActivityLog shape used by the template
-                const activityLog = activities.map((a: ApiActivity) => {
-                    const isCurrentUser = !!(user && a.userId === user.id);
-                    return {
-                        id: a.id,
-                        userId: a.userId,
-                        userName: a.userName,
-                        action: formatActivityAction(a.type, a.details, isCurrentUser),
-                        target: formatActivityTarget(a.type, a.details, a.targetUserName),
-                        timestamp: new Date(a.timestamp).toISOString(),
-                    };
-                });
-
-                setProject(prev => prev ? { ...prev, activityLog } : prev);
-            } catch (error) {
-                console.error('Failed to load activities:', error);
-            }
-        };
-
-        loadActivities();
-    }, [project?.id, user?.id, activityRefreshKey]);
-
-    // Load deliverables from API (for Overview tab consistency with Deliverables tab)
-    useEffect(() => {
-        if (!project?.id) return;
-
-        const loadDeliverables = async () => {
-            setDeliverablesLoading(true);
-            try {
-                const response = await fetch(`/api/deliverables?projectId=${project.id}`, {
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load deliverables');
-                }
-
-                const data = await response.json();
-
-                // Transform API response to match the display format
-                const transformed = (data || []).map((d: any) => ({
-                    id: d.id,
-                    title: d.name || d.title || 'Untitled',
-                    type: d.type || 'Video',
-                    status: d.status || 'pending',
-                    progress: d.progress || 0,
-                    dueDate: d.estimated_completion_week
-                        ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-                        : new Date().toISOString(),
-                }));
-
-                setDeliverables(transformed);
-            } catch (error) {
-                console.error('Failed to load deliverables:', error);
-                // Fallback to empty array - don't show mock data
-                setDeliverables([]);
-            } finally {
-                setDeliverablesLoading(false);
-            }
-        };
-
-        loadDeliverables();
-    }, [project?.id]);
 
     // Auto-analysis on load
     useEffect(() => {
@@ -407,20 +429,11 @@ export const ProjectDetail = () => {
                 deadline: parsed.deadline
             });
 
-            setTasks([...tasks, newTask]);
+            invalidateTasks();
             setNewTaskInput('');
 
-            // Persist activity to database
-            if (user) {
-                createActivity({
-                    type: 'TASK_CREATED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId: newTask.id, taskTitle: newTask.title },
-                }).then(() => setActivityRefreshKey(k => k + 1))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Created',
@@ -471,33 +484,11 @@ export const ProjectDetail = () => {
                 visibleToClient: updates.visibleToClient
             });
 
-            // Merge API response with local assignee data (API returns assignedTo UUID, not User object)
-            setTasks(prevTasks =>
-                prevTasks.map(t => t.id === taskId ? {
-                    ...t,
-                    ...updatedTask,
-                    assignee: updates.assignee,
-                    assigneeId: updates.assigneeId ?? updates.assignee?.id,
-                } : t)
-            );
+            invalidateTasks();
             setEditingTask(null);
 
-            // Persist activity to database
-            if (user && project) {
-                const activityType = updates.status ? 'TASK_STATUS_CHANGED' : 'TASK_UPDATED';
-                createActivity({
-                    type: activityType,
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: {
-                        taskId,
-                        taskTitle: updatedTask.title || updates.title || '',
-                        ...(updates.status && { newStatus: updates.status }),
-                    },
-                }).then(() => setActivityRefreshKey(k => k + 1))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Task Updated',
@@ -521,7 +512,8 @@ export const ProjectDetail = () => {
 
         try {
             await deleteTask(taskId);
-            setTasks(prev => prev.filter(t => t.id !== taskId));
+            invalidateTasks();
+            if (project) invalidateActivities(project.id);
             addToast({
                 title: 'Task Deleted',
                 description: 'Task has been deleted successfully',
@@ -541,18 +533,6 @@ export const ProjectDetail = () => {
         if (!user) return;
 
         const isFollowing = task.followers?.includes(user.id);
-        const originalTasks = [...tasks];
-
-        // Optimistic update
-        setTasks(prev => prev.map(t => {
-            if (t.id !== task.id) return t;
-
-            const newFollowers = isFollowing
-                ? (t.followers || []).filter(id => id !== user.id)
-                : [...(t.followers || []), user.id];
-
-            return { ...t, followers: newFollowers };
-        }));
 
         try {
             if (isFollowing) {
@@ -571,10 +551,9 @@ export const ProjectDetail = () => {
                     icon: <Bell className="h-4 w-4 text-emerald-500" />
                 });
             }
+            invalidateTasks();
         } catch (error) {
             console.error('Failed to toggle follow state:', error);
-            // Revert on error
-            setTasks(originalTasks);
             addToast({
                 title: "Error",
                 description: "Failed to update follow status",
@@ -609,38 +588,13 @@ export const ProjectDetail = () => {
                 content: commentText
             });
 
-            // Optimistic update
-            const newComment = {
-                id: `comment-${Date.now()}`,
-                userId: user.id,
-                userName: user.name,
-                content: commentText,
-                timestamp: Date.now()
-            };
-
-            setTasks(prevTasks =>
-                prevTasks.map(t =>
-                    t.id === taskId
-                        ? { ...t, comments: [...(t.comments || []), newComment] }
-                        : t
-                )
-            );
+            invalidateTasks();
 
             // Clear input
             setNewCommentInput(prev => ({ ...prev, [taskId]: '' }));
 
-            // Persist activity to database
-            if (project) {
-                const task = tasks.find(t => t.id === taskId);
-                createActivity({
-                    type: 'COMMENT_ADDED',
-                    userId: user.id,
-                    userName: user.name,
-                    projectId: project.id,
-                    details: { taskId, taskTitle: task?.title || '' },
-                }).then(() => setActivityRefreshKey(k => k + 1))
-                  .catch(err => console.error('Failed to log activity:', err));
-            }
+            // Refresh activity feed (backend logs the activity)
+            if (project) invalidateActivities(project.id);
 
             addToast({
                 title: 'Comment Added',
@@ -659,14 +613,7 @@ export const ProjectDetail = () => {
 
     // Delete a comment
     const handleDeleteComment = async (taskId: string, commentId: string) => {
-        setTasks(prevTasks =>
-            prevTasks.map(t =>
-                t.id === taskId
-                    ? { ...t, comments: (t.comments || []).filter(c => c.id !== commentId) }
-                    : t
-            )
-        );
-
+        invalidateTasks();
         addToast({
             title: 'Comment Deleted',
             description: 'The comment has been removed.',
@@ -684,7 +631,7 @@ export const ProjectDetail = () => {
             assignee: assignee
         };
 
-        setTasks(prev => [...prev, newTask]);
+        invalidateTasks();
 
         addToast({
             title: "Task Created",
@@ -696,32 +643,49 @@ export const ProjectDetail = () => {
         // navigate to tasks tab? No, let's just show toast.
     };
 
-    // File Upload Handler
-    const handleFileUploadComplete = (key: string, file: File) => {
-        const newFile: ProjectFile = {
-            id: `file-${Date.now()}`,
-            projectId: project.id,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            key: key,
-            uploadedBy: user || TEAM_MEMBERS[0],
-            uploadedAt: new Date().toISOString()
-        };
+    // File Upload Handler — persist metadata to DB, then invalidate cache
+    const handleFileUploadComplete = async (key: string, file: File) => {
+        try {
+            await createProjectFile({
+                projectId: project.id,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                r2Key: key,
+            });
 
-        setProjectFiles(prev => [newFile, ...prev]);
+            // Invalidate to trigger refetch
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', 'list', project.id] });
+            invalidateActivities(project.id);
 
-        addToast({
-            title: "File Uploaded",
-            description: `${file.name} has been uploaded successfully.`,
-            variant: "success"
-        });
+            addToast({
+                title: "File Uploaded",
+                description: `${file.name} has been uploaded successfully.`,
+                variant: "success"
+            });
+        } catch (error) {
+            console.error('Failed to save file record:', error);
+            addToast({
+                title: "Error",
+                description: "File uploaded to storage but failed to save record.",
+                variant: "destructive"
+            });
+        }
     };
 
-    // File Delete Handler (confirmation handled in FileList)
-    const handleFileDelete = (fileId: string) => {
-        // In a real app, calls storageService.deleteFile(key)
-        setProjectFiles(prev => prev.filter(f => f.id !== fileId));
+    // File Delete Handler
+    const handleFileDelete = async (fileId: string) => {
+        try {
+            await deleteProjectFileMutation.mutateAsync(fileId);
+            if (project) invalidateActivities(project.id);
+        } catch (error) {
+            console.error('Failed to delete file:', error);
+            addToast({
+                title: "Error",
+                description: "Failed to delete file.",
+                variant: "destructive"
+            });
+        }
     };
 
 
@@ -768,7 +732,7 @@ export const ProjectDetail = () => {
             case 'revision_requested':
                 return 'bg-rose-100 text-rose-700 border-rose-200';
             default:
-                return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+                return 'bg-muted text-muted-foreground border-border';
         }
     };
 
@@ -791,7 +755,7 @@ export const ProjectDetail = () => {
     };
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto pb-20">
+        <div className="space-y-6 max-w-7xl mx-auto pb-16">
 
             {/* Terms Acceptance Banner - Shows if not accepted */}
             {!termsAccepted && <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />}
@@ -810,17 +774,17 @@ export const ProjectDetail = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4 overflow-hidden">
                             {/* Project Icon */}
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                                 <LayoutDashboard className="h-5 w-5" />
                             </div>
 
                             {/* Title & Status */}
                             <div className="flex items-center gap-3 min-w-0">
-                                <h1 className="text-xl font-bold tracking-tight text-zinc-900 truncate">
+                                <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
                                     {project.title}
                                 </h1>
                                 <DropdownMenu trigger={
-                                    <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
+                                    <button className="text-muted-foreground hover:text-muted-foreground transition-colors">
                                         <ChevronDown className="h-4 w-4" />
                                     </button>
                                 }>
@@ -830,73 +794,58 @@ export const ProjectDetail = () => {
                                     <DropdownMenuItem>On Hold</DropdownMenuItem>
                                 </DropdownMenu>
 
-                                <Badge variant={getStatusVariant(project.status)} className="h-6 px-2 text-xs font-medium">
-                                    <Zap className="h-3 w-3 mr-1 fill-current" />
+                                <Badge variant={getStatusVariant(project.status)} className="text-[12px] font-medium">
                                     {project.status}
                                 </Badge>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                                    onClick={() => navigate(`/projects/${id}/settings`)}
+                                    title="Project Settings"
+                                >
+                                    <Settings className="h-3.5 w-3.5" />
+                                </Button>
                             </div>
 
                             {/* Vertical Divider */}
-                            <div className="h-6 w-px bg-zinc-200 hidden md:block mx-2" />
+                            <div className="h-6 w-px bg-muted hidden md:block mx-2" />
 
                             {/* Team Avatars */}
                             <div className="flex items-center -space-x-2 hidden md:flex">
                                 {project.team.slice(0, 4).map((member, index) => (
                                     <div key={`${member.id}-${index}`} title={`${member.name}${member.email ? ` (${member.email})` : ''}`}>
-                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-white" />
+                                        <Avatar src={member.avatar} fallback={member.name[0]} className="h-8 w-8 ring-2 ring-card" />
                                     </div>
                                 ))}
                                 {project.team.length > 4 && (
                                     <button
                                         onClick={() => navigate(`/projects/${id}/5`)}
-                                        className="h-8 w-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-primary hover:border-primary transition-colors ring-2 ring-white z-10"
+                                        className="h-8 w-8 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-primary hover:border-primary transition-colors ring-2 ring-card z-10"
                                     >
                                         +{project.team.length - 4}
                                     </button>
                                 )}
                                 <button
                                     onClick={() => navigate(`/projects/${id}/5`)}
-                                    className="h-8 w-8 rounded-full bg-zinc-50 border border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-white z-10"
+                                    className="h-8 w-8 rounded-full bg-muted border border-dashed border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors ml-2 ring-2 ring-card z-10"
                                 >
                                     <Users className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Right Side: Actions */}
-                        <div className="flex items-center gap-4 shrink-0">
-                            <DropdownMenu trigger={
-                                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-900">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            }>
-                                <DropdownMenuItem onClick={() => navigate(`/projects/${id}/settings`)}>
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                    navigator.clipboard.writeText(window.location.href);
-                                    addToast({
-                                        title: 'Link Copied',
-                                        description: 'Project link copied to clipboard',
-                                        variant: 'success'
-                                    });
-                                }}>
-                                    <Share2 className="h-4 w-4 mr-2" />
-                                    Share Project
-                                </DropdownMenuItem>
-                            </DropdownMenu>
-                        </div>
                     </div>
 
                     {/* Bottom Row: Minimal Tabs */}
-                    <div className="border-b border-zinc-200 pb-1">
-                        <TabsList className="bg-zinc-100/80 p-1 rounded-lg border border-zinc-200/60 inline-flex h-auto gap-1 justify-start overflow-x-auto no-scrollbar max-w-full">
+                    <div className="border-b border-border pb-1">
+                        <TabsList className="bg-muted/80 p-1 rounded-lg border border-border inline-flex h-auto gap-1 justify-start overflow-x-auto no-scrollbar max-w-full">
                             {tabConfig.map(({ name, index }) => (
                                 <TabsTrigger
                                     key={name}
                                     value={Object.keys(TAB_INDEX_MAP).find(key => TAB_INDEX_MAP[key as TabName] === index) || 'overview'}
-                                    className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm hover:bg-zinc-200/50 hover:text-zinc-900 text-zinc-500"
+                                    className="rounded-md px-3 py-1.5 text-[14px] font-medium transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground hover:bg-muted/50 hover:text-foreground text-muted-foreground"
                                 >
                                     {name}
                                 </TabsTrigger>
@@ -908,29 +857,29 @@ export const ProjectDetail = () => {
                 {/* --- TAB CONTENT --- */}
                 {/* --- OVERVIEW TAB --- */}
                 <TabsContent value="overview">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left Column (Main) */}
-                        <div className="lg:col-span-2 space-y-8">
+                        <div className="lg:col-span-2 space-y-5">
                             {/* Progress Section */}
-                            <Card className="overflow-hidden bg-white shadow-sm border-zinc-200/60">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
-                                    <CardTitle className="text-lg">Project Health</CardTitle>
+                            <Card className="overflow-hidden">
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border">
+                                    <CardTitle>Project Health</CardTitle>
                                     <Badge variant={project.progress === 100 ? 'success' : 'outline'}>{project.progress}% Complete</Badge>
                                 </CardHeader>
-                                <CardContent className="pt-6">
-                                    <div className="flex flex-col md:flex-row gap-8 items-center">
-                                        <div className="shrink-0 drop-shadow-lg">
-                                            <CircularProgress value={project.progress} size={150} strokeWidth={12} color={project.progress > 80 ? 'text-emerald-500' : 'text-primary'} />
+                                <CardContent className="pt-4">
+                                    <div className="flex flex-col md:flex-row gap-6 items-center">
+                                        <div className="shrink-0">
+                                            <CircularProgress value={project.progress} size={120} strokeWidth={10} color={project.progress > 80 ? 'text-teal-600' : 'text-primary'} />
                                         </div>
-                                        <div className="flex-1 space-y-5 w-full">
-                                            <p className="text-zinc-600 text-sm leading-relaxed">{project.description}</p>
-                                            <div className="bg-gradient-to-r from-purple-50 to-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Sparkles className="h-4 w-4 text-purple-600" />
-                                                    <h4 className="text-sm font-bold text-purple-900">AI Risk Analysis</h4>
+                                        <div className="flex-1 space-y-4 w-full">
+                                            <p className="text-muted-foreground text-[14px] leading-relaxed">{project.description}</p>
+                                            <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    <h4 className="text-[14px] font-semibold text-foreground">AI Risk Analysis</h4>
                                                 </div>
-                                                <p className="text-sm text-zinc-600 italic">
-                                                    "{riskAssessment || 'Analyzing...'}"
+                                                <p className="text-[14px] text-muted-foreground">
+                                                    {riskAssessment || 'Analyzing...'}
                                                 </p>
                                             </div>
                                         </div>
@@ -939,33 +888,33 @@ export const ProjectDetail = () => {
                             </Card>
 
                             {/* Recent Deliverables Table - Now uses real API data */}
-                            <Card className="border-zinc-200/60 shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-100 bg-zinc-50/30">
-                                    <CardTitle className="text-lg">Active Deliverables</CardTitle>
-                                    <Button variant="link" size="sm" className="h-auto p-0 text-zinc-500 hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border">
+                                    <CardTitle>Active Deliverables</CardTitle>
+                                    <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => navigate(`/projects/${id}/3`)}>View All</Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <div className="divide-y divide-zinc-100">
+                                    <div className="divide-y divide-border">
                                         {deliverablesLoading ? (
-                                            <div className="p-8 text-center text-zinc-400 text-sm">Loading deliverables...</div>
+                                            <div className="p-8 text-center text-muted-foreground text-sm">Loading deliverables...</div>
                                         ) : deliverables.slice(0, 3).map(del => (
                                             <div
                                                 key={del.id}
-                                                className="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors cursor-pointer"
+                                                className="p-4 flex items-center justify-between hover:bg-muted transition-colors cursor-pointer"
                                                 onClick={() => navigate(`/projects/${id}/deliverables/${del.id}`)}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 shadow-inner">
+                                                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground border border-border">
                                                         {del.type === 'Video' ? <FileVideo className="h-5 w-5" /> : <FileBox className="h-5 w-5" />}
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-sm text-zinc-900">{del.title}</p>
-                                                        <p className="text-xs text-zinc-500">Due {new Date(del.dueDate).toLocaleDateString()}</p>
+                                                        <p className="font-semibold text-sm text-foreground">{del.title}</p>
+                                                        <p className="text-xs text-muted-foreground">Due {new Date(del.dueDate).toLocaleDateString()}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-6">
                                                     <div className="w-24 hidden sm:block">
-                                                        <div className="flex justify-between text-[10px] text-zinc-400 font-medium mb-1">
+                                                        <div className="flex justify-between text-[10px] text-muted-foreground font-medium mb-1">
                                                             <span>Progress</span>
                                                             <span>{del.progress}%</span>
                                                         </div>
@@ -973,12 +922,12 @@ export const ProjectDetail = () => {
                                                     </div>
                                                     <Badge variant={
                                                         del.status === 'approved' || del.status === 'final_delivered' ? 'success' :
-                                                        del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
-                                                        del.status === 'in_progress' || del.status === 'beta_ready' ? 'info' :
-                                                        del.status === 'revision_requested' ? 'destructive' :
-                                                        'secondary'
+                                                            del.status === 'awaiting_approval' || del.status === 'payment_pending' ? 'warning' :
+                                                                del.status === 'in_progress' || del.status === 'beta_ready' ? 'info' :
+                                                                    del.status === 'revision_requested' ? 'destructive' :
+                                                                        'secondary'
                                                     }>
-                                                        {del.status.replace(/_/g, ' ')}
+                                                        {(user && isClient(user) && del.status === 'beta_ready' ? 'in_progress' : del.status).replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -999,27 +948,32 @@ export const ProjectDetail = () => {
                         {/* Right Column (Side) */}
                         <div className="space-y-6">
                             {/* Recent Activity */}
-                            <Card className="border-zinc-200/60 shadow-sm">
-                                <CardHeader className="border-b border-zinc-100 pb-3">
-                                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-500">Recent Activity</CardTitle>
+                            <Card>
+                                <CardHeader className="border-b border-border">
+                                    <CardTitle className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Recent Activity</CardTitle>
                                 </CardHeader>
-                                <CardContent className="pt-6">
+                                <CardContent className="pt-4">
                                     <div className="space-y-0">
-                                        {project.activityLog.length > 0 ? project.activityLog.map((log, i) => {
+                                        {activityLog.length > 0 ? activityLog.map((log, i) => {
                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                             const isCurrentUser = user && log.userId === user.id;
                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                             return (
-                                                <div key={log.id} className="flex gap-3 pb-6 relative last:pb-0 group">
-                                                    {i !== project.activityLog.length - 1 && (
-                                                        <div className="absolute left-[15px] top-8 bottom-0 w-px bg-zinc-200" />
+                                                <div
+                                                    key={log.id}
+                                                    className={cn("flex gap-3 pb-6 relative last:pb-0 group", activityLink && "cursor-pointer")}
+                                                    onClick={() => activityLink && navigate(activityLink)}
+                                                >
+                                                    {i !== activityLog.length - 1 && (
+                                                        <div className="absolute left-[15px] top-8 bottom-0 w-px bg-muted" />
                                                     )}
-                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-8 w-8 z-10 ring-2 ring-white shadow-sm" />
+                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-7 w-7 z-10 ring-2 ring-card" />
                                                     <div>
-                                                        <p className="text-xs text-zinc-500 mb-0.5 group-hover:text-zinc-700 transition-colors">
-                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                        <p className="text-xs text-muted-foreground mb-0.5 group-hover:text-foreground transition-colors">
+                                                            <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
                                                         </p>
-                                                        <p className="text-[10px] text-zinc-400 flex items-center gap-1 font-medium">
+                                                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
                                                             <Clock className="h-3 w-3" />
                                                             {formatTimeAgo(log.timestamp)}
                                                         </p>
@@ -1027,30 +981,32 @@ export const ProjectDetail = () => {
                                                 </div>
                                             )
                                         }) : (
-                                            <p className="text-sm text-zinc-400 italic">No activity yet.</p>
+                                            <p className="text-sm text-muted-foreground italic">No activity yet.</p>
                                         )}
                                     </div>
                                 </CardContent>
                             </Card>
 
                             {/* Deadlines - Now uses real API data */}
-                            <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white shadow-lg shadow-black/10 border-zinc-700">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-2 mb-5">
-                                        <Calendar className="h-5 w-5 text-zinc-400" />
-                                        <h3 className="font-bold tracking-tight">Upcoming Deadlines</h3>
+                            <Card>
+                                <CardHeader className="border-b border-border">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                                        <CardTitle>Upcoming Deadlines</CardTitle>
                                     </div>
-                                    <div className="space-y-4">
+                                </CardHeader>
+                                <CardContent className="pt-3">
+                                    <div className="space-y-3">
                                         {deliverablesLoading ? (
-                                            <p className="text-sm text-zinc-500 italic">Loading...</p>
-                                        ) : deliverables.slice(0, 2).map(d => (
-                                            <div key={d.id} className="flex justify-between items-center text-sm border-l-2 border-primary pl-4 py-1">
-                                                <span className="text-zinc-200 truncate w-32 font-medium">{d.title}</span>
-                                                <span className="font-mono text-zinc-400 text-xs bg-zinc-800 px-2 py-0.5 rounded">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                            <p className="text-[14px] text-muted-foreground">Loading...</p>
+                                        ) : deliverables.slice(0, 3).map(d => (
+                                            <div key={d.id} className="flex justify-between items-center text-[14px] border-l-2 border-primary pl-3 py-1">
+                                                <span className="text-foreground truncate w-32 font-medium">{d.title}</span>
+                                                <span className="tabular-nums text-muted-foreground text-[13px]">{new Date(d.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
                                         ))}
                                         {!deliverablesLoading && deliverables.length === 0 && (
-                                            <p className="text-sm text-zinc-500 italic">No upcoming deadlines.</p>
+                                            <p className="text-[14px] text-muted-foreground">No upcoming deadlines.</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -1067,7 +1023,7 @@ export const ProjectDetail = () => {
                         isPrimaryContact={isPrimaryContact}
                         isInviteModalOpen={isInviteModalOpen}
                         setIsInviteModalOpen={setIsInviteModalOpen}
-                        onTeamUpdated={(updatedTeam) => setProject(prev => prev ? { ...prev, team: updatedTeam } : prev)}
+                        onTeamUpdated={(updatedTeam) => queryClient.setQueryData<Project | null>(['project', id], (prev) => prev ? { ...prev, team: updatedTeam } : prev)}
                         addToast={addToast}
                     />
                 </TabsContent>
@@ -1077,8 +1033,8 @@ export const ProjectDetail = () => {
                     <div className="space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Tasks</h3>
-                                <p className="text-sm text-zinc-500">Manage your project tasks and track progress.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-foreground">Tasks</h3>
+                                <p className="text-sm text-muted-foreground">Manage your project tasks and track progress.</p>
                             </div>
                         </div>
 
@@ -1101,12 +1057,14 @@ export const ProjectDetail = () => {
                                                 onSave={handleSaveTask}
                                                 onCancel={() => setEditingTask(null)}
                                                 userId={user.id}
+                                                userName={user.name}
+                                                userRole={user.role}
                                             />
                                         );
                                     }
 
                                     return (
-                                        <div key={task.id} className="group flex flex-col gap-2 px-4 py-3 rounded-lg border border-zinc-200 bg-white hover:border-zinc-300 transition-colors">
+                                        <div key={task.id} className="group flex flex-col gap-2 px-4 py-3 rounded-lg border border-border bg-card hover:border-border transition-colors">
                                             {/* Top row: checkbox + title + actions */}
                                             <div className="flex items-center gap-3">
                                                 <button
@@ -1118,19 +1076,19 @@ export const ProjectDetail = () => {
                                                         "h-5 w-5 shrink-0 rounded border flex items-center justify-center transition-all focus:ring-2 focus:ring-primary/20 outline-none",
                                                         task.status === 'Done' || task.status === 'completed'
                                                             ? "bg-primary border-primary text-white"
-                                                            : "border-zinc-300 hover:border-primary bg-white"
+                                                            : "border-border hover:border-primary bg-card"
                                                     )}
                                                 >
                                                     {(task.status === 'Done' || task.status === 'completed') && <CheckSquare className="h-3.5 w-3.5" />}
                                                 </button>
                                                 <span className={cn(
                                                     "text-sm font-medium flex-1 min-w-0 truncate",
-                                                    (task.status === 'Done' || task.status === 'completed') ? "text-zinc-400 line-through decoration-zinc-300" : "text-zinc-900"
+                                                    (task.status === 'Done' || task.status === 'completed') ? "text-muted-foreground line-through decoration-zinc-300" : "text-foreground"
                                                 )}>
                                                     {task.title}
                                                 </span>
                                                 <div className="flex items-center gap-1.5 shrink-0">
-                                                    <Badge variant="secondary" className={cn("text-[11px] font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
+                                                    <Badge variant="secondary" className={cn("text-[12px] font-medium border", getTaskStatusStyle(task.status))}>{getTaskStatusLabel(task.status)}</Badge>
 
                                                     <Button
                                                         size="sm"
@@ -1140,7 +1098,7 @@ export const ProjectDetail = () => {
                                                             "h-7 w-7 p-0 rounded-md transition-all",
                                                             expandedComments.has(task.id)
                                                                 ? "text-blue-600 bg-blue-50"
-                                                                : "text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
+                                                                : "text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
                                                         )}
                                                         title="Comments"
                                                     >
@@ -1162,7 +1120,7 @@ export const ProjectDetail = () => {
                                                             "h-7 w-7 p-0 rounded-md transition-all",
                                                             task.followers?.includes(user?.id || '')
                                                                 ? "text-emerald-500 hover:text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
-                                                                : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                                                                : "text-muted-foreground hover:text-muted-foreground hover:bg-muted"
                                                         )}
                                                         title={task.followers?.includes(user?.id || '') ? "Unfollow updates" : "Follow updates"}
                                                     >
@@ -1174,19 +1132,19 @@ export const ProjectDetail = () => {
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleEditTask(task)}
-                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all"
+                                                            className="h-7 w-7 p-0 rounded-md text-muted-foreground hover:text-muted-foreground hover:bg-muted transition-all"
                                                             title="Edit task"
                                                         >
                                                             <Edit2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                     )}
 
-                                                    {user && canDeleteTask(user) && (
+                                                    {user && canDeleteTask(user, task) && (
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleDeleteTask(task.id)}
-                                                            className="h-7 w-7 p-0 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                            className="h-7 w-7 p-0 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-all"
                                                             title="Delete task"
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -1195,9 +1153,9 @@ export const ProjectDetail = () => {
                                                 </div>
                                             </div>
                                             {/* Meta row: assignee, time, creator, deadline */}
-                                            <div className="flex items-center gap-3 pl-8 text-xs text-zinc-400">
+                                            <div className="flex items-center gap-3 pl-8 text-xs text-muted-foreground">
                                                 {assignee && (
-                                                    <span className="flex items-center gap-1.5 text-zinc-600 font-medium" title={`Assigned to ${assignee.name}`}>
+                                                    <span className="flex items-center gap-1.5 text-muted-foreground font-medium" title={`Assigned to ${assignee.name}`}>
                                                         <Avatar src={assignee.avatar} fallback={assignee.name[0]} className="h-4 w-4" />
                                                         {assignee.name}
                                                     </span>
@@ -1226,7 +1184,7 @@ export const ProjectDetail = () => {
 
                                             {/* Expanded Comments Section */}
                                             {expandedComments.has(task.id) && (
-                                                <div className="mt-4 pt-4 border-t border-zinc-100 pl-9">
+                                                <div className="mt-4 pt-4 border-t border-border pl-9">
                                                     <div className="space-y-3">
                                                         {/* Existing Comments */}
                                                         <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
@@ -1249,7 +1207,7 @@ export const ProjectDetail = () => {
                                                                     />
                                                                 ))
                                                             ) : (
-                                                                <p className="text-sm text-zinc-400 italic py-2">No comments yet.</p>
+                                                                <p className="text-sm text-muted-foreground italic py-2">No comments yet.</p>
                                                             )}
                                                         </div>
 
@@ -1276,7 +1234,7 @@ export const ProjectDetail = () => {
                                     title="No tasks yet"
                                     description="Get started by adding a task."
                                     icon={ClipboardList}
-                                    className="py-16 bg-zinc-50/50 border-dashed"
+                                    className="py-16 bg-muted/50 border-dashed"
                                 />
                             )}
                         </div>
@@ -1286,8 +1244,8 @@ export const ProjectDetail = () => {
                             <TaskCreateForm
                                 projectId={project.id}
                                 teamMembers={project.team || []}
-                                onTaskCreated={(task) => {
-                                    setTasks(prev => [...prev, task]);
+                                onTaskCreated={() => {
+                                    invalidateTasks();
                                     addToast({
                                         title: 'Task Created',
                                         description: 'Task has been created successfully',
@@ -1295,6 +1253,8 @@ export const ProjectDetail = () => {
                                     });
                                 }}
                                 userId={user.id}
+                                userName={user.name}
+                                userRole={user.role}
                             />
                         )}
 
@@ -1311,8 +1271,8 @@ export const ProjectDetail = () => {
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h3 className="text-xl font-bold tracking-tight text-zinc-900">Project Files</h3>
-                                <p className="text-sm text-zinc-500">Shared assets and documents for this project.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-foreground">Project Files</h3>
+                                <p className="text-sm text-muted-foreground">Shared assets and documents for this project.</p>
                             </div>
                         </div>
 
@@ -1345,7 +1305,7 @@ export const ProjectDetail = () => {
                         <div className="flex justify-between items-center">
                             <div>
                                 <h3 className="text-lg font-bold">Project Activity</h3>
-                                <p className="text-sm text-zinc-500">Complete timeline of all project events</p>
+                                <p className="text-sm text-muted-foreground">Complete timeline of all project events</p>
                             </div>
                             <div className="flex gap-2">
                                 <Button variant="outline" size="sm" className="gap-2">
@@ -1356,71 +1316,42 @@ export const ProjectDetail = () => {
                         </div>
 
                         {/* Activity Stream */}
-                        <Card className="border-zinc-200/60 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-6">
-                                {project.activityLog.length > 0 ? (
+                                {activityLog.length > 0 ? (
                                     <>
                                         {/* Group by date */}
                                         <div className="space-y-8">
-                                            {/* Today Section */}
-                                            <div>
-                                                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
-                                                    <div className="h-px flex-1 bg-zinc-200" />
-                                                    <span>Today</span>
-                                                    <div className="h-px flex-1 bg-zinc-200" />
-                                                </h4>
-                                                <div className="space-y-0">
-                                                    {project.activityLog.slice(0, 3).map((log, i) => {
-                                                        const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
-                                                        const isCurrentUser = user && log.userId === user.id;
-                                                        const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
-                                                        return (
-                                                            <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
-                                                                {i !== 2 && (
-                                                                    <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
-                                                                )}
-                                                                <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
-                                                                <div className="flex-1 pt-1">
-                                                                    <p className="text-sm text-zinc-600 mb-1">
-                                                                        <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
-                                                                    </p>
-                                                                    <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
-                                                                        <Clock className="h-3 w-3" />
-                                                                        {new Date(log.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            {/* Earlier Section */}
-                                            {project.activityLog.length > 3 && (
-                                                <div>
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-2">
-                                                        <div className="h-px flex-1 bg-zinc-200" />
-                                                        <span>Earlier</span>
-                                                        <div className="h-px flex-1 bg-zinc-200" />
+                                            {groupActivitiesByDate(activityLog).map((group) => (
+                                                <div key={group.label}>
+                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                                                        <div className="h-px flex-1 bg-muted" />
+                                                        <span>{group.label}</span>
+                                                        <div className="h-px flex-1 bg-muted" />
                                                     </h4>
                                                     <div className="space-y-0">
-                                                        {project.activityLog.slice(3).map((log, i, arr) => {
+                                                        {group.activities.map((log, i, arr) => {
                                                             const teamUser = TEAM_MEMBERS.find(u => u.id === log.userId);
                                                             const isCurrentUser = user && log.userId === user.id;
                                                             const displayName = isCurrentUser ? 'You' : (teamUser?.name || log.userName || 'Unknown');
+                                                            const activityLink = getActivityLink(project.id, log.type, log.details);
                                                             return (
-                                                                <div key={log.id} className="flex gap-4 pb-6 relative last:pb-0 group hover:bg-zinc-50 -mx-2 px-2 py-2 rounded-lg transition-colors">
+                                                                <div
+                                                                    key={log.id}
+                                                                    className={cn("flex gap-4 pb-6 relative last:pb-0 group hover:bg-muted -mx-2 px-2 py-2 rounded-lg transition-colors", activityLink && "cursor-pointer")}
+                                                                    onClick={() => activityLink && navigate(activityLink)}
+                                                                >
                                                                     {i !== arr.length - 1 && (
-                                                                        <div className="absolute left-[23px] top-12 bottom-0 w-px bg-zinc-200" />
+                                                                        <div className="absolute left-[23px] top-12 bottom-0 w-px bg-muted" />
                                                                     )}
-                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-white shadow-sm shrink-0" />
+                                                                    <Avatar src={teamUser?.avatar} fallback={displayName[0]} className="h-10 w-10 z-10 ring-2 ring-card shadow-sm shrink-0" />
                                                                     <div className="flex-1 pt-1">
-                                                                        <p className="text-sm text-zinc-600 mb-1">
-                                                                            <span className="font-bold text-zinc-900">{displayName}</span> {log.action} <span className="font-semibold text-zinc-900">{log.target}</span>
+                                                                        <p className="text-sm text-muted-foreground mb-1">
+                                                                            <span className="font-bold text-foreground">{displayName}</span> {log.action} <span className="font-semibold text-foreground">{log.target}</span>
                                                                         </p>
-                                                                        <p className="text-xs text-zinc-400 flex items-center gap-1.5 font-medium">
+                                                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
                                                                             <Clock className="h-3 w-3" />
-                                                                            {new Date(log.timestamp).toLocaleDateString()}
+                                                                            {formatTimestamp(log.timestamp)}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -1428,14 +1359,7 @@ export const ProjectDetail = () => {
                                                         })}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Load More */}
-                                        <div className="pt-6 border-t border-zinc-100 mt-6">
-                                            <Button variant="outline" className="w-full">
-                                                Load More Activity
-                                            </Button>
+                                            ))}
                                         </div>
                                     </>
                                 ) : (

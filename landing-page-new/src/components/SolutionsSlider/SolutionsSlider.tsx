@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export default function SolutionsSlider() {
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -10,9 +10,11 @@ export default function SolutionsSlider() {
   const [active, setActive] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragScrollLeftRef = useRef(0);
 
   // Calculate total pages based on cards per view
   const totalPages = Math.ceil(solutions.length / cardsPerView);
@@ -29,34 +31,26 @@ export default function SolutionsSlider() {
       const gap = parseInt(window.getComputedStyle(track).gap || "16", 10) || 16;
       const cardW = firstCard?.getBoundingClientRect().width ?? 300;
 
-      // Calculate how many full cards fit in viewport
       const perView = Math.floor((trackWidth + gap) / (cardW + gap));
       setCardsPerView(Math.max(1, perView));
       setCardWidth(cardW + gap);
 
-      // Detect if mobile (< 640px, sm breakpoint)
-      setIsMobile(window.innerWidth < 640);
-
-      // Update scroll button states
       updateScrollState();
     };
 
     update();
-    const onResize = () => update();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Update scroll state (which buttons are enabled)
   const updateScrollState = () => {
     const track = trackRef.current;
     if (!track) return;
-
     setCanScrollLeft(track.scrollLeft > 1);
     setCanScrollRight(track.scrollLeft < track.scrollWidth - track.clientWidth - 1);
   };
 
-  // Track scroll position and update active page
+  // Track scroll position and update active dot
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
@@ -65,12 +59,9 @@ export default function SolutionsSlider() {
     const onScroll = () => {
       if (t) window.clearTimeout(t);
       t = window.setTimeout(() => {
-        // Calculate which page we're on
         const pageWidth = cardsPerView * cardWidth;
         const currentPage = Math.round(track.scrollLeft / pageWidth);
         setActive(Math.max(0, Math.min(currentPage, totalPages - 1)));
-
-        // Update button states
         updateScrollState();
       }, 80);
     };
@@ -79,84 +70,130 @@ export default function SolutionsSlider() {
     return () => track.removeEventListener("scroll", onScroll);
   }, [cardWidth, cardsPerView, totalPages]);
 
-  // Auto-scroll on mobile
-  useEffect(() => {
-    if (!isMobile || hasUserInteracted) return;
+  // Auto-scroll: advance one card every 3 seconds, loop, resume after interaction
+  const startAutoScroll = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
 
+    autoScrollIntervalRef.current = setInterval(() => {
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      const next = track.scrollLeft + (cardWidth || 340);
+      track.scrollTo({ left: next >= maxScroll ? 0 : next, behavior: "smooth" });
+    }, 3000);
+  }, [cardWidth]);
+
+  const pauseAutoScroll = useCallback(() => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    // Resume after 5 seconds of inactivity
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => startAutoScroll(), 5000);
+  }, [startAutoScroll]);
+
+  useEffect(() => {
+    const delay = setTimeout(() => startAutoScroll(), 1500);
+    return () => {
+      clearTimeout(delay);
+      if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, [startAutoScroll]);
+
+  // Mouse drag-to-scroll
+  useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
 
-    // Start auto-scroll after a brief delay
-    const startDelay = setTimeout(() => {
-      autoScrollIntervalRef.current = setInterval(() => {
-        const maxScroll = track.scrollWidth - track.clientWidth;
-        const nextScrollLeft = track.scrollLeft + cardWidth;
+    const onMouseDown = (e: MouseEvent) => {
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.pageX - track.offsetLeft;
+      dragScrollLeftRef.current = track.scrollLeft;
+      track.style.cursor = "grabbing";
+      track.style.userSelect = "none";
+      pauseAutoScroll();
+    };
 
-        // If we've reached the end, loop back to start
-        if (nextScrollLeft >= maxScroll) {
-          track.scrollTo({ left: 0, behavior: "smooth" });
-        } else {
-          track.scrollTo({ left: nextScrollLeft, behavior: "smooth" });
-        }
-      }, 3000); // Scroll every 3 seconds
-    }, 1000); // Wait 1 second before starting
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      e.preventDefault();
+      const x = e.pageX - track.offsetLeft;
+      const walk = (x - dragStartXRef.current) * 1.2;
+      track.scrollLeft = dragScrollLeftRef.current - walk;
+    };
 
-    return () => {
-      clearTimeout(startDelay);
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current);
-        autoScrollIntervalRef.current = null;
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      track.style.cursor = "grab";
+      track.style.userSelect = "";
+    };
+
+    const onMouseLeave = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        track.style.cursor = "grab";
+        track.style.userSelect = "";
       }
     };
-  }, [isMobile, hasUserInteracted, cardWidth]);
 
-  // Stop auto-scroll on user interaction
+    track.style.cursor = "grab";
+    track.addEventListener("mousedown", onMouseDown);
+    track.addEventListener("mousemove", onMouseMove);
+    track.addEventListener("mouseup", onMouseUp);
+    track.addEventListener("mouseleave", onMouseLeave);
+
+    return () => {
+      track.removeEventListener("mousedown", onMouseDown);
+      track.removeEventListener("mousemove", onMouseMove);
+      track.removeEventListener("mouseup", onMouseUp);
+      track.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, [pauseAutoScroll]);
+
+  // Mouse wheel horizontal scroll
   useEffect(() => {
     const track = trackRef.current;
-    if (!track || !isMobile) return;
+    if (!track) return;
 
-    const handleInteraction = () => {
-      setHasUserInteracted(true);
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current);
-        autoScrollIntervalRef.current = null;
-      }
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // already horizontal
+      e.preventDefault();
+      track.scrollLeft += e.deltaY;
+      pauseAutoScroll();
     };
 
-    // Listen for touch and scroll events
-    track.addEventListener("touchstart", handleInteraction);
-    track.addEventListener("mousedown", handleInteraction);
+    track.addEventListener("wheel", onWheel, { passive: false });
+    return () => track.removeEventListener("wheel", onWheel);
+  }, [pauseAutoScroll]);
 
-    return () => {
-      track.removeEventListener("touchstart", handleInteraction);
-      track.removeEventListener("mousedown", handleInteraction);
-    };
-  }, [isMobile]);
+  // Touch: pause auto-scroll on touch
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const onTouch = () => pauseAutoScroll();
+    track.addEventListener("touchstart", onTouch, { passive: true });
+    return () => track.removeEventListener("touchstart", onTouch);
+  }, [pauseAutoScroll]);
 
   const scrollBy = (dir: -1 | 1) => {
     const track = trackRef.current;
     if (!track) return;
-
-    // Scroll by full page (cardsPerView cards)
+    pauseAutoScroll();
     const scrollAmount = cardsPerView * cardWidth;
-    const newScrollLeft = track.scrollLeft + (dir * scrollAmount);
+    const newScrollLeft = track.scrollLeft + dir * scrollAmount;
     const maxScroll = track.scrollWidth - track.clientWidth;
-
-    // Clamp to valid range
-    const targetScroll = Math.max(0, Math.min(newScrollLeft, maxScroll));
-    track.scrollTo({ left: targetScroll, behavior: "smooth" });
+    track.scrollTo({ left: Math.max(0, Math.min(newScrollLeft, maxScroll)), behavior: "smooth" });
   };
 
   const scrollToPage = (pageIndex: number) => {
     const track = trackRef.current;
     if (!track) return;
-
-    // Scroll to the start of the page
+    pauseAutoScroll();
     const scrollAmount = pageIndex * cardsPerView * cardWidth;
     const maxScroll = track.scrollWidth - track.clientWidth;
-    const targetScroll = Math.min(scrollAmount, maxScroll);
-
-    track.scrollTo({ left: targetScroll, behavior: "smooth" });
+    track.scrollTo({ left: Math.min(scrollAmount, maxScroll), behavior: "smooth" });
   };
 
   return (
@@ -198,9 +235,9 @@ export default function SolutionsSlider() {
             <style>{`#solutionsTrack::-webkit-scrollbar{display:none;}`}</style>
 
             {solutions.map((s, i) => (
-              <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm hover:shadow-xl transition ease-out hover:-translate-y-0.5 overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
+              <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm transition ease-out overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
                 {/* Solution image/illustration */}
-                <div className={`h-32 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}>
+                <div className={`h-32 flex items-center justify-center relative overflow-hidden transition-transform duration-500`}>
                   <Image
                     src={s.image}
                     alt={s.title}
@@ -208,10 +245,10 @@ export default function SolutionsSlider() {
                     height={200}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-black/5 transition-colors duration-300" />
 
                   {/* Icon overlay */}
-                  <div className={`h-12 w-12 rounded-xl backdrop-blur-md bg-white/90 ring-1 ring-white/50 flex items-center justify-center ${s.iconColor} shadow-lg relative z-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-300`}>
+                  <div className={`h-12 w-12 rounded-xl backdrop-blur-md bg-white/90 ring-1 ring-white/50 flex items-center justify-center ${s.iconColor} shadow-lg relative z-10 transition-transform duration-300`}>
                     <div className="scale-90">
                       {s.icon}
                     </div>

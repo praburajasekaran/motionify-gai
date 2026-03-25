@@ -206,7 +206,7 @@ export default function ProposalPage() {
       <header className="bg-black/20 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-white/80 transition-colors">
-            <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            <img src="/images/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
           </Link>
         </div>
       </header>

@@ -1,4 +1,4 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { sendProposalNotificationEmail, sendProposalStatusChangeEmail } from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
@@ -6,7 +6,29 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 
-const { Client } = pg;
+async function logActivity(params: {
+  type: string;
+  userId: string;
+  userName: string;
+  inquiryId?: string;
+  proposalId?: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbQuery(
+      `INSERT INTO activities (type, user_id, user_name, target_user_id, target_user_name, inquiry_id, proposal_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [params.type, params.userId, params.userName,
+       params.targetUserId || null, params.targetUserName || null,
+       params.inquiryId || null, params.proposalId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
 
 interface ProposalDeliverable {
   id: string;
@@ -25,26 +47,14 @@ interface CreateProposalPayload {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded?: number;
+  revisionsDescription?: string;
 }
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
 
 /**
  * Send status change notifications (email + in-app) when proposal status changes
  * Notifies clients on admin actions, notifies admins on client responses
  */
 async function notifyStatusChange(
-  client: pg.Client,
   proposalId: string,
   newStatus: 'sent' | 'accepted' | 'rejected' | 'changes_requested',
   changedByUserId: string,
@@ -52,7 +62,7 @@ async function notifyStatusChange(
 ) {
   try {
     // Fetch proposal with inquiry details and client info
-    const proposalResult = await client.query(
+    const proposalResult = await dbQuery(
       `SELECT
         p.id,
         p.inquiry_id,
@@ -103,7 +113,7 @@ async function notifyStatusChange(
       // Create in-app notification for client
       if (proposal.client_user_id) {
         try {
-          await client.query(
+          await dbQuery(
             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
@@ -123,11 +133,11 @@ async function notifyStatusChange(
         }
       }
     } else {
-      // Client changed status → notify all admins (super_admin and project_manager)
-      const adminsResult = await client.query(
+      // Client changed status → notify all admins (super_admin and support)
+      const adminsResult = await dbQuery(
         `SELECT id, email, full_name
          FROM users
-         WHERE role IN ('super_admin', 'project_manager')`
+         WHERE role IN ('super_admin', 'support')`
       );
 
       for (const admin of adminsResult.rows) {
@@ -150,7 +160,7 @@ async function notifyStatusChange(
 
         // Create in-app notification for each admin
         try {
-          await client.query(
+          await dbQuery(
             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
@@ -184,8 +194,6 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   // Helper to extract proposal ID from path
   const pathParts = event.path.split('/');
   const lastPart = pathParts[pathParts.length - 1];
@@ -193,8 +201,6 @@ export const handler = compose(
   const proposalId = isIdPath ? lastPart : null;
 
   try {
-    await client.connect();
-
     // Handle PUT request for updating a proposal
     if (event.httpMethod === 'PUT' && proposalId) {
       const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
@@ -223,26 +229,34 @@ export const handler = compose(
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        const dbField = fieldMapping[key] || key;
-        if (allowedFields.includes(dbField)) {
-          let value = updates[key];
+      // Build reverse mapping: snake_case DB field -> camelCase input key
+      const reverseMapping: Record<string, string> = {};
+      for (const [inputKey, dbField] of Object.entries(fieldMapping)) {
+        reverseMapping[dbField] = inputKey;
+      }
+
+      for (const dbField of allowedFields) {
+        // Check both the DB field name and the camelCase input key
+        const inputKey = reverseMapping[dbField] || dbField;
+        if (inputKey in updates) {
+          let value = (updates as any)[inputKey];
           if (dbField === 'deliverables' || dbField === 'edit_history') {
             value = JSON.stringify(value);
           }
           updateFields.push(`${dbField} = $${paramIndex}`);
           updateValues.push(value);
           paramIndex++;
-        }
-        // Handle status timestamps
-        if (key === 'status') {
-          if (updates[key] === 'accepted') {
-            updateFields.push(`accepted_at = NOW()`);
-          } else if (updates[key] === 'rejected') {
-            updateFields.push(`rejected_at = NOW()`);
+
+          // Handle status timestamps
+          if (dbField === 'status') {
+            if (value === 'accepted') {
+              updateFields.push(`accepted_at = NOW()`);
+            } else if (value === 'rejected') {
+              updateFields.push(`rejected_at = NOW()`);
+            }
           }
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {
@@ -254,8 +268,8 @@ export const handler = compose(
 
       updateFields.push(`updated_at = NOW()`);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -263,7 +277,7 @@ export const handler = compose(
 
       updateValues.push(proposalId);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -275,7 +289,7 @@ export const handler = compose(
 
       // Update inquiry status if proposal is accepted
       if (updates.status === 'accepted') {
-        await client.query(
+        await dbQuery(
           `UPDATE inquiries SET status = 'accepted' WHERE proposal_id = $1`,
           [proposalId]
         );
@@ -284,12 +298,29 @@ export const handler = compose(
       // Send notifications if status changed
       if (updates.status && auth?.user?.userId) {
         await notifyStatusChange(
-          client,
           proposalId,
           updates.status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
           auth.user.userId,
           updates.feedback as string | undefined
         );
+      }
+
+      // Log activity for status change
+      if (updates.status) {
+        const statusTypeMap: Record<string, string> = {
+          accepted: 'PROPOSAL_ACCEPTED',
+          rejected: 'PROPOSAL_REJECTED',
+          changes_requested: 'PROPOSAL_CHANGES_REQUESTED',
+          sent: 'PROPOSAL_SENT',
+        };
+        await logActivity({
+          type: statusTypeMap[updates.status] || 'PROPOSAL_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: result.rows[0].inquiry_id,
+          proposalId,
+          details: { ...(updates.feedback ? { feedback: String(updates.feedback).substring(0, 100) } : {}) },
+        });
       }
 
       return {
@@ -323,14 +354,14 @@ export const handler = compose(
 
       params.push(proposalId);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       if (result.rows.length === 0) {
         return {
@@ -341,7 +372,7 @@ export const handler = compose(
       }
 
       if (status === 'accepted') {
-        await client.query(
+        await dbQuery(
           `UPDATE inquiries SET status = 'accepted' WHERE proposal_id = $1`,
           [proposalId]
         );
@@ -350,12 +381,29 @@ export const handler = compose(
       // Send notifications on status change
       if (status && auth?.user?.userId) {
         await notifyStatusChange(
-          client,
           proposalId,
           status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
           auth.user.userId,
           feedback as string | undefined
         );
+      }
+
+      // Log activity for status change
+      if (status) {
+        const statusTypeMap: Record<string, string> = {
+          accepted: 'PROPOSAL_ACCEPTED',
+          rejected: 'PROPOSAL_REJECTED',
+          changes_requested: 'PROPOSAL_CHANGES_REQUESTED',
+          sent: 'PROPOSAL_SENT',
+        };
+        await logActivity({
+          type: statusTypeMap[status] || 'PROPOSAL_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          inquiryId: result.rows[0].inquiry_id,
+          proposalId,
+          details: { ...(feedback ? { feedback: String(feedback).substring(0, 100) } : {}) },
+        });
       }
 
       return {
@@ -371,7 +419,7 @@ export const handler = compose(
       const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lastPart);
 
       if (isId) {
-        const result = await client.query('SELECT * FROM proposals WHERE id = $1', [lastPart]);
+        const result = await dbQuery('SELECT * FROM proposals WHERE id = $1', [lastPart]);
 
         if (result.rows.length === 0) {
           return {
@@ -383,26 +431,26 @@ export const handler = compose(
 
         return {
           statusCode: 200,
-          headers,
+          headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
           body: JSON.stringify(result.rows[0]),
         };
       }
 
       const { inquiryId } = event.queryStringParameters || {};
 
-      let query = 'SELECT * FROM proposals ORDER BY created_at DESC';
+      let sql = 'SELECT * FROM proposals ORDER BY created_at DESC';
       const params: any[] = [];
 
       if (inquiryId) {
-        query = 'SELECT * FROM proposals WHERE inquiry_id = $1 ORDER BY created_at DESC';
+        sql = 'SELECT * FROM proposals WHERE inquiry_id = $1 ORDER BY created_at DESC';
         params.push(inquiryId);
       }
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
         body: JSON.stringify(result.rows),
       };
     }
@@ -412,7 +460,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const payload = validation.data;
 
-      const inquiryResult = await client.query(
+      const inquiryResult = await dbQuery(
         'SELECT id, inquiry_number, contact_email, contact_name FROM inquiries WHERE id = $1',
         [payload.inquiryId]
       );
@@ -430,7 +478,7 @@ export const handler = compose(
 
       let clientUserId: string | null = null;
 
-      const existingUserResult = await client.query(
+      const existingUserResult = await dbQuery(
         'SELECT id FROM users WHERE email = $1',
         [contact_email]
       );
@@ -438,20 +486,20 @@ export const handler = compose(
       if (existingUserResult.rows.length > 0) {
         clientUserId = existingUserResult.rows[0].id;
       } else {
-        const newUserResult = await client.query(
-          `INSERT INTO users (email, full_name, role) 
-           VALUES ($1, $2, 'client') 
+        const newUserResult = await dbQuery(
+          `INSERT INTO users (email, full_name, role)
+           VALUES ($1, $2, 'client')
            RETURNING id`,
           [contact_email, contact_name]
         );
         clientUserId = newUserResult.rows[0].id;
       }
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO proposals (
           inquiry_id, description, deliverables, currency, total_price,
-          advance_percentage, advance_amount, balance_amount, client_user_id, revisions_included
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          advance_percentage, advance_amount, balance_amount, client_user_id, revisions_included, revisions_description
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *`,
         [
           payload.inquiryId,
@@ -464,18 +512,19 @@ export const handler = compose(
           payload.balanceAmount,
           clientUserId,
           payload.revisionsIncluded ?? 2,
+          payload.revisionsDescription || null,
         ]
       );
 
-      await client.query(
+      await dbQuery(
         `UPDATE inquiries SET proposal_id = $1, status = 'proposal_sent' WHERE id = $2`,
         [result.rows[0].id, payload.inquiryId]
       );
 
       // Send proposal notification email to client
-      const proposalId = result.rows[0].id;
+      const newProposalId = result.rows[0].id;
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const proposalUrl = `${appUrl}/proposal/${proposalId}`;
+      const proposalUrl = `${appUrl}/proposal/${newProposalId}`;
 
       // Format price for email (convert from smallest unit if needed)
       const formattedPrice = (payload.totalPrice / 100).toLocaleString('en-IN');
@@ -495,6 +544,18 @@ export const handler = compose(
         console.error('❌ Failed to send proposal notification email:', emailError);
         // Don't fail the request if email fails
       }
+
+      // Log activity
+      await logActivity({
+        type: 'PROPOSAL_SENT',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        inquiryId: payload.inquiryId,
+        proposalId: result.rows[0].id,
+        targetUserId: clientUserId || undefined,
+        targetUserName: contact_name,
+        details: { inquiryNumber: inquiry.inquiry_number },
+      });
 
       return {
         statusCode: 201,
@@ -519,7 +580,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

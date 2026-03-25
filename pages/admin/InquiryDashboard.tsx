@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { getInquiries, getInquiriesByClientUserId, getInquiryStats, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { getInquiries, getInquiriesByClientUserId, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
+import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { NewInquiryModal } from '../../components/admin/NewInquiryModal';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -19,36 +20,9 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   paid: 'bg-green-500/10 text-green-400 ring-green-500/20',
   converted: 'bg-emerald-600/10 text-emerald-600 ring-emerald-600/20',
   rejected: 'bg-red-500/10 text-red-400 ring-red-500/20',
-  archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
+  archived: 'bg-muted text-muted-foreground ring-border',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Reviewing',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'Negotiating',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up',
-  payment_pending: 'Payment Pending',
-  paid: 'Paid',
-  converted: 'Converted',
-  rejected: 'Rejected',
-  archived: 'Archived',
-};
-
-const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'Submitted',
-  reviewing: 'Under Review',
-  proposal_sent: 'Proposal Received',
-  negotiating: 'In Discussion',
-  accepted: 'Accepted',
-  project_setup: 'Project Starting',
-  payment_pending: 'Payment Due',
-  paid: 'Paid',
-  converted: 'Project Started',
-  rejected: 'Declined',
-  archived: 'Archived',
-};
 
 interface StatCardProps {
   label: string;
@@ -74,11 +48,11 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
+    <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
         </div>
         <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
           <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -89,6 +63,7 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
 }
 
 export function InquiryDashboard() {
+  const navigate = useNavigate();
   const { user, isLoading } = useAuthContext();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([]);
@@ -102,22 +77,33 @@ export function InquiryDashboard() {
 
   const loadInquiries = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      let allInquiries: Inquiry[];
-      let inquiryStats;
-      
-      if (isClient(user)) {
-        allInquiries = await getInquiriesByClientUserId(user.id);
-        inquiryStats = await getInquiryStats(user.id);
-      } else {
-        allInquiries = await getInquiries();
-        inquiryStats = await getInquiryStats();
-      }
-      
+      const allInquiries = isClient(user)
+        ? await getInquiriesByClientUserId(user.id)
+        : await getInquiries();
+
+      // Compute stats locally from the already-fetched list (avoids duplicate API call)
+      const inquiryStats = isClient(user)
+        ? {
+            total: allInquiries.length,
+            pendingResponse: allInquiries.filter(i => i.status === 'new' || i.status === 'reviewing').length,
+            proposalReceived: allInquiries.filter(i => i.status === 'proposal_sent').length,
+            accepted: allInquiries.filter(i => i.status === 'accepted').length,
+          }
+        : {
+            total: allInquiries.length,
+            new: allInquiries.filter(i => i.status === 'new').length,
+            reviewing: allInquiries.filter(i => i.status === 'reviewing').length,
+            proposalSent: allInquiries.filter(i => i.status === 'proposal_sent').length,
+            accepted: allInquiries.filter(i => i.status === 'accepted').length,
+            converted: allInquiries.filter(i => i.status === 'converted').length,
+            rejected: allInquiries.filter(i => i.status === 'rejected').length,
+          };
+
       setInquiries(allInquiries);
       setFilteredInquiries(allInquiries);
       setStats(inquiryStats);
@@ -161,7 +147,7 @@ export function InquiryDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -191,7 +177,7 @@ export function InquiryDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Inquiries</h1>
+          <h1 className="text-3xl font-bold text-foreground">Inquiries</h1>
           {isClient(user) && (
             <button
               onClick={() => setIsModalOpen(true)}
@@ -202,7 +188,7 @@ export function InquiryDashboard() {
             </button>
           )}
         </div>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           {isClient(user) 
             ? 'View your inquiries and track proposals' 
             : 'Manage customer inquiries and create proposals'}
@@ -271,18 +257,18 @@ export function InquiryDashboard() {
       )}
   
       {/* Filters */}
-      <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm mb-6">
+      <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search by inquiry #, name, email, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
               />
             </div>
           </div>
@@ -290,17 +276,17 @@ export function InquiryDashboard() {
           {/* Status Filter */}
           <div className="sm:w-48">
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | 'all')}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
-                {Object.entries(isClient(user) ? CLIENT_STATUS_LABELS : STATUS_LABELS)
+                {Object.entries(INQUIRY_STATUS_CONFIG)
                   .filter(([key]) => !['archived', 'project_setup', 'payment_pending', 'paid'].includes(key))
-                  .map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  .map(([value, config]) => (
+                    <option key={value} value={value}>{isClient(user) ? config.clientLabel : config.adminLabel}</option>
                   ))
                 }
               </select>
@@ -311,18 +297,18 @@ export function InquiryDashboard() {
   
       {/* Loading State */}
       {loading ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
           <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-700">Loading inquiries...</p>
+          <p className="text-foreground">Loading inquiries...</p>
         </div>
       ) : error ? (
-        <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
           <ErrorState error={error} onRetry={loadInquiries} />
         </div>
       ) : (
         <>
           {/* Inquiries List */}
-          <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
             {filteredInquiries.length === 0 ? (
               <EmptyState
                 icon={FileText}
@@ -334,51 +320,51 @@ export function InquiryDashboard() {
                 }
               />
             ) : (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-border">
                 {filteredInquiries.map((inquiry) => (
-                  <Link
+                  <div
                     key={inquiry.id}
-                    to={`/admin/inquiries/${inquiry.id}`}
-                    className="block p-4 hover:bg-gray-50 transition-colors group"
+                    onClick={() => navigate(`/admin/inquiries/${inquiry.id}`)}
+                    className="block p-4 hover:bg-muted transition-colors group cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         {/* Inquiry Number & Status */}
                         <div className="flex items-center gap-3 mb-2">
-                          <code className="text-base font-semibold text-gray-900 font-mono">
+                          <code className="text-base font-semibold text-foreground font-mono">
                             {inquiry.inquiryNumber}
                           </code>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-                            {isClient(user) ? CLIENT_STATUS_LABELS[inquiry.status] : STATUS_LABELS[inquiry.status]}
+                            {isClient(user) ? INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel : INQUIRY_STATUS_CONFIG[inquiry.status].adminLabel}
                           </span>
                         </div>
                     
                         {/* Contact Info */}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-1">
-                          <div className="flex items-center gap-1.5 text-gray-900">
-                            <User className="w-4 h-4 text-gray-500" />
+                          <div className="flex items-center gap-1.5 text-foreground">
+                            <User className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{inquiry.contactName}</span>
                           </div>
                           {inquiry.companyName && (
-                            <span className="text-gray-700">{inquiry.companyName}</span>
+                            <span className="text-foreground">{inquiry.companyName}</span>
                           )}
                         </div>
                     
-                        <div className="flex items-center gap-1.5 text-sm text-gray-700 mb-2">
+                        <div className="flex items-center gap-1.5 text-sm text-foreground mb-2">
                           <Mail className="w-4 h-4" />
                           <span>{inquiry.contactEmail}</span>
                         </div>
                     
                         {/* Video Type */}
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-600">Recommended:</span>
+                          <span className="text-muted-foreground">Recommended:</span>
                           <span className="text-violet-600">{inquiry.recommendedVideoType}</span>
                         </div>
                       </div>
                     
                     {/* Right Side: Date & Action */}
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Calendar className="w-3.5 h-3.5" />
                         {formatDate(inquiry.createdAt)}
                       </div>
@@ -388,7 +374,7 @@ export function InquiryDashboard() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
+                            navigate(`/admin/inquiries/${inquiry.id}/proposal`);
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -398,7 +384,7 @@ export function InquiryDashboard() {
                       )}
                     </div>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
@@ -406,7 +392,7 @@ export function InquiryDashboard() {
           
           {/* Results Count */}
           {filteredInquiries.length > 0 && (
-            <div className="mt-4 text-center text-sm text-gray-500">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               Showing {filteredInquiries.length} of {inquiries.length} inquiries
             </div>
           )}

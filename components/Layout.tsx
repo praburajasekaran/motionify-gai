@@ -1,36 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, Home, Sun, Moon, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
+import { useTheme } from 'next-themes';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { TAB_INDEX_MAP } from '../constants';
 import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useAuthContext } from '../contexts/AuthContext';
-import { isSuperAdmin, getRoleLabel } from '../lib/permissions';
+import { isSuperAdmin, isClient, getRoleLabel } from '../lib/permissions';
 import { NotificationBell } from './notifications';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
-  <Link to={path}>
+  <PrefetchLink to={path}>
     <div
       className={cn(
-        "group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent",
+        "group flex items-center justify-between w-full px-3 py-2 text-[14px] font-medium rounded-md transition-colors duration-150",
         active
-          ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-primary/50"
-          : "text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5"
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
       )}
     >
-      <div className="flex items-center gap-3">
-        <Icon className={cn("h-4.5 w-4.5 transition-colors", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-        {label}
+      <div className="flex items-center gap-2.5">
+        <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+        <span>{label}</span>
       </div>
       {count !== undefined && (
-        <span className={cn("text-xs px-2 py-0.5 rounded-full transition-colors font-semibold", active ? "bg-primary/20 text-primary" : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200")}>
+        <span className={cn("text-[12px] tabular-nums px-1.5 py-0.5 rounded transition-colors font-medium", active ? "bg-primary/15 text-primary" : "text-muted-foreground")}>
           {count}
         </span>
       )}
     </div>
-  </Link>
+  </PrefetchLink>
 );
 
 // Simplified RevisionBattery Component (no line graph)
@@ -39,20 +42,20 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
   const percentage = Math.round((remaining / max) * 100);
 
   // Determine color based on remaining percentage
-  let colorClass = "bg-emerald-500";
-  let textColor = "text-emerald-700";
+  let colorClass = "bg-[var(--studio-teal)]";
+  let textColor = "text-[var(--studio-teal)]";
   if (percentage <= 20) {
-    colorClass = "bg-red-500";
-    textColor = "text-red-700";
+    colorClass = "bg-destructive";
+    textColor = "text-destructive";
   } else if (percentage <= 50) {
-    colorClass = "bg-amber-500";
-    textColor = "text-amber-700";
+    colorClass = "bg-primary";
+    textColor = "text-primary";
   }
 
   return (
-    <div className="flex items-center gap-3 bg-white border border-zinc-200/80 px-3 py-1.5 rounded-lg shadow-sm">
+    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg">
       {/* Label */}
-      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         Revisions
       </span>
 
@@ -63,14 +66,14 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
 
       {/* Battery Icon */}
       <div className="relative flex items-center">
-        <div className="h-4 w-7 rounded-[3px] border-2 border-zinc-300 p-0.5 relative flex items-center bg-white">
+        <div className="h-4 w-7 rounded-[3px] border-2 border-border p-0.5 relative flex items-center bg-card">
           <div
             className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
             style={{ width: `${percentage}%` }}
           />
         </div>
         {/* Battery Nub */}
-        <div className="h-1.5 w-0.5 bg-zinc-300 rounded-r-[1px] absolute -right-0.5" />
+        <div className="h-1.5 w-0.5 bg-border rounded-r-[1px] absolute -right-0.5" />
 
         {/* Charging Bolt */}
         {percentage > 0 && (
@@ -85,11 +88,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthContext();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
 
+  useEffect(() => setMounted(true), []);
+
   const commandItems = [
-    { label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' },
+    ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' }] : []),
     { label: 'Go to Projects', icon: FolderKanban, action: () => navigate('/projects'), group: 'Navigation' },
     { label: 'Go to Settings', icon: Settings, action: () => navigate('/settings'), group: 'Navigation' },
     { label: 'Create New Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
@@ -108,13 +115,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       category: 'ui',
     },
     // Navigation - Go to pages (g + letter)
-    {
+    ...(!isClient(user) ? [{
       key: 'd',
       sequence: 'g d',
       description: 'Go to Dashboard',
       action: () => navigate('/'),
-      category: 'navigation',
-    },
+      category: 'navigation' as const,
+    }] : []),
     {
       key: 'p',
       sequence: 'g p',
@@ -196,7 +203,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Accessibility: Skip to content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:ring-2 focus:ring-primary transition-all"
       >
         Skip to content
       </a>
@@ -204,42 +211,48 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
       <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
 
-      <div className="h-screen w-full flex overflow-hidden bg-zinc-50 font-sans text-foreground">
+      <div className="h-screen w-full flex overflow-hidden bg-background font-sans text-foreground">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden animate-in fade-in"
+            className="fixed top-14 inset-x-0 bottom-0 bg-black/30 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar — same bg as canvas, border-only separation */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-zinc-200 transform transition-transform duration-300 ease-out lg:transform-none flex flex-col h-full shadow-lg",
+          "fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto lg:inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <div className="h-20 flex items-center px-6 shrink-0">
-            <Link to="/" className="flex items-center group cursor-pointer">
+          {/* Logo — desktop only; on mobile the header is always visible above the sidebar */}
+          <div className="h-14 hidden lg:flex items-center px-4 shrink-0 border-b border-border">
+            <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
-                src="/motionify-studio-dark.png"
+                src={mounted && resolvedTheme === 'dark'
+                  ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
+                  : `${import.meta.env.BASE_URL}motionify-studio-dark.png`}
                 alt="Motionify Studio"
-                className="h-16 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
-            </Link>
+            </PrefetchLink>
           </div>
 
-          <div className="flex-1 py-6 px-4 space-y-8 overflow-y-auto">
+          {/* Nav sections */}
+          <div className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
             <div>
-              <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Workspace
               </div>
-              <div className="space-y-1">
-                <SidebarItem
-                  icon={LayoutDashboard}
-                  label="Dashboard"
-                  path="/"
-                  active={location.pathname === '/'}
-                />
+              <div className="space-y-0.5">
+                {!isClient(user) && (
+                  <SidebarItem
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    path="/"
+                    active={location.pathname === '/'}
+                  />
+                )}
                 <SidebarItem
                   icon={FolderKanban}
                   label="Projects"
@@ -262,16 +275,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
 
             <div>
-              <div className="px-4 mb-3 text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 System
               </div>
-              <div className="space-y-1">
-                <SidebarItem
-                  icon={Settings}
-                  label="Settings"
-                  path="/settings"
-                  active={location.pathname === '/settings'}
-                />
+              <div className="space-y-0.5">
                 {isSuperAdmin(user) && (
                   <SidebarItem
                     icon={UserIcon}
@@ -280,33 +287,49 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     active={location.pathname === '/admin/users'}
                   />
                 )}
-                <div
-                  onClick={logout}
-                  className="group flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out border border-transparent text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground hover:pl-5 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <LogOut className="h-4.5 w-4.5 transition-colors text-muted-foreground group-hover:text-foreground" />
-                    Log Out
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 border-t border-zinc-100 shrink-0">
-            <div
-              id="logout-btn"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-b from-white to-zinc-50 border border-zinc-200/60 hover:border-zinc-300 transition-colors cursor-pointer group shadow-sm hover:shadow-md"
-              onClick={logout}
-              title="Logout"
-            >
-              <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-9 w-9 ring-2 ring-white" />
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-semibold truncate text-foreground">{user?.name || 'User'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
-              </div>
-              <LogOut className="h-4 w-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
-            </div>
+          {/* User footer */}
+          <div className="p-3 border-t border-border shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 w-full p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group text-left"
+                  aria-label="User menu"
+                >
+                  <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
+                  <div className="flex-1 overflow-hidden min-w-0">
+                    <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
+                    <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
+                  </div>
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-sm font-medium">{user?.name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.role ? getRoleLabel(user.role) : ''}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <PrefetchLink to="/settings" onClick={() => setSidebarOpen(false)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </PrefetchLink>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => { setSidebarOpen(false); logout(); }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </aside>
 
@@ -314,50 +337,77 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/50 h-full relative focus:outline-none"
+          className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
-          {/* Top Header */}
-          <header className="h-16 bg-white border-b border-zinc-200 z-30 shrink-0 sticky top-0 shadow-sm">
-            <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6 lg:px-10">
+          {/* Top bar — minimal, functional */}
+          <header className="h-14 border-b border-border z-[60] shrink-0 sticky top-0 bg-background">
+            <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-4" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
-                  <Menu className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(prev => !prev)} id="mobile-menu-btn">
+                  <Menu className="h-4 w-4" />
                 </Button>
 
-                <nav className="hidden md:flex items-center text-sm text-muted-foreground">
-                  <span className="hover:text-foreground cursor-pointer transition-colors font-medium">Workspace</span>
-                  <ChevronRight className="h-4 w-4 mx-2 text-zinc-300" />
-                  <span className={cn("font-semibold text-foreground animate-in fade-in slide-in-from-left-2")}>
+                {/* Logo — mobile only (sidebar logo is hidden on mobile) */}
+                <PrefetchLink to="/" className="lg:hidden mr-3">
+                  <img
+                    src={mounted && resolvedTheme === 'dark'
+                      ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
+                      : `${import.meta.env.BASE_URL}motionify-studio-dark.png`}
+                    alt="Motionify Studio"
+                    className="h-8 w-auto object-contain"
+                  />
+                </PrefetchLink>
+
+                <nav className="hidden md:flex items-center text-[14px] text-muted-foreground">
+                  <span className="hover:text-foreground cursor-pointer transition-colors">Workspace</span>
+                  <ChevronRight className="h-3.5 w-3.5 mx-1.5 text-muted-foreground/50" />
+                  <span className="font-medium text-foreground">
                     {location.pathname === '/' ? 'Dashboard' :
                       location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
                   </span>
                 </nav>
               </div>
 
-              <div className="flex items-center gap-3 md:gap-5">
-                <div className="hidden md:flex items-center relative group">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="h-9 w-40 rounded-full border border-zinc-200 bg-white/50 pl-10 pr-4 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-zinc-400 shadow-sm"
-                    onClick={() => setCommandOpen(true)}
-                    readOnly
-                  />
-                  <div className="absolute right-3 top-2.5 hidden lg:flex items-center gap-1">
-                    <kbd className="hidden sm:inline-block rounded bg-zinc-100 border border-zinc-200 px-1.5 text-[10px] font-bold text-zinc-500 shadow-sm">⌘</kbd>
-                    <kbd className="hidden sm:inline-block rounded bg-zinc-100 border border-zinc-200 px-1.5 text-[10px] font-bold text-zinc-500 shadow-sm">K</kbd>
+              <div className="flex items-center gap-1">
+                {/* Search trigger */}
+                <button
+                  onClick={() => setCommandOpen(true)}
+                  className="hidden md:flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-background text-[14px] text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>Search</span>
+                  <div className="flex items-center gap-0.5 ml-4">
+                    <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">⌘</kbd>
+                    <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">K</kbd>
                   </div>
-                </div>
+                </button>
 
                 <NotificationBell />
+
+                {mounted && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
+                    title={`Theme: ${theme} (click to change)`}
+                  >
+                    {theme === 'dark' ? (
+                      <Moon className="h-4 w-4" />
+                    ) : theme === 'light' ? (
+                      <Sun className="h-4 w-4" />
+                    ) : (
+                      <Monitor className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </header>
 
-          {/* Page Content with Entrance Animation */}
-          <div key={location.pathname} className="flex-1 overflow-y-auto scroll-smooth">
-            <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 lg:py-10 animate-fade-in-up">
+          {/* Page Content */}
+          <div key={location.pathname} className="flex-1 overflow-y-auto">
+            <div className="max-w-6xl mx-auto px-6 py-6">
               {children}
             </div>
           </div>

@@ -5,9 +5,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/',
+    base: '/portal/',
     server: {
       port: 5173,
+      strictPort: true,
       host: '0.0.0.0',
       proxy: {
         '/.netlify/functions': {
@@ -37,12 +38,24 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
+      sourcemap: 'hidden',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-checkbox'],
+            'vendor-editor': ['@tiptap/react', '@tiptap/starter-kit'],
+            'vendor-charts': ['d3'],
+            'vendor-sentry': ['@sentry/react'],
+          },
+        },
+      },
     },
     plugins: [react()],
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-    },
+    // SECURITY: API keys must not be embedded in client bundles.
+    // Use a backend proxy endpoint (e.g., /.netlify/functions/gemini-proxy) instead.
+    define: {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

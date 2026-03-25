@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import {
     MoreVertical,
     MoreHorizontal,
@@ -7,20 +8,16 @@ import {
     List,
     Search,
     Plus,
-    FileBox,
-    AlertCircle,
     Clock,
     FolderOpen,
-    FilterX
+    FilterX,
+    Clapperboard,
+    RotateCcw,
 } from 'lucide-react';
 import {
-    Card,
-    CardContent,
     Button,
     Badge,
     Input,
-    Avatar,
-    Progress,
     Select,
     DropdownMenu,
     DropdownMenuItem,
@@ -30,78 +27,25 @@ import {
     cn
 } from '../components/ui/design-system';
 import { ErrorState } from '../components/ui/ErrorState';
+import { CardGridSkeleton } from '../components/ui/SkeletonLoaders';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { useAuthContext } from '../contexts/AuthContext';
+import { isClient } from '../lib/permissions';
+import { useProjects } from '../shared/hooks/useProjects';
 
 export const ProjectList = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [filter, setFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-    const [apiProjects, setApiProjects] = useState<Project[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [fetchError, setFetchError] = useState<string | null>(null);
     const navigate = useNavigate();
     const selectedRef = useRef<HTMLDivElement>(null);
     const { user } = useAuthContext();
+    const projectsQuery = useProjects(user?.id);
 
-    // Fetch real projects from API
-    const fetchProjects = async () => {
-        if (!user?.id) {
-            setIsLoading(false);
-            return;
-        }
-
-        setIsLoading(true);
-        setFetchError(null);
-
-        try {
-            const response = await fetch(`/api/projects?userId=${user.id}`, {
-                credentials: 'include',
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Transform API response to match Project type
-                const transformed = data.map((p: any) => ({
-                    id: p.id,
-                    title: p.project_number || `Project ${p.id.slice(0, 8)}`,
-                    client: p.client_name || p.client_company || 'Client',
-                    thumbnail: '',
-                    status: p.status === 'active' ? 'Active' : (p.status || 'Active'),
-                    dueDate: p.created_at || new Date().toISOString(),
-                    startDate: p.created_at || new Date().toISOString(),
-                    progress: 0,
-                    description: '',
-                    tasks: [],
-                    team: [],
-                    budget: 0,
-                    deliverables: [],
-                    files: [],
-                    deliverablesCount: 0,
-                    revisionCount: p.revisions_used || 0,
-                    maxRevisions: p.total_revisions_allowed || 2,
-                    activityLog: [],
-                }));
-                setApiProjects(transformed);
-            } else {
-                setFetchError('Failed to load projects. Please try again.');
-            }
-        } catch (error) {
-            console.error('Failed to fetch projects:', error);
-            setFetchError(error instanceof Error ? error.message : 'Failed to load projects');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchProjects();
-    }, [user?.id]);
-
-    // Use API projects only (no more mock data)
-    const allProjects = apiProjects;
+    const isLoading = projectsQuery.isLoading;
+    const allProjects = projectsQuery.data ?? [];
 
     const getStatusVariant = (status: ProjectStatus) => {
         switch (status) {
@@ -181,42 +125,36 @@ export const ProjectList = () => {
     useKeyboardShortcuts({ shortcuts: listShortcuts });
 
     return (
-        <div className="space-y-8 max-w-[1600px] mx-auto pb-20">
-            {/* Header Section */}
-            <div className="flex flex-col gap-6 animate-fade-in-up relative z-50">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-6 pb-20">
+            {/* Header */}
+            <div className="flex flex-col gap-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-3xl font-bold tracking-tight text-foreground">Productions in Motion</h2>
-                            <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-zinc-500 bg-zinc-100 px-2.5 py-1 rounded-full">
-                                <kbd className="text-[10px] font-semibold">J</kbd>
-                                <kbd className="text-[10px] font-semibold">K</kbd>
-                                to navigate • Press <kbd className="text-[10px] font-semibold">?</kbd> for all shortcuts
-                            </span>
-                        </div>
-                        <p className="text-muted-foreground mt-1">Your crew's creating amazing work. Let's keep it moving.</p>
+                        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h2>
+                        <p className="text-sm text-muted-foreground mt-1">{filteredProjects.length} production{filteredProjects.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <Link to="/projects/new">
-                        <Button variant="gradient" className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 rounded-full px-6 transition-transform hover:scale-105 active:scale-95" aria-label="Start New Production">
-                            <Plus className="h-4 w-4" />
-                            Start a Production
-                        </Button>
-                    </Link>
+                    {!isClient(user) && (
+                        <PrefetchLink to="/projects/new">
+                            <Button className="gap-2 h-9 px-4" aria-label="Start New Production">
+                                <Plus className="h-4 w-4" />
+                                New Project
+                            </Button>
+                        </PrefetchLink>
+                    )}
                 </div>
 
-                {/* Toolbar - Sticky */}
-                <div className="sticky top-2 z-40 flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-2xl border border-zinc-200 shadow-md transition-all">
-                    <div className="flex items-center gap-2 w-full md:w-auto px-1 flex-col md:flex-row">
-                        <div className="relative w-full md:w-72 group">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
+                {/* Toolbar */}
+                <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="relative w-full md:w-72">
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search projects..."
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
-                                className="pl-9 bg-white/50 border-zinc-200 focus:bg-white focus:border-primary rounded-full transition-all shadow-sm"
+                                className="pl-9 h-9 bg-background border-border rounded-lg"
                             />
                         </div>
-                        <div className="h-6 w-px bg-zinc-200 mx-2 hidden md:block" />
                         <Select
                             placeholder="Status"
                             options={[
@@ -225,27 +163,27 @@ export const ProjectList = () => {
                                 { label: 'In Review', value: 'In Review' },
                                 { label: 'Completed', value: 'Completed' },
                                 { label: 'On Hold', value: 'On Hold' },
-                                { label: '📦 View Archived', value: 'Archived' },
+                                { label: 'Archived', value: 'Archived' },
                             ]}
                             value={statusFilter}
                             onValueChange={setStatusFilter}
-                            className="w-full md:w-48"
-                            triggerClassName="rounded-full bg-white/50 border-zinc-200"
+                            className="w-full md:w-44"
+                            triggerClassName="h-9 rounded-lg"
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto px-2 justify-end">
-                        <div className="flex items-center bg-zinc-100/80 rounded-full p-1 border border-zinc-200">
+                    <div className="flex items-center gap-1 w-full md:w-auto justify-end">
+                        <div className="flex items-center border border-border rounded-lg p-0.5">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'grid' ? "bg-white shadow-sm text-foreground scale-105" : "text-zinc-400 hover:text-foreground")}
+                                className={cn("p-1.5 rounded-md transition-colors", viewMode === 'grid' ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}
                                 aria-label="Grid View"
                             >
                                 <LayoutGrid className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={cn("p-2 rounded-full transition-all duration-300", viewMode === 'list' ? "bg-white shadow-sm text-foreground scale-105" : "text-zinc-400 hover:text-foreground")}
+                                className={cn("p-1.5 rounded-md transition-colors", viewMode === 'list' ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}
                                 aria-label="List View"
                             >
                                 <List className="h-4 w-4" />
@@ -257,20 +195,21 @@ export const ProjectList = () => {
 
             {/* Content */}
             {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                </div>
-            ) : fetchError ? (
-                <ErrorState error={fetchError} onRetry={fetchProjects} />
-            ) : allProjects.length === 0 ? (
+                <CardGridSkeleton count={6} columns={3} />
+            ) : projectsQuery.error ? (
+                <ErrorState
+                    error={projectsQuery.error instanceof Error ? projectsQuery.error.message : 'Failed to load projects'}
+                    onRetry={() => projectsQuery.refetch()}
+                />
+            ) : projectsQuery.isSuccess && allProjects.length === 0 ? (
                 <EmptyState
                     title="Your canvas is blank"
                     description="Ready to create something amazing? Start your first production."
                     icon={FolderOpen}
                     action={
-                        <Link to="/projects/new">
+                        <PrefetchLink to="/projects/new">
                             <Button variant="outline" className="mt-4">Start a Production</Button>
-                        </Link>
+                        </PrefetchLink>
                     }
                 />
             ) : filteredProjects.length === 0 ? (
@@ -288,16 +227,15 @@ export const ProjectList = () => {
                 <>
                     {/* Grid View */}
                     {viewMode === 'grid' && (
-                        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             {filteredProjects.map((project, idx) => (
                                 <div
                                     key={project.id}
                                     ref={selectedIndex === idx ? selectedRef : null}
                                     className={cn(
-                                        "animate-fade-in-up transition-all duration-200",
-                                        selectedIndex === idx && "ring-2 ring-primary ring-offset-4 rounded-2xl"
+                                        "transition-all duration-150",
+                                        selectedIndex === idx && "ring-2 ring-primary ring-offset-2 rounded-lg"
                                     )}
-                                    style={{ animationDelay: `${idx * 100}ms` }}
                                 >
                                     <ProjectGridCard project={project} getStatusVariant={getStatusVariant} navigate={navigate} />
                                 </div>
@@ -307,92 +245,79 @@ export const ProjectList = () => {
 
                     {/* List View */}
                     {viewMode === 'list' && (
-                        <div className="rounded-2xl border border-zinc-200/60 bg-white overflow-hidden shadow-sm animate-fade-in-up">
-                            <div className="w-full overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 font-medium">
-                                        <tr>
-                                            <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Project Name</th>
-                                            <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Status</th>
-                                            <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Team</th>
-                                            <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Deliverables</th>
-                                            <th scope="col" className="h-12 px-6 align-middle font-semibold uppercase text-[11px] tracking-wider">Due Date</th>
-                                            <th scope="col" className="h-12 px-6 align-middle font-medium text-right"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-100">
-                                        {filteredProjects.map((project, idx) => (
-                                            <tr
-                                                key={project.id}
-                                                ref={selectedIndex === idx ? selectedRef : null}
-                                                className={cn(
-                                                    "hover:bg-zinc-50/80 transition-all group",
-                                                    selectedIndex === idx && "bg-primary/5 ring-2 ring-inset ring-primary/20"
-                                                )}
-                                            >
-                                                <td className="p-6 align-middle">
-                                                    <div className="flex items-center gap-4">
-                                                        <ClientLogo
-                                                            clientName={project.client}
-                                                            website={project.website}
-                                                            className="h-10 w-10 rounded-xl shadow-sm border border-zinc-100"
-                                                        />
-                                                        <div>
-                                                            <Link to={`/projects/${project.id}`} className="font-semibold text-zinc-900 hover:text-primary transition-colors block">
-                                                                {project.title}
-                                                            </Link>
-                                                            <span className="text-xs text-zinc-500">{project.client}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 align-middle">
-                                                    <Badge variant={getStatusVariant(project.status)}>{project.status}</Badge>
-                                                </td>
-                                                <td className="p-6 align-middle">
-                                                    <div className="flex -space-x-2">
-                                                        {project.team.slice(0, 3).map((user) => (
-                                                            <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-8 w-8 border-2 border-white ring-1 ring-zinc-200 transition-transform hover:scale-110 hover:z-10" />
-                                                        ))}
-                                                        {project.team.length > 3 && (
-                                                            <div className="h-8 w-8 rounded-full bg-zinc-100 border-2 border-white flex items-center justify-center text-xs font-medium text-zinc-500">
-                                                                +{project.team.length - 3}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 align-middle">
-                                                    <div className="flex flex-col gap-1 w-24">
-                                                        <div className="flex justify-between text-xs text-zinc-500 mb-0.5">
-                                                            <span>{project.progress}%</span>
-                                                        </div>
-                                                        <Progress value={project.progress} className="h-1.5" />
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 align-middle text-zinc-500">
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar className="h-4 w-4" />
-                                                        {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                                    </div>
-                                                </td>
-                                                <td className="p-6 align-middle text-right">
-                                                    <DropdownMenu
-                                                        trigger={
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Project Actions">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        }
+                        <div className="space-y-2">
+                            {filteredProjects.map((project, idx) => (
+                                <div
+                                    key={project.id}
+                                    ref={selectedIndex === idx ? selectedRef : null}
+                                    className={cn(
+                                        "transition-all duration-150",
+                                        selectedIndex === idx && "ring-2 ring-primary ring-offset-2 rounded-lg"
+                                    )}
+                                >
+                                    <PrefetchLink
+                                        to={`/projects/${project.id}`}
+                                        className="group flex bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
+                                    >
+                                        {/* Status stripe */}
+                                        <div className={cn("w-1 shrink-0 rounded-l-lg", getStatusColor(project.status))} title={`Status: ${project.status}`} />
+
+                                        <div className="flex-1 flex items-center gap-4 px-4 py-3 min-w-0">
+                                            {/* Identity */}
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <ClientLogo
+                                                    clientName={project.client}
+                                                    website={project.website}
+                                                    className="h-8 w-8 rounded-lg border border-border shrink-0"
+                                                />
+                                                <div className="min-w-0">
+                                                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate leading-snug">
+                                                        {project.title}
+                                                    </h3>
+                                                    <p className="text-xs text-muted-foreground truncate">{project.client}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Metadata — inline, right-aligned */}
+                                            <div className="hidden sm:flex items-center gap-5 shrink-0 text-sm text-muted-foreground">
+                                                <div className="flex items-center gap-1.5 tabular-nums" title={`${project.deliverablesCount} deliverable${project.deliverablesCount !== 1 ? 's' : ''}`}>
+                                                    <Clapperboard className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                                    <span>{project.deliverablesCount}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 tabular-nums" title={`${project.revisionCount} of ${project.maxRevisions} revisions used`}>
+                                                    <RotateCcw className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                                    <span>{project.revisionCount}/{project.maxRevisions}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 w-[5.5rem]" title={`Due: ${new Date(project.dueDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}>
+                                                    <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                                    <span>{new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                                </div>
+                                                <Badge variant={getStatusVariant(project.status)} className="w-[5.5rem] justify-center">{project.status}</Badge>
+                                            </div>
+
+                                            {/* Actions */}
+                                            <DropdownMenu
+                                                trigger={
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        aria-label="Project Actions"
+                                                        onClick={(e) => e.preventDefault()}
                                                     >
-                                                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>View Details</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/settings`)}>Edit Project</DropdownMenuItem>
-                                                        <Separator className="my-1" />
-                                                        <DropdownMenuItem className="text-red-600 hover:text-red-700">Archive</DropdownMenuItem>
-                                                    </DropdownMenu>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                }
+                                            >
+                                                <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/projects/${project.id}`); }}>View Details</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/projects/${project.id}/settings`); }}>Edit Project</DropdownMenuItem>
+                                                <Separator className="my-1" />
+                                                <DropdownMenuItem onClick={(e) => e.preventDefault()} className="text-destructive">Archive</DropdownMenuItem>
+                                            </DropdownMenu>
+                                        </div>
+                                    </PrefetchLink>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </>
@@ -401,97 +326,83 @@ export const ProjectList = () => {
     );
 };
 
-// Extracted component helper for Calendar icon since it was missing in imports in previous step
-const Calendar = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
-)
+const getStatusColor = (status: ProjectStatus) => {
+    switch (status) {
+        case 'Active': return 'bg-primary';
+        case 'Completed': return 'bg-teal-500';
+        case 'In Review': return 'bg-amber-500';
+        case 'On Hold': return 'bg-red-400';
+        case 'Archived': return 'bg-stone-300';
+        default: return 'bg-stone-300';
+    }
+};
 
 const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navigate: any }> = ({ project, getStatusVariant, navigate }) => (
-    <Card hoverable className="group relative overflow-hidden bg-white border-zinc-200 transform-gpu">
-        {/* Top Decoration */}
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+    <PrefetchLink
+        to={`/projects/${project.id}`}
+        className="group block bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
+    >
+        <div className="flex">
+            {/* Status stripe — the colored tab on a production folder */}
+            <div className={cn("w-1 shrink-0 rounded-l-lg", getStatusColor(project.status))} title={`Status: ${project.status}`} />
 
-        <CardContent className="p-0">
-            <div className="p-7 pb-5">
-                <div className="flex justify-between items-start mb-5">
-                    <div className="relative">
-                        <ClientLogo
-                            clientName={project.client}
-                            website={project.website}
-                            className="h-16 w-16 rounded-2xl ring-1 ring-black/5 shadow-sm group-hover:scale-105 group-hover:shadow-md transition-all duration-300 bg-white"
-                        />
-                        {project.status === 'Active' && (
-                            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 z-10">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white"></span>
-                            </span>
-                        )}
+            <div className="flex-1 p-4 min-w-0">
+                {/* Identity row */}
+                <div className="flex items-start gap-3">
+                    <ClientLogo
+                        clientName={project.client}
+                        website={project.website}
+                        className="h-9 w-9 rounded-lg border border-border shrink-0 mt-0.5"
+                    />
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 leading-snug">
+                            {project.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{project.client}</p>
                     </div>
                     <DropdownMenu
                         trigger={
-                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-zinc-400 hover:text-zinc-900" aria-label="Project Options">
-                                <MoreVertical className="h-4 w-4" />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 -mr-1 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Project Options"
+                                onClick={(e) => e.preventDefault()}
+                            >
+                                <MoreVertical className="h-3.5 w-3.5" />
                             </Button>
                         }
                     >
-                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/settings`)}>Edit Project</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/settings`)}>Manage Team</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/projects/${project.id}/settings`); }}>Edit Project</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate(`/projects/${project.id}/settings`); }}>Manage Team</DropdownMenuItem>
                     </DropdownMenu>
                 </div>
 
-                <div className="space-y-1.5 mb-5">
-                    <Link to={`/projects/${project.id}`}>
-                        <h3 className="font-bold text-lg text-zinc-900 group-hover:text-primary transition-colors line-clamp-1">
-                            {project.title}
-                        </h3>
-                    </Link>
-                    <p className="text-sm text-zinc-500 font-medium">{project.client}</p>
-                </div>
-
-                <div className="flex items-center gap-2 mb-6">
-                    <Badge variant={getStatusVariant(project.status)} className="px-2.5 py-0.5">{project.status}</Badge>
-                    {project.revisionCount > 0 && (
-                        <Badge variant="warning" className="gap-1 px-2 border-amber-200 bg-amber-50 text-amber-700">
-                            <AlertCircle className="h-3 w-3" />
-                            {project.revisionCount} Revisions
-                        </Badge>
-                    )}
-                </div>
-
-                <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-semibold text-zinc-500">
-                        <span>Progress</span>
-                        <span className="text-zinc-900">{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} indicatorClassName="bg-gradient-to-r from-primary to-blue-400" />
-                </div>
-            </div>
-
-            <Separator className="bg-zinc-100" />
-
-            <div className="px-7 py-4 bg-zinc-50/50 flex items-center justify-between group-hover:bg-zinc-50/80 transition-colors">
-                <div className="flex items-center gap-5 text-xs text-zinc-500 font-medium">
-                    <div className="flex items-center gap-1.5" title="Deliverables">
-                        <FileBox className="h-3.5 w-3.5" />
-                        {project.deliverablesCount}
-                    </div>
-                    <div className="flex items-center gap-1.5" title="Due Date">
-                        <Clock className="h-3.5 w-3.5" />
-                        {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </div>
-                </div>
-
-                <div className="flex -space-x-2">
-                    {project.team.slice(0, 3).map((user) => (
-                        <Avatar key={user.id} src={user.avatar} fallback={user.name[0]} className="h-6 w-6 border-2 border-white ring-1 ring-zinc-200 transition-transform hover:scale-110 hover:z-10" />
-                    ))}
-                    {project.team.length > 3 && (
-                        <div className="h-6 w-6 rounded-full bg-zinc-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-zinc-500">
-                            +{project.team.length - 3}
+                {/* Metadata — labeled, scannable */}
+                <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border">
+                    <div title={`${project.deliverablesCount} deliverable${project.deliverablesCount !== 1 ? 's' : ''}`}>
+                        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Deliverables</div>
+                        <div className="text-sm font-semibold text-foreground tabular-nums mt-0.5 flex items-center gap-1.5">
+                            <Clapperboard className="h-3.5 w-3.5 text-muted-foreground/60" />
+                            {project.deliverablesCount}
                         </div>
-                    )}
+                    </div>
+                    <div title={`${project.revisionCount} of ${project.maxRevisions} revisions used`}>
+                        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Revisions</div>
+                        <div className="text-sm font-semibold text-foreground tabular-nums mt-0.5 flex items-center gap-1.5">
+                            <RotateCcw className="h-3.5 w-3.5 text-muted-foreground/60" />
+                            {project.revisionCount}/{project.maxRevisions}
+                        </div>
+                    </div>
+                    <div title={`Due: ${new Date(project.dueDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}>
+                        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Due</div>
+                        <div className="text-sm font-semibold text-foreground mt-0.5 flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
+                            {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </CardContent>
-    </Card>
+        </div>
+    </PrefetchLink>
 );

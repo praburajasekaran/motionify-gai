@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInquiryByNumber, type Inquiry, type InquiryStatus } from '../lib/inquiries';
+import { INQUIRY_STATUS_CONFIG } from '../lib/status-config';
 import { ArrowLeft, Mail, User, Building2, Phone, FileText, Calendar, CheckCircle2, Clock, Send, Package } from 'lucide-react';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
@@ -14,22 +15,9 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   paid: 'bg-green-500/10 text-green-400 ring-green-500/20',
   converted: 'bg-emerald-600/10 text-emerald-600 ring-emerald-600/20',
   rejected: 'bg-red-500/10 text-red-400 ring-red-500/20',
-  archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
+  archived: 'bg-muted text-muted-foreground ring-border',
 };
 
-const STATUS_LABELS: Record<InquiryStatus, string> = {
-  new: 'New',
-  reviewing: 'Under Review',
-  proposal_sent: 'Proposal Sent',
-  negotiating: 'In Discussion',
-  accepted: 'Accepted',
-  project_setup: 'Setting Up Your Project',
-  payment_pending: 'Payment Pending',
-  paid: 'Payment Received',
-  converted: 'Project Created',
-  rejected: 'Declined',
-  archived: 'Archived',
-};
 
 const STATUS_DESCRIPTIONS: Record<InquiryStatus, string> = {
   new: 'Your inquiry has been received and is awaiting review by our team.',
@@ -83,8 +71,17 @@ export function InquiryTracking() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen bg-gray-950">
+        <header className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
+          </div>
+        </header>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 65px)' }}>
+          <div className="text-white/60">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -94,7 +91,10 @@ export function InquiryTracking() {
       <div className="min-h-screen bg-gray-950">
         {/* Header */}
         <header className="border-b border-white/10">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
             <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
@@ -132,7 +132,10 @@ export function InquiryTracking() {
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
       <header className="border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link to="/landing" className="inline-flex items-center">
+            <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+          </Link>
           <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
@@ -148,7 +151,7 @@ export function InquiryTracking() {
               {inquiry.inquiryNumber}
             </code>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ${STATUS_COLORS[inquiry.status]}`}>
-              {STATUS_LABELS[inquiry.status]}
+              {INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel}
             </span>
           </div>
           <p className="text-white/60">
@@ -169,7 +172,7 @@ export function InquiryTracking() {
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">{STATUS_LABELS[inquiry.status]}</h3>
+              <h3 className="text-lg font-semibold mb-2">{INQUIRY_STATUS_CONFIG[inquiry.status].clientLabel}</h3>
               <p className="text-white/70 text-sm">{STATUS_DESCRIPTIONS[inquiry.status]}</p>
               <p className="text-white/40 text-xs mt-2">
                 Last updated: {formatDate(inquiry.updatedAt)}

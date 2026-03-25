@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
     try {
         const cookies = request.headers.get('cookie') || '';
-        const netlifyFunctionUrl = process.env.NETLIFY_FUNCTIONS_URL || 'http://localhost:8888/.netlify/functions/auth-me';
+        const functionsBase = process.env.NETLIFY_FUNCTIONS_URL || 'http://localhost:8888/.netlify/functions';
+        const netlifyFunctionUrl = `${functionsBase}/auth-me`;
         
         const response = await fetch(netlifyFunctionUrl, {
             method: 'GET',

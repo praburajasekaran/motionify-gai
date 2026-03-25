@@ -6,7 +6,8 @@ import type { AuthUser } from '../types/auth.types';
 interface DatabaseUser {
     id: string;
     email: string;
-    full_name: string;
+    full_name?: string;
+    name?: string;       // auth-me returns "name" instead of "full_name"
     role: string;
     avatar_url?: string | null;
     profile_picture_url?: string | null;
@@ -16,6 +17,7 @@ interface DatabaseUser {
     is_active?: boolean;
     status?: string;
     preferences?: any;
+    timezone?: string | null;
 }
 
 /**
@@ -29,7 +31,7 @@ export function transformUser(dbUser: DatabaseUser | null | undefined): AuthUser
     return {
         id: dbUser.id,
         email: dbUser.email,
-        fullName: dbUser.full_name || '',
+        fullName: dbUser.full_name || dbUser.name || '',
         role: dbUser.role as any,
         avatarUrl: dbUser.avatar_url || dbUser.profile_picture_url || null,
         preferences: dbUser.preferences || {
@@ -42,6 +44,7 @@ export function transformUser(dbUser: DatabaseUser | null | undefined): AuthUser
         createdAt: dbUser.created_at ? new Date(dbUser.created_at) : new Date(),
         updatedAt: dbUser.updated_at ? new Date(dbUser.updated_at) : new Date(),
         lastLoginAt: dbUser.last_login_at ? new Date(dbUser.last_login_at) : null,
+        timezone: dbUser.timezone || null,
         deactivatedAt: null,
         metadata: {},
     };

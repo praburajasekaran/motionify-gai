@@ -35,6 +35,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
+    const lastPolledAtRef = useRef<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
     const { addNotification } = useNotifications();
@@ -106,9 +107,12 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             setComments(fetchedComments);
             if (fetchedComments.length > 0) {
                 const latest = fetchedComments[fetchedComments.length - 1];
+                lastPolledAtRef.current = latest.createdAt;
                 setLastPolledAt(latest.createdAt);
             } else {
-                setLastPolledAt(new Date().toISOString());
+                const now = new Date().toISOString();
+                lastPolledAtRef.current = now;
+                setLastPolledAt(now);
             }
         } catch (err) {
             setError('Failed to load comments');
@@ -120,7 +124,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
     const pollForNewComments = async () => {
         try {
-            const newComments = await getComments(proposalId, lastPolledAt || undefined);
+            const newComments = await getComments(proposalId, lastPolledAtRef.current || undefined);
             if (newComments.length > 0) {
                 // Check if user was near bottom before new comments arrived
                 const wasNearBottom = isNearBottom();
@@ -155,6 +159,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     return [...prev, ...trulyNew];
                 });
                 const latest = newComments[newComments.length - 1];
+                lastPolledAtRef.current = latest.createdAt;
                 setLastPolledAt(latest.createdAt);
 
                 // Auto-scroll to new comment if user was near bottom
@@ -226,17 +231,17 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     if (loading) {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-2 text-gray-500">
+                <div className="flex items-center gap-2 text-muted-foreground">
                     <MessageSquare className="w-5 h-5" />
                     <h3 className="font-medium">Comments</h3>
                 </div>
                 <div className="space-y-3">
                     {[1, 2].map(i => (
                         <div key={i} className="flex gap-3 p-4">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+                            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
                             <div className="flex-1 space-y-2">
-                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                                <div className="h-3 w-full bg-gray-100 rounded animate-pulse" />
+                                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                                <div className="h-3 w-full bg-muted rounded animate-pulse" />
                             </div>
                         </div>
                     ))}
@@ -247,8 +252,8 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
     if (error) {
         return (
-            <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 mb-4">
+            <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+                <div className="flex items-center gap-2 text-muted-foreground mb-4">
                     <MessageSquare className="w-5 h-5" />
                     <h3 className="font-medium">Comments</h3>
                 </div>
@@ -258,22 +263,22 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     }
 
     return (
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 text-gray-900 mb-4">
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <div className="flex items-center gap-2 text-foreground mb-4">
                 <MessageSquare className="w-5 h-5" />
                 <h3 className="font-medium">Comments</h3>
                 {comments.length > 0 && (
-                    <span className="text-sm text-gray-500">({comments.length})</span>
+                    <span className="text-sm text-muted-foreground">({comments.length})</span>
                 )}
             </div>
 
             {comments.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4">No comments yet. Be the first to comment!</p>
+                <p className="text-sm text-muted-foreground py-4">No comments yet. Be the first to comment!</p>
             ) : (
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
-                    className="space-y-1 mb-4 divide-y divide-gray-100 max-h-[500px] overflow-y-auto"
+                    className="space-y-1 mb-4 divide-y divide-border max-h-[500px] overflow-y-auto"
                 >
                     {comments.map(comment => {
                         const hasSubsequentReplies = computeHasSubsequentReplies(
@@ -305,7 +310,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     />
                 </div>
             ) : (
-                <p className="text-sm text-gray-500 pt-2">Sign in to join the conversation</p>
+                <p className="text-sm text-muted-foreground pt-2">Sign in to join the conversation</p>
             )}
         </div>
     );

@@ -1,11 +1,19 @@
-import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
 
+/**
+ * Revoke a project-level invitation.
+ *
+ * DELETE /.netlify/functions/invitations-revoke/{invitationId}
+ *
+ * Permission: super_admin, admin, support (on assigned projects),
+ *             client primary contact (can revoke client invitations only)
+ */
 export const handler = compose(
   withCORS(['DELETE']),
-  withSuperAdmin(),
+  withAuth(),
   withRateLimit(RATE_LIMITS.apiStrict, 'invitation_revoke')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
@@ -20,10 +28,7 @@ export const handler = compose(
       statusCode: 400,
       headers,
       body: JSON.stringify({
-        error: {
-          code: 'MISSING_ID',
-          message: 'Invitation ID is required',
-        },
+        error: 'Invitation ID is required',
       }),
     };
   }
@@ -31,7 +36,7 @@ export const handler = compose(
   try {
     // Check if invitation exists and is pending
     const check = await query(
-      `SELECT id, email, status FROM user_invitations WHERE id = $1`,
+      `SELECT id, email, status, project_id, role FROM project_invitations WHERE id = $1`,
       [invitationId]
     );
 
@@ -40,10 +45,7 @@ export const handler = compose(
         statusCode: 404,
         headers,
         body: JSON.stringify({
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Invitation not found',
-          },
+          error: 'Invitation not found',
         }),
       };
     }
@@ -55,23 +57,55 @@ export const handler = compose(
         statusCode: 400,
         headers,
         body: JSON.stringify({
-          error: {
-            code: 'ALREADY_PROCESSED',
-            message: 'Invitation has already been processed',
-          },
+          error: 'Invitation has already been processed',
         }),
+      };
+    }
+
+    const currentUserRole = auth?.user?.role;
+    const currentUserId = auth?.user?.userId;
+
+    // Permission check: clients can only revoke client invitations on their own projects
+    if (currentUserRole === 'client') {
+      if (invitation.role !== 'client') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Clients can only revoke client invitations' }),
+        };
+      }
+
+      // Verify they are primary contact on this project
+      const pcCheck = await query(
+        `SELECT 1 FROM project_team
+         WHERE project_id = $1 AND user_id = $2 AND is_primary_contact = true AND removed_at IS NULL`,
+        [invitation.project_id, currentUserId]
+      );
+
+      if (pcCheck.rows.length === 0) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Only the primary contact can revoke invitations' }),
+        };
+      }
+    } else if (currentUserRole === 'team_member') {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({ error: 'Team members cannot revoke invitations' }),
       };
     }
 
     // Revoke invitation
     await query(
-      `UPDATE user_invitations
-       SET status = 'revoked', revoked_at = NOW(), revoked_by = $1
-       WHERE id = $2`,
-      [auth!.user!.userId, invitationId]
+      `UPDATE project_invitations
+       SET status = 'revoked', updated_at = NOW()
+       WHERE id = $1`,
+      [invitationId]
     );
 
-    console.log(`[Invitation] Revoked for ${invitation.email} by ${auth!.user!.email}`);
+    console.log(`[Project Invitation] Revoked invitation ${invitationId} for ${invitation.email} by ${auth?.user?.email}`);
 
     return {
       statusCode: 200,
@@ -84,10 +118,7 @@ export const handler = compose(
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to revoke invitation',
-        },
+        error: 'Failed to revoke invitation',
       }),
     };
   }

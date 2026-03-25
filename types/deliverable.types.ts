@@ -43,7 +43,7 @@ export type IssueCategory = 'color' | 'audio' | 'timing' | 'editing' | 'content'
 /**
  * Deliverable types
  */
-export type DeliverableType = 'Video' | 'Image' | 'Document';
+export type DeliverableType = 'Video' | 'Image' | 'Document' | null;
 
 // ============================================================================
 // FEEDBACK & COMMENTS
@@ -188,6 +188,10 @@ export interface Deliverable {
 
   // Approval History
   approvalHistory: DeliverableApproval[]; // Full history of approvals/rejections
+
+  // Timestamps
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 
   // Final Delivery
   finalFileUrl?: string; // URL to final file (no watermark)

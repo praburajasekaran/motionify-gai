@@ -62,12 +62,10 @@ async function getComments(proposalId: string, since?: string): Promise<Comment[
 
 async function createComment(data: { proposalId: string; content: string }): Promise<Comment | null> {
     try {
-        const token = localStorage.getItem('portal_token');
         const response = await fetch(`${API_BASE}/comments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
             credentials: 'include',
             body: JSON.stringify(data),

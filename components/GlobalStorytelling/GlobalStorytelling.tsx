@@ -27,7 +27,7 @@ export default function GlobalStorytelling() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 sm:mb-20">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[11px] text-white/80 ring-1 ring-white/10 backdrop-blur mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
             Global Team, Local Expertise
           </div>

@@ -45,9 +45,9 @@ export default function Hero() {
                   <span>Find Your Video Style</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg>
                 </a>
-                <a href="#" className="group inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_32px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700 transition-all duration-300 ring-2 ring-orange-400/30">
+                <a href="/contact" className="group inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(249,115,22,0.35)] hover:shadow-[0_12px_32px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700 transition-all duration-300 ring-2 ring-orange-400/30">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform duration-300"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
-                  <span>Start Your Project</span>
+                  <span>Get Started</span>
                 </a>
               </div>
 
@@ -57,7 +57,7 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-300"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 3v18"></path><path d="M3 7.5h4"></path><path d="M3 12h18"></path><path d="M3 16.5h4"></path><path d="M17 3v18"></path><path d="M17 7.5h4"></path><path d="M17 16.5h4"></path></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">500+ Videos Created</p>
+                    <p className="text-sm text-white/70">500+ Videos</p>
                     <p className="text-sm font-medium tracking-tight">Across industries</p>
                   </div>
                 </div>
@@ -66,8 +66,8 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-300"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" x2="9.01" y1="9" y2="9"></line><line x1="15" x2="15.01" y1="9" y2="9"></line></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">98% Client Satisfaction</p>
-                    <p className="text-sm font-medium tracking-tight">Measured post‑launch</p>
+                    <p className="text-sm text-white/70">98% Satisfaction</p>
+                    <p className="text-sm font-medium tracking-tight">Client-verified</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 ring-1 ring-emerald-500/20 px-4 py-3 backdrop-blur hover:ring-emerald-500/40 transition-all duration-300">
@@ -75,8 +75,8 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-300"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">Trusted by leading brands</p>
-                    <p className="text-sm font-medium tracking-tight">From seed to enterprise</p>
+                    <p className="text-sm text-white/70">Trusted Brands</p>
+                    <p className="text-sm font-medium tracking-tight">Seed to enterprise</p>
                   </div>
                 </div>
               </div>
@@ -88,18 +88,18 @@ export default function Hero() {
                 <div className="relative grid grid-cols-2 gap-3">
                   <div className="space-y-3">
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-lens-minimal.png" alt="Cinema Lens" width={700} height={900} className="w-full h-full object-cover opacity-90" />
+                      <Image src="/images/lp/Image1.jpg" alt="Video Production" width={700} height={900} className="w-full h-full object-cover opacity-90" />
                     </div>
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-waveform-minimal.png" alt="Digital Waveform" width={700} height={525} className="w-full h-full object-cover opacity-90" />
+                      <Image src="/images/lp/Image2.jpg" alt="Creative Production" width={700} height={525} className="w-full h-full object-cover opacity-90" />
                     </div>
                   </div>
                   <div className="space-y-3 pt-6">
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-light-minimal.png" alt="Volumetric Light" width={700} height={525} className="w-full h-full object-cover opacity-90" />
+                      <Image src="/images/lp/Image3.jpg" alt="Brand Storytelling" width={700} height={525} className="w-full h-full object-cover opacity-90" />
                     </div>
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <Image src="/images/hero/hero-bokeh-minimal.png" alt="Abstract Bokeh" width={700} height={933} className="w-full h-full object-cover opacity-90" />
+                      <Image src="/images/lp/Image4.jpg" alt="Cinematic Video" width={700} height={933} className="w-full h-full object-cover opacity-90" />
                     </div>
                   </div>
                 </div>

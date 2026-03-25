@@ -12,7 +12,6 @@ import {
     query,
     transaction,
     getCorsHeaders,
-    requireAuthAndRole,
     uuidSchema,
     z,
     parseJsonBody,

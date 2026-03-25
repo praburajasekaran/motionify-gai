@@ -1,30 +1,26 @@
 import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { validateStatusTransition } from './_shared/projectStatusTransitions';
 
-const { Client } = pg;
+const { types } = pg;
 
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
+// Return DATE columns as plain 'YYYY-MM-DD' strings instead of JS Date objects.
+// This prevents timezone-shift bugs where e.g. 2026-02-09 in UTC becomes 2026-02-08
+// when serialized in timezones ahead of UTC (like IST).
+types.setTypeParser(1082, (val: string) => val); // 1082 = DATE OID
 
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
-const generateProjectNumber = async (client: pg.Client): Promise<string> => {
+const generateProjectNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
 
-  const result = await client.query(
-    `SELECT project_number FROM projects 
-     WHERE project_number LIKE $1 
+  const result = await dbQuery(
+    `SELECT project_number FROM projects
+     WHERE project_number LIKE $1
      ORDER BY project_number DESC LIMIT 1`,
     [`PROJ-${year}-%`]
   );
@@ -42,18 +38,14 @@ const generateProjectNumber = async (client: pg.Client): Promise<string> => {
 };
 
 export const handler = compose(
-  withCORS(['GET', 'POST']),
+  withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'projects')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
       // Check if requesting a single project by ID from path: /api/projects/{id}
       const pathParts = event.path.split('/');
@@ -67,8 +59,8 @@ export const handler = compose(
         const userId = auth?.user?.userId;
 
         // Fetch project from main projects table
-        const result = await client.query(
-          `SELECT p.*, u.full_name as client_name, u.email as client_email
+        const result = await dbQuery(
+          `SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone
            FROM projects p
            LEFT JOIN users u ON p.client_user_id = u.id
            WHERE p.id = $1`,
@@ -86,7 +78,7 @@ export const handler = compose(
         const project = result.rows[0];
 
         // Fetch team members for this project
-        const teamResult = await client.query(
+        const teamResult = await dbQuery(
           `SELECT pt.id as membership_id, pt.role as team_role, pt.is_primary_contact, pt.added_at,
                   u.id as user_id, u.full_name, u.email, u.profile_picture_url
            FROM project_team pt
@@ -106,7 +98,7 @@ export const handler = compose(
         }));
 
         // Permission check
-        if (userRole !== 'super_admin' && userRole !== 'project_manager') {
+        if (userRole !== 'super_admin' && userRole !== 'support') {
           if (userRole === 'client' && project.client_user_id !== userId) {
             return {
               statusCode: 403,
@@ -119,7 +111,7 @@ export const handler = compose(
           }
 
           if (userRole === 'team_member') {
-            const taskResult = await client.query(
+            const taskResult = await dbQuery(
               `SELECT 1 FROM tasks
                WHERE project_id = $1
                AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -142,14 +134,14 @@ export const handler = compose(
 
         return {
           statusCode: 200,
-          headers,
+          headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
           body: JSON.stringify(project),
         };
       }
 
       // First check if this is a schema check request
       if (event.queryStringParameters?.checkSchema === 'true') {
-        const schemaResult = await client.query(`
+        const schemaResult = await dbQuery(`
           SELECT column_name, data_type, is_nullable, column_default
           FROM information_schema.columns
           WHERE table_name = 'projects'
@@ -180,7 +172,7 @@ export const handler = compose(
       }
 
       // Fetch user role
-      const userResult = await client.query(
+      const userResult = await dbQuery(
         'SELECT role FROM users WHERE id = $1',
         [effectiveUserId]
       );
@@ -194,24 +186,23 @@ export const handler = compose(
       }
 
       const userRole = userResult.rows[0].role;
-      let query = '';
+      let sql = '';
       const params: any[] = [];
 
-      if (userRole === 'project_manager') {
-        // Project Manager: Only see projects linked to inquiries assigned to them
-        query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+      if (userRole === 'support') {
+        // Support: See all projects (support users have platform-wide access)
+        sql = `
+          SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
-          LEFT JOIN inquiries i ON p.inquiry_id = i.id
-          WHERE i.assigned_to_admin_id = $1
           ORDER BY p.created_at DESC
         `;
-        params.push(effectiveUserId);
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
-        query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+        sql = `
+          SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
           WHERE p.client_user_id = $1
@@ -220,8 +211,9 @@ export const handler = compose(
         params.push(effectiveUserId);
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
-        query = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email
+        sql = `
+          SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
+                 (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
           ORDER BY p.created_at DESC
@@ -235,11 +227,11 @@ export const handler = compose(
         };
       }
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
         body: JSON.stringify(result.rows),
       };
     }
@@ -250,7 +242,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const { inquiryId, proposalId } = validation.data;
 
-      const proposalResult = await client.query(
+      const proposalResult = await dbQuery(
         'SELECT * FROM proposals WHERE id = $1',
         [proposalId]
       );
@@ -273,7 +265,7 @@ export const handler = compose(
         };
       }
 
-      const inquiryResult = await client.query(
+      const inquiryResult = await dbQuery(
         'SELECT contact_email, contact_name FROM inquiries WHERE id = $1',
         [inquiryId]
       );
@@ -291,7 +283,7 @@ export const handler = compose(
 
       let assignedClientUserId: string | null = null;
 
-      const existingUserResult = await client.query(
+      const existingUserResult = await dbQuery(
         'SELECT id FROM users WHERE email = $1',
         [contact_email]
       );
@@ -299,30 +291,30 @@ export const handler = compose(
       if (existingUserResult.rows.length > 0) {
         assignedClientUserId = existingUserResult.rows[0].id;
       } else {
-        const newUserResult = await client.query(
-          `INSERT INTO users (email, full_name, role) 
-           VALUES ($1, $2, 'client') 
+        const newUserResult = await dbQuery(
+          `INSERT INTO users (email, full_name, role)
+           VALUES ($1, $2, 'client')
            RETURNING id`,
           [contact_email, contact_name]
         );
         assignedClientUserId = newUserResult.rows[0].id;
       }
 
-      const projectNumber = await generateProjectNumber(client);
+      const projectNumber = await generateProjectNumber();
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO projects (
-          project_number, inquiry_id, proposal_id, client_user_id, status
-        ) VALUES ($1, $2, $3, $4, 'active')
+          project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
+        ) VALUES ($1, $2, $3, $4, 'active', $5)
         RETURNING *`,
-        [projectNumber, inquiryId, proposalId, assignedClientUserId]
+        [projectNumber, inquiryId, proposalId, assignedClientUserId, proposal.revisions_included ?? 2]
       );
 
       const project = result.rows[0];
 
       const deliverables = JSON.parse(proposal.deliverables);
       for (const deliverable of deliverables) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO deliverables (
             id, project_id, name, description, estimated_completion_week, status
           ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
@@ -336,14 +328,14 @@ export const handler = compose(
         );
       }
 
-      await client.query(
+      await dbQuery(
         `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW() WHERE id = $1`,
         [inquiryId, project.id]
       );
 
       // Auto-populate project team: add client as primary contact
       if (assignedClientUserId) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
            VALUES ($1, $2, 'client', true, $3)
            ON CONFLICT (user_id, project_id) DO NOTHING`,
@@ -351,9 +343,19 @@ export const handler = compose(
         );
       }
 
+      // Log activity
+      await logActivity({
+        type: 'PROJECT_CREATED',
+        userId: auth?.user?.userId || '',
+        userName: auth?.user?.fullName || 'Unknown',
+        projectId: project.id,
+        inquiryId: inquiryId,
+        details: { projectNumber },
+      });
+
       // Auto-populate project team: add creator (the authenticated user)
       if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
            VALUES ($1, $2, $3, false, $1)
            ON CONFLICT (user_id, project_id) DO NOTHING`,
@@ -361,10 +363,200 @@ export const handler = compose(
         );
       }
 
+      // Auto-add all active support users to the project team
+      const supportUsersResult = await dbQuery(
+        `SELECT id FROM users WHERE role = 'support' AND is_active = true`
+      );
+      for (const supportUser of supportUsersResult.rows) {
+        await dbQuery(
+          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+           VALUES ($1, $2, 'support', false, $3)
+           ON CONFLICT (user_id, project_id) DO NOTHING`,
+          [supportUser.id, project.id, auth?.user?.userId || null]
+        );
+      }
+
       return {
         statusCode: 201,
         headers,
         body: JSON.stringify(project),
+      };
+    }
+
+    if (event.httpMethod === 'PATCH') {
+      const userRole = auth?.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'support') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Only administrators and support users can update project settings' }),
+        };
+      }
+
+      const pathParts = event.path.split('/');
+      const projectId = pathParts[pathParts.length - 1];
+
+      if (!projectId || projectId === 'projects') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Project ID is required' }),
+        };
+      }
+
+      const validation = validateRequest(event.body, SCHEMAS.project.update, origin);
+      if (!validation.success) return validation.response;
+
+      const updates = validation.data;
+
+      // Verify project exists
+      const existing = await dbQuery('SELECT * FROM projects WHERE id = $1', [projectId]);
+      if (existing.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Project not found' }),
+        };
+      }
+
+      const currentProject = existing.rows[0];
+
+      // Validate status transition if status is changing
+      if (updates.status && updates.status !== currentProject.status) {
+        const transition = validateStatusTransition(currentProject.status, updates.status);
+        if (!transition.valid) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: transition.error }),
+          };
+        }
+      }
+
+      // Build dynamic SET clause
+      const allowedFields = ['name', 'description', 'website', 'status', 'start_date', 'due_date'] as const;
+      const setClauses: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      for (const field of allowedFields) {
+        if (field in updates) {
+          const value = (updates as any)[field];
+          setClauses.push(`${field} = $${paramIndex}`);
+          values.push(field === 'name' && typeof value === 'string' ? value.trim() : value);
+          paramIndex++;
+        }
+      }
+
+      if (setClauses.length === 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'No valid fields to update' }),
+        };
+      }
+
+      setClauses.push(`updated_at = NOW()`);
+      values.push(projectId);
+
+      const result = await dbQuery(
+        `UPDATE projects SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+        values
+      );
+
+      // Log activity
+      const details: Record<string, string | number> = {};
+      if (updates.name) {
+        details.oldName = currentProject.name || '';
+        details.newName = updates.name.trim();
+      }
+      if (updates.status && updates.status !== currentProject.status) {
+        details.oldStatus = currentProject.status;
+        details.newStatus = updates.status;
+      }
+
+      const activityType = updates.status === 'archived'
+        ? 'PROJECT_ARCHIVED'
+        : updates.status && updates.status !== currentProject.status
+          ? 'PROJECT_STATUS_CHANGED'
+          : 'PROJECT_UPDATED';
+
+      await logActivity({
+        type: activityType,
+        userId: auth.user!.userId,
+        userName: auth.user!.fullName,
+        projectId,
+        details,
+      });
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(result.rows[0]),
+      };
+    }
+
+    if (event.httpMethod === 'DELETE') {
+      // Only super_admin can delete projects
+      if (auth?.user?.role !== 'super_admin') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Only super administrators can delete projects' }),
+        };
+      }
+
+      const pathParts = event.path.split('/');
+      const projectId = pathParts[pathParts.length - 1];
+
+      if (!projectId || projectId === 'projects') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Project ID is required' }),
+        };
+      }
+
+      const existing = await dbQuery('SELECT id, status, name, project_number FROM projects WHERE id = $1', [projectId]);
+      if (existing.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Project not found' }),
+        };
+      }
+
+      if (existing.rows[0].status !== 'archived') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Project must be archived before deletion' }),
+        };
+      }
+
+      // Log before deletion
+      await logActivity({
+        type: 'PROJECT_DELETED',
+        userId: auth.user!.userId,
+        userName: auth.user!.fullName,
+        details: {
+          projectNumber: existing.rows[0].project_number,
+          projectName: existing.rows[0].name || '',
+        },
+      });
+
+      // Delete child records then project (deliverables cascade via FK)
+      await dbQuery('DELETE FROM revision_requests WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM payments WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM project_team WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM project_files WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM activities WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM projects WHERE id = $1', [projectId]);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ deleted: true }),
       };
     }
 
@@ -384,7 +576,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

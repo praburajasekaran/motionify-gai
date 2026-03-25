@@ -157,12 +157,13 @@ export async function checkRateLimit(
         };
 
     } catch (error) {
-        // On error, allow the request (fail open) but log
-        logger.error('Rate limit check failed', error);
+        // Fail closed for security - deny requests when rate limit check fails
+        logger.error('Rate limit check failed, denying request (fail-closed)', error);
         return {
-            allowed: true,
-            remaining: config.maxRequests,
+            allowed: false,
+            remaining: 0,
             resetAt,
+            retryAfter: 60,
         };
     }
 }

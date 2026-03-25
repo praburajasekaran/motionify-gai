@@ -89,13 +89,33 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`, {
                 credentials: 'include',
             });
+
+            // Check if response is OK and is JSON before parsing
+            if (!response.ok) {
+                // Silently handle 404 - notifications API may not be available
+                if (response.status === 404) {
+                    return;
+                }
+                console.warn(`Notifications API returned status ${response.status}`);
+                return;
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType?.includes('application/json')) {
+                // Silently handle non-JSON responses (e.g., HTML error pages)
+                return;
+            }
+
             const data = await response.json();
 
             if (data.success && data.notifications) {
                 setNotifications(data.notifications);
             }
         } catch (error) {
-            console.error('Failed to fetch notifications:', error);
+            // Only log in development, silently handle in production
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('Notifications not available:', error instanceof Error ? error.message : error);
+            }
         } finally {
             setIsLoading(false);
         }
