@@ -29,9 +29,9 @@ export default function Footer() {
           {/* CTA and Social */}
           <div className="lg:col-span-3 flex flex-col gap-8">
             <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Get Started</h3>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Contact Us</h3>
               <a href="#video-style-quiz" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold text-sm shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 transform hover:scale-105">
-                <span>Get Started</span>
+                <span>Contact Us</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
               </a>
             </div>
