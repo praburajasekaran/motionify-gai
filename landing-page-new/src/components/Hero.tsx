@@ -25,7 +25,7 @@ export default function Hero() {
         <div className="absolute -bottom-28 -right-16 h-[26rem] w-[26rem] rounded-full blur-3xl opacity-25" style={{ background: "radial-gradient(circle at 70% 70%, rgba(59,130,246,0.35), rgba(59,130,246,0) 60%)" }} />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[32rem] w-[32rem] rounded-full blur-3xl opacity-20" style={{ background: "radial-gradient(circle, rgba(14,165,233,0.28), rgba(14,165,233,0) 60%)" }} />
       </div>
-      <div className="sm:pt-20 lg:pt-28 sm:pb-16 lg:pb-20 pt-16 pb-12">
+      <div className="sm:pt-20 lg:pt-28 sm:pb-16 lg:pb-20 pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             <div className="lg:col-span-7 text-white">
