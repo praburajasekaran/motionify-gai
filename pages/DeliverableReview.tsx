@@ -22,12 +22,15 @@ import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
+import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
-import { InlineFeedbackForm } from '@/components/deliverables/InlineFeedbackForm';
+import { DeliverableReviewActions } from '@/components/deliverables/DeliverableReviewActions';
 import { ApprovalTimeline } from '@/components/deliverables/ApprovalTimeline';
 import { DeliverableApproval } from '@/types/deliverable.types';
 import { Project } from '@/types';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useProject } from '@/shared/hooks';
+import { DetailPageHeaderSkeleton } from '@/components/ui/SkeletonLoaders';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
@@ -39,7 +42,7 @@ const DeliverableReviewContent: React.FC = () => {
     deliverableId: string;
   }>();
   const navigate = useNavigate();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables } =
+  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -51,6 +54,16 @@ const DeliverableReviewContent: React.FC = () => {
   const [isSendingForReview, setIsSendingForReview] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+
+  // Upload progress state (passed to DeliverableFilesList for inline display)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFileName, setUploadingFileName] = useState('');
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // Active video file state (connects video player to files list)
+  const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
+  const [activeVideoFileName, setActiveVideoFileName] = useState('');
 
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
@@ -87,9 +100,19 @@ const DeliverableReviewContent: React.FC = () => {
 
   // Shared helper: show error toast
   const showError = (error: unknown, fallback: string) => {
+    if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+      return;
+    }
     setErrorMessage(error instanceof Error ? error.message : fallback);
     setShowErrorMessage(true);
     setTimeout(() => setShowErrorMessage(false), 5000);
+  };
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   // Handle send for client review (beta_ready → awaiting_approval)
@@ -131,6 +154,12 @@ const DeliverableReviewContent: React.FC = () => {
   // Handle request revision button click
   const handleRequestRevisionClick = () => {
     setShowRevisionForm(true);
+  };
+
+  // Handle cancel revision (reset form and exit revision mode)
+  const handleCancelRevision = () => {
+    setShowRevisionForm(false);
+    dispatch({ type: 'RESET_REVISION_FORM' });
   };
 
   // Handle revision submission
@@ -182,32 +211,48 @@ const DeliverableReviewContent: React.FC = () => {
   const handleUpload = async (file: File) => {
     if (!deliverable) return;
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      setShowSuccessMessage(false); // Reset
-      setSuccessMessage('Uploading file...');
-      setShowSuccessMessage(true);
+      // Track upload progress inline (shown in DeliverableFilesList)
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadingFileName(file.name);
 
       const folder = 'beta'; // Default for empty state upload
 
-      // Upload file to R2
+      // Upload file to R2 with progress tracking
       const key = await storageService.uploadFile(
         file,
         deliverable.projectId,
-        folder
+        folder,
+        (p) => setUploadProgress(p),
+        undefined,
+        controller.signal
       );
 
       // Generate thumbnail if video
       if (file.type.startsWith('video/')) {
         try {
           const thumbnailFile = await generateThumbnail(file);
-          if (thumbnailFile) {
+          if (thumbnailFile && !controller.signal.aborted) {
             const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-            await storageService.uploadFile(thumbnailFile, deliverable.projectId, folder, undefined, thumbKey);
+            await storageService.uploadFile(
+              thumbnailFile,
+              deliverable.projectId,
+              folder,
+              undefined,
+              thumbKey,
+              controller.signal
+            );
           }
         } catch (err) {
           console.warn("Thumbnail failed", err);
         }
       }
+
+      if (controller.signal.aborted) return;
 
       // Determine file category from mime type
       const getFileCategory = (mimeType: string): string => {
@@ -233,6 +278,7 @@ const DeliverableReviewContent: React.FC = () => {
           file_category: getFileCategory(file.type),
           is_final: false,
         }),
+        signal: controller.signal
       });
 
       if (!fileResponse.ok) {
@@ -246,10 +292,9 @@ const DeliverableReviewContent: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ status: 'beta_ready' }),
+          signal: controller.signal
         });
       }
-
-      setSuccessMessage('File uploaded successfully!');
 
       // Refresh file list
       if ((window as any).__refreshDeliverableFiles) {
@@ -259,36 +304,55 @@ const DeliverableReviewContent: React.FC = () => {
       // Also refresh deliverables for status update
       await refreshCurrentDeliverable();
 
-      // Allow success message to show for a bit
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-
+      showSuccess('File uploaded successfully!');
     } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        console.log("Upload aborted by user");
+        return;
+      }
       console.error('Upload error:', error);
-      setShowSuccessMessage(false);
       showError(error, 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadingFileName('');
+      abortControllerRef.current = null;
     }
   };
 
-  if (state.isLoading) {
+  if (deliverablesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="text-zinc-500">Loading deliverable...</p>
+          <p className="text-muted-foreground">Loading deliverable...</p>
         </div>
       </div>
     );
   }
 
-  if (!deliverable) {
+  // Only show "not found" if deliverables have loaded and this ID isn't in the list
+  if (!deliverable && state.deliverables.length > 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
-          <p className="text-zinc-500">Deliverable not found</p>
+          <p className="text-muted-foreground">Deliverable not found</p>
           <Button variant="outline" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deliverables
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Still resolving (deliverables fetched but LOAD_DELIVERABLE_BY_ID hasn't fired yet)
+  if (!deliverable) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="text-muted-foreground">Loading deliverable...</p>
         </div>
       </div>
     );
@@ -359,21 +423,21 @@ const DeliverableReviewContent: React.FC = () => {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="mb-3 -ml-2 text-zinc-600 hover:text-zinc-900"
+            className="mb-3 -ml-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deliverables
           </Button>
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             {deliverable.title}
           </h1>
-          <p className="text-sm text-zinc-600">{deliverable.description}</p>
+          <p className="text-sm text-muted-foreground">{deliverable.description}</p>
         </div>
         <Badge
-          variant={statusColors[deliverable.status] as any}
+          variant={statusColors[currentUser?.role === 'client' && deliverable.status === 'beta_ready' ? 'in_progress' : deliverable.status] as any}
           className="shrink-0 text-sm px-3 py-1"
         >
-          {deliverable.status.replace('_', ' ').toUpperCase()}
+          {(currentUser?.role === 'client' && deliverable.status === 'beta_ready' ? 'in_progress' : deliverable.status).replace('_', ' ').toUpperCase()}
         </Badge>
       </div>
 
@@ -381,42 +445,82 @@ const DeliverableReviewContent: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Video & Feedback Form (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* File List Section */}
+          {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
             canUploadBeta={permissions.canUploadBeta}
             onUpload={handleUpload}
+            onCancelUpload={handleCancelUpload}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            uploadingFileName={uploadingFileName}
+            activeFileKey={activeVideoFileKey}
+            onVideoFileSelect={(key, name) => {
+              if (key === activeVideoFileKey) {
+                setActiveVideoFileKey(undefined);
+                setActiveVideoFileName('');
+              } else {
+                setActiveVideoFileKey(key);
+                setActiveVideoFileName(name);
+              }
+            }}
+            videoPlayer={
+              <DeliverableVideoSection
+                deliverable={deliverable}
+                isRevisionMode={showRevisionForm}
+                canRequestRevision={permissions.canReject}
+                canComment={permissions.canComment}
+                canUploadBeta={permissions.canUploadBeta}
+                comments={state.revisionFeedback.timestampedComments}
+                onAddComment={handleAddComment}
+                onRemoveComment={handleRemoveComment}
+                onUpdateComment={handleUpdateComment}
+                onUpload={handleUpload}
+                selectedFileKey={activeVideoFileKey}
+                selectedFileName={activeVideoFileName}
+                onActiveFileChange={(key, name) => {
+                  setActiveVideoFileKey(key);
+                  setActiveVideoFileName(name);
+                }}
+              />
+            }
+            reviewActions={
+              <DeliverableReviewActions
+                deliverable={deliverable}
+                isRevisionMode={showRevisionForm}
+                canApprove={permissions.canApprove}
+                canReject={permissions.canReject}
+                canAccessFinal={permissions.canAccessFinal}
+                canSendForReview={permissions.canSendForReview}
+                isClientPM={permissions.isClientPM}
+                getDeniedReason={permissions.getDeniedReason}
+                onApprove={() => setShowApproveDialog(true)}
+                onRequestRevision={handleRequestRevisionClick}
+                onCancelRevision={handleCancelRevision}
+                onSubmit={handleSubmitRevision}
+                quota={state.quota}
+                allComments={state.revisionFeedback.timestampedComments}
+                currentUserId={currentUser?.id || ''}
+                currentUserName={currentUser?.name || ''}
+                currentUserEmail={currentUser?.email || ''}
+              />
+            }
           />
-
-          {/* Inline Feedback Form (shown when "Request Revision" clicked) */}
-          {showRevisionForm && permissions.canReject && (
-            <InlineFeedbackForm
-              deliverable={deliverable}
-              onSubmit={handleSubmitRevision}
-              quota={state.quota}
-              currentUserId={currentUser?.id || ''}
-              currentUserName={currentUser?.name || ''}
-              currentUserEmail={currentUser?.email || ''}
-              allComments={state.revisionFeedback.timestampedComments}
-            />
-          )}
 
           {/* Approval History */}
           {deliverable.approvalHistory.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-zinc-900">Review History</h3>
+              <h3 className="text-lg font-bold text-foreground">Review History</h3>
               <ApprovalTimeline approvalHistory={deliverable.approvalHistory} />
             </div>
           )}
         </div>
 
         {/* Right Column - Metadata Sidebar (1/3 width) */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           <DeliverableMetadataSidebar
             deliverable={deliverable}
             project={currentProject}
-            onApprove={() => setShowApproveDialog(true)}
-            onRequestRevision={handleRequestRevisionClick}
             onSendForReview={() => setShowSendForReviewDialog(true)}
             isSendingForReview={isSendingForReview}
           />
@@ -432,66 +536,15 @@ const DeliverableReviewContent: React.FC = () => {
 export const DeliverableReview: React.FC = () => {
   const { user } = useAuthContext();
   const { id: projectId } = useParams<{ id: string }>();
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadProject = async () => {
-      // Fetch project from API
-      try {
-        const response = await fetch(`/api/projects/${projectId}`, {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Transform API response to Project type
-          const project: Project = {
-            id: data.id,
-            title: data.project_number || `Project ${data.id.slice(0, 8)}`,
-            client: data.client_name || 'Client',
-            thumbnail: '',
-            status: data.status === 'active' ? 'Active' : (data.status || 'Active'),
-            dueDate: data.due_date || new Date().toISOString(),
-            startDate: data.created_at || new Date().toISOString(),
-            progress: 0,
-            description: '',
-            tasks: [],
-            team: [],
-            budget: 0,
-            deliverables: [],
-            files: [],
-            deliverablesCount: 0,
-            revisionCount: data.revisions_used || 0,
-            maxRevisions: data.total_revisions_allowed || 2,
-            activityLog: [],
-            termsAcceptedAt: data.terms_accepted_at,
-            termsAcceptedBy: data.terms_accepted_by,
-          };
-          setCurrentProject(project);
-        }
-      } catch (error) {
-        console.error('Failed to fetch project:', error);
-      }
-      setIsLoading(false);
-    };
-
-    if (projectId) {
-      loadProject();
-    }
-  }, [projectId]);
+  const { data: currentProject, isLoading } = useProject(projectId);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-zinc-500">
-        <p>Loading...</p>
-      </div>
-    );
+    return <DetailPageHeaderSkeleton />;
   }
 
   if (!user || !currentProject) {
     return (
-      <div className="flex items-center justify-center py-12 text-zinc-500">
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p>Project not found</p>
       </div>
     );

@@ -11,7 +11,7 @@ import { User, UserRole, Deliverable, DeliverableStatus, Project, ProjectStatus,
  * Helper: Check if user is a Motionify team member (Admin, PM, or Team Member)
  */
 export function isMotionifyTeam(user: User): boolean {
-  return ['super_admin', 'project_manager', 'team_member'].includes(user.role);
+  return ['super_admin', 'support', 'team_member'].includes(user.role);
 }
 
 /**
@@ -69,7 +69,7 @@ export function canViewDeliverable(
 
   // Draft projects: Only Admin/PM can view
   if (project.status === 'Draft') {
-    return user.role === 'super_admin' || user.role === 'project_manager';
+    return user.role === 'super_admin' || user.role === 'support';
   }
 
   // Motionify team can always view (except archived)
@@ -100,7 +100,7 @@ export function canUploadBetaFiles(
   }
 
   // Admin and PM always can
-  if (user.role === 'super_admin' || user.role === 'project_manager') {
+  if (user.role === 'super_admin' || user.role === 'support') {
     return true;
   }
 
@@ -127,7 +127,7 @@ export function canUploadFinalFiles(
   }
 
   // Only Admin and PM can upload final files
-  return user.role === 'super_admin' || user.role === 'project_manager';
+  return user.role === 'super_admin' || user.role === 'support';
 }
 
 /**
@@ -296,7 +296,7 @@ export function canCreateDeliverable(
   }
 
   // Only Admin and PM can create
-  return user.role === 'super_admin' || user.role === 'project_manager';
+  return user.role === 'super_admin' || user.role === 'support';
 }
 
 /**
@@ -316,15 +316,12 @@ export function canDeleteDeliverable(
  * Only Admin and PM can delete tasks
  */
 export function canDeleteTask(user: User, task?: Task): boolean {
-  if (user.role === 'super_admin' || user.role === 'project_manager') {
+  if (user.role === 'super_admin' || user.role === 'support') {
     return true;
   }
-
-  // Any user can delete tasks they created
   if (task?.createdBy && task.createdBy === user.id) {
     return true;
   }
-
   return false;
 }
 
@@ -361,6 +358,33 @@ export function canViewBetaFiles(
 }
 
 /**
+ * Check if user can send a deliverable for client review
+ * Only Admin and PM can transition beta_ready → awaiting_approval
+ */
+export function canSendForReview(
+  user: User,
+  deliverable: Deliverable,
+  project: Project
+): boolean {
+  // Only admin and PM can send for review
+  if (user.role !== 'super_admin' && user.role !== 'support') {
+    return false;
+  }
+
+  // Deliverable must be in beta_ready status
+  if (deliverable.status !== 'beta_ready') {
+    return false;
+  }
+
+  // Project must not be on hold or archived
+  if (project.status === 'On Hold' || project.status === 'Archived') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Check if user can submit feedback/comments on a deliverable
  * All users who can view can comment
  */
@@ -374,13 +398,13 @@ export function canCommentOnDeliverable(
 
 /**
  * Check if user can edit a task
- * Super Admin and Project Manager can edit any task
+ * Super Admin and Support can edit any task
  * Team Member can edit tasks assigned to them or tasks they created
  * Any user can edit tasks they created
  */
 export function canEditTask(user: User, task?: Task): boolean {
   // Admin and PM can always edit
-  if (user.role === 'super_admin' || user.role === 'project_manager') {
+  if (user.role === 'super_admin' || user.role === 'support') {
     return true;
   }
 
@@ -406,7 +430,7 @@ export function canEditTask(user: User, task?: Task): boolean {
  */
 export function canAssignTask(user: User, targetUserId: string): boolean {
   if (targetUserId === user.id) return true;
-  return user.role === 'super_admin' || user.role === 'project_manager';
+  return user.role === 'super_admin' || user.role === 'support';
 }
 
 
@@ -414,7 +438,7 @@ export function canAssignTask(user: User, targetUserId: string): boolean {
  * Get user-friendly reason why action is not permitted
  */
 export function getPermissionDeniedReason(
-  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task',
+  action: 'view' | 'upload_beta' | 'upload_final' | 'approve' | 'reject' | 'view_history' | 'access_final' | 'edit' | 'create' | 'delete' | 'edit_task' | 'delete_task' | 'create_task' | 'send_for_review',
   user: User,
   deliverable?: Deliverable,
   project?: Project
@@ -479,7 +503,7 @@ export function getPermissionDeniedReason(
       return 'You do not have permission to view approval history';
 
     case 'edit_task':
-      if (user.role === 'super_admin' || user.role === 'project_manager') {
+      if (user.role === 'super_admin' || user.role === 'support') {
         return 'You have permission to edit this task';
       }
       if (user.role === 'team_member') {
@@ -488,13 +512,20 @@ export function getPermissionDeniedReason(
       return 'Clients cannot edit tasks';
 
     case 'delete_task':
-      if (user.role === 'super_admin' || user.role === 'project_manager') {
+      if (user.role === 'super_admin' || user.role === 'support') {
         return 'You have permission to delete this task';
       }
-      return 'Only admins and project managers can delete tasks';
+      return 'Only admins and support can delete tasks';
 
     case 'create_task':
       return 'All authenticated users can create tasks';
+
+    case 'send_for_review':
+      if (isClient(user)) return 'Only the Motionify team can send deliverables for review';
+      if (user.role === 'team_member') return 'Only Admins and Support can send deliverables for review';
+      if (deliverable?.status !== 'beta_ready') return 'Deliverable must be in beta ready status';
+      if (project.status === 'On Hold') return 'Project is on hold';
+      return 'Cannot send deliverable for review';
 
     default:
       return 'Permission denied';

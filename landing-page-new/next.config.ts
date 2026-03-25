@@ -17,8 +17,16 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
           },
         ],
       },
@@ -26,22 +34,34 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    return [
-      {
-        source: '/portal/:path*',
-        destination: 'http://localhost:5173',
-        permanent: false,
-      },
-    ];
+    // Only proxy to Vite dev server in local development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/portal/:path*',
+          destination: 'http://localhost:5173/portal/:path*',
+          permanent: false,
+        },
+      ];
+    }
+    return [];
   },
 
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:9999/.netlify/functions/:path*',
-      },
-    ];
+    // Only proxy API calls to Netlify Dev in local development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/.netlify/functions/:path*',
+          destination: 'http://localhost:8888/.netlify/functions/:path*',
+        },
+        {
+          source: '/api/:path*',
+          destination: 'http://localhost:8888/.netlify/functions/:path*',
+        },
+      ];
+    }
+    return [];
   },
 };
 

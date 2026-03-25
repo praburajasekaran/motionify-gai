@@ -20,6 +20,13 @@ import {
   IssueCategory,
   FeedbackAttachment,
 } from '../../types/deliverable.types';
+import { Project, User } from '@/types';
+import {
+  canApproveDeliverable,
+  canRequestRevisions,
+  canSendForReview,
+  getPermissionDeniedReason,
+} from '@/utils/deliverablePermissions';
 
 // Default revision quota - will be overwritten by project data from API
 const DEFAULT_REVISION_QUOTA: RevisionQuota = {
@@ -27,12 +34,70 @@ const DEFAULT_REVISION_QUOTA: RevisionQuota = {
   used: 0,
   remaining: 3,
 };
-import { Project, User } from '@/types';
-import {
-  canApproveDeliverable,
-  canRequestRevisions,
-  getPermissionDeniedReason,
-} from '@/utils/deliverablePermissions';
+
+// Map deliverable status to progress percentage
+const STATUS_PROGRESS_MAP: Record<DeliverableStatus, number> = {
+  pending: 0,
+  in_progress: 25,
+  beta_ready: 50,
+  awaiting_approval: 60,
+  revision_requested: 40,
+  approved: 75,
+  payment_pending: 85,
+  final_delivered: 100,
+};
+
+// Derive deliverable type from dominant file category
+function deriveTypeFromFileCategory(category: string | null | undefined): 'Video' | 'Image' | 'Document' | null {
+  if (category === 'video') return 'Video';
+  if (category === 'image') return 'Image';
+  if (category === 'document' || category === 'script') return 'Document';
+  return null;
+}
+
+// Raw API response shape for deliverables
+interface RawDeliverableResponse {
+  id: string;
+  project_id: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  dominant_file_category?: string | null;
+  status?: string;
+  estimated_completion_week?: number;
+  beta_file_key?: string;
+  final_file_key?: string;
+  revision_count?: number;
+  approval_history?: DeliverableApproval[];
+  delivery_notes?: string;
+  version?: number;
+}
+
+// Transform API response to match Deliverable type
+function transformApiDeliverable(d: RawDeliverableResponse): Deliverable {
+  const status = (d.status || 'pending') as DeliverableStatus;
+  return {
+    id: d.id,
+    projectId: d.project_id,
+    title: d.name || d.title || 'Untitled',
+    description: d.description || '',
+    type: deriveTypeFromFileCategory(d.dominant_file_category),
+    status,
+    progress: STATUS_PROGRESS_MAP[status] ?? 0,
+    dueDate: d.estimated_completion_week
+      ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date().toISOString(),
+    betaFileUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
+    betaFileKey: d.beta_file_key,
+    watermarked: !!d.beta_file_key && !d.final_file_key,
+    finalFileUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
+    finalFileKey: d.final_file_key,
+    finalDeliveredAt: d.final_delivered_at ? new Date(d.final_delivered_at) : undefined,
+    approvalHistory: d.approval_history || [],
+    createdAt: d.created_at,
+    updatedAt: d.updated_at,
+  };
+}
 
 // ============================================================================
 // STATE INTERFACE
@@ -62,6 +127,7 @@ interface DeliverableState {
 
 type DeliverableAction =
   | { type: 'SET_DELIVERABLES'; deliverables: Deliverable[] }
+  | { type: 'SET_QUOTA'; quota: RevisionQuota }
   | { type: 'DELETE_DELIVERABLE'; payload: string }
   | { type: 'APPROVE_DELIVERABLE'; id: string; userId: string; userName: string; userEmail: string }
   | { type: 'REJECT_DELIVERABLE'; id: string; approval: DeliverableApproval }
@@ -112,6 +178,12 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
       return {
         ...state,
         deliverables: action.deliverables,
+      };
+
+    case 'SET_QUOTA':
+      return {
+        ...state,
+        quota: action.quota,
       };
 
     case 'DELETE_DELIVERABLE':
@@ -359,6 +431,7 @@ interface DeliverableContextType {
   approveDeliverable: (deliverableId: string) => Promise<void>;
   rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => Promise<void>;
   deleteDeliverable: (deliverableId: string) => Promise<void>;
+  sendForReview: (deliverableId: string) => Promise<void>;
 
   // Loading state
   isLoading: boolean;
@@ -415,28 +488,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         }
 
         const deliverables = await response.json();
-
-        // Transform API response to match Deliverable type
-        const transformedDeliverables = (deliverables || []).map((d: any) => ({
-          id: d.id,
-          projectId: d.project_id,
-          title: d.name || d.title || 'Untitled',
-          description: d.description || '',
-          type: d.type || 'Video', // Default to Video if missing
-          status: d.status || 'pending',
-          dueDate: d.estimated_completion_week
-            ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date().toISOString(),
-          betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
-          betaFileKey: d.beta_file_key,
-          finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
-          finalFileKey: d.final_file_key,
-          revisionCount: d.revision_count || 0,
-          approvalHistory: d.approval_history || [],
-          thumbnailUrl: undefined,
-          deliveryNotes: d.delivery_notes,
-          version: d.version || 1,
-        }));
+        const transformedDeliverables = (deliverables || []).map(transformApiDeliverable);
 
         dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
       } catch (err) {
@@ -449,6 +501,18 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
     fetchDeliverables();
   }, [currentProject?.id]);
+
+  // Sync revision quota from project data
+  useEffect(() => {
+    if (currentProject) {
+      const total = currentProject.maxRevisions ?? 2;
+      const used = currentProject.revisionCount ?? 0;
+      dispatch({
+        type: 'SET_QUOTA',
+        quota: { total, used, remaining: total - used },
+      });
+    }
+  }, [currentProject?.maxRevisions, currentProject?.revisionCount]);
 
   /**
    * Permission-aware approve action
@@ -619,9 +683,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       throw new Error('You must be logged in to delete deliverables');
     }
 
-    // Permission check: only super_admin and project_manager can delete
-    if (currentUser.role !== 'super_admin' && currentUser.role !== 'project_manager') {
-      throw new Error('Only administrators and project managers can delete deliverables');
+    // Permission check: only super_admin and support can delete
+    if (currentUser.role !== 'super_admin' && currentUser.role !== 'support') {
+      throw new Error('Only administrators and support can delete deliverables');
     }
 
     const response = await fetch(`/api/deliverables/${deliverableId}`, {
@@ -637,6 +701,41 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
     dispatch({ type: 'DELETE_DELIVERABLE', payload: deliverableId });
   };
 
+  /**
+   * Permission-aware send for review action
+   * Transitions deliverable from beta_ready → awaiting_approval
+   * Only Admin and PM can perform this action
+   */
+  const sendForReview = async (deliverableId: string) => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to send deliverables for review');
+    }
+
+    const deliverable = state.deliverables.find(d => d.id === deliverableId);
+    if (!deliverable) {
+      throw new Error('Deliverable not found');
+    }
+
+    // Check permission
+    if (!canSendForReview(currentUser, deliverable, currentProject)) {
+      const reason = getPermissionDeniedReason('send_for_review', currentUser, deliverable, currentProject);
+      throw new Error(reason);
+    }
+
+    // Call backend API to transition status
+    const response = await fetch(`/api/deliverables/${deliverableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status: 'awaiting_approval' }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || errorData.message || 'Failed to send for review');
+    }
+  };
+
   // Refresh function to reload deliverables
   const refreshDeliverables = async (): Promise<void> => {
     if (!currentProject?.id) return;
@@ -650,29 +749,10 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         credentials: 'include',
       });
       const deliverables = await res.json();
-      const transformedDeliverables = (deliverables || []).map((d: any) => ({
-        id: d.id,
-        projectId: d.project_id,
-        title: d.name || d.title || 'Untitled',
-        description: d.description || '',
-        type: d.type || 'Video', // Default to Video if missing
-        status: d.status || 'pending',
-        dueDate: d.estimated_completion_week
-          ? new Date(Date.now() + d.estimated_completion_week * 7 * 24 * 60 * 60 * 1000).toISOString()
-          : new Date().toISOString(),
-        betaUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
-        betaFileKey: d.beta_file_key,
-        finalUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
-        finalFileKey: d.final_file_key,
-        revisionCount: d.revision_count || 0,
-        approvalHistory: d.approval_history || [],
-        thumbnailUrl: undefined,
-        deliveryNotes: d.delivery_notes,
-        version: d.version || 1,
-      }));
+      const transformedDeliverables = (deliverables || []).map(transformApiDeliverable);
       dispatch({ type: 'SET_DELIVERABLES', deliverables: transformedDeliverables });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load deliverables');
     } finally {
       setIsLoading(false);
     }
@@ -687,6 +767,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
         approveDeliverable,
         rejectDeliverable,
         deleteDeliverable,
+        sendForReview,
         isLoading,
         error,
         refreshDeliverables,

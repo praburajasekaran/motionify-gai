@@ -13,7 +13,7 @@
  */
 
 import crypto from 'crypto';
-import { sendEmail } from './send-email';
+import { sendEmail, emailWrapper } from './send-email';
 import {
     query,
     validateCors,
@@ -46,13 +46,9 @@ async function sendMagicLinkEmail(data: {
     userName: string;
     magicLink: string;
 }) {
-    const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px; color: #333; background-color: #ffffff;">
-      <div style="text-align: center; margin-bottom: 32px;">
-        <img src="https://motionify.studio/motionify-dark-logo.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
-      </div>
-
-      <p style="margin: 0 0 16px;">Hi <strong>${data.userName}</strong>,</p>
+    const content = `
+      <h2 style="color: #7c3aed; text-align: center; margin: 0 0 24px;">Log In to Your Account</h2>
+      <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${data.userName}</strong>,</p>
       <p style="margin: 0 0 24px; color: #555;">Click the button below to log in to your account:</p>
 
       <div style="text-align: center; margin: 32px 0;">
@@ -60,19 +56,12 @@ async function sendMagicLinkEmail(data: {
       </div>
 
       <p style="font-size: 13px; color: #888; margin: 24px 0 0;">This link expires in 15 minutes.</p>
-
-      <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0 24px;">
-
-      <p style="font-size: 12px; color: #aaa; text-align: center; margin: 0;">
-        <a href="https://motionify.studio" style="color: #7c3aed; text-decoration: none;">motionify.studio</a>
-      </p>
-    </div>
-  `;
+    `;
 
     return sendEmail({
         to: data.to,
         subject: 'Log in to Motionify Portal',
-        html,
+        html: emailWrapper(content),
     });
 }
 
@@ -149,9 +138,16 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             [email.toLowerCase(), token, expiresAt, rememberMe]
         );
 
-        // Build magic link URL
-        const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
-        const magicLink = `${portalUrl}/#/login?token=${token}&email=${encodeURIComponent(email)}`;
+        // Build magic link URL - strip any trailing /api or /portal suffixes
+        const rawPortalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
+        const portalUrl = rawPortalUrl.replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
+        const magicLink = `${portalUrl}/portal/login?token=${token}&email=${encodeURIComponent(email)}`;
+        logger.info('Magic link generated', { portalUrl });
+
+        // Log full magic link in local development for easy access
+        if (portalUrl.includes('localhost')) {
+            console.log(`\n🔗 [DEV] Magic link for ${email}:\n${magicLink}\n`);
+        }
 
         // Send the magic link email
         const emailResult = await sendMagicLinkEmail({
@@ -159,12 +155,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             userName: user.full_name || email.split('@')[0],
             magicLink,
         });
-
-        // DEVELOPMENT: Always log the magic link for local testing
-        const isLocalDev = portalUrl.includes('localhost');
-        if (isLocalDev) {
-            logger.info('Magic link generated for local testing', { magicLink });
-        }
 
         if (emailResult) {
             logger.info('Magic link email sent', { email: email.slice(0, 3) + '***' });

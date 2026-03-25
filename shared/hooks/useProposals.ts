@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../utils/api.client';
 import type { Proposal, CreateProposalDto } from '../contracts';
 
@@ -15,6 +15,8 @@ export function useProposals() {
   return useQuery({
     queryKey: proposalKeys.lists(),
     queryFn: api.proposals.list,
+    placeholderData: keepPreviousData,
+    throwOnError: false,
   });
 }
 
@@ -23,6 +25,8 @@ export function useProposal(id: string | undefined) {
     queryKey: proposalKeys.detail(id!),
     queryFn: () => api.proposals.get(id!),
     enabled: !!id,
+    placeholderData: keepPreviousData,
+    throwOnError: false,
   });
 }
 

@@ -27,7 +27,8 @@ export const storageService = {
         projectId: string,
         folder: 'beta' | 'final' | 'misc' = 'misc',
         onProgress?: (progress: number) => void,
-        customKey?: string
+        customKey?: string,
+        signal?: AbortSignal
     ): Promise<string> {
         try {
             // 1. Get presigned URL
@@ -48,6 +49,7 @@ export const storageService = {
                 },
                 credentials: 'include', // Required for cookie-based auth
                 body: JSON.stringify(requestBody),
+                signal // Also support signal for the presign request
             });
 
             if (!presignRes.ok) {
@@ -70,6 +72,19 @@ export const storageService = {
 
                 xhr.open('PUT', uploadUrl, true);
                 xhr.setRequestHeader('Content-Type', file.type);
+
+                // Handle cancellation
+                if (signal) {
+                    if (signal.aborted) {
+                        xhr.abort();
+                        reject(new Error('Aborted'));
+                        return;
+                    }
+                    signal.addEventListener('abort', () => {
+                        xhr.abort();
+                        reject(new Error('Aborted'));
+                    });
+                }
 
                 xhr.upload.onprogress = (event) => {
                     if (event.lengthComputable && onProgress) {
@@ -101,10 +116,12 @@ export const storageService = {
                 };
 
                 xhr.onerror = () => {
+                    if (signal?.aborted) return; // Promise already rejected
                     reject(new Error('Network error during upload. Please check your connection and try again.'));
                 };
 
                 xhr.ontimeout = () => {
+                    if (signal?.aborted) return; // Promise already rejected
                     reject(new Error('Upload timed out. The file may be too large for your connection speed.'));
                 };
 
@@ -115,6 +132,9 @@ export const storageService = {
             });
 
         } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error('Aborted');
+            }
             console.error('Storage Upload Error:', error);
             throw error;
         }

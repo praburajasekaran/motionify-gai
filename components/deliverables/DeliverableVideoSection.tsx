@@ -41,11 +41,15 @@ export interface DeliverableVideoSectionProps {
   canRequestRevision: boolean;
   canComment: boolean;
   canUploadBeta: boolean;
+  isRevisionMode?: boolean;
   comments: TimestampedComment[];
   onAddComment: (timestamp: number, comment: string) => void;
   onRemoveComment: (commentId: string) => void;
   onUpdateComment: (commentId: string, text: string) => void;
   onUpload?: (file: File) => void;
+  selectedFileKey?: string;
+  selectedFileName?: string;
+  onActiveFileChange?: (fileKey: string, fileName: string) => void;
 }
 
 export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = ({
@@ -53,33 +57,73 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   canRequestRevision,
   canComment,
   canUploadBeta,
+  isRevisionMode = false,
   comments,
   onAddComment,
   onRemoveComment,
   onUpdateComment,
   onUpload,
+  selectedFileKey,
+  selectedFileName,
+  onActiveFileChange,
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
+  const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
+  const currentFileKeyRef = React.useRef<string | undefined>();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const loadUrl = async () => {
-      // Determine if we need to generate a URL
       const isFinal = deliverable.status === 'final_delivered';
-      const key = isFinal
-        ? deliverable.finalFileKey || deliverable.betaFileKey
-        : deliverable.betaFileKey;
+      let key: string | undefined;
+      let fileName: string | undefined;
+
+      if (selectedFileKey) {
+        // Explicit file selected from the files list
+        key = selectedFileKey;
+        fileName = selectedFileName;
+      } else {
+        // 1. Try legacy fields on the deliverable record first
+        key = isFinal
+          ? deliverable.finalFileKey || deliverable.betaFileKey
+          : deliverable.betaFileKey;
+
+        // 2. If no key on deliverable record, fetch from deliverable_files table
+        if (!key) {
+          try {
+            const res = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
+              credentials: 'include',
+            });
+            if (res.ok) {
+              const files = await res.json();
+              const videoFile = files.find((f: any) => f.file_category === 'video') || files[0];
+              if (videoFile?.file_key) {
+                key = videoFile.file_key;
+                fileName = videoFile.label || videoFile.file_name;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch deliverable files", e);
+          }
+        }
+      }
 
       if (!key) return;
 
+      // Skip if the same file is already loaded
+      if (key === currentFileKeyRef.current) return;
+      currentFileKeyRef.current = key;
+
+      setResolvedFileKey(key);
+
+      // Notify parent of the active file (for highlighting in files list)
+      onActiveFileChange?.(key, fileName || '');
+
       try {
-        if (isFinal) {
-          // Final files are typically public or handled differently, but try public first or presign
-          // If we have a direct URL, use it (handled below), otherwise key
+        if (isFinal && !selectedFileKey) {
           const url = storageService.getPublicUrl(key);
           setGeneratedUrl(url);
         } else {
-          // Beta files need presigned URL
           const url = await storageService.getDownloadUrl(key);
           setGeneratedUrl(url);
         }
@@ -88,7 +132,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       }
     };
     loadUrl();
-  }, [deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status]);
+  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, selectedFileKey]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -108,18 +152,21 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
     ? deliverable.finalFileUrl || deliverable.betaFileUrl
     : deliverable.betaFileUrl);
 
-  // Detect actual media type from file key (not the static deliverable.type)
-  const fileKey = isFinalDelivered
+  // Detect actual media type from the resolved file key
+  const fileKey = resolvedFileKey || (isFinalDelivered
     ? deliverable.finalFileKey || deliverable.betaFileKey
-    : deliverable.betaFileKey;
+    : deliverable.betaFileKey);
   const detectedMediaType = detectMediaTypeFromKey(fileKey);
 
   return (
     <div className="space-y-6">
-      {/* Media Preview: Video, Image, or Empty State */}
-      {fileUrl && detectedMediaType === 'video' ? (
-        canComment ? (
-          // Interactive commenting enabled for users with comment permissions
+      {/* Media Preview Section */}
+      <div>
+        {/* Video, Image, or Empty State */}
+        {fileUrl && detectedMediaType === 'video' ? (
+        (isRevisionMode || canRequestRevision === false) && canComment ? (
+          // Interactive commenting: gated behind revision mode for client PM,
+          // always available for team members (canComment && !canRequestRevision)
           <VideoCommentTimeline
             videoUrl={fileUrl}
             comments={comments}
@@ -139,7 +186,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
         )
       ) : fileUrl && detectedMediaType === 'image' ? (
         // Image preview
-        <div className="relative w-full rounded-lg overflow-hidden bg-zinc-100 border border-zinc-200">
+        <div className="relative w-full rounded-lg overflow-hidden bg-muted border border-border">
           <img
             src={fileUrl}
             alt={deliverable.title}
@@ -152,16 +199,16 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
           )}
         </div>
       ) : (
-        <div className="w-full aspect-video bg-zinc-100 rounded-lg flex flex-col items-center justify-center gap-4 border-2 border-dashed border-zinc-200">
+        <div className="w-full aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4 border-2 border-dashed border-border">
           {detectedMediaType === 'image' ? (
-            <FileImage className="h-16 w-16 text-zinc-300" />
+            <FileImage className="h-16 w-16 text-muted-foreground" />
           ) : (
-            <FileVideo className="h-16 w-16 text-zinc-300" />
+            <FileVideo className="h-16 w-16 text-muted-foreground" />
           )}
 
           {canUploadBeta && onUpload ? (
             <div className="text-center">
-              <p className="text-sm text-zinc-500 mb-3">No file uploaded yet</p>
+              <p className="text-sm text-muted-foreground mb-3">No file uploaded yet</p>
               <button
                 onClick={handleUploadClick}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors flex items-center gap-2 mx-auto"
@@ -177,48 +224,49 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
               />
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">No content available</p>
+            <p className="text-sm text-muted-foreground">No content available</p>
           )}
         </div>
       )}
+      </div>
 
       {/* Video Metadata Cards */}
       <div className="grid grid-cols-3 gap-4">
         {deliverable.duration && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Clock className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Duration
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900">
+            <p className="text-lg font-bold text-foreground">
               {deliverable.duration}
             </p>
           </div>
         )}
         {deliverable.format && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <FileVideo className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Format
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900">
+            <p className="text-lg font-bold text-foreground">
               {deliverable.format}
             </p>
           </div>
         )}
         {deliverable.resolution && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Maximize2 className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 Resolution
               </span>
             </div>
-            <p className="text-lg font-bold text-zinc-900 font-mono">
+            <p className="text-lg font-bold text-foreground font-mono">
               {deliverable.resolution}
             </p>
           </div>

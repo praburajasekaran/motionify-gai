@@ -13,7 +13,6 @@ import {
     transaction,
     validateCors,
     getCorsHeaders,
-    createJWT,
     validateRequest,
     magicLinkVerifySchema,
     rateLimitLogin,
@@ -154,14 +153,6 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 userEmail = tokenRecord.email;
                 rememberMe = tokenRecord.remember_me;
 
-                if (tokenRecord.used_at !== null) {
-                    throw {
-                        statusCode: 401,
-                        code: 'TOKEN_ALREADY_USED',
-                        message: 'This magic link has already been used. Please request a new one.',
-                    };
-                }
-
                 if (new Date() > new Date(tokenRecord.expires_at)) {
                     throw {
                         statusCode: 401,
@@ -170,8 +161,19 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                     };
                 }
 
-                // Mark as used
-                await client.query(`UPDATE magic_link_tokens SET used_at = NOW() WHERE id = $1`, [tokenRecord.id]);
+                // Atomic check-and-set: mark as used only if not already used (prevents race condition)
+                const markUsedResult = await client.query(
+                    `UPDATE magic_link_tokens SET used_at = NOW() WHERE id = $1 AND used_at IS NULL RETURNING id`,
+                    [tokenRecord.id]
+                );
+
+                if (markUsedResult.rows.length === 0) {
+                    throw {
+                        statusCode: 401,
+                        code: 'TOKEN_ALREADY_USED',
+                        message: 'This magic link has already been used. Please request a new one.',
+                    };
+                }
 
                 // Get user
                 const userResult = await client.query(
@@ -274,8 +276,12 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 createdInquiryNumber = inquiryNumber;
 
                 // Send notification to admin about new inquiry (async, don't wait)
-                const portalUrl = process.env.PORTAL_URL || 'http://localhost:3003';
-                const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@motionify.com';
+                const portalUrl = (process.env.PORTAL_URL || 'http://localhost:3003').replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
+                const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+                if (!adminEmail) {
+                    logger.warn('ADMIN_NOTIFICATION_EMAIL not configured, skipping admin notification');
+                }
+                adminEmail &&
                 sendNewInquiryNotificationEmail({
                     to: adminEmail,
                     inquiryNumber: inquiryNumber,
@@ -292,7 +298,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             }
 
             // 3. Create Session (Common for both flows)
-            const sessionDurationSeconds = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
+            const sessionDurationSeconds = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
             const sessionExpiresAt = new Date(Date.now() + sessionDurationSeconds * 1000);
 
             // Generate JWT using new jwt.ts module

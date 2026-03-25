@@ -10,7 +10,9 @@
  * - Action button (Review/Download)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 import {
   FileVideo,
@@ -21,12 +23,17 @@ import {
   Eye,
   Clock,
   CheckCircle2,
+  Upload,
+  Loader2,
+  Play,
+  CreditCard,
+  X,
 } from 'lucide-react';
 import { cn, Badge, Progress, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { generateThumbnail } from '../../utils/thumbnail';
-import { Upload, Loader2, Play, CreditCard } from 'lucide-react';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface DeliverableCardProps {
   deliverable: Deliverable;
@@ -34,7 +41,7 @@ export interface DeliverableCardProps {
 }
 
 // Icon mapping for deliverable types
-const TYPE_ICONS = {
+const TYPE_ICONS: Record<string, typeof FileVideo> = {
   Video: FileVideo,
   Image: FileImage,
   Document: FileText,
@@ -57,7 +64,7 @@ const STATUS_CONFIG: Record<
   pending: {
     variant: 'secondary',
     label: 'Pending',
-    color: 'text-zinc-500',
+    color: 'text-muted-foreground',
   },
   in_progress: {
     variant: 'info',
@@ -79,7 +86,7 @@ const STATUS_CONFIG: Record<
     label: 'Approved',
     color: 'text-emerald-500',
   },
-  rejected: {
+  revision_requested: {
     variant: 'destructive',
     label: 'Revision Requested',
     color: 'text-red-500',
@@ -104,10 +111,12 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
+  const [paymentConfirm, setPaymentConfirm] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const uploadTypeRef = React.useRef<'beta' | 'final'>('beta');
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  const Icon = TYPE_ICONS[deliverable.type] || FileVideo;
+  const Icon = (deliverable.type && TYPE_ICONS[deliverable.type]) || FileVideo;
   const statusConfig = STATUS_CONFIG[deliverable.status];
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
@@ -122,6 +131,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       e.stopPropagation(); // Prevent double navigation if button inside card is clicked
     }
     navigate(`/projects/${deliverable.projectId}/deliverables/${deliverable.id}`);
+  };
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   // Load thumbnail if video
@@ -186,6 +203,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       return;
     }
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -195,7 +214,9 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         file,
         deliverable.projectId,
         folder,
-        (progress) => setUploadProgress(progress)
+        (progress) => setUploadProgress(progress),
+        undefined,
+        controller.signal
       );
 
       console.log(`Uploaded ${uploadTypeRef.current} file:`, key);
@@ -205,14 +226,15 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         try {
           console.log('Generating thumbnail...');
           const thumbnailFile = await generateThumbnail(file);
-          if (thumbnailFile) {
+          if (thumbnailFile && !controller.signal.aborted) {
             const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
             await storageService.uploadFile(
               thumbnailFile,
               deliverable.projectId,
               folder,
               undefined, // no progress tracking for thumb
-              thumbKey // Force specific key to match video
+              thumbKey, // Force specific key to match video
+              controller.signal
             );
             console.log('Thumbnail uploaded:', thumbKey);
 
@@ -224,6 +246,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           // Non-fatal error, proceed
         }
       }
+
+      if (controller.signal.aborted) return;
 
       // Save key to database
       const updateData = uploadTypeRef.current === 'beta'
@@ -237,6 +261,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         },
         credentials: 'include',
         body: JSON.stringify(updateData),
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -246,12 +271,17 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       alert(`${uploadTypeRef.current === 'beta' ? 'Beta' : 'Final'} file uploaded and saved successfully!`);
 
     } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        console.log("Upload aborted by user");
+        return;
+      }
       console.error('Upload failed:', error);
       alert('Upload failed. Check console for details.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      abortControllerRef.current = null;
     }
   };
 
@@ -285,23 +315,22 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       if (legacyUrl) {
         window.open(legacyUrl, '_blank');
       } else {
-        alert('No file available');
+        toast.error('No file available');
       }
     } catch (err) {
       console.error("Download error", err);
-      alert("Failed to get download URL");
+      toast.error('Failed to get download URL');
     }
   };
 
   const handlePayment = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const confirmPayment = window.confirm(
-      "Simulate payment for remaining 50% balance?\n\nThis will mark the deliverable as paid and release final files."
-    );
+    setPaymentConfirm(true);
+  };
 
-    if (!confirmPayment) return;
-
+  const handlePaymentConfirmed = async () => {
+    setPaymentConfirm(false);
     setIsUploading(true); // Reuse loading state for payment processing
 
     try {
@@ -321,13 +350,13 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         throw new Error('Payment processing failed');
       }
 
-      alert('Payment successful! Final files are now available for download.');
+      toast.success('Payment successful! Final files are now available for download.');
       // Ideally trigger a refresh, but strict React might require context update or key change
       window.location.reload();
 
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Payment failed. Please try again.');
+      toast.error('Payment failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -390,50 +419,72 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     // Upload Beta when in progress or revision requested
     if (deliverable.status === 'in_progress' || deliverable.status === 'revision_requested') {
       return (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full mt-2"
-          onClick={(e) => handleUploadClick('beta', e)}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <div className="flex items-center gap-2 w-full justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{uploadProgress}%</span>
-            </div>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Upload Beta
-            </>
+        <div className="relative group/upload">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full mt-2"
+            onClick={(e) => handleUploadClick('beta', e)}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="flex items-center gap-2 w-full justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{uploadProgress}%</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload Beta
+              </>
+            )}
+          </Button>
+          {isUploading && (
+            <button
+              onClick={handleCancel}
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              title="Cancel upload"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-        </Button>
+        </div>
       );
     }
 
     // Upload Final when approved or payment pending
     if (deliverable.status === 'approved' || deliverable.status === 'payment_pending') {
       return (
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full mt-2"
-          onClick={(e) => handleUploadClick('final', e)}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <div className="flex items-center gap-2 w-full justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{uploadProgress}%</span>
-            </div>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Upload Final
-            </>
+        <div className="relative group/upload">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full mt-2"
+            onClick={(e) => handleUploadClick('final', e)}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className="flex items-center gap-2 w-full justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{uploadProgress}%</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload Final
+              </>
+            )}
+          </Button>
+          {isUploading && (
+            <button
+              onClick={handleCancel}
+              className="absolute right-2 top-1/2 -translate-y-1/2 mt-1 p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors z-20 pointer-events-auto"
+              title="Cancel upload"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-        </Button>
+        </div>
       );
     }
 
@@ -444,14 +495,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   return (
     <div
       className={cn(
-        'group relative rounded-xl border border-zinc-200 bg-white shadow-sm transition-all hover:shadow-md hover:-translate-y-1 overflow-hidden',
+        'group relative rounded-lg border border-border bg-card transition-colors hover:border-foreground/15 overflow-hidden',
         isActionable && 'cursor-pointer',
         className
       )}
       onClick={() => isActionable && handleNavigate()}
     >
       {/* Thumbnail/Icon Area */}
-      <div className="relative aspect-video bg-gradient-to-br from-zinc-100 to-zinc-50 flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
         {deliverable.betaFileUrl && deliverable.type === 'Video' ? (
           <div className="relative w-full h-full bg-zinc-900 group-hover:scale-105 transition-transform duration-500">
             {thumbnailUrl ? (
@@ -480,7 +531,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
             )}
           </div>
         ) : (
-          <div className="bg-white p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+          <div className="bg-card p-5 rounded-lg border border-border">
             <Icon className={cn('h-10 w-10', statusConfig.color)} />
           </div>
         )}
@@ -502,7 +553,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         {/* Title & Status */}
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-sm text-zinc-900 line-clamp-2 flex-1">
+            <h3 className="font-semibold text-sm text-foreground line-clamp-2 flex-1">
               {deliverable.title}
             </h3>
             <Badge variant={statusConfig.variant as any} className="shrink-0 text-xs">
@@ -511,14 +562,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           </div>
 
           {deliverable.description && (
-            <p className="text-xs text-zinc-500 line-clamp-2">
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {deliverable.description}
             </p>
           )}
         </div>
 
         {/* Metadata */}
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {deliverable.duration && (
             <div className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
@@ -537,13 +588,23 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         <div
           className={cn(
             'flex items-center gap-2 text-xs font-medium',
-            isOverdue ? 'text-red-600' : 'text-zinc-600'
+            isOverdue ? 'text-red-600' : 'text-muted-foreground'
           )}
         >
           <Calendar className="h-3.5 w-3.5" />
           Due {dueDate.toLocaleDateString()}
           {isOverdue && <span className="text-red-600 font-bold">(Overdue)</span>}
         </div>
+
+        {/* Created Date */}
+        {deliverable.createdAt && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span title={formatDateTime(deliverable.createdAt) || undefined}>
+              Created {formatTimestamp(deliverable.createdAt)}
+            </span>
+          </div>
+        )}
 
         {/* Progress Bar (for non-completed) */}
         {deliverable.progress < 100 && deliverable.status !== 'beta_ready' && (
@@ -576,8 +637,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
 
         {/* Approval History Count */}
         {deliverable.approvalHistory.length > 0 && (
-          <div className="pt-2 border-t border-zinc-100">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {deliverable.approvalHistory.length} review
               {deliverable.approvalHistory.length !== 1 ? 's' : ''}
@@ -585,6 +646,16 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={paymentConfirm}
+        onClose={() => setPaymentConfirm(false)}
+        onConfirm={handlePaymentConfirmed}
+        title="Simulate Payment"
+        message="Simulate payment for remaining 50% balance? This will mark the deliverable as paid and release final files."
+        confirmLabel="Confirm Payment"
+        variant="warning"
+      />
     </div>
   );
 };

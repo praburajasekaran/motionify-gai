@@ -1,5 +1,8 @@
 'use client';
 
+import { getApiBase } from '@/lib/portal/utils/api-config';
+import { CSRF_HEADERS } from './csrf';
+
 export type ProposalStatus =
   | 'sent'
   | 'accepted'
@@ -34,6 +37,7 @@ export interface Proposal {
   advanceAmount: number;
   balanceAmount: number;
   revisionsIncluded: number;
+  revisionsDescription?: string;
   acceptedAt?: string;
   rejectedAt?: string;
   feedback?: string;
@@ -76,12 +80,28 @@ function mapProposal(data: any): Proposal {
     acceptedAt: data.accepted_at || data.acceptedAt,
     rejectedAt: data.rejected_at || data.rejectedAt,
     revisionsIncluded: data.revisions_included ?? data.revisionsIncluded ?? 2,
+    revisionsDescription: data.revisions_description ?? data.revisionsDescription ?? undefined,
     feedback: data.feedback,
     editHistory: data.edit_history || data.editHistory,
   };
 }
 
 export async function fetchProposalById(id: string): Promise<Proposal | null> {
+  // Try Netlify function backend (PostgreSQL — source of truth) first
+  try {
+    const netlifyBase = getApiBase();
+    const response = await fetch(`${netlifyBase}/proposal-detail/${id}`, {
+      credentials: 'include',
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return mapProposal(data);
+    }
+  } catch (error) {
+    console.error('Error fetching proposal from backend, falling back to local:', error);
+  }
+
+  // Fallback to local JSON storage
   try {
     const response = await fetch(`${API_BASE_URL}/${id}`);
     if (!response.ok) {
@@ -169,6 +189,7 @@ export async function createProposal(data: {
 }
 
 export async function updateProposal(id: string, updates: Partial<Proposal>): Promise<Proposal> {
+  // Update local JSON storage
   const response = await fetch(`${API_BASE_URL}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -201,7 +222,24 @@ export async function updateProposalStatus(
     updates.feedback = feedback;
   }
 
-  return updateProposal(id, updates);
+  // Update local JSON storage
+  const result = await updateProposal(id, updates);
+
+  // Also sync status change to Netlify backend (PostgreSQL — source of truth)
+  // Uses PATCH which automatically handles accepted_at/rejected_at timestamps
+  try {
+    const netlifyBase = getApiBase();
+    await fetch(`${netlifyBase}/proposal-detail/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
+      credentials: 'include',
+      body: JSON.stringify({ status, feedback }),
+    });
+  } catch (error) {
+    console.error('Failed to sync proposal status to backend:', error);
+  }
+
+  return result;
 }
 
 export async function incrementProposalVersion(

@@ -4,12 +4,14 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare, Lock, Send } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { CommentThread } from '../../components/proposals';
 import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { PromptDialog } from '../../components/ui/PromptDialog';
+import { RichTextEditor } from '../../components/ui/RichTextEditor';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 interface DeliverableInput {
   id: string;
@@ -39,12 +41,15 @@ export function ProposalDetail() {
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [advancePercentage, setAdvancePercentage] = useState<40 | 50 | 60>(50);
   const [revisionsIncluded, setRevisionsIncluded] = useState<number>(2);
+  const [revisionsDescription, setRevisionsDescription] = useState('');
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [promptDialog, setPromptDialog] = useState<{ open: boolean; type: 'reject' | 'revise' | null }>({ open: false, type: null });
   const [showForceEditDialog, setShowForceEditDialog] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [hasBeenEdited, setHasBeenEdited] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -79,13 +84,14 @@ export function ProposalDetail() {
       setCurrency(proposal.currency);
       setAdvancePercentage(proposal.advancePercentage as 40 | 50 | 60);
       setRevisionsIncluded(proposal.revisionsIncluded ?? 2);
+      setRevisionsDescription(proposal.revisionsDescription ?? '');
     }
   }, [isEditMode, proposal]);
 
   if (authLoading || isDataLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -108,11 +114,11 @@ export function ProposalDetail() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Proposal Not Found</h2>
-          <p className="text-gray-600 mb-6">The proposal you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Proposal Not Found</h2>
+          <p className="text-muted-foreground mb-6">The proposal you're looking for doesn't exist.</p>
           <button
             onClick={() => navigate('/admin/inquiries')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Inquiries
@@ -241,9 +247,11 @@ export function ProposalDetail() {
         advanceAmount: pricing.advanceAmount,
         balanceAmount: pricing.balanceAmount,
         revisionsIncluded,
+        revisionsDescription: revisionsDescription.trim() || undefined,
       });
 
       setProposal(updatedProposal);
+      setHasBeenEdited(true);
       alert('Proposal updated successfully!');
       setIsEditMode(false);
     } catch (error) {
@@ -439,6 +447,7 @@ export function ProposalDetail() {
 
   const handleResend = async () => {
     if (!proposal || proposal.status !== 'changes_requested') return;
+    if (!hasBeenEdited) return;
 
     setIsResending(true);
     try {
@@ -460,11 +469,19 @@ export function ProposalDetail() {
         }),
       });
 
-      // Update proposal status back to sent and increment version
+      // Update proposal status back to sent, increment version, and clear previous feedback
       const updatedProposal = await updateProposal(proposal.id, {
         status: 'sent',
         version: (proposal.version || 1) + 1,
+        feedback: '',
       });
+
+      // Update inquiry status back to proposal_sent
+      if (proposal.inquiryId) {
+        await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
+          updateInquiryStatus(proposal.inquiryId, 'proposal_sent')
+        );
+      }
 
       setProposal(updatedProposal);
       alert('Proposal resent to client!');
@@ -499,7 +516,7 @@ export function ProposalDetail() {
       <div className="mb-6">
         <button
           onClick={() => navigate(isClient ? (inquiry ? `/admin/inquiries/${inquiry.id}` : '/') : (inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries'))}
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Inquiry
@@ -508,18 +525,18 @@ export function ProposalDetail() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Proposal</h1>
+              <h1 className="text-3xl font-bold text-foreground">Proposal</h1>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
                 <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
                 {statusInfo.adminLabel}
               </span>
             </div>
             {inquiry && (
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 For inquiry <code className="text-violet-600 font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
               </p>
             )}
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Created {formatDate(proposal.createdAt)}
               {proposal.updatedAt !== proposal.createdAt && ` • Updated ${formatDate(proposal.updatedAt)}`}
             </p>
@@ -547,23 +564,28 @@ export function ProposalDetail() {
 
               {/* Resend button for revision cycle */}
               {proposal.status === 'changes_requested' && (
-                <button
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50"
+                <div
+                  title={!hasBeenEdited ? "Save your changes to the proposal before resending" : undefined}
+                  className="inline-block"
                 >
-                  {isResending ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-green-700/30 border-t-green-700 rounded-full animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Resend to Client
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleResend}
+                    disabled={isResending || !hasBeenEdited}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-green-700/30 border-t-green-700 rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Resend to Client
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -587,34 +609,36 @@ export function ProposalDetail() {
 
       <div className="space-y-6">
         {/* Project Description */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Project Description {isEditMode && <span className="text-red-600">*</span>}
           </label>
           {isEditMode ? (
             <>
-              <p className="text-xs text-gray-600 mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
                 Describe the scope of work, objectives, and what the client can expect
               </p>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={6}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none"
+              <RichTextEditor
+                content={description}
+                onChange={setDescription}
                 placeholder="Enter detailed project description..."
               />
             </>
           ) : (
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+            /<[^>]+>/.test(proposal.description) ? (
+              <div className="tiptap text-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.description) }} />
+            ) : (
+              <p className="text-foreground leading-relaxed whitespace-pre-wrap">{proposal.description}</p>
+            )
           )}
         </div>
 
         {/* Deliverables */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Deliverables</h2>
-              <p className="text-xs text-gray-600 mt-1">
+              <h2 className="text-lg font-semibold text-foreground">Deliverables</h2>
+              <p className="text-xs text-muted-foreground mt-1">
                 {isEditMode ? 'Define what will be delivered to the client' : `${proposal.deliverables.length} deliverable${proposal.deliverables.length !== 1 ? 's' : ''}`}
               </p>
             </div>
@@ -634,12 +658,12 @@ export function ProposalDetail() {
               deliverables.map((deliverable, index) => (
                 <div
                   key={deliverable.id}
-                  className="bg-gray-50 border border-gray-300 rounded-lg p-4"
+                  className="bg-muted border border-border rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex items-center gap-2 mt-2">
-                      <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
-                      <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
+                      <GripVertical className="w-5 h-5 text-muted-foreground cursor-move" />
+                      <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
                     </div>
 
                     <div className="flex-1 space-y-3">
@@ -650,7 +674,7 @@ export function ProposalDetail() {
                           handleDeliverableChange(deliverable.id, 'name', e.target.value)
                         }
                         placeholder="Deliverable name (e.g., 'Product Demo Video')"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent text-sm"
                       />
 
                       <textarea
@@ -660,11 +684,11 @@ export function ProposalDetail() {
                         }
                         placeholder="Describe what's included in this deliverable..."
                         rows={3}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none text-sm"
+                        className="w-full px-3 py-2 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-none text-sm"
                       />
 
                       <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-600">Estimated completion:</label>
+                        <label className="text-xs text-muted-foreground">Estimated completion:</label>
                         <input
                           type="number"
                           min="1"
@@ -676,9 +700,9 @@ export function ProposalDetail() {
                               parseInt(e.target.value) || 1
                             )
                           }
-                          className="w-20 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                          className="w-20 px-3 py-1.5 bg-card border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                         />
-                        <span className="text-xs text-gray-600">
+                        <span className="text-xs text-muted-foreground">
                           week{deliverable.estimatedCompletionWeek !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -698,16 +722,16 @@ export function ProposalDetail() {
               proposal.deliverables.map((deliverable, index) => (
                 <div
                   key={deliverable.id}
-                  className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                  className="bg-muted border border-border rounded-lg p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex items-center justify-center w-8 h-8 bg-violet-100 text-violet-700 rounded-full font-semibold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{deliverable.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{deliverable.description}</p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <h3 className="font-semibold text-foreground mb-1">{deliverable.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">{deliverable.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span>
                           Estimated completion: Week {deliverable.estimatedCompletionWeek}
@@ -722,14 +746,14 @@ export function ProposalDetail() {
         </div>
 
         {/* Project Terms */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Terms</h2>
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Project Terms</h2>
           {isEditMode ? (
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Revisions Included
               </label>
-              <p className="text-xs text-gray-600 mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
                 Number of revision rounds included in this project
               </p>
               <input
@@ -738,8 +762,23 @@ export function ProposalDetail() {
                 max="20"
                 value={revisionsIncluded}
                 onChange={(e) => setRevisionsIncluded(parseInt(e.target.value) || 0)}
-                className="w-24 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-24 px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
               />
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Revision Notes <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Add a note for the client explaining how revisions work
+                </p>
+                <textarea
+                  value={revisionsDescription}
+                  onChange={(e) => setRevisionsDescription(e.target.value)}
+                  placeholder="e.g. Each revision round includes feedback on all deliverables. Additional revisions beyond the included rounds will be billed separately."
+                  rows={3}
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent resize-y"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -747,25 +786,28 @@ export function ProposalDetail() {
                 <span className="text-sm font-semibold">{proposal.revisionsIncluded ?? 2}</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Revisions Included</p>
-                <p className="text-gray-900 font-medium">
+                <p className="text-sm text-muted-foreground">Revisions Included</p>
+                <p className="text-foreground font-medium">
                   {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
                 </p>
+                {proposal.revisionsDescription && (
+                  <p className="text-sm text-muted-foreground mt-1">{proposal.revisionsDescription}</p>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Pricing */}
-        <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
+        <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Pricing</h2>
 
           {isEditMode ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Total Price */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Total Project Cost ({currency}) <span className="text-red-600">*</span>
                   </label>
 
@@ -776,7 +818,7 @@ export function ProposalDetail() {
                       onClick={() => setCurrency('INR')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'INR'
                         ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-muted text-foreground hover:bg-muted'
                         }`}
                     >
                       INR (₹)
@@ -786,7 +828,7 @@ export function ProposalDetail() {
                       onClick={() => setCurrency('USD')}
                       className={`px-3 py-2 rounded-lg font-medium transition-all text-sm ${currency === 'USD'
                         ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-muted text-foreground hover:bg-muted'
                         }`}
                     >
                       USD ($)
@@ -795,9 +837,9 @@ export function ProposalDetail() {
 
                   <div className="relative">
                     {currency === 'INR' ? (
-                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     ) : (
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     )}
                     <input
                       type="number"
@@ -806,14 +848,14 @@ export function ProposalDetail() {
                       value={totalPrice}
                       onChange={(e) => setTotalPrice(e.target.value)}
                       placeholder="80000"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                     />
                   </div>
                 </div>
 
                 {/* Advance Percentage */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Advance Payment Percentage
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -823,7 +865,7 @@ export function ProposalDetail() {
                         onClick={() => setAdvancePercentage(percentage as 40 | 50 | 60)}
                         className={`px-4 py-3 rounded-lg font-medium transition-all ${advancePercentage === percentage
                           ? 'bg-violet-500 text-white ring-2 ring-violet-400'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-muted text-foreground hover:bg-muted'
                           }`}
                       >
                         {percentage}%
@@ -837,21 +879,21 @@ export function ProposalDetail() {
 
           {/* Pricing Breakdown */}
           {pricing && (
-            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-lg border border-violet-200`}>
-              <h3 className="text-sm font-medium text-gray-800 mb-3">Payment Breakdown</h3>
+            <div className={`${isEditMode ? 'mt-6' : ''} p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/40 dark:to-fuchsia-950/40 rounded-lg border border-violet-200 dark:border-violet-800/50`}>
+              <h3 className="text-sm font-medium text-foreground mb-3">Payment Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Advance Payment ({isEditMode ? advancePercentage : proposal.advancePercentage}%)</span>
-                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.advanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-muted-foreground">Advance Payment ({isEditMode ? advancePercentage : proposal.advancePercentage}%)</span>
+                  <span className="text-foreground font-semibold">{formatCurrency(pricing.advanceAmount, isEditMode ? currency : proposal.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Balance Payment ({isEditMode ? 100 - advancePercentage : 100 - proposal.advancePercentage}%)</span>
-                  <span className="text-gray-900 font-semibold">{formatCurrency(pricing.balanceAmount, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-muted-foreground">Balance Payment ({isEditMode ? 100 - advancePercentage : 100 - proposal.advancePercentage}%)</span>
+                  <span className="text-foreground font-semibold">{formatCurrency(pricing.balanceAmount, isEditMode ? currency : proposal.currency)}</span>
                 </div>
-                <div className="h-px bg-gray-300 my-2" />
+                <div className="h-px bg-border my-2" />
                 <div className="flex justify-between">
-                  <span className="text-gray-900 font-medium">Total Project Cost</span>
-                  <span className="text-gray-900 font-bold text-lg">{formatCurrency(pricing.totalPrice, isEditMode ? currency : proposal.currency)}</span>
+                  <span className="text-foreground font-medium">Total Project Cost</span>
+                  <span className="text-foreground font-bold text-lg">{formatCurrency(pricing.totalPrice, isEditMode ? currency : proposal.currency)}</span>
                 </div>
               </div>
             </div>
@@ -860,32 +902,32 @@ export function ProposalDetail() {
 
         {/* Payments Section (Admin Only) */}
         {isAdmin && (
-          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Payments</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Payments</h2>
             {payments.length === 0 ? (
-              <p className="text-gray-500 text-sm">No payments found for this proposal.</p>
+              <p className="text-muted-foreground text-sm">No payments found for this proposal.</p>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-lg border border-border">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {payments.map((payment) => (
                       <tr key={payment.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                           {formatDate(payment.created_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">
                           {payment.payment_type}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           {formatCurrency(payment.amount, payment.currency as 'INR' | 'USD')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -915,20 +957,10 @@ export function ProposalDetail() {
           </div>
         )}
 
-        {/* Comments Section */}
-        {proposal && user && (
-          <CommentThread
-            proposalId={proposal.id}
-            currentUserId={user.id}
-            currentUserName={user.name}
-            isAuthenticated={!!user}
-          />
-        )}
-
         {/* Response Tracking */}
         {(proposal.acceptedAt || proposal.rejectedAt || proposal.feedback) && (
-          <div className="bg-white rounded-xl p-6 ring-1 ring-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Client Response</h2>
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Client Response</h2>
             <div className="space-y-3">
               {proposal.acceptedAt && (
                 <div className="flex items-center gap-2 text-sm text-emerald-600">
@@ -943,9 +975,9 @@ export function ProposalDetail() {
                 </div>
               )}
               {proposal.feedback && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-900 mb-1">Feedback:</p>
-                  <p className="text-sm text-gray-700">{proposal.feedback}</p>
+                <div className="mt-2 p-3 bg-muted rounded-lg border border-border">
+                  <p className="text-sm font-medium text-foreground mb-1">Feedback:</p>
+                  <p className="text-sm text-foreground">{proposal.feedback}</p>
                 </div>
               )}
             </div>
@@ -954,10 +986,10 @@ export function ProposalDetail() {
 
         {/* Action Buttons */}
         {isEditMode && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <button
               onClick={handleCancelEdit}
-              className="px-4 py-2.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+              className="px-4 py-2.5 rounded-lg bg-muted text-foreground hover:bg-muted transition-colors font-medium border border-border"
               disabled={isSaving}
             >
               <X className="w-4 h-4 inline mr-2" />
@@ -986,12 +1018,9 @@ export function ProposalDetail() {
 
         {/* Client Action Buttons */}
         {isClient && proposal.status === 'sent' && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <button
-              onClick={() => {
-                const feedback = prompt('Please provide a reason for rejecting the proposal:');
-                if (feedback) handleRejectProposal(feedback);
-              }}
+              onClick={() => setPromptDialog({ open: true, type: 'reject' })}
               disabled={isRejecting || isAccepting || isRequestingChanges}
               className="px-4 py-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium border border-red-200"
             >
@@ -999,10 +1028,7 @@ export function ProposalDetail() {
             </button>
 
             <button
-              onClick={() => {
-                const feedback = prompt('Please describe the changes you would like to request:');
-                if (feedback) handleRequestChanges(feedback);
-              }}
+              onClick={() => setPromptDialog({ open: true, type: 'revise' })}
               disabled={isRejecting || isAccepting || isRequestingChanges}
               className="px-4 py-2.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors font-medium border border-orange-200"
             >
@@ -1031,8 +1057,8 @@ export function ProposalDetail() {
 
         {/* Payment Button for Accepted Proposals */}
         {isClient && proposal.status === 'accepted' && (
-          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 -mx-4 border-t border-gray-200">
-            <div className="mr-auto text-sm text-gray-600">
+          <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
+            <div className="mr-auto text-sm text-muted-foreground">
               <span className="font-medium text-emerald-600">Proposal Accepted!</span> Please proceed to payment to start the project.
             </div>
             <button
@@ -1058,6 +1084,30 @@ export function ProposalDetail() {
         confirmLabel="Yes, Force Edit"
         cancelLabel="Cancel"
         variant="warning"
+      />
+
+      {/* Reject / Request Revision Prompt Dialog */}
+      <PromptDialog
+        isOpen={promptDialog.open}
+        onClose={() => setPromptDialog({ open: false, type: null })}
+        onConfirm={(feedback) => {
+          if (promptDialog.type === 'reject') handleRejectProposal(feedback);
+          if (promptDialog.type === 'revise') handleRequestChanges(feedback);
+          setPromptDialog({ open: false, type: null });
+        }}
+        title={promptDialog.type === 'reject' ? 'Reject Proposal' : 'Request Revision'}
+        description={
+          promptDialog.type === 'reject'
+            ? 'Please provide a reason for rejecting this proposal.'
+            : 'Please describe the changes you would like to request.'
+        }
+        placeholder={
+          promptDialog.type === 'reject'
+            ? 'Enter rejection reason...'
+            : 'Describe the changes you need...'
+        }
+        confirmLabel={promptDialog.type === 'reject' ? 'Reject Proposal' : 'Request Revision'}
+        isLoading={promptDialog.type === 'reject' ? isRejecting : isRequestingChanges}
       />
     </div>
   );

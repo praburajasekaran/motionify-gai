@@ -70,7 +70,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
       <div className="px-6 pb-6">
         {/* Header */}
         <p className="text-sm text-muted-foreground mb-6">
-          Master these shortcuts to navigate and work faster. Press <kbd className="px-2 py-1 text-xs font-semibold bg-zinc-100 border border-zinc-200 rounded">?</kbd> anytime to see this help.
+          Master these shortcuts to navigate and work faster. Press <kbd className="px-2 py-1 text-xs font-semibold bg-muted border border-border rounded">?</kbd> anytime to see this help.
         </p>
 
         {/* Shortcuts by Category */}
@@ -94,15 +94,15 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
                   {(categoryShortcuts as KeyboardShortcut[]).map((shortcut, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-zinc-50 transition-colors group"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted transition-colors group"
                     >
                       <span className="text-sm text-foreground group-hover:text-primary transition-colors">
                         {shortcut.description}
                       </span>
                       <kbd
                         className={cn(
-                          "px-3 py-1.5 text-xs font-semibold rounded-md border shadow-sm transition-all",
-                          "bg-white border-zinc-200 text-zinc-700",
+                          "px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors",
+                          "bg-card border-border text-foreground",
                           "group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary"
                         )}
                       >
@@ -117,7 +117,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
         </div>
 
         {/* Pro Tip */}
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+        <div className="mt-8 p-4 bg-muted/50 border border-border rounded-lg">
           <div className="flex items-start gap-3">
             <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
               <Zap className="h-3 w-3 text-white" />
@@ -125,7 +125,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({ sh
             <div>
               <p className="text-sm font-medium text-blue-900 mb-1">Pro Tip</p>
               <p className="text-sm text-blue-700">
-                Use <kbd className="px-2 py-1 text-xs font-semibold bg-white border border-blue-200 rounded mx-1">Cmd+K</kbd> to open the command palette for quick access to any action.
+                Use <kbd className="px-2 py-1 text-xs font-semibold bg-secondary border border-border rounded mx-1">Cmd+K</kbd> to open the command palette for quick access to any action.
               </p>
             </div>
           </div>

@@ -15,7 +15,7 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
   paid: 'bg-green-500/10 text-green-400 ring-green-500/20',
   converted: 'bg-emerald-600/10 text-emerald-600 ring-emerald-600/20',
   rejected: 'bg-red-500/10 text-red-400 ring-red-500/20',
-  archived: 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
+  archived: 'bg-muted text-muted-foreground ring-border',
 };
 
 
@@ -71,8 +71,17 @@ export function InquiryTracking() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen bg-gray-950">
+        <header className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
+          </div>
+        </header>
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 65px)' }}>
+          <div className="text-white/60">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -82,7 +91,10 @@ export function InquiryTracking() {
       <div className="min-h-screen bg-gray-950">
         {/* Header */}
         <header className="border-b border-white/10">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <Link to="/landing" className="inline-flex items-center">
+              <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+            </Link>
             <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
@@ -120,7 +132,10 @@ export function InquiryTracking() {
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
       <header className="border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link to="/landing" className="inline-flex items-center">
+            <img src="/motionify-light-logo.png" alt="Motionify Studio" className="h-8 w-auto" />
+          </Link>
           <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard

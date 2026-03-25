@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./components/**/*.{js,ts,jsx,tsx}",
@@ -127,6 +128,7 @@ export default {
         'fade-in-up': 'fadeInUp 300ms ease-out',
         'scale-in': 'scaleIn 200ms ease-out',
         'slide-in-right': 'slideInRight 250ms ease-out',
+        'pulse-soft': 'pulseSoft 3s infinite ease-in-out',
         'spin-slow': 'spin 3s linear infinite',
         'shimmer': 'shimmer 2s linear infinite',
       },
@@ -151,6 +153,10 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
         },
       },
 

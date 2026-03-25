@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateProposalStatus, formatCurrencyWithConversion } from '@/lib/proposals';
+import { updateProposalStatus } from '@/lib/proposals';
 import { updateInquiryStatus } from '@/lib/inquiries';
 import type { Proposal } from '@/lib/proposals';
 import type { Inquiry } from '@/lib/inquiries';
 import { Check, X, MessageSquare, AlertTriangle, Loader2 } from 'lucide-react';
-import { logProposalAccepted, logProposalRejected, logProposalChangesRequested } from '@/lib/portal/api/activities.api';
 
 interface ProposalActionsProps {
   proposal: Proposal;
@@ -27,58 +26,11 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
   // Check if already responded
   const hasResponded = proposal.status !== 'sent';
 
-  // Handle Accept Proposal
-  const handleAccept = async () => {
+  // Handle Accept & Pay — redirect to payment page without changing proposal status.
+  // The proposal will be marked 'accepted' by the backend only after payment succeeds.
+  const handleAccept = () => {
     if (hasResponded) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Validate inquiry.id before proceeding
-      if (!inquiry.id) {
-        console.error('Cannot accept proposal: inquiry.id is missing', { inquiry });
-        throw new Error('Inquiry ID is missing. Please reload the page and try again.');
-      }
-
-      // Update proposal status
-      await updateProposalStatus(proposal.id, 'accepted');
-
-      // Update inquiry status
-      await updateInquiryStatus(inquiry.id, 'accepted');
-
-      // Log email notification
-      const pricing = formatCurrencyWithConversion(proposal.totalPrice, proposal.currency);
-      const advance = formatCurrencyWithConversion(proposal.advanceAmount, proposal.currency);
-
-      console.log('📧 EMAIL SENT TO ADMIN:');
-      console.log('========================================');
-      console.log('Subject: Proposal Accepted -', inquiry.inquiryNumber);
-      console.log('Client:', inquiry.contactName);
-      console.log('Company:', inquiry.companyName || 'N/A');
-      console.log('Email:', inquiry.contactEmail);
-      console.log('Proposal Version:', proposal.version || 1);
-      console.log('Total Amount:', pricing.primary);
-      console.log('Advance Due:', advance.primary);
-      console.log('========================================');
-
-      // Log activity: Proposal Accepted
-      logProposalAccepted({
-        accepterId: inquiry.contactEmail, // Use email as identifier since we don't have user ID on client side
-        accepterName: inquiry.contactName,
-        senderId: 'motionify-admin', // Admin who sent the proposal (we don't have this info on client side)
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-      }).catch((err) => console.error('Failed to log activity:', err));
-
-      // Redirect to payment page
-      router.push(`/payment/${proposal.id}`);
-    } catch (error) {
-      console.error('Error accepting proposal:', error);
-      alert('Failed to accept proposal. Please try again.');
-      setIsSubmitting(false);
-    }
+    router.push(`/payment/${proposal.id}`);
   };
 
   // Handle Request Changes
@@ -114,18 +66,6 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Feedback:');
       console.log(feedback.trim());
       console.log('========================================');
-
-      // Log activity: Proposal Changes Requested
-      logProposalChangesRequested({
-        requesterId: inquiry.contactEmail,
-        requesterName: inquiry.contactName,
-        senderId: 'motionify-admin',
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-        feedback: feedback.trim(),
-      }).catch((err) => console.error('Failed to log activity:', err));
 
       // Close modal and refresh
       setShowChangesModal(false);
@@ -172,18 +112,6 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
       console.log('Reason:', rejectReason.trim() || 'Not provided');
       console.log('========================================');
 
-      // Log activity: Proposal Rejected
-      logProposalRejected({
-        rejecterId: inquiry.contactEmail,
-        rejecterName: inquiry.contactName,
-        senderId: 'motionify-admin',
-        senderName: 'Motionify',
-        inquiryId: inquiry.id,
-        proposalId: proposal.id,
-        proposalName: `Proposal for ${inquiry.inquiryNumber}`,
-        reason: rejectReason.trim() || undefined,
-      }).catch((err) => console.error('Failed to log activity:', err));
-
       // Close modal and refresh
       setShowRejectModal(false);
       setRejectReason('');
@@ -222,20 +150,10 @@ export default function ProposalActions({ proposal, inquiry, onStatusChange }: P
           {/* Accept Button (Primary) */}
           <button
             onClick={handleAccept}
-            disabled={isSubmitting}
-            className="sm:col-span-3 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sm:col-span-3 flex items-center justify-center gap-2 px-6 py-4 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Check className="w-5 h-5" />
-                Accept Proposal & Proceed to Payment
-              </>
-            )}
+            <Check className="w-5 h-5" />
+            Accept &amp; Pay
           </button>
 
           {/* Request Changes Button (Secondary) */}

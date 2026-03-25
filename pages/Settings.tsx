@@ -1,16 +1,51 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Mail, Bell, MessageSquare, Briefcase, Zap } from 'lucide-react';
+import { Mail, Bell, MessageSquare, Briefcase, Zap, Globe } from 'lucide-react';
+import { setUserTimezone } from '@/utils/dateFormatting';
 
 interface UserPreferences {
     email_task_assignment: boolean;
     email_mention: boolean;
     email_project_update: boolean;
     email_marketing: boolean;
+    timezone?: string | null;
+}
+
+/** Build a label like "America/New_York (UTC-5)" for a given IANA timezone. */
+function getTimezoneLabel(tz: string): string {
+    try {
+        const offsetParts = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            timeZoneName: 'shortOffset',
+        }).formatToParts(new Date());
+        const offset = offsetParts.find(p => p.type === 'timeZoneName')?.value || '';
+        return `${tz.replace(/_/g, ' ')} (${offset})`;
+    } catch {
+        return tz.replace(/_/g, ' ');
+    }
+}
+
+/** Get all IANA timezones grouped by region. */
+function getTimezoneOptions(): { value: string; label: string }[] {
+    try {
+        const timezones = Intl.supportedValuesOf('timeZone');
+        return timezones.map(tz => ({
+            value: tz,
+            label: getTimezoneLabel(tz),
+        }));
+    } catch {
+        // Fallback for older browsers
+        const common = [
+            'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+            'America/Los_Angeles', 'Europe/London', 'Europe/Berlin',
+            'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+        ];
+        return common.map(tz => ({ value: tz, label: getTimezoneLabel(tz) }));
+    }
 }
 
 export function Settings() {
@@ -20,9 +55,13 @@ export function Settings() {
         email_mention: true,
         email_project_update: true,
         email_marketing: false,
+        timezone: null,
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+
+    const browserTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+    const timezoneOptions = useMemo(() => getTimezoneOptions(), []);
 
     useEffect(() => {
         if (user?.id) {
@@ -62,14 +101,39 @@ export function Settings() {
             });
 
             if (!response.ok) throw new Error('Failed to update settings');
-
-            // confirm save silently or showing generic 'saved' state if needed
-            // toast.success('Settings saved'); 
         } catch (error) {
             console.error('Error updating preferences:', error);
             toast.error('Failed to save changes');
             // Revert on error
             setPreferences(prev => ({ ...prev, [key]: !value }));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const updateTimezone = async (timezone: string | null) => {
+        const oldTimezone = preferences.timezone;
+        // Optimistic update
+        setPreferences(prev => ({ ...prev, timezone }));
+        setUserTimezone(timezone);
+        setIsSaving(true);
+
+        try {
+            const response = await fetch(`/.netlify/functions/users-settings?userId=${user?.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ timezone }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) throw new Error('Failed to update timezone');
+        } catch (error) {
+            console.error('Error updating timezone:', error);
+            toast.error('Failed to save timezone');
+            // Revert on error
+            setPreferences(prev => ({ ...prev, timezone: oldTimezone }));
+            setUserTimezone(oldTimezone || null);
         } finally {
             setIsSaving(false);
         }
@@ -89,6 +153,41 @@ export function Settings() {
                 <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
                 <p className="text-muted-foreground">Manage your account preferences and notifications.</p>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-primary" />
+                        <CardTitle>Regional Settings</CardTitle>
+                    </div>
+                    <CardDescription>
+                        Set your timezone so dates and times display correctly.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        <Label htmlFor="timezone" className="font-medium text-base">
+                            Timezone
+                        </Label>
+                        <select
+                            id="timezone"
+                            value={preferences.timezone || ''}
+                            onChange={(e) => updateTimezone(e.target.value || null)}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                            <option value="">Browser Default ({browserTimezone})</option>
+                            {timezoneOptions.map(tz => (
+                                <option key={tz.value} value={tz.value}>
+                                    {tz.label}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-sm text-muted-foreground">
+                            All dates and times across the app will display in your selected timezone.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>

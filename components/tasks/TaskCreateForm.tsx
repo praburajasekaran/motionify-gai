@@ -95,7 +95,7 @@ function TaskFormFields({
     <>
       {/* Title */}
       <div>
-        <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+        <label className="block text-sm font-semibold text-foreground mb-1.5">
           Title <span className="text-red-500">*</span>
         </label>
         <Input
@@ -107,7 +107,7 @@ function TaskFormFields({
           }}
           onKeyDown={handleTitleKeyDown}
           placeholder="Task title..."
-          className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all"
+          className="w-full px-4 py-2.5 border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all"
         />
         {error && (
           <p className="text-xs text-red-500 mt-1">{error}</p>
@@ -116,7 +116,7 @@ function TaskFormFields({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+        <label className="block text-sm font-semibold text-foreground mb-1.5">
           Description
         </label>
         <Textarea
@@ -133,14 +133,14 @@ function TaskFormFields({
       {/* Status (edit mode only) */}
       {showStatusField && status !== undefined && setStatus && (
         <div>
-          <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+          <label className="block text-sm font-semibold text-foreground mb-1.5">
             Status
           </label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
+            className="w-full px-4 py-2.5 border border-border rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
             style={selectStyle}
           >
             {statusOptions.map((option) => (
@@ -156,33 +156,49 @@ function TaskFormFields({
       <div className="flex gap-4">
         {showAssigneeField && (
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+            <label className="block text-sm font-semibold text-foreground mb-1.5">
               Assignee
             </label>
             <select
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
+              className="w-full px-4 py-2.5 border border-border rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all appearance-none cursor-pointer"
               style={selectStyle}
             >
               <option value="">Unassigned</option>
               <option value={userId}>
                 {teamMembers.find(m => m.id === userId)?.name || userName} (me)
               </option>
-              {!isClientRole && teamMembers
-                .filter(m => m.id !== userId)
-                .map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
+              {!isClientRole && (() => {
+                const others = teamMembers.filter(m => m.id !== userId);
+                const internalMembers = others.filter(m => m.role !== 'client');
+                const clientMembers = others.filter(m => m.role === 'client');
+                return (
+                  <>
+                    {internalMembers.length > 0 && (
+                      <optgroup label="Internal Team">
+                        {internalMembers.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {clientMembers.length > 0 && (
+                      <optgroup label="Client Team">
+                        {clientMembers.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                );
+              })()}
             </select>
           </div>
         )}
 
         <div className="flex-1">
-          <label className="block text-sm font-semibold text-zinc-900 mb-1.5">
+          <label className="block text-sm font-semibold text-foreground mb-1.5">
             Due Date
           </label>
           <input
@@ -190,7 +206,7 @@ function TaskFormFields({
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full px-4 py-2.5 border border-zinc-200 rounded-lg bg-white text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 border border-border rounded-lg bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-all"
           />
         </div>
       </div>
@@ -198,10 +214,10 @@ function TaskFormFields({
       {/* Visible to Client (edit mode only) */}
       {showVisibilityField && visibleToClient !== undefined && setVisibleToClient && (
         <>
-          <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-lg border border-zinc-200">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-zinc-900">Visible to Client</span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-sm font-semibold text-foreground">Visible to Client</span>
+              <span className="text-xs text-muted-foreground">
                 {visibleToClient
                   ? 'Clients can see this task'
                   : 'Only internal team can see this task'}
@@ -210,10 +226,10 @@ function TaskFormFields({
             <button
               type="button"
               onClick={() => setVisibleToClient(!visibleToClient)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${visibleToClient ? 'bg-primary' : 'bg-zinc-300'}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${visibleToClient ? 'bg-primary' : 'bg-muted-foreground'}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${visibleToClient ? 'translate-x-6' : 'translate-x-1'}`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform shadow-sm ${visibleToClient ? 'translate-x-6' : 'translate-x-1'}`}
               />
             </button>
           </div>
@@ -241,11 +257,13 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
   userName,
   userRole,
 }) => {
+  const isClientRole = userRole === 'client';
   const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [visibleToClient, setVisibleToClient] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -261,6 +279,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
     setDescription('');
     setAssigneeId('');
     setDueDate('');
+    setVisibleToClient(false);
     setError('');
   };
 
@@ -284,7 +303,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
         project_id: projectId,
         title: trimmedTitle,
         description: description.trim() || undefined,
-        visible_to_client: false,
+        visible_to_client: isClientRole ? true : visibleToClient,
         status: 'pending',
         assignee_id: assigneeId || undefined,
         deadline: dueDate || undefined,
@@ -320,7 +339,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
       <div className="pt-2">
         <button
           onClick={() => setIsExpanded(true)}
-          className="flex items-center gap-2 text-sm text-zinc-500 hover:text-primary transition-colors px-1 py-2"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors px-1 py-2"
         >
           <PlusCircle className="h-4 w-4" />
           <span>Add Task</span>
@@ -331,7 +350,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
 
   return (
     <div className="pt-2" onKeyDown={handleKeyDown}>
-      <div className="border border-zinc-200 rounded-lg bg-white shadow-sm p-4 space-y-4">
+      <div className="border border-border rounded-lg bg-card shadow-sm p-4 space-y-4">
         <TaskFormFields
           title={title}
           setTitle={setTitle}
@@ -341,6 +360,8 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           setAssigneeId={setAssigneeId}
           dueDate={dueDate}
           setDueDate={setDueDate}
+          visibleToClient={visibleToClient}
+          setVisibleToClient={setVisibleToClient}
           teamMembers={teamMembers}
           userId={userId}
           userName={userName}
@@ -351,7 +372,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           handleKeyDown={handleKeyDown}
           handleTitleKeyDown={handleTitleKeyDown}
           showStatusField={false}
-          showVisibilityField={false}
+          showVisibilityField={!isClientRole}
         />
 
         {/* Actions */}
@@ -366,7 +387,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({
           </Button>
           <button
             onClick={handleCancel}
-            className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
           >
             <X className="h-3.5 w-3.5" />
             Cancel
@@ -446,7 +467,7 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
 
   return (
     <div onKeyDown={handleKeyDown}>
-      <div className="border border-primary/30 rounded-lg bg-white shadow-md ring-1 ring-primary/10 p-4 space-y-4">
+      <div className="border border-primary/30 rounded-lg bg-card shadow-md ring-1 ring-primary/10 p-4 space-y-4">
         <TaskFormFields
           title={title}
           setTitle={setTitle}
@@ -486,7 +507,7 @@ export const TaskEditForm: React.FC<TaskEditFormProps> = ({
           </Button>
           <button
             onClick={onCancel}
-            className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
           >
             <X className="h-3.5 w-3.5" />
             Cancel

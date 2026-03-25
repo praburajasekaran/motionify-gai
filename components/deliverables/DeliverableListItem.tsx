@@ -10,15 +10,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Calendar,
+  Clock,
   Download,
   Eye,
   ChevronRight,
   Trash2,
 } from 'lucide-react';
-import { cn, Badge, Progress, Button } from '../ui/design-system';
+import { cn, Badge, Button } from '../ui/design-system';
 import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { useDeliverables } from './DeliverableContext';
+import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
 export interface DeliverableListItemProps {
   deliverable: Deliverable;
@@ -47,12 +49,16 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   const navigate = useNavigate();
   const { currentUser, deleteDeliverable } = useDeliverables();
 
-  const statusConfig = STATUS_CONFIG[deliverable.status];
+  const rawStatusConfig = STATUS_CONFIG[deliverable.status];
+  // Clients see "In Progress" instead of "Beta Ready" — it's an internal team concept
+  const statusConfig = (currentUser?.role === 'client' && deliverable.status === 'beta_ready')
+    ? STATUS_CONFIG['in_progress']
+    : rawStatusConfig;
   const dueDate = new Date(deliverable.dueDate);
   const isOverdue = dueDate < new Date() && deliverable.progress < 100;
 
-  // Permission check: only super_admin and project_manager can delete
-  const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'project_manager';
+  // Permission check: only super_admin and support can delete
+  const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'support';
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,27 +103,27 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   return (
     <div
       className={cn(
-        'group flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-lg',
-        'hover:border-zinc-300 hover:shadow-sm transition-all cursor-pointer',
+        'group flex items-center gap-4 p-4 bg-card border border-border rounded-lg',
+        'hover:border-foreground/15 transition-colors cursor-pointer',
         className
       )}
       onClick={handleClick}
     >
       {/* File Count Indicator */}
-      <div className="shrink-0 w-12 h-12 rounded-lg bg-zinc-100 flex flex-col items-center justify-center">
-        <FileText className="h-5 w-5 text-zinc-400" />
-        <span className="text-xs font-medium text-zinc-600 mt-0.5">
+      <div className="shrink-0 w-12 h-12 rounded-lg bg-muted flex flex-col items-center justify-center">
+        <FileText className="h-5 w-5 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground mt-0.5">
           {fileCount > 0 ? fileCount : '—'}
         </span>
       </div>
 
       {/* Title & Description */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-sm text-zinc-900 truncate">
+        <h3 className="font-medium text-sm text-foreground truncate">
           {deliverable.title}
         </h3>
         {deliverable.description && (
-          <p className="text-xs text-zinc-500 truncate mt-0.5">
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
             {deliverable.description}
           </p>
         )}
@@ -133,20 +139,20 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
       {/* Due Date */}
       <div className={cn(
         'shrink-0 flex items-center gap-1.5 text-xs',
-        isOverdue ? 'text-red-600' : 'text-zinc-500'
+        isOverdue ? 'text-red-600' : 'text-muted-foreground'
       )}>
         <Calendar className="h-3.5 w-3.5" />
         <span>{dueDate.toLocaleDateString()}</span>
         {isOverdue && <span className="font-semibold">(Overdue)</span>}
       </div>
 
-      {/* Progress */}
-      {deliverable.progress < 100 && deliverable.status !== 'final_delivered' && (
-        <div className="shrink-0 w-24">
-          <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
-            <span>{deliverable.progress}%</span>
-          </div>
-          <Progress value={deliverable.progress} className="h-1.5" />
+      {/* Created Date */}
+      {deliverable.createdAt && (
+        <div className="shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span title={formatDateTime(deliverable.createdAt) || undefined}>
+            {formatTimestamp(deliverable.createdAt)}
+          </span>
         </div>
       )}
 
@@ -179,13 +185,13 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-zinc-400 hover:text-red-500"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
             onClick={handleDelete}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
-        <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-600 transition-colors" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </div>
     </div>
   );

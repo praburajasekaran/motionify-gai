@@ -74,7 +74,7 @@ function VerifyPageContent() {
                         setInquiryCreated(true);
                         setStatus('success');
                         // Redirect to InquiryTracking page in React portal
-                        const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || 'http://localhost:3003';
+                        const portalUrl = (process.env.NEXT_PUBLIC_PORTAL_URL || 'http://localhost:3003').replace(/\/+$/, '');
                         const inquiryTrackingUrl = `${portalUrl}/#/inquiry-status/${result.data.inquiryNumber}`;
                         console.log('[VerifyPage] Redirecting to InquiryTracking:', inquiryTrackingUrl);
                         // Delay redirect slightly to show success message

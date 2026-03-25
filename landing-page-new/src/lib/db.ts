@@ -27,7 +27,7 @@ export function getPool(): Pool {
             ssl: isProduction
                 ? true // Production: enforce SSL with certificate validation
                 : process.env.DATABASE_SSL === 'true'
-                    ? { rejectUnauthorized: false } // Development: SSL with self-signed support
+                    ? true // Development/Staging: SSL with certificate validation
                     : undefined, // Development: no SSL
             max: 20, // Maximum number of clients in the pool
             idleTimeoutMillis: 30000,

@@ -77,7 +77,7 @@ export default function SupportSection() {
 
         <div className="text-center relative">
           <p className="text-lg sm:text-xl text-gray-700 font-medium mb-6">Need help right now?</p>
-          <a href="#" className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold text-lg shadow-xl transform" style={{ background: 'linear-gradient(to right, #FFAA88, #FF8B7B)', animation: 'gentlePulse 3s ease-in-out infinite' }}>
+          <a href="/contact" className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold text-lg shadow-xl transform" style={{ background: 'linear-gradient(to right, #FFAA88, #FF8B7B)', animation: 'gentlePulse 3s ease-in-out infinite' }}>
             <span>Talk to a Creative Expert</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </a>

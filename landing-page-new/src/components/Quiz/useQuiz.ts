@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { requestInquiryVerification, type ContactInfo, type Inquiry } from "../../lib/inquiries";
 
 export type QuizSelections = {
@@ -32,7 +32,17 @@ export function useQuiz() {
   const [submittedInquiry, setSubmittedInquiry] = useState<Inquiry | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
   const [contactEmail, setContactEmail] = useState<string | null>(null);
+  const [magicLink, setMagicLink] = useState<string | null>(null);
   const total = 5; // Number of quiz questions (doesn't include contact form or success)
+
+  // Store last submission data for resend functionality
+  const lastSubmissionRef = useRef<{
+    contactInfo: ContactInfo;
+    recommendedVideoType: string;
+  } | null>(null);
+
+  // When navigating back via a chip, remember where to return after editing
+  const returnToRef = useRef<number | null>(null);
 
   const startQuiz = useCallback(() => {
     setCurrent(0);
@@ -40,8 +50,19 @@ export function useQuiz() {
 
   const select = useCallback((key: keyof QuizSelections, value: string) => {
     setSelections((s) => ({ ...s, [key]: value }));
-    setCurrent((c) => Math.min(c + 1, total - 1));
+    if (returnToRef.current !== null) {
+      const target = Math.min(returnToRef.current, total - 1);
+      returnToRef.current = null;
+      setCurrent(target);
+    } else {
+      setCurrent((c) => Math.min(c + 1, total - 1));
+    }
   }, []);
+
+  const navigateToQuestion = useCallback((idx: number) => {
+    returnToRef.current = current;
+    setCurrent(idx);
+  }, [current]);
 
   const goBack = useCallback(() => {
     setCurrent((c) => Math.max(c - 1, -1));
@@ -52,6 +73,8 @@ export function useQuiz() {
     setSubmittedInquiry(null);
     setVerificationSent(false);
     setContactEmail(null);
+    setMagicLink(null);
+    lastSubmissionRef.current = null;
     setCurrent(-1);
   }, []);
 
@@ -71,18 +94,45 @@ export function useQuiz() {
 
   const submitInquiry = useCallback(async (contactInfo: ContactInfo, recommendedVideoType: string) => {
     try {
-      await requestInquiryVerification({
+      const result = await requestInquiryVerification({
         quizAnswers: selections,
         contactInfo,
         recommendedVideoType,
       });
 
+      // Store for potential resend
+      lastSubmissionRef.current = { contactInfo, recommendedVideoType };
+
       setContactEmail(contactInfo.contactEmail);
+      setMagicLink(result.magicLink || null);
       setVerificationSent(true);
       setCurrent(6);
     } catch (error) {
       console.error('Error requesting inquiry verification:', error);
       throw error;
+    }
+  }, [selections]);
+
+  const resendVerification = useCallback(async (): Promise<{ success: boolean; magicLink?: string }> => {
+    if (!lastSubmissionRef.current) {
+      return { success: false };
+    }
+
+    try {
+      const result = await requestInquiryVerification({
+        quizAnswers: selections,
+        contactInfo: lastSubmissionRef.current.contactInfo,
+        recommendedVideoType: lastSubmissionRef.current.recommendedVideoType,
+      });
+
+      if (result.magicLink) {
+        setMagicLink(result.magicLink);
+      }
+
+      return { success: true, magicLink: result.magicLink };
+    } catch (error) {
+      console.error('Error resending verification:', error);
+      return { success: false };
     }
   }, [selections]);
 
@@ -92,6 +142,7 @@ export function useQuiz() {
     selections,
     select,
     setCurrent,
+    navigateToQuestion,
     goBack,
     reset,
     isComplete,
@@ -104,5 +155,8 @@ export function useQuiz() {
     submittedInquiry,
     verificationSent,
     contactEmail,
+    magicLink,
+    resendVerification,
   };
 }
+

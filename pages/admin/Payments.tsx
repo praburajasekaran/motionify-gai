@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
     CreditCard,
@@ -14,12 +14,17 @@ import {
     AlertCircle,
     DollarSign,
     X,
+    Link2,
+    RotateCcw,
 } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import {
     fetchAllPayments,
     sendPaymentReminder,
+    linkPaymentToProject,
+    refundPayment,
+    fetchProjectsForLinking,
     PaymentFilters,
     PaymentSummary,
     AdminPayment,
@@ -39,12 +44,15 @@ import {
 } from '../../components/ui/design-system';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Modal } from '../../components/ui/Modal';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 // Status badge color mapping
 const STATUS_COLORS: Record<string, { variant: 'success' | 'warning' | 'destructive' | 'secondary'; icon: React.ElementType }> = {
     completed: { variant: 'success', icon: CheckCircle2 },
     pending: { variant: 'warning', icon: Clock },
     failed: { variant: 'destructive', icon: XCircle },
+    refunded: { variant: 'secondary', icon: RotateCcw },
 };
 
 // Payment type badge colors
@@ -78,12 +86,12 @@ function StatCard({ label, value, icon: Icon, color, subtitle }: StatCardProps) 
     };
 
     return (
-        <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm">
+        <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm text-gray-600">{label}</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-                    {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
+                    {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
                 </div>
                 <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
                     <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -94,12 +102,12 @@ function StatCard({ label, value, icon: Icon, color, subtitle }: StatCardProps) 
 }
 
 function formatCurrency(amount: number, currency: string = 'INR'): string {
-    return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency,
+    const locale = currency === 'USD' ? 'en-US' : 'en-IN';
+    return new Intl.NumberFormat(locale, {
+        style: 'decimal',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount / 100);
 }
 
 function formatDate(dateString: string): string {
@@ -132,61 +140,98 @@ export function Payments() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Filter state
-    const [filters, setFilters] = useState<PaymentFilters>({
+    // API filters (status/date) — changes trigger server fetch
+    const [apiFilters, setApiFilters] = useState<Pick<PaymentFilters, 'status' | 'dateFrom' | 'dateTo'>>({
         status: 'all',
         dateFrom: '',
         dateTo: '',
-        clientName: '',
-        projectSearch: '',
     });
+
+    // Text search — filtered client-side, no API call needed
+    const [clientName, setClientName] = useState('');
+    const [projectSearch, setProjectSearch] = useState('');
 
     // Reminder state
     const [sendingReminder, setSendingReminder] = useState<string | null>(null);
     const [reminderSuccess, setReminderSuccess] = useState<string | null>(null);
 
-    const loadPayments = useCallback(async () => {
+    // Link to project state
+    const [linkModalPayment, setLinkModalPayment] = useState<AdminPayment | null>(null);
+    const [availableProjects, setAvailableProjects] = useState<Array<{ id: string; projectNumber: string; clientName: string }>>([]);
+    const [projectSearchQuery, setProjectSearchQuery] = useState('');
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+    const [linking, setLinking] = useState(false);
+
+    // Refund state
+    const [refundPaymentTarget, setRefundPaymentTarget] = useState<AdminPayment | null>(null);
+    const [refunding, setRefunding] = useState(false);
+
+    const apiFiltersRef = useRef(apiFilters);
+    apiFiltersRef.current = apiFilters;
+
+    const loadPayments = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError(null);
 
         try {
-            const response = await fetchAllPayments(filters);
-            setPayments(response.payments);
-            setSummary(response.summary);
+            const response = await fetchAllPayments(apiFiltersRef.current, signal);
+            // Backend may return a raw array or { payments, summary } object
+            if (Array.isArray(response)) {
+                setPayments(response);
+                setSummary(null);
+            } else {
+                setPayments(response.payments ?? []);
+                setSummary(response.summary ?? null);
+            }
         } catch (err) {
+            if (err instanceof DOMException && err.name === 'AbortError') return;
             console.error('Failed to load payments:', err);
             setError(err instanceof Error ? err.message : 'Failed to load payments');
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, []);
 
+    // Only re-fetch from API when status/date filters change
     useEffect(() => {
-        if (user) {
-            loadPayments();
+        if (!user) return;
+        const controller = new AbortController();
+        loadPayments(controller.signal);
+        return () => controller.abort();
+    }, [user, apiFilters, loadPayments]);
+
+    // Client-side text filtering (instant, no API call)
+    const filteredPayments = useMemo(() => {
+        let result = payments;
+        const cn = clientName.toLowerCase().trim();
+        const ps = projectSearch.toLowerCase().trim();
+        if (cn) {
+            result = result.filter((p) => p.clientName?.toLowerCase().includes(cn));
         }
-    }, [user, loadPayments]);
+        if (ps) {
+            result = result.filter((p) => p.projectNumber?.toLowerCase().includes(ps));
+        }
+        return result;
+    }, [payments, clientName, projectSearch]);
 
     const handleFilterChange = (key: keyof PaymentFilters, value: string) => {
-        setFilters((prev) => ({ ...prev, [key]: value }));
+        if (key === 'clientName') setClientName(value);
+        else if (key === 'projectSearch') setProjectSearch(value);
+        else setApiFilters((prev) => ({ ...prev, [key]: value }));
     };
 
     const clearFilters = () => {
-        setFilters({
-            status: 'all',
-            dateFrom: '',
-            dateTo: '',
-            clientName: '',
-            projectSearch: '',
-        });
+        setApiFilters({ status: 'all', dateFrom: '', dateTo: '' });
+        setClientName('');
+        setProjectSearch('');
     };
 
     const hasActiveFilters =
-        (filters.status && filters.status !== 'all') ||
-        filters.dateFrom ||
-        filters.dateTo ||
-        filters.clientName ||
-        filters.projectSearch;
+        (apiFilters.status && apiFilters.status !== 'all') ||
+        apiFilters.dateFrom ||
+        apiFilters.dateTo ||
+        clientName ||
+        projectSearch;
 
     const handleSendReminder = async (paymentId: string) => {
         setSendingReminder(paymentId);
@@ -209,6 +254,54 @@ export function Payments() {
             navigate(`/projects/${projectId}`);
         }
     };
+
+    const handleOpenLinkModal = async (payment: AdminPayment) => {
+        setLinkModalPayment(payment);
+        setSelectedProjectId(null);
+        setProjectSearchQuery('');
+        try {
+            const projects = await fetchProjectsForLinking();
+            setAvailableProjects(projects);
+        } catch (err) {
+            console.error('Failed to fetch projects:', err);
+            setAvailableProjects([]);
+        }
+    };
+
+    const handleLinkProject = async () => {
+        if (!linkModalPayment || !selectedProjectId) return;
+        setLinking(true);
+        try {
+            await linkPaymentToProject(linkModalPayment.id, selectedProjectId);
+            setLinkModalPayment(null);
+            loadPayments();
+        } catch (err) {
+            console.error('Failed to link payment:', err);
+            setError(err instanceof Error ? err.message : 'Failed to link payment');
+        } finally {
+            setLinking(false);
+        }
+    };
+
+    const handleRefund = async () => {
+        if (!refundPaymentTarget) return;
+        setRefunding(true);
+        try {
+            await refundPayment(refundPaymentTarget.id);
+            setRefundPaymentTarget(null);
+            loadPayments();
+        } catch (err) {
+            console.error('Failed to refund payment:', err);
+            setError(err instanceof Error ? err.message : 'Failed to refund payment');
+        } finally {
+            setRefunding(false);
+        }
+    };
+
+    const filteredProjects = availableProjects.filter((p) =>
+        p.projectNumber.toLowerCase().includes(projectSearchQuery.toLowerCase()) ||
+        p.clientName.toLowerCase().includes(projectSearchQuery.toLowerCase())
+    );
 
     // Wait for auth to load before checking permissions
     if (authLoading) {
@@ -234,14 +327,14 @@ export function Payments() {
                             <CreditCard className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-                            <p className="text-gray-600">Track and manage all payment transactions</p>
+                            <h1 className="text-3xl font-bold text-foreground">Payments</h1>
+                            <p className="text-muted-foreground">Track and manage all payment transactions</p>
                         </div>
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={loadPayments}
+                        onClick={() => loadPayments()}
                         disabled={loading}
                         className="gap-2"
                     >
@@ -283,90 +376,91 @@ export function Payments() {
             )}
 
             {/* Filters */}
-            <div className="bg-white rounded-xl p-4 ring-1 ring-gray-200 shadow-sm mb-6">
+            <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm mb-6">
                 <div className="flex flex-col lg:flex-row gap-4 items-end">
                     {/* Status Filter */}
                     <div className="w-full lg:w-40">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Status
                         </label>
                         <div className="relative">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <select
-                                value={filters.status || 'all'}
+                                value={apiFilters.status || 'all'}
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
                             >
                                 <option value="all">All Status</option>
                                 <option value="pending">Pending</option>
                                 <option value="completed">Completed</option>
                                 <option value="failed">Failed</option>
+                                <option value="refunded">Refunded</option>
                             </select>
                         </div>
                     </div>
 
                     {/* Date From */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             From Date
                         </label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="date"
-                                value={filters.dateFrom || ''}
+                                value={apiFilters.dateFrom || ''}
                                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-3 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Date To */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             To Date
                         </label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="date"
-                                value={filters.dateTo || ''}
+                                value={apiFilters.dateTo || ''}
                                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-3 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Client Name */}
                     <div className="flex-1 min-w-0">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Client Name
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="Search by client name..."
-                                value={filters.clientName || ''}
+                                value={clientName}
                                 onChange={(e) => handleFilterChange('clientName', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
 
                     {/* Project Search */}
                     <div className="w-full lg:w-48">
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-foreground mb-1.5">
                             Project #
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="PRJ-..."
-                                value={filters.projectSearch || ''}
+                                value={projectSearch}
                                 onChange={(e) => handleFilterChange('projectSearch', e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                                className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
                             />
                         </div>
                     </div>
@@ -377,7 +471,7 @@ export function Payments() {
                             variant="ghost"
                             size="sm"
                             onClick={clearFilters}
-                            className="gap-1.5 text-gray-600 hover:text-gray-900"
+                            className="gap-1.5 text-muted-foreground hover:text-foreground"
                         >
                             <X className="w-4 h-4" />
                             Clear
@@ -388,16 +482,16 @@ export function Payments() {
 
             {/* Loading State */}
             {loading ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
                     <Spinner className="w-8 h-8 mx-auto mb-4" />
-                    <p className="text-gray-700">Loading payments...</p>
+                    <p className="text-foreground">Loading payments...</p>
                 </div>
             ) : error ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
-                    <ErrorState error={error} onRetry={loadPayments} />
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
+                    <ErrorState error={error} onRetry={() => loadPayments()} />
                 </div>
-            ) : payments.length === 0 ? (
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+            ) : filteredPayments.length === 0 ? (
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
                     <EmptyState
                         icon={CreditCard}
                         title="No payments found"
@@ -410,10 +504,10 @@ export function Payments() {
                 </div>
             ) : (
                 /* Payments Table */
-                <div className="bg-white rounded-xl ring-1 ring-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-card rounded-xl ring-1 ring-border shadow-sm overflow-hidden">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50">
+                            <TableRow className="bg-muted">
                                 <TableHead className="font-semibold">Date</TableHead>
                                 <TableHead className="font-semibold">Client</TableHead>
                                 <TableHead className="font-semibold">Project</TableHead>
@@ -424,18 +518,18 @@ export function Payments() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments.map((payment) => {
+                            {filteredPayments.map((payment) => {
                                 const statusConfig = STATUS_COLORS[payment.status] || STATUS_COLORS.pending;
                                 const StatusIcon = statusConfig.icon;
 
                                 return (
-                                    <TableRow key={payment.id} className="hover:bg-gray-50">
+                                    <TableRow key={payment.id} className="hover:bg-muted">
                                         <TableCell className="whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
+                                            <div className="text-sm font-medium text-foreground">
                                                 {formatDate(payment.createdAt)}
                                             </div>
                                             {payment.paidAt && (
-                                                <div className="text-xs text-gray-500">
+                                                <div className="text-xs text-muted-foreground">
                                                     Paid: {formatDateTime(payment.paidAt)}
                                                 </div>
                                             )}
@@ -443,15 +537,15 @@ export function Payments() {
                                         <TableCell>
                                             {payment.clientName ? (
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-900">
+                                                    <div className="text-sm font-medium text-foreground">
                                                         {payment.clientName}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
+                                                    <div className="text-xs text-muted-foreground">
                                                         {payment.clientEmail}
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <span className="text-gray-400 text-sm">-</span>
+                                                <span className="text-muted-foreground text-sm">-</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -462,8 +556,16 @@ export function Payments() {
                                                 >
                                                     {payment.projectNumber}
                                                 </button>
+                                            ) : payment.status !== 'refunded' ? (
+                                                <button
+                                                    onClick={() => handleOpenLinkModal(payment)}
+                                                    className="inline-flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 hover:underline"
+                                                >
+                                                    <Link2 className="w-3 h-3" />
+                                                    Link to project
+                                                </button>
                                             ) : (
-                                                <span className="text-gray-400 text-sm">-</span>
+                                                <span className="text-xs text-muted-foreground">-</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -471,16 +573,26 @@ export function Payments() {
                                                 className={cn(
                                                     'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 capitalize',
                                                     PAYMENT_TYPE_COLORS[payment.paymentType] ||
-                                                        'bg-gray-50 text-gray-700 ring-gray-600/20'
+                                                        'bg-muted text-foreground ring-gray-600/20'
                                                 )}
                                             >
                                                 {payment.paymentType}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <span className="text-sm font-semibold text-gray-900">
-                                                {formatCurrency(payment.amount, payment.currency)}
-                                            </span>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <span className={cn(
+                                                    'text-[10px] font-semibold px-1 py-0.5 rounded',
+                                                    payment.currency === 'USD'
+                                                        ? 'bg-emerald-50 text-emerald-700'
+                                                        : 'bg-orange-50 text-orange-700'
+                                                )}>
+                                                    {payment.currency}
+                                                </span>
+                                                <span className="text-sm font-semibold text-foreground">
+                                                    {formatCurrency(payment.amount, payment.currency)}
+                                                </span>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant={statusConfig.variant} className="gap-1 capitalize">
@@ -512,6 +624,17 @@ export function Payments() {
                                                         {reminderSuccess === payment.id ? 'Sent!' : 'Remind'}
                                                     </Button>
                                                 )}
+                                                {payment.status === 'completed' && !payment.projectId && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setRefundPaymentTarget(payment)}
+                                                        className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3" />
+                                                        Refund
+                                                    </Button>
+                                                )}
                                                 {payment.projectId && (
                                                     <Button
                                                         variant="outline"
@@ -531,13 +654,107 @@ export function Payments() {
                     </Table>
 
                     {/* Results Count */}
-                    <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                        <p className="text-sm text-gray-600">
-                            Showing {payments.length} payment{payments.length !== 1 ? 's' : ''}
+                    <div className="px-4 py-3 border-t border-border bg-muted">
+                        <p className="text-sm text-muted-foreground">
+                            Showing {filteredPayments.length} payment{filteredPayments.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                 </div>
             )}
+
+            {/* Link to Project Modal */}
+            <Modal
+                isOpen={!!linkModalPayment}
+                onClose={() => setLinkModalPayment(null)}
+                title="Link Payment to Project"
+                size="sm"
+            >
+                <div className="p-6 space-y-4">
+                    {linkModalPayment && (
+                        <div className="bg-muted rounded-lg p-3 text-sm">
+                            <p className="text-foreground font-medium">
+                                {formatCurrency(linkModalPayment.amount, linkModalPayment.currency)}
+                            </p>
+                            <p className="text-muted-foreground">
+                                {linkModalPayment.clientName || 'Unknown client'} &middot; {formatDate(linkModalPayment.createdAt)}
+                            </p>
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-foreground mb-1.5">
+                            Select a project
+                        </label>
+                        <div className="relative mb-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search projects..."
+                                value={projectSearchQuery}
+                                onChange={(e) => setProjectSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                            />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                            {filteredProjects.length === 0 ? (
+                                <p className="text-sm text-muted-foreground p-3 text-center">
+                                    No projects found
+                                </p>
+                            ) : (
+                                filteredProjects.map((project) => (
+                                    <button
+                                        key={project.id}
+                                        onClick={() => setSelectedProjectId(project.id)}
+                                        className={cn(
+                                            'w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-muted transition-colors border-b border-border last:border-b-0',
+                                            selectedProjectId === project.id && 'bg-violet-50 ring-1 ring-violet-200'
+                                        )}
+                                    >
+                                        <div>
+                                            <span className="font-mono font-medium text-foreground">{project.projectNumber}</span>
+                                            <span className="text-muted-foreground ml-2">{project.clientName}</span>
+                                        </div>
+                                        {selectedProjectId === project.id && (
+                                            <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                                        )}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button variant="outline" size="sm" onClick={() => setLinkModalPayment(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handleLinkProject}
+                            disabled={!selectedProjectId || linking}
+                            className="gap-1.5"
+                        >
+                            {linking ? <Spinner className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                            {linking ? 'Linking...' : 'Link Payment'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Refund Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={!!refundPaymentTarget}
+                onClose={() => setRefundPaymentTarget(null)}
+                onConfirm={handleRefund}
+                title="Refund Payment"
+                message={
+                    refundPaymentTarget
+                        ? `Are you sure you want to refund ${formatCurrency(refundPaymentTarget.amount, refundPaymentTarget.currency)} to ${refundPaymentTarget.clientName || 'the client'}? ${refundPaymentTarget.razorpayPaymentId ? 'This will initiate a Razorpay refund.' : 'This payment has no Razorpay ID — it will be marked as refunded manually.'}`
+                        : ''
+                }
+                confirmLabel="Refund"
+                variant="danger"
+                isLoading={refunding}
+            />
         </div>
     );
 }

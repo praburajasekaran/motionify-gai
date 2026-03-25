@@ -1,0 +1,26 @@
+{
+    "id": "TC-NT-005",
+    "title": "Notification Preferences",
+    "category": "Notifications",
+    "priority": 33,
+    "type": "Functional",
+    "description": "Users can manage their email notification preferences",
+    "acceptanceCriteria": [
+        "Navigate to Settings page",
+        "Toggle 'Task Assignment' email preference",
+        "Toggle 'Mentions' email preference",
+        "Toggle 'Project Updates' email preference",
+        "Settings persist across sessions",
+        "Emails are suppressed if preference is off",
+        "Typecheck passes"
+    ],
+    "implementationHints": "Requires new user_preferences table and Settings page",
+    "relatedFiles": [
+        "pages/Settings.tsx",
+        "netlify/functions/users-settings.ts",
+        "netlify/functions/send-email.ts",
+        "database/schema.sql"
+    ],
+    "passes": false,
+    "notes": "Moved from notImplemented list to active userStories."
+}

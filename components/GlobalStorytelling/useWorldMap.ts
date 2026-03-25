@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import * as d3 from "d3";
+import { select } from "d3-selection";
+import { geoMercator, geoPath } from "d3-geo";
+import { json } from "d3-fetch";
 import { feature } from "topojson-client";
 
 type Region = { name: string; coords: [number, number]; color: string; clients: string[] };
@@ -16,7 +18,7 @@ const keyRegions: Region[] = [
 
 export function useWorldMap(svgSelector: string, containerSelector: string) {
   useEffect(() => {
-    const svg = d3.select(svgSelector);
+    const svg = select(svgSelector);
     const container = document.querySelector(containerSelector) as HTMLElement | null;
     if (!container || svg.empty()) return;
 
@@ -25,10 +27,10 @@ export function useWorldMap(svgSelector: string, containerSelector: string) {
 
     svg.attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio', 'xMidYMid meet').attr('height', height);
 
-    const projection = d3.geoMercator().scale(width / 6.5).translate([width / 2, height / 1.6]);
-    const path = d3.geoPath().projection(projection);
+    const projection = geoMercator().scale(width / 6.5).translate([width / 2, height / 1.6]);
+    const path = geoPath().projection(projection);
 
-    const tooltip = d3.select('body').append('div')
+    const tooltip = select('body').append('div')
       .style('position','absolute')
       .style('background','rgba(15,23,42,.95)')
       .style('color','#fff')
@@ -46,7 +48,7 @@ export function useWorldMap(svgSelector: string, containerSelector: string) {
 
     let destroyed = false;
 
-    d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
       .then((world: any) => {
         if (destroyed) return;
         const countries = feature(world, world.objects.countries) as any;
@@ -58,8 +60,8 @@ export function useWorldMap(svgSelector: string, containerSelector: string) {
           .attr('fill', 'rgba(255,255,255,.03)')
           .attr('stroke', 'rgba(255,255,255,.1)')
           .attr('stroke-width', .5)
-          .on('mouseover', function() { d3.select(this).attr('fill','rgba(255,255,255,.08)').attr('stroke','rgba(255,255,255,.3)'); })
-          .on('mouseout', function() { d3.select(this).attr('fill','rgba(255,255,255,.03)').attr('stroke','rgba(255,255,255,.1)'); });
+          .on('mouseover', function() { select(this).attr('fill','rgba(255,255,255,.08)').attr('stroke','rgba(255,255,255,.3)'); })
+          .on('mouseout', function() { select(this).attr('fill','rgba(255,255,255,.03)').attr('stroke','rgba(255,255,255,.1)'); });
 
         const markers = svg.append('g');
         keyRegions.forEach((r) => {

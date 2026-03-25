@@ -1,23 +1,10 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
+import { maskSupportName } from './_shared/displayName';
 
 export const handler = compose(
   withCORS(['GET', 'POST', 'OPTIONS']),
@@ -27,29 +14,29 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // GET - Fetch activities by context (inquiry, proposal, or project)
     if (event.httpMethod === 'GET') {
       const { inquiryId, proposalId, projectId, userId, offset = '0', limit = '50' } = event.queryStringParameters || {};
 
-      // Check if user is admin (super_admin or project_manager)
-      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'project_manager';
+      // Check if user is admin (super_admin or support)
+      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'support';
 
-      let query = `
+      let sql = `
         SELECT
           a.id, a.type, a.user_id, a.user_name,
           a.target_user_id, a.target_user_name,
           a.inquiry_id, a.proposal_id, a.project_id,
           a.details, a.created_at,
           p.project_number as project_name,
-          i.inquiry_number
+          i.inquiry_number,
+          u_actor.role as actor_role,
+          u_target.role as target_role
         FROM activities a
         LEFT JOIN projects p ON a.project_id = p.id
         LEFT JOIN inquiries i ON a.inquiry_id = i.id
+        LEFT JOIN users u_actor ON a.user_id = u_actor.id
+        LEFT JOIN users u_target ON a.target_user_id = u_target.id
         WHERE 1=1
       `;
       const params: (string | number)[] = [];
@@ -57,26 +44,26 @@ export const handler = compose(
 
       // Filter by context - activities can relate to multiple contexts
       if (inquiryId) {
-        query += ` AND a.inquiry_id = $${paramIndex}`;
+        sql += ` AND a.inquiry_id = $${paramIndex}`;
         params.push(inquiryId);
         paramIndex++;
       }
 
       if (proposalId) {
-        query += ` AND a.proposal_id = $${paramIndex}`;
+        sql += ` AND a.proposal_id = $${paramIndex}`;
         params.push(proposalId);
         paramIndex++;
       }
 
       if (projectId) {
-        query += ` AND a.project_id = $${paramIndex}`;
+        sql += ` AND a.project_id = $${paramIndex}`;
         params.push(projectId);
         paramIndex++;
       }
 
       // Filter by userId (admin feature)
       if (userId) {
-        query += ` AND a.user_id = $${paramIndex}`;
+        sql += ` AND a.user_id = $${paramIndex}`;
         params.push(userId);
         paramIndex++;
       }
@@ -91,20 +78,21 @@ export const handler = compose(
       }
 
       // Add pagination support
-      query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      sql += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       params.push(parseInt(limit, 10));
       params.push(parseInt(offset, 10));
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       // Transform snake_case to camelCase for frontend
+      const requesterRole = auth?.user?.role || '';
       const activities = result.rows.map(row => ({
         id: row.id,
         type: row.type,
         userId: row.user_id,
-        userName: row.user_name,
+        userName: maskSupportName(row.user_name, row.actor_role || '', requesterRole),
         targetUserId: row.target_user_id,
-        targetUserName: row.target_user_name,
+        targetUserName: row.target_user_name ? maskSupportName(row.target_user_name, row.target_role || '', requesterRole) : row.target_user_name,
         inquiryId: row.inquiry_id,
         proposalId: row.proposal_id,
         projectId: row.project_id,
@@ -128,7 +116,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const payload = validation.data;
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO activities (
           type, user_id, user_name,
           target_user_id, target_user_name,
@@ -193,7 +181,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

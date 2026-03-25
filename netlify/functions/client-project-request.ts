@@ -1,35 +1,21 @@
-import pg from 'pg';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { query as dbQuery } from './_shared/db';
+import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
-
-const { Client } = pg;
 
 interface CreateProjectRequestPayload {
     title: string;
     description: string;
     tentativeDeadline: string; // ISO date string
-    clientUserId: string;
+    clientUserId?: string; // Only used by admin/support acting on behalf of client
 }
 
-const getDbClient = () => {
-    const DATABASE_URL = process.env.DATABASE_URL;
-    if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL not configured');
-    }
-
-    return new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-};
-
-const generateRequestNumber = async (client: pg.Client): Promise<string> => {
+const generateRequestNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
 
-    const result = await client.query(
-        `SELECT request_number FROM project_requests 
-     WHERE request_number LIKE $1 
+    const result = await dbQuery(
+        `SELECT request_number FROM project_requests
+     WHERE request_number LIKE $1
      ORDER BY request_number DESC LIMIT 1`,
         [`REQ-${year}-%`]
     );
@@ -48,33 +34,48 @@ const generateRequestNumber = async (client: pg.Client): Promise<string> => {
 
 export const handler = compose(
     withCORS(['GET', 'POST', 'OPTIONS']),
+    withAuth(),
     withRateLimit(RATE_LIMITS.apiStrict, 'client_project_request')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
+    const userRole = auth!.user!.role;
+    const userId = auth!.user!.userId;
 
-    const client = getDbClient();
+    // Only client, super_admin, and support roles can access this endpoint
+    if (!['client', 'super_admin', 'support'].includes(userRole)) {
+        return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'You do not have permission to access project requests' }),
+        };
+    }
 
     try {
-        await client.connect();
-
-        // GET: Fetch project requests for a client
+        // GET: Fetch project requests
         if (event.httpMethod === 'GET') {
-            const { clientUserId } = event.queryStringParameters || {};
-
-            if (!clientUserId) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ error: 'clientUserId is required' }),
-                };
+            // Clients can only see their own requests (derived from token)
+            // Admin/support can view any client's requests via query param
+            let targetUserId: string;
+            if (userRole === 'client') {
+                targetUserId = userId;
+            } else {
+                const { clientUserId } = event.queryStringParameters || {};
+                if (!clientUserId) {
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({ error: 'clientUserId query parameter is required for admin access' }),
+                    };
+                }
+                targetUserId = clientUserId;
             }
 
-            const result = await client.query(
-                `SELECT * FROM project_requests 
-         WHERE client_user_id = $1 
+            const result = await dbQuery(
+                `SELECT * FROM project_requests
+         WHERE client_user_id = $1
          ORDER BY created_at DESC`,
-                [clientUserId]
+                [targetUserId]
             );
 
             return {
@@ -87,6 +88,21 @@ export const handler = compose(
         // POST: Create new project request
         if (event.httpMethod === 'POST') {
             const payload: CreateProjectRequestPayload = JSON.parse(event.body || '{}');
+
+            // Derive clientUserId: clients use their own ID, admin/support can specify
+            let targetUserId: string;
+            if (userRole === 'client') {
+                targetUserId = userId;
+            } else {
+                if (!payload.clientUserId) {
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({ error: 'clientUserId is required when creating on behalf of a client' }),
+                    };
+                }
+                targetUserId = payload.clientUserId;
+            }
 
             // Validation
             if (!payload.title || payload.title.trim().length < 3) {
@@ -125,24 +141,16 @@ export const handler = compose(
                 };
             }
 
-            if (!payload.clientUserId) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ error: 'Client user ID is required' }),
-                };
-            }
+            const requestNumber = await generateRequestNumber();
 
-            const requestNumber = await generateRequestNumber(client);
-
-            const result = await client.query(
+            const result = await dbQuery(
                 `INSERT INTO project_requests (
           request_number, client_user_id, title, description, tentative_deadline, status
         ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
                 [
                     requestNumber,
-                    payload.clientUserId,
+                    targetUserId,
                     payload.title.trim(),
                     payload.description.trim(),
                     payload.tentativeDeadline,
@@ -151,10 +159,6 @@ export const handler = compose(
             );
 
             const projectRequest = result.rows[0];
-
-            // TODO: Add notification to super admin here
-            // This could be done by inserting into notifications table
-            // or by calling a send-email function
 
             return {
                 statusCode: 201,
@@ -180,10 +184,8 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
                 error: 'Internal server error',
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: 'An unexpected error occurred',
             }),
         };
-    } finally {
-        await client.end();
     }
 });

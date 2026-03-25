@@ -3,14 +3,15 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
+import { sendProjectInvitationEmail } from './send-email';
 
 /**
  * Create a project-level invitation.
  *
  * POST /.netlify/functions/project-invitations-create/{projectId}
- * Body: { email: string, role: 'client' | 'team_member' | 'project_manager' }
+ * Body: { email: string, role: 'client' | 'team_member' | 'support' }
  *
- * Permission: super_admin, project_manager (on assigned projects),
+ * Permission: super_admin, support (on assigned projects),
  *             client primary contact (can invite other clients only)
  */
 export const handler = compose(
@@ -54,8 +55,8 @@ export const handler = compose(
     };
   }
 
-  // Validate role
-  const validRoles = ['client', 'team_member', 'project_manager'];
+  // Validate role (support is managed at admin level, not per-project invitations)
+  const validRoles = ['client', 'team_member'];
   if (!validRoles.includes(role)) {
     return {
       statusCode: 400,
@@ -170,13 +171,37 @@ export const handler = compose(
       console.error('Failed to log activity:', logError);
     }
 
-    // TODO: Send invitation email via SES
+    // Send invitation email
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const inviteLink = `${appUrl}/invitation/accept?token=${token}`;
-    console.log(`[Project Invitation] Sent to ${email}:`);
-    console.log(`  Link: ${inviteLink}`);
-    console.log(`  Project: ${projectId}`);
-    console.log(`  Expires: ${expiresAt.toISOString()}`);
+
+    // Fetch project name for the email
+    let projectName = projectId;
+    try {
+      const projectResult = await query(
+        `SELECT name, project_number FROM projects WHERE id = $1`,
+        [projectId]
+      );
+      if (projectResult.rows.length > 0) {
+        const p = projectResult.rows[0];
+        projectName = p.name || p.project_number || projectId;
+      }
+    } catch (e) {
+      console.error('Failed to fetch project name for invitation email:', e);
+    }
+
+    try {
+      await sendProjectInvitationEmail({
+        to: email,
+        inviteLink,
+        projectName,
+        role,
+        invitedByName: auth?.user?.fullName || 'A team member',
+      });
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't block the invitation creation if email fails
+    }
 
     return {
       statusCode: 201,

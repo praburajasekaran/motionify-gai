@@ -1,25 +1,34 @@
-import pg from 'pg';
 import Razorpay from 'razorpay';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendPaymentReminderEmail } from './send-email';
+import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
 
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
+async function logActivity(params: {
+  type: string;
+  userId: string;
+  userName: string;
+  inquiryId?: string;
+  proposalId?: string;
+  projectId?: string;
+  details?: Record<string, string | number>;
+}) {
+  try {
+    await dbQuery(
+      `INSERT INTO activities (type, user_id, user_name, inquiry_id, proposal_id, project_id, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [params.type, params.userId, params.userName,
+       params.inquiryId || null, params.proposalId || null, params.projectId || null,
+       JSON.stringify(params.details || {})]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
   }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
+}
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
@@ -34,26 +43,22 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
       const { proposalId, projectId } = event.queryStringParameters || {};
 
-      let query = 'SELECT * FROM payments ORDER BY created_at DESC';
+      let sql = 'SELECT * FROM payments ORDER BY created_at DESC';
       const params: any[] = [];
 
       if (proposalId) {
-        query = 'SELECT * FROM payments WHERE proposal_id = $1 ORDER BY created_at DESC';
+        sql = 'SELECT * FROM payments WHERE proposal_id = $1 ORDER BY created_at DESC';
         params.push(proposalId);
       } else if (projectId) {
-        query = 'SELECT * FROM payments WHERE project_id = $1 ORDER BY created_at DESC';
+        sql = 'SELECT * FROM payments WHERE project_id = $1 ORDER BY created_at DESC';
         params.push(projectId);
       }
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       return {
         statusCode: 200,
@@ -71,7 +76,7 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const { proposalId, paymentType } = validation.data;
 
-        const proposalResult = await client.query(
+        const proposalResult = await dbQuery(
           'SELECT * FROM proposals WHERE id = $1',
           [proposalId]
         );
@@ -109,7 +114,7 @@ export const handler = compose(
         try {
           const razorpayOrder = await razorpay.orders.create(orderOptions);
 
-          const result = await client.query(
+          const result = await dbQuery(
             `INSERT INTO payments (
                 proposal_id, payment_type, amount, currency, status, razorpay_order_id
               ) VALUES ($1, $2, $3, $4, 'pending', $5)
@@ -153,10 +158,10 @@ export const handler = compose(
         const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = validation.data;
 
         try {
-        const result = await client.query(
-          `UPDATE payments 
-           SET razorpay_order_id = $1, 
-               razorpay_payment_id = $2, 
+        const result = await dbQuery(
+          `UPDATE payments
+           SET razorpay_order_id = $1,
+               razorpay_payment_id = $2,
                razorpay_signature = $3,
                status = 'completed',
                paid_at = NOW()
@@ -175,110 +180,28 @@ export const handler = compose(
 
         const payment = result.rows[0];
 
-        if (payment.payment_type === 'advance') {
-          // Get proposal details for project creation
-          const proposalResult = await client.query(
-            'SELECT * FROM proposals WHERE id = $1',
-            [payment.proposal_id]
-          );
+        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
 
-          if (proposalResult.rows.length > 0) {
-            const proposal = proposalResult.rows[0];
-
-            // Get inquiry details
-            const inquiryResult = await client.query(
-              'SELECT * FROM inquiries WHERE proposal_id = $1',
-              [payment.proposal_id]
-            );
-
-            if (inquiryResult.rows.length > 0) {
-              const inquiry = inquiryResult.rows[0];
-
-              // Generate project number
-              const year = new Date().getFullYear();
-              const projectNumResult = await client.query(
-                `SELECT project_number FROM projects 
-                 WHERE project_number LIKE $1 
-                 ORDER BY project_number DESC LIMIT 1`,
-                [`PROJ-${year}-%`]
-              );
-
-              let maxNumber = 0;
-              if (projectNumResult.rows.length > 0) {
-                const match = projectNumResult.rows[0].project_number.match(/PROJ-\d{4}-(\d+)/);
-                if (match) {
-                  maxNumber = parseInt(match[1], 10);
-                }
-              }
-              const projectNumber = `PROJ-${year}-${String(maxNumber + 1).padStart(3, '0')}`;
-
-              // Get or create client user
-              let clientUserId = proposal.client_user_id;
-              if (!clientUserId) {
-                const userResult = await client.query(
-                  'SELECT id FROM users WHERE email = $1',
-                  [inquiry.contact_email]
-                );
-                if (userResult.rows.length > 0) {
-                  clientUserId = userResult.rows[0].id;
-                } else {
-                  const newUserResult = await client.query(
-                    `INSERT INTO users (email, full_name, role) 
-                     VALUES ($1, $2, 'client') 
-                     RETURNING id`,
-                    [inquiry.contact_email, inquiry.contact_name]
-                  );
-                  clientUserId = newUserResult.rows[0].id;
-                }
-              }
-
-              // Create project
-              const projectResult = await client.query(
-                `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status
-                ) VALUES ($1, $2, $3, $4, 'active')
-                RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId]
-              );
-
-              const project = projectResult.rows[0];
-
-              // Create deliverables from proposal
-              const deliverables = typeof proposal.deliverables === 'string'
-                ? JSON.parse(proposal.deliverables)
-                : proposal.deliverables;
-
-              for (const deliverable of deliverables) {
-                await client.query(
-                  `INSERT INTO deliverables (
-                    id, project_id, name, description, estimated_completion_week, status
-                  ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
-                  [
-                    deliverable.id,
-                    project.id,
-                    deliverable.name,
-                    deliverable.description,
-                    deliverable.estimatedCompletionWeek
-                  ]
-                );
-              }
-
-              // Update inquiry status to converted
-              await client.query(
-                `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-                [inquiry.id]
-              );
-
-              // Link payment to project
-              await client.query(
-                `UPDATE payments SET project_id = $1 WHERE id = $2`,
-                [project.id, payment.id]
-              );
-
-              console.log(`✅ Project ${projectNumber} created from payment verification`);
-            }
-          }
+        if (newProjectId) {
+          await logActivity(client, {
+            type: 'PROJECT_CREATED',
+            userId: auth?.user?.userId || '',
+            userName: auth?.user?.fullName || 'System',
+            projectId: newProjectId,
+            proposalId: payment.proposal_id || null,
+            details: {},
+          });
         }
+
+        // Log payment received activity
+        await logActivity({
+          type: 'PAYMENT_RECEIVED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: payment.proposal_id || null,
+          details: { amount: payment.amount, currency: payment.currency, paymentType: payment.payment_type },
+        });
 
         return {
           statusCode: 200,
@@ -292,20 +215,28 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
               error: 'Payment verification failed',
-              details: verifyError.message || 'Unknown error',
-              stack: verifyError.stack,
+              details: 'Please retry or contact support',
             }),
           };
         }
       }
 
       if (action === 'manual-complete') {
+        const adminRoles = ['super_admin', 'support'];
+        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Admin access required' }),
+          };
+        }
+
         const validation = validateRequest(event.body, SCHEMAS.payment.manualComplete, origin);
         if (!validation.success) return validation.response;
         const { paymentId } = validation.data;
 
-        const result = await client.query(
-          `UPDATE payments 
+        const result = await dbQuery(
+          `UPDATE payments
            SET status = 'completed',
                paid_at = NOW(),
                notes = 'Marked as paid manually by admin'
@@ -324,110 +255,28 @@ export const handler = compose(
 
         const payment = result.rows[0];
 
-        if (payment.payment_type === 'advance') {
-          // Get proposal details for project creation
-          const proposalResult = await client.query(
-            'SELECT * FROM proposals WHERE id = $1',
-            [payment.proposal_id]
-          );
+        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
 
-          if (proposalResult.rows.length > 0) {
-            const proposal = proposalResult.rows[0];
-
-            // Get inquiry details
-            const inquiryResult = await client.query(
-              'SELECT * FROM inquiries WHERE proposal_id = $1',
-              [payment.proposal_id]
-            );
-
-            if (inquiryResult.rows.length > 0) {
-              const inquiry = inquiryResult.rows[0];
-
-              // Generate project number
-              const year = new Date().getFullYear();
-              const projectNumResult = await client.query(
-                `SELECT project_number FROM projects 
-                 WHERE project_number LIKE $1 
-                 ORDER BY project_number DESC LIMIT 1`,
-                [`PROJ-${year}-%`]
-              );
-
-              let maxNumber = 0;
-              if (projectNumResult.rows.length > 0) {
-                const match = projectNumResult.rows[0].project_number.match(/PROJ-\d{4}-(\d+)/);
-                if (match) {
-                  maxNumber = parseInt(match[1], 10);
-                }
-              }
-              const projectNumber = `PROJ-${year}-${String(maxNumber + 1).padStart(3, '0')}`;
-
-              // Get or create client user
-              let clientUserId = proposal.client_user_id;
-              if (!clientUserId) {
-                const userResult = await client.query(
-                  'SELECT id FROM users WHERE email = $1',
-                  [inquiry.contact_email]
-                );
-                if (userResult.rows.length > 0) {
-                  clientUserId = userResult.rows[0].id;
-                } else {
-                  const newUserResult = await client.query(
-                    `INSERT INTO users (email, full_name, role) 
-                     VALUES ($1, $2, 'client') 
-                     RETURNING id`,
-                    [inquiry.contact_email, inquiry.contact_name]
-                  );
-                  clientUserId = newUserResult.rows[0].id;
-                }
-              }
-
-              // Create project
-              const projectResult = await client.query(
-                `INSERT INTO projects (
-                  project_number, inquiry_id, proposal_id, client_user_id, status
-                ) VALUES ($1, $2, $3, $4, 'active')
-                RETURNING *`,
-                [projectNumber, inquiry.id, proposal.id, clientUserId]
-              );
-
-              const project = projectResult.rows[0];
-
-              // Create deliverables from proposal
-              const deliverables = typeof proposal.deliverables === 'string'
-                ? JSON.parse(proposal.deliverables)
-                : proposal.deliverables;
-
-              for (const deliverable of deliverables) {
-                await client.query(
-                  `INSERT INTO deliverables (
-                    id, project_id, name, description, estimated_completion_week, status
-                  ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
-                  [
-                    deliverable.id,
-                    project.id,
-                    deliverable.name,
-                    deliverable.description,
-                    deliverable.estimatedCompletionWeek
-                  ]
-                );
-              }
-
-              // Update inquiry status to converted
-              await client.query(
-                `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-                [inquiry.id]
-              );
-
-              // Link payment to project
-              await client.query(
-                `UPDATE payments SET project_id = $1 WHERE id = $2`,
-                [project.id, payment.id]
-              );
-
-              console.log(`✅ Project ${projectNumber} created from manual payment completion`);
-            }
-          }
+        if (newProjectId) {
+          await logActivity(client, {
+            type: 'PROJECT_CREATED',
+            userId: auth?.user?.userId || '',
+            userName: auth?.user?.fullName || 'Admin',
+            projectId: newProjectId,
+            proposalId: payment.proposal_id || null,
+            details: {},
+          });
         }
+
+        // Log payment received activity
+        await logActivity({
+          type: 'PAYMENT_RECEIVED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: payment.proposal_id || null,
+          details: { amount: payment.amount, paymentType: 'manual' },
+        });
 
         return {
           statusCode: 200,
@@ -438,7 +287,7 @@ export const handler = compose(
 
       if (action === 'send-reminder') {
         // Verify admin access for sending reminders
-        const adminRoles = ['super_admin', 'project_manager'];
+        const adminRoles = ['super_admin', 'support'];
         if (!auth?.user || !adminRoles.includes(auth.user.role)) {
           return {
             statusCode: 403,
@@ -460,7 +309,7 @@ export const handler = compose(
         }
 
         // Fetch payment with project and client information
-        const paymentResult = await client.query(
+        const paymentResult = await dbQuery(
           `SELECT
             p.id, p.amount, p.currency, p.payment_type, p.status, p.created_at,
             proj.id as project_id, proj.project_number,
@@ -534,6 +383,16 @@ export const handler = compose(
 
         console.log(`[Payments API] Reminder sent to ${payment.client_email} for payment ${paymentId}`);
 
+        // Log activity
+        await logActivity({
+          type: 'PAYMENT_REMINDER_SENT',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: payment.project_id || null,
+          proposalId: null,
+          details: { clientEmail: payment.client_email },
+        });
+
         return {
           statusCode: 200,
           headers,
@@ -566,10 +425,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: 'An unexpected error occurred',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

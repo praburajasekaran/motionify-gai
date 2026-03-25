@@ -1,27 +1,13 @@
-import pg from 'pg';
-import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
+import { query as dbQuery } from './_shared/db';
+import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/middleware';
+import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-  
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-};
-
 export const handler = compose(
   withCORS(['GET', 'PUT', 'PATCH']),
-  withAuth(),
   withRateLimit(RATE_LIMITS.api, 'proposal_detail')
-)(async (event: NetlifyEvent, auth?: AuthResult) => {
+)(async (event: NetlifyEvent) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -36,13 +22,24 @@ export const handler = compose(
     };
   }
 
-  const client = getDbClient();
+  // Conditional auth: GET is public (clients view proposals via shared links),
+  // PUT and PATCH require authentication
+  if (event.httpMethod === 'PUT' || event.httpMethod === 'PATCH') {
+    const auth = await requireAuthFromCookie(event);
+    if (!auth.authorized) {
+      return {
+        statusCode: auth.statusCode || 401,
+        headers,
+        body: JSON.stringify({
+          error: { code: 'UNAUTHORIZED', message: auth.error || 'Authentication required' },
+        }),
+      };
+    }
+  }
 
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
-      const result = await client.query(
+      const result = await dbQuery(
         `SELECT * FROM proposals WHERE id = $1`,
         [id]
       );
@@ -57,7 +54,7 @@ export const handler = compose(
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
         body: JSON.stringify(result.rows[0]),
       };
     }
@@ -68,21 +65,21 @@ export const handler = compose(
       const allowedFields = [
         'description', 'deliverables', 'currency', 'total_price',
         'advance_percentage', 'advance_amount', 'balance_amount',
-        'status', 'feedback', 'revisions_included'
+        'status', 'feedback', 'revisions_included', 'revisions_description', 'version'
       ];
 
       const updateFields: string[] = [];
       const updateValues: any[] = [];
       let paramIndex = 1;
 
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          const value = key === 'deliverables' ? JSON.stringify(updates[key]) : updates[key];
-          updateFields.push(`${key} = $${paramIndex}`);
+      for (const field of allowedFields) {
+        if (field in updates) {
+          const value = field === 'deliverables' ? JSON.stringify(updates[field]) : updates[field];
+          updateFields.push(`${field} = $${paramIndex}`);
           updateValues.push(value);
           paramIndex++;
         }
-      });
+      }
 
       if (updateFields.length === 0) {
         return {
@@ -94,8 +91,8 @@ export const handler = compose(
 
       updateFields.push(`updated_at = NOW()`);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -103,7 +100,7 @@ export const handler = compose(
 
       updateValues.push(id);
 
-      const result = await client.query(query, updateValues);
+      const result = await dbQuery(sql, updateValues);
 
       if (result.rows.length === 0) {
         return {
@@ -140,6 +137,26 @@ export const handler = compose(
         };
       }
 
+      // Block direct acceptance — proposal can only become 'accepted' after payment
+      if (status === 'accepted') {
+        const paymentCheck = await client.query(
+          `SELECT id FROM payments
+           WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
+           LIMIT 1`,
+          [id]
+        );
+        if (paymentCheck.rows.length === 0) {
+          return {
+            statusCode: 402,
+            headers,
+            body: JSON.stringify({
+              error: 'Payment required',
+              message: 'Proposal can only be accepted after advance payment is completed.',
+            }),
+          };
+        }
+      }
+
       const updateFields = ['status = $1', 'updated_at = NOW()'];
       const params: any[] = [status];
       let paramIndex = 2;
@@ -158,14 +175,14 @@ export const handler = compose(
 
       params.push(id);
 
-      const query = `
-        UPDATE proposals 
+      const sql = `
+        UPDATE proposals
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       if (result.rows.length === 0) {
         return {
@@ -176,7 +193,7 @@ export const handler = compose(
       }
 
       if (status === 'accepted') {
-        await client.query(
+        await dbQuery(
           `UPDATE inquiries SET status = 'accepted' WHERE proposal_id = $1`,
           [id]
         );
@@ -205,7 +222,5 @@ export const handler = compose(
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

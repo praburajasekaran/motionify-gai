@@ -101,6 +101,46 @@ export interface PaymentReminderTemplateData extends EmailTemplateBase {
   customMessage?: string;
 }
 
+export interface ClientPaymentProjectEmailData {
+  to: string;
+  customerName: string;
+  amount: number;
+  currency: string;
+  projectNumber: string;
+  projectId: string;
+  transactionId?: string;
+}
+
+export interface AdminPaymentProjectEmailData {
+  clientName: string;
+  clientEmail: string;
+  companyName?: string;
+  amount: number;
+  currency: string;
+  razorpayPaymentId?: string;
+  projectNumber: string;
+  projectId: string;
+}
+
+export interface ClientPaymentProjectTemplateData extends EmailTemplateBase {
+  amount: number;
+  currency: string;
+  projectNumber: string;
+  projectDashboardUrl: string;
+  transactionId?: string;
+}
+
+export interface AdminPaymentProjectTemplateData extends EmailTemplateBase {
+  clientName: string;
+  clientEmail: string;
+  clientCompanyName?: string;
+  amount: number;
+  currency: string;
+  razorpayPaymentId?: string;
+  projectNumber: string;
+  adminProjectUrl: string;
+}
+
 export interface EmailConfig {
   resendApiKey?: string;
   resendDomain?: string;

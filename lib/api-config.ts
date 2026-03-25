@@ -37,8 +37,8 @@ interface ApiResponse<T = any> {
 function handleUnauthorized(): void {
     clearAuthSession();
     // Only redirect if not already on login page
-    if (!window.location.hash.includes('/login')) {
-        window.location.href = '/#/login?session=expired';
+    if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/portal/login?session=expired';
     }
 }
 
@@ -54,6 +54,7 @@ export async function apiRequest<T = any>(
     // Build headers
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'fetch',  // CSRF protection — triggers CORS preflight on cross-origin
         ...(fetchOptions.headers as Record<string, string>),
     };
 

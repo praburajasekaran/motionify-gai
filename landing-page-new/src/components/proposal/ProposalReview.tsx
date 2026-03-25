@@ -6,6 +6,7 @@ import type { Inquiry } from '@/lib/inquiries';
 import { Building2, Calendar, CheckCircle2, Clock, FileText, RotateCcw, User } from 'lucide-react';
 import { StatusTimeline } from './StatusTimeline';
 import { getStatusConfig } from '@/lib/status-config';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface ProposalReviewProps {
   proposal: Proposal;
@@ -85,10 +86,14 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
       {/* Project Description */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Project Description</h2>
-        <div className="prose prose-sm max-w-none">
-          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-            {proposal.description}
-          </p>
+        <div className="max-w-none">
+          {/<[^>]+>/.test(proposal.description) ? (
+            <div className="tiptap text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.description) }} />
+          ) : (
+            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {proposal.description}
+            </p>
+          )}
         </div>
       </div>
 
@@ -138,6 +143,9 @@ export default function ProposalReview({ proposal, inquiry }: ProposalReviewProp
               <p className="text-gray-900 font-semibold">
                 {proposal.revisionsIncluded ?? 2} revision{(proposal.revisionsIncluded ?? 2) !== 1 ? 's' : ''}
               </p>
+              {proposal.revisionsDescription && (
+                <p className="text-sm text-gray-500 mt-1">{proposal.revisionsDescription}</p>
+              )}
             </div>
           </div>
         </div>

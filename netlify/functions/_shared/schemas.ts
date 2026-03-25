@@ -38,17 +38,19 @@ export const proposalDeliverableSchema = z.object({
 
 export const createProposalSchema = z.object({
     inquiryId: uuidSchema,
-    description: z.string().min(10).max(10000),
+    description: z.string().min(10).max(50000),
     deliverables: z.array(proposalDeliverableSchema).min(1),
     currency: z.enum(['INR', 'USD']),
     totalPrice: z.number().positive(),
     advancePercentage: z.number().min(0).max(100),
     advanceAmount: z.number().min(0),
     balanceAmount: z.number().min(0),
+    revisionsIncluded: z.number().int().min(0).max(100).optional(),
+    revisionsDescription: z.string().max(2000).optional(),
 });
 
 export const updateProposalSchema = z.object({
-    description: z.string().min(10).max(10000).optional(),
+    description: z.string().min(10).max(50000).optional(),
     deliverables: z.array(proposalDeliverableSchema).optional(),
     currency: z.enum(['INR', 'USD']).optional(),
     totalPrice: z.number().positive().optional(),
@@ -59,6 +61,8 @@ export const updateProposalSchema = z.object({
     feedback: z.string().max(5000).optional(),
     version: z.number().int().min(1).optional(),
     editHistory: z.array(z.any()).optional(),
+    revisionsIncluded: z.number().int().min(0).max(100).optional(),
+    revisionsDescription: z.string().max(2000).optional(),
     acceptedAt: dateSchema.optional().nullable(),
     rejectedAt: dateSchema.optional().nullable(),
 });
@@ -85,7 +89,7 @@ export const updateCommentSchema = z.object({
 export const createAttachmentSchema = z.object({
     commentId: uuidSchema,
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max
+    fileSize: z.number().positive().max(1024 * 1024 * 1024), // 1GB max
     fileType: z.string().min(1).max(100),
     r2Key: z.string().min(1).max(500),
 });
@@ -136,9 +140,14 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = z.object({
     name: nameSchema.optional(),
-    clientUserId: uuidSchema.optional(),
-    description: z.string().max(5000).optional(),
-    status: z.enum(['draft', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    website: z.string().max(500).optional().nullable(),
+    status: z.enum([
+        'draft', 'active', 'in_review', 'awaiting_payment',
+        'on_hold', 'completed', 'archived',
+    ]).optional(),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
+    due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
 });
 
 export const acceptProjectTermsSchema = z.object({
@@ -149,6 +158,14 @@ export const acceptProjectTermsSchema = z.object({
 export const createProjectFromProposalSchema = z.object({
     inquiryId: uuidSchema,
     proposalId: uuidSchema,
+});
+
+export const createProjectDirectSchema = z.object({
+    name: nameSchema,
+    clientUserId: uuidSchema,
+    deliverables: z.array(z.string().min(1).max(500)).min(1).max(50),
+    nonInclusions: z.array(z.string().min(1).max(500)).optional(),
+    totalRevisions: z.number().int().min(0).max(100).optional().default(2),
 });
 
 // ==========================================
@@ -259,6 +276,7 @@ export const updateUserSettingsSchema = z.object({
     email_marketing: z.boolean().optional(),
     notification_sound: z.boolean().optional(),
     notification_desktop: z.boolean().optional(),
+    timezone: z.string().max(100).optional().nullable(),
 });
 
 // ==========================================
@@ -306,7 +324,7 @@ export const requestInquiryVerificationSchema = z.object({
 export const r2PresignSchema = z.object({
     fileName: z.string().min(1).max(255),
     fileType: z.string().min(1).max(100),
-    fileSize: z.number().positive().max(10 * 1024 * 1024), // 10MB max for comments
+    fileSize: z.number().positive().max(1024 * 1024 * 1024), // 1GB max for comments
     commentId: uuidSchema.optional(),
 });
 
@@ -325,7 +343,7 @@ export const r2PresignDeliverableSchema = z.object({
     ),
     fileSize: z.number()
         .positive()
-        .max(100 * 1024 * 1024, 'File size cannot exceed 100MB'), // 100MB max
+        .max(1024 * 1024 * 1024, 'File size cannot exceed 1GB'), // 1GB max
     projectId: z.string().min(1).max(100).optional(), // Accept any string (UUID or numeric ID)
     folder: z.enum(['beta', 'final', 'misc']).optional(),
     customKey: z.string().max(500).optional(), // For thumbnail uploads
@@ -360,7 +378,7 @@ export const timestampedCommentSchema = z.object({
 
 export const revisionAttachmentSchema = z.object({
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().positive().max(10 * 1024 * 1024),
+    fileSize: z.number().positive().max(1024 * 1024 * 1024),
     fileType: z.string().min(1).max(100),
     r2Key: z.string().min(1).max(500),
 });
@@ -422,6 +440,7 @@ export const SCHEMAS = {
         update: updateProjectSchema,
         acceptTerms: acceptProjectTermsSchema,
         fromProposal: createProjectFromProposalSchema,
+        direct: createProjectDirectSchema,
     },
     task: {
         create: createTaskSchema,

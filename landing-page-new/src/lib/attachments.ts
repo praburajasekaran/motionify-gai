@@ -1,3 +1,5 @@
+import { CSRF_HEADERS } from './csrf';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/.netlify/functions';
 
 export interface Attachment {
@@ -40,12 +42,11 @@ export async function createAttachment(
     r2Key: string
 ): Promise<Attachment | null> {
     try {
-        const token = localStorage.getItem('portal_token');
         const response = await fetch(`${API_BASE}/attachments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...CSRF_HEADERS,
             },
             credentials: 'include',
             body: JSON.stringify({ commentId, fileName, fileType, fileSize, r2Key }),
@@ -67,7 +68,7 @@ export async function getPresignedUploadUrl(
     try {
         const response = await fetch(`${API_BASE}/r2-presign`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
             credentials: 'include',
             body: JSON.stringify({ fileName, fileType, projectId, folder: 'comment-attachments' }),
         });
@@ -81,11 +82,7 @@ export async function getPresignedUploadUrl(
 
 export async function getAttachmentDownloadUrl(attachmentId: string): Promise<{ url: string; fileName: string } | null> {
     try {
-        const token = localStorage.getItem('portal_token');
         const response = await fetch(`${API_BASE}/attachments?attachmentId=${encodeURIComponent(attachmentId)}`, {
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            },
             credentials: 'include',
         });
         if (!response.ok) return null;

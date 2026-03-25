@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import { requireAuthFromCookie, requireSuperAdmin, requireProjectManager, type CookieAuthResult } from './auth';
+import { requireAuthFromCookie, requireSuperAdmin, requireSupport, type CookieAuthResult } from './auth';
 import { checkRateLimit, createRateLimitResponse, getClientIP, type RateLimitConfig } from './rateLimit';
 import { validateRequest } from './validation';
 import { getCorsHeaders, validateCors } from './cors';
@@ -66,7 +66,34 @@ export function createUnauthorizedResponse(auth: AuthResult, origin?: string): N
 }
 
 /**
+ * Check CSRF header on state-changing requests.
+ * Returns error response if check fails, null if OK.
+ */
+function checkCSRF(event: NetlifyEvent): NetlifyResponse | null {
+    const method = event.httpMethod;
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        const xRequestedWith = event.headers['x-requested-with'] || event.headers['X-Requested-With'];
+        if (!xRequestedWith) {
+            const origin = event.headers.origin || event.headers.Origin;
+            const headers = getCorsHeaders(origin);
+            return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({
+                    error: {
+                        code: 'CSRF_REJECTED',
+                        message: 'Missing required security header',
+                    },
+                }),
+            };
+        }
+    }
+    return null;
+}
+
+/**
  * Require authentication - any authenticated user
+ * Includes CSRF check on state-changing requests.
  */
 export function withAuth(): Middleware {
     return (handler: Handler) => async (event: NetlifyEvent) => {
@@ -77,12 +104,16 @@ export function withAuth(): Middleware {
             return createUnauthorizedResponse(auth, origin);
         }
 
+        const csrfError = checkCSRF(event);
+        if (csrfError) return csrfError;
+
         return handler(event, auth);
     };
 }
 
 /**
  * Require Super Admin role
+ * Includes CSRF check on state-changing requests.
  */
 export function withSuperAdmin(): Middleware {
     return (handler: Handler) => async (event: NetlifyEvent) => {
@@ -93,21 +124,28 @@ export function withSuperAdmin(): Middleware {
             return createUnauthorizedResponse(auth, origin);
         }
 
+        const csrfError = checkCSRF(event);
+        if (csrfError) return csrfError;
+
         return handler(event, auth);
     };
 }
 
 /**
  * Require Project Manager or Super Admin role
+ * Includes CSRF check on state-changing requests.
  */
 export function withProjectManager(): Middleware {
     return (handler: Handler) => async (event: NetlifyEvent) => {
-        const auth = await requireProjectManager(event);
+        const auth = await requireSupport(event);
 
         if (!auth.authorized) {
             const origin = event.headers.origin || event.headers.Origin;
             return createUnauthorizedResponse(auth, origin);
         }
+
+        const csrfError = checkCSRF(event);
+        if (csrfError) return csrfError;
 
         return handler(event, auth);
     };
@@ -237,7 +275,6 @@ export function withCORS(allowedMethods: string[]): Middleware {
                     error: {
                         code: 'INTERNAL_SERVER_ERROR',
                         message: 'An unexpected error occurred',
-                        details: error.message,
                     },
                 }),
             };
