@@ -1,4 +1,6 @@
 import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
+import { logActivity } from './_shared/logActivity';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -6,52 +8,19 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { validateStatusTransition } from './_shared/projectStatusTransitions';
 
-const { Client, types } = pg;
+const { types } = pg;
 
 // Return DATE columns as plain 'YYYY-MM-DD' strings instead of JS Date objects.
 // This prevents timezone-shift bugs where e.g. 2026-02-09 in UTC becomes 2026-02-08
 // when serialized in timezones ahead of UTC (like IST).
 types.setTypeParser(1082, (val: string) => val); // 1082 = DATE OID
 
-async function logActivity(dbClient: pg.Client, params: {
-  type: string;
-  userId: string;
-  userName: string;
-  projectId?: string;
-  inquiryId?: string;
-  details?: Record<string, string | number>;
-}) {
-  try {
-    await dbClient.query(
-      `INSERT INTO activities (type, user_id, user_name, project_id, inquiry_id, details)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [params.type, params.userId, params.userName,
-       params.projectId || null, params.inquiryId || null,
-       JSON.stringify(params.details || {})]
-    );
-  } catch (err) {
-    console.error('Failed to log activity:', err);
-  }
-}
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
-
-const generateProjectNumber = async (client: pg.Client): Promise<string> => {
+const generateProjectNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
 
-  const result = await client.query(
-    `SELECT project_number FROM projects 
-     WHERE project_number LIKE $1 
+  const result = await dbQuery(
+    `SELECT project_number FROM projects
+     WHERE project_number LIKE $1
      ORDER BY project_number DESC LIMIT 1`,
     [`PROJ-${year}-%`]
   );
@@ -76,11 +45,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     if (event.httpMethod === 'GET') {
       // Check if requesting a single project by ID from path: /api/projects/{id}
       const pathParts = event.path.split('/');
@@ -94,7 +59,7 @@ export const handler = compose(
         const userId = auth?.user?.userId;
 
         // Fetch project from main projects table
-        const result = await client.query(
+        const result = await dbQuery(
           `SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone
            FROM projects p
            LEFT JOIN users u ON p.client_user_id = u.id
@@ -113,7 +78,7 @@ export const handler = compose(
         const project = result.rows[0];
 
         // Fetch team members for this project
-        const teamResult = await client.query(
+        const teamResult = await dbQuery(
           `SELECT pt.id as membership_id, pt.role as team_role, pt.is_primary_contact, pt.added_at,
                   u.id as user_id, u.full_name, u.email, u.profile_picture_url
            FROM project_team pt
@@ -146,7 +111,7 @@ export const handler = compose(
           }
 
           if (userRole === 'team_member') {
-            const taskResult = await client.query(
+            const taskResult = await dbQuery(
               `SELECT 1 FROM tasks
                WHERE project_id = $1
                AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
@@ -169,14 +134,14 @@ export const handler = compose(
 
         return {
           statusCode: 200,
-          headers,
+          headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
           body: JSON.stringify(project),
         };
       }
 
       // First check if this is a schema check request
       if (event.queryStringParameters?.checkSchema === 'true') {
-        const schemaResult = await client.query(`
+        const schemaResult = await dbQuery(`
           SELECT column_name, data_type, is_nullable, column_default
           FROM information_schema.columns
           WHERE table_name = 'projects'
@@ -207,7 +172,7 @@ export const handler = compose(
       }
 
       // Fetch user role
-      const userResult = await client.query(
+      const userResult = await dbQuery(
         'SELECT role FROM users WHERE id = $1',
         [effectiveUserId]
       );
@@ -221,12 +186,12 @@ export const handler = compose(
       }
 
       const userRole = userResult.rows[0].role;
-      let query = '';
+      let sql = '';
       const params: any[] = [];
 
       if (userRole === 'support') {
         // Support: See all projects (support users have platform-wide access)
-        query = `
+        sql = `
           SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
@@ -235,7 +200,7 @@ export const handler = compose(
         `;
       } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
         // Client: Only see their own projects
-        query = `
+        sql = `
           SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
@@ -246,7 +211,7 @@ export const handler = compose(
         params.push(effectiveUserId);
       } else if (userRole === 'super_admin' || userRole === 'admin') {
         // Super Admin: See all projects
-        query = `
+        sql = `
           SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
@@ -262,122 +227,22 @@ export const handler = compose(
         };
       }
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       return {
         statusCode: 200,
-        headers,
+        headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
         body: JSON.stringify(result.rows),
       };
     }
 
     if (event.httpMethod === 'POST') {
-      // Detect which creation path: direct admin creation (has 'name' field) vs from proposal (has 'inquiryId')
-      let parsedBody: Record<string, unknown> = {};
-      try { parsedBody = JSON.parse(event.body || '{}'); } catch { /* ignore */ }
-
-      if ('name' in parsedBody) {
-        // ── Direct admin/support project creation ──────────────────────────────
-        const userRole = auth?.user?.role;
-        if (userRole !== 'super_admin' && userRole !== 'support') {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Only administrators and support users can create projects directly' }),
-          };
-        }
-
-        const validation = validateRequest(event.body, SCHEMAS.project.direct, origin);
-        if (!validation.success) return validation.response;
-        const { name, clientUserId, deliverables: deliverableNames, nonInclusions, totalRevisions } = validation.data;
-
-        // Verify the client user exists
-        const clientUserResult = await client.query(
-          'SELECT id, full_name FROM users WHERE id = $1',
-          [clientUserId]
-        );
-        if (clientUserResult.rows.length === 0) {
-          return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: 'Client user not found' }),
-          };
-        }
-
-        const projectNumber = await generateProjectNumber(client);
-
-        const projectResult = await client.query(
-          `INSERT INTO projects (project_number, name, client_user_id, status, total_revisions_allowed)
-           VALUES ($1, $2, $3, 'active', $4)
-           RETURNING *`,
-          [projectNumber, name, clientUserId, totalRevisions ?? 2]
-        );
-        const newProject = projectResult.rows[0];
-
-        // Insert deliverables
-        for (const deliverableName of deliverableNames) {
-          await client.query(
-            `INSERT INTO deliverables (project_id, name, status) VALUES ($1, $2, 'pending')`,
-            [newProject.id, deliverableName]
-          );
-        }
-
-        // Add client to project_team as primary contact
-        await client.query(
-          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-           VALUES ($1, $2, 'client', true, $3)
-           ON CONFLICT (user_id, project_id) DO NOTHING`,
-          [clientUserId, newProject.id, auth?.user?.userId || null]
-        );
-
-        // Add creator to project_team
-        if (auth?.user?.userId && auth.user.userId !== clientUserId) {
-          await client.query(
-            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-             VALUES ($1, $2, $3, false, $1)
-             ON CONFLICT (user_id, project_id) DO NOTHING`,
-            [auth.user.userId, newProject.id, auth.user.role || 'super_admin']
-          );
-        }
-
-        // Auto-add all active support users
-        const supportUsersResult = await client.query(
-          `SELECT id FROM users WHERE role = 'support' AND is_active = true`
-        );
-        for (const supportUser of supportUsersResult.rows) {
-          await client.query(
-            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-             VALUES ($1, $2, 'support', false, $3)
-             ON CONFLICT (user_id, project_id) DO NOTHING`,
-            [supportUser.id, newProject.id, auth?.user?.userId || null]
-          );
-        }
-
-        await logActivity(client, {
-          type: 'PROJECT_CREATED',
-          userId: auth?.user?.userId || '',
-          userName: auth?.user?.fullName || 'Unknown',
-          projectId: newProject.id,
-          details: { projectNumber },
-        });
-
-        return {
-          statusCode: 201,
-          headers,
-          body: JSON.stringify({
-            ...newProject,
-            client_name: clientUserResult.rows[0].full_name,
-          }),
-        };
-      }
-
-      // ── Create project from accepted proposal ──────────────────────────────
       // Validate request body using Zod schema
       const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
       if (!validation.success) return validation.response;
       const { inquiryId, proposalId } = validation.data;
 
-      const proposalResult = await client.query(
+      const proposalResult = await dbQuery(
         'SELECT * FROM proposals WHERE id = $1',
         [proposalId]
       );
@@ -400,7 +265,7 @@ export const handler = compose(
         };
       }
 
-      const inquiryResult = await client.query(
+      const inquiryResult = await dbQuery(
         'SELECT contact_email, contact_name FROM inquiries WHERE id = $1',
         [inquiryId]
       );
@@ -418,7 +283,7 @@ export const handler = compose(
 
       let assignedClientUserId: string | null = null;
 
-      const existingUserResult = await client.query(
+      const existingUserResult = await dbQuery(
         'SELECT id FROM users WHERE email = $1',
         [contact_email]
       );
@@ -426,18 +291,18 @@ export const handler = compose(
       if (existingUserResult.rows.length > 0) {
         assignedClientUserId = existingUserResult.rows[0].id;
       } else {
-        const newUserResult = await client.query(
-          `INSERT INTO users (email, full_name, role) 
-           VALUES ($1, $2, 'client') 
+        const newUserResult = await dbQuery(
+          `INSERT INTO users (email, full_name, role)
+           VALUES ($1, $2, 'client')
            RETURNING id`,
           [contact_email, contact_name]
         );
         assignedClientUserId = newUserResult.rows[0].id;
       }
 
-      const projectNumber = await generateProjectNumber(client);
+      const projectNumber = await generateProjectNumber();
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO projects (
           project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
         ) VALUES ($1, $2, $3, $4, 'active', $5)
@@ -449,7 +314,7 @@ export const handler = compose(
 
       const deliverables = JSON.parse(proposal.deliverables);
       for (const deliverable of deliverables) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO deliverables (
             id, project_id, name, description, estimated_completion_week, status
           ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
@@ -463,14 +328,14 @@ export const handler = compose(
         );
       }
 
-      await client.query(
+      await dbQuery(
         `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW() WHERE id = $1`,
         [inquiryId, project.id]
       );
 
       // Auto-populate project team: add client as primary contact
       if (assignedClientUserId) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
            VALUES ($1, $2, 'client', true, $3)
            ON CONFLICT (user_id, project_id) DO NOTHING`,
@@ -479,7 +344,7 @@ export const handler = compose(
       }
 
       // Log activity
-      await logActivity(client, {
+      await logActivity({
         type: 'PROJECT_CREATED',
         userId: auth?.user?.userId || '',
         userName: auth?.user?.fullName || 'Unknown',
@@ -490,7 +355,7 @@ export const handler = compose(
 
       // Auto-populate project team: add creator (the authenticated user)
       if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
            VALUES ($1, $2, $3, false, $1)
            ON CONFLICT (user_id, project_id) DO NOTHING`,
@@ -499,11 +364,11 @@ export const handler = compose(
       }
 
       // Auto-add all active support users to the project team
-      const supportUsersResult = await client.query(
+      const supportUsersResult = await dbQuery(
         `SELECT id FROM users WHERE role = 'support' AND is_active = true`
       );
       for (const supportUser of supportUsersResult.rows) {
-        await client.query(
+        await dbQuery(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
            VALUES ($1, $2, 'support', false, $3)
            ON CONFLICT (user_id, project_id) DO NOTHING`,
@@ -545,7 +410,7 @@ export const handler = compose(
       const updates = validation.data;
 
       // Verify project exists
-      const existing = await client.query('SELECT * FROM projects WHERE id = $1', [projectId]);
+      const existing = await dbQuery('SELECT * FROM projects WHERE id = $1', [projectId]);
       if (existing.rows.length === 0) {
         return {
           statusCode: 404,
@@ -594,7 +459,7 @@ export const handler = compose(
       setClauses.push(`updated_at = NOW()`);
       values.push(projectId);
 
-      const result = await client.query(
+      const result = await dbQuery(
         `UPDATE projects SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
         values
       );
@@ -616,7 +481,7 @@ export const handler = compose(
           ? 'PROJECT_STATUS_CHANGED'
           : 'PROJECT_UPDATED';
 
-      await logActivity(client, {
+      await logActivity({
         type: activityType,
         userId: auth.user!.userId,
         userName: auth.user!.fullName,
@@ -652,7 +517,7 @@ export const handler = compose(
         };
       }
 
-      const existing = await client.query('SELECT id, status, name, project_number FROM projects WHERE id = $1', [projectId]);
+      const existing = await dbQuery('SELECT id, status, name, project_number FROM projects WHERE id = $1', [projectId]);
       if (existing.rows.length === 0) {
         return {
           statusCode: 404,
@@ -670,7 +535,7 @@ export const handler = compose(
       }
 
       // Log before deletion
-      await logActivity(client, {
+      await logActivity({
         type: 'PROJECT_DELETED',
         userId: auth.user!.userId,
         userName: auth.user!.fullName,
@@ -681,12 +546,12 @@ export const handler = compose(
       });
 
       // Delete child records then project (deliverables cascade via FK)
-      await client.query('DELETE FROM revision_requests WHERE project_id = $1', [projectId]);
-      await client.query('DELETE FROM payments WHERE project_id = $1', [projectId]);
-      await client.query('DELETE FROM project_team WHERE project_id = $1', [projectId]);
-      await client.query('DELETE FROM project_files WHERE project_id = $1', [projectId]);
-      await client.query('DELETE FROM activities WHERE project_id = $1', [projectId]);
-      await client.query('DELETE FROM projects WHERE id = $1', [projectId]);
+      await dbQuery('DELETE FROM revision_requests WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM payments WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM project_team WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM project_files WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM activities WHERE project_id = $1', [projectId]);
+      await dbQuery('DELETE FROM projects WHERE id = $1', [projectId]);
 
       return {
         statusCode: 200,
@@ -708,9 +573,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

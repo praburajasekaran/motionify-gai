@@ -30,9 +30,8 @@ export default function Header() {
             />
           </a>
           <div className="hidden sm:flex items-center gap-8">
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Work</a>
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Approach</a>
-            <a href="#" className="text-sm text-white/80 hover:text-white transition">Pricing</a>
+            <a href="/work" className="text-sm text-white/80 hover:text-white transition">Work</a>
+            <a href="/about" className="text-sm text-white/80 hover:text-white transition">About</a>
             
             {!isLoading && (
               <>
@@ -53,7 +52,7 @@ export default function Header() {
                   // Not logged in state
                   <>
                     <a href="/login" className="text-sm text-white/80 hover:text-white transition">Login</a>
-                    <a href="#" className={`inline-flex items-center gap-2 rounded-lg bg-[var(--studio-amber)] text-white font-medium hover:bg-[var(--studio-amber-hover)] transition-all duration-300 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'}`}>
+                    <a href="/contact" className={`inline-flex items-center gap-2 rounded-lg bg-[var(--studio-amber)] text-white font-medium hover:bg-[var(--studio-amber-hover)] transition-all duration-300 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'}`}>
                       Get in touch
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                     </a>

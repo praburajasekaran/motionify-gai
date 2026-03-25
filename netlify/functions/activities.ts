@@ -1,24 +1,10 @@
-import pg from 'pg';
+import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
-
-const { Client } = pg;
-
-const getDbClient = () => {
-  const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured');
-  }
-
-  return new Client({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? true : { rejectUnauthorized: false },
-  });
-};
 
 export const handler = compose(
   withCORS(['GET', 'POST', 'OPTIONS']),
@@ -28,11 +14,7 @@ export const handler = compose(
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
-  const client = getDbClient();
-
   try {
-    await client.connect();
-
     // GET - Fetch activities by context (inquiry, proposal, or project)
     if (event.httpMethod === 'GET') {
       const { inquiryId, proposalId, projectId, userId, offset = '0', limit = '50' } = event.queryStringParameters || {};
@@ -40,7 +22,7 @@ export const handler = compose(
       // Check if user is admin (super_admin or support)
       const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'support';
 
-      let query = `
+      let sql = `
         SELECT
           a.id, a.type, a.user_id, a.user_name,
           a.target_user_id, a.target_user_name,
@@ -62,26 +44,26 @@ export const handler = compose(
 
       // Filter by context - activities can relate to multiple contexts
       if (inquiryId) {
-        query += ` AND a.inquiry_id = $${paramIndex}`;
+        sql += ` AND a.inquiry_id = $${paramIndex}`;
         params.push(inquiryId);
         paramIndex++;
       }
 
       if (proposalId) {
-        query += ` AND a.proposal_id = $${paramIndex}`;
+        sql += ` AND a.proposal_id = $${paramIndex}`;
         params.push(proposalId);
         paramIndex++;
       }
 
       if (projectId) {
-        query += ` AND a.project_id = $${paramIndex}`;
+        sql += ` AND a.project_id = $${paramIndex}`;
         params.push(projectId);
         paramIndex++;
       }
 
       // Filter by userId (admin feature)
       if (userId) {
-        query += ` AND a.user_id = $${paramIndex}`;
+        sql += ` AND a.user_id = $${paramIndex}`;
         params.push(userId);
         paramIndex++;
       }
@@ -96,11 +78,11 @@ export const handler = compose(
       }
 
       // Add pagination support
-      query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      sql += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       params.push(parseInt(limit, 10));
       params.push(parseInt(offset, 10));
 
-      const result = await client.query(query, params);
+      const result = await dbQuery(sql, params);
 
       // Transform snake_case to camelCase for frontend
       const requesterRole = auth?.user?.role || '';
@@ -134,7 +116,7 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const payload = validation.data;
 
-      const result = await client.query(
+      const result = await dbQuery(
         `INSERT INTO activities (
           type, user_id, user_name,
           target_user_id, target_user_name,
@@ -196,9 +178,8 @@ export const handler = compose(
       headers,
       body: JSON.stringify({
         error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-  } finally {
-    await client.end();
   }
 });

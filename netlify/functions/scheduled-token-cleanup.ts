@@ -16,6 +16,13 @@ export default async function handler(req: Request, context: Context) {
     const correlationId = generateCorrelationId();
     const logger = createLogger('scheduled-token-cleanup', correlationId);
 
+    // Validate invocation source (defense-in-depth)
+    const body = await req.json().catch(() => ({}));
+    if (!body.next_run) {
+        logger.warn('Scheduled function invoked without next_run — possible unauthorized call');
+        return new Response('Unauthorized', { status: 403 });
+    }
+
     logger.info('Starting scheduled token cleanup');
 
     const pool = getPool();

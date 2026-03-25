@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Clock, CheckCircle2, XCircle, MessageSquare, FileText, History } from 'lucide-react';
-import { fetchActivities, type Activity, type ActivityType } from '@/lib/portal/api/activities.api';
+import { fetchActivities, type Activity } from '@/lib/portal/api/activities.api';
+import { ActivityType } from '@/lib/portal/types';
 
 interface StatusTimelineProps {
   proposalId: string;
@@ -10,10 +11,10 @@ interface StatusTimelineProps {
 
 // Activity types that are relevant to clients (visible in timeline)
 const CLIENT_VISIBLE_ACTIVITIES: ActivityType[] = [
-  'PROPOSAL_SENT',
-  'PROPOSAL_ACCEPTED',
-  'PROPOSAL_REJECTED',
-  'PROPOSAL_CHANGES_REQUESTED',
+  ActivityType.PROPOSAL_SENT,
+  ActivityType.PROPOSAL_ACCEPTED,
+  ActivityType.PROPOSAL_REJECTED,
+  ActivityType.PROPOSAL_CHANGES_REQUESTED,
 ];
 
 // Map activity types to display info

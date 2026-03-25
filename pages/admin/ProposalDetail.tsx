@@ -4,27 +4,14 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare, Lock, Send } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { CommentThread } from '../../components/proposals';
 import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { PromptDialog } from '../../components/ui/PromptDialog';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
-
-/**
- * Sanitize HTML to prevent XSS attacks.
- * Strips script tags, event handlers, and dangerous attributes.
- */
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/data\s*:\s*text\/html/gi, '');
-}
+import { sanitizeHtml } from '../../lib/sanitize';
 
 interface DeliverableInput {
   id: string;
@@ -59,6 +46,7 @@ export function ProposalDetail() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [promptDialog, setPromptDialog] = useState<{ open: boolean; type: 'reject' | 'revise' | null }>({ open: false, type: null });
   const [showForceEditDialog, setShowForceEditDialog] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [hasBeenEdited, setHasBeenEdited] = useState(false);
@@ -969,16 +957,6 @@ export function ProposalDetail() {
           </div>
         )}
 
-        {/* Comments Section */}
-        {proposal && user && (
-          <CommentThread
-            proposalId={proposal.id}
-            currentUserId={user.id}
-            currentUserName={user.name}
-            isAuthenticated={!!user}
-          />
-        )}
-
         {/* Response Tracking */}
         {(proposal.acceptedAt || proposal.rejectedAt || proposal.feedback) && (
           <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
@@ -1042,10 +1020,7 @@ export function ProposalDetail() {
         {isClient && proposal.status === 'sent' && (
           <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <button
-              onClick={() => {
-                const feedback = prompt('Please provide a reason for rejecting the proposal:');
-                if (feedback) handleRejectProposal(feedback);
-              }}
+              onClick={() => setPromptDialog({ open: true, type: 'reject' })}
               disabled={isRejecting || isAccepting || isRequestingChanges}
               className="px-4 py-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium border border-red-200"
             >
@@ -1053,10 +1028,7 @@ export function ProposalDetail() {
             </button>
 
             <button
-              onClick={() => {
-                const feedback = prompt('Please describe the changes you would like to request:');
-                if (feedback) handleRequestChanges(feedback);
-              }}
+              onClick={() => setPromptDialog({ open: true, type: 'revise' })}
               disabled={isRejecting || isAccepting || isRequestingChanges}
               className="px-4 py-2.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors font-medium border border-orange-200"
             >
@@ -1112,6 +1084,30 @@ export function ProposalDetail() {
         confirmLabel="Yes, Force Edit"
         cancelLabel="Cancel"
         variant="warning"
+      />
+
+      {/* Reject / Request Revision Prompt Dialog */}
+      <PromptDialog
+        isOpen={promptDialog.open}
+        onClose={() => setPromptDialog({ open: false, type: null })}
+        onConfirm={(feedback) => {
+          if (promptDialog.type === 'reject') handleRejectProposal(feedback);
+          if (promptDialog.type === 'revise') handleRequestChanges(feedback);
+          setPromptDialog({ open: false, type: null });
+        }}
+        title={promptDialog.type === 'reject' ? 'Reject Proposal' : 'Request Revision'}
+        description={
+          promptDialog.type === 'reject'
+            ? 'Please provide a reason for rejecting this proposal.'
+            : 'Please describe the changes you would like to request.'
+        }
+        placeholder={
+          promptDialog.type === 'reject'
+            ? 'Enter rejection reason...'
+            : 'Describe the changes you need...'
+        }
+        confirmLabel={promptDialog.type === 'reject' ? 'Reject Proposal' : 'Request Revision'}
+        isLoading={promptDialog.type === 'reject' ? isRejecting : isRequestingChanges}
       />
     </div>
   );

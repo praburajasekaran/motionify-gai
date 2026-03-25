@@ -7,7 +7,7 @@ import {
 } from '../../services/taskApi';
 import type { Task } from '../../services/taskApi';
 
-const POLL_INTERVAL = 10_000; // 10 seconds
+const POLL_INTERVAL = 30_000; // 30 seconds
 
 export const taskKeys = {
   all: ['tasks'] as const,
