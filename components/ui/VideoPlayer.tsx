@@ -437,8 +437,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   <div
                     key={comment.id}
                     className={cn(
-                      "absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-125 transition-transform",
-                      isActive ? "w-4 h-4 bg-amber-600" : "w-3 h-3 bg-amber-500"
+                      "absolute top-1/2 -translate-y-1/2 rounded-full border-2 border-white cursor-pointer hover:scale-125 transition-transform",
+                      isActive ? "w-4 h-4 bg-primary" : "w-3 h-3 bg-primary"
                     )}
                     style={{ left: `${markerPosition}%`, marginLeft: isActive ? '-8px' : '-6px' }}
                     title={`${formatTime(comment.timestamp)}: ${comment.comment.substring(0, 50)}...`}
@@ -511,7 +511,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
       {/* Inline Comment Tooltips - Rendered via Portal to escape modal stacking context */}
       {(activeCommentId || showAddCommentForm) && ReactDOM.createPortal(
         <div
-          className="fixed w-80 bg-card rounded-lg shadow-2xl border-2 border-amber-400 z-[100] animate-in slide-in-from-right-2 duration-200 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity"
+          className="fixed w-80 bg-card rounded-lg border-2 border-primary z-[100] animate-in slide-in-from-right-2 duration-200 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-opacity"
           style={{
             top: `${tooltipPosition.top}px`,
             right: `${tooltipPosition.right}px`,
@@ -527,8 +527,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
               <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between drag-handle cursor-grab">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-sm font-mono font-bold text-amber-900">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="text-sm font-mono font-bold text-foreground">
                       {formatTime(comment.timestamp)}
                     </span>
                   </div>
@@ -543,7 +543,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
 
                 {showConvertToTaskForm ? (
                   <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center gap-2 text-xs font-bold text-purple-700 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
                       <CheckSquare className="h-3 w-3" />
                       Convert to Task
                     </div>
@@ -575,7 +575,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                       </Button>
                       <Button
                         size="sm"
-                        className="flex-1 h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                        className="flex-1 h-8 text-xs bg-primary hover:bg-[var(--studio-amber-hover)] text-white"
                         onClick={submitConvertToTask}
                       >
                         Create Task
@@ -599,7 +599,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        className="text-xs text-destructive hover:text-destructive/80 font-medium"
                       >
                         Delete
                       </button>
@@ -607,7 +607,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                       {onConvertToTask && (
                         <button
                           onClick={() => handleConvertToTaskClick(comment)}
-                          className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 px-2 py-1 rounded-md transition-colors"
                         >
                           <CheckSquare className="h-3 w-3" />
                           Convert to Task
@@ -624,7 +624,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
           {showAddCommentForm && (
             <div className="p-4 space-y-2">
               <div className="flex items-start justify-between drag-handle cursor-grab">
-                <span className="text-sm font-bold text-amber-900">
+                <span className="text-sm font-bold text-foreground">
                   {activeCommentId
                     ? `Edit comment at ${formatTime(newCommentTimestamp)}`
                     : `Add comment at ${formatTime(newCommentTimestamp)}`
@@ -644,13 +644,13 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                   onChange={(e) => setNewCommentText(e.target.value)}
                   onKeyDown={handleCommentKeyDown}
                   placeholder="Describe the issue... (Enter to submit, Shift+Enter for new line)"
-                  className="flex-1 min-h-[60px] px-3 py-2 text-sm border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none bg-background text-foreground"
+                  className="flex-1 min-h-[60px] px-3 py-2 text-sm border border-input rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none bg-background text-foreground"
                   autoFocus
                 />
                 <button
                   onClick={handleAddComment}
                   disabled={!newCommentText.trim()}
-                  className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                  className="p-2 bg-primary text-white rounded-lg hover:bg-[var(--studio-amber-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
                   title={activeCommentId ? 'Update Comment (Enter)' : 'Add Comment (Enter)'}
                 >
                   <Send className="h-4 w-4" />

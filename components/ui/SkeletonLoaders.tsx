@@ -46,7 +46,7 @@ export const ShimmerSkeleton = ({
  */
 export const ProjectCardSkeleton = () => {
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
+    <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
       {/* Header with logo and title */}
       <div className="flex items-start gap-4">
         <ShimmerSkeleton className="h-14 w-14 rounded-xl flex-shrink-0" />
@@ -88,7 +88,7 @@ export const StatCardSkeleton = ({
 }) => {
   return (
     <div
-      className="bg-card rounded-xl border border-border shadow-sm p-6"
+      className="bg-card rounded-xl border border-border p-6"
       style={{ animationDelay: delay }}
     >
       <div className="flex items-center justify-between space-y-0 pb-2">
@@ -145,7 +145,7 @@ export const StatGridSkeleton = () => {
       {[0, 100, 200, 300].map((delay) => (
         <div
           key={delay}
-          className="bg-card rounded-xl border border-border shadow-sm p-5"
+          className="bg-card rounded-xl border border-border p-5"
           style={{ animationDelay: `${delay}ms` }}
         >
           <div className="flex items-center justify-between">
@@ -262,7 +262,7 @@ export const ActivityFeedSkeleton = ({
  */
 export const ChartSkeleton = () => {
   return (
-    <div className="bg-card rounded-xl border border-border shadow-sm p-6">
+    <div className="bg-card rounded-xl border border-border p-6">
       <div className="space-y-4">
         <ShimmerSkeleton className="h-6 w-48" />
         <div className="h-[300px] flex items-end gap-2">
@@ -343,7 +343,7 @@ export const CardGridSkeleton = ({
   return (
     <div className={cn('grid gap-6', gridCols[columns])}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-card rounded-xl border border-border shadow-sm p-6 space-y-4">
+        <div key={i} className="bg-card rounded-xl border border-border p-6 space-y-4">
           <ShimmerSkeleton className="h-6 w-3/4" />
           <div className="space-y-2">
             <ShimmerSkeleton className="h-4 w-full" />

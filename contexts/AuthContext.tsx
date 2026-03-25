@@ -2,15 +2,17 @@
  * Authentication Context
  *
  * Provides current user information and authentication state to all components.
- * Integrates with real backend authentication via httpOnly cookies.
+ * Internally uses React Query via useAuth() hook for caching and background refresh.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { User } from '@/types';
 import { clearAuthSession } from '@/lib/auth';
 import { API_BASE } from '@/lib/api-config';
 import { setUserTimezone } from '@/utils/dateFormatting';
+import { useAuth, authKeys } from '@/shared/hooks/useAuth';
 
 interface AuthContextType {
     user: User | null;
@@ -28,81 +30,30 @@ interface AuthProviderProps {
     children: ReactNode;
 }
 
-// Session check interval (5 minutes)
-const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
-
 export function AuthProvider({ children }: AuthProviderProps) {
     const navigate = useNavigate();
-    const [user, setUserState] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const { data: user, isLoading } = useAuth();
 
     /**
-     * Load user from cookie-based session via /auth-me endpoint
-     */
-    const loadUser = useCallback(async () => {
-        // Create abort controller for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-        try {
-            const response = await fetch(`${API_BASE}/auth-me`, {
-                method: 'GET',
-                credentials: 'include',
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.user) {
-                    setUserState(data.user);
-                    setUserTimezone(data.user.timezone || null);
-                    setToken('cookie'); // Indicate we have a valid session
-                    return;
-                }
-            }
-
-            // No valid session
-            setToken(null);
-            setUserState(null);
-            setUserTimezone(null);
-        } catch (error: any) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.warn('Auth check timed out - API server may not be running');
-            } else {
-                console.error('Failed to load user session:', error);
-            }
-            setToken(null);
-            setUserState(null);
-            setUserTimezone(null);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    /**
-     * Set user and update session
+     * Set user — updates the React Query cache directly
      */
     const setUser = useCallback((newUser: User | null) => {
         if (newUser) {
-            setUserState(newUser);
-            setToken('cookie'); // Indicate we have a valid session
+            queryClient.setQueryData(authKeys.session(), newUser);
+            setUserTimezone(newUser.timezone || null);
         } else {
             clearAuthSession();
-            setToken(null);
-            setUserState(null);
+            queryClient.setQueryData(authKeys.session(), null);
+            setUserTimezone(null);
         }
-    }, []);
+    }, [queryClient]);
 
     /**
      * Logout and clear session
      */
     const logout = useCallback(async () => {
         try {
-            // Call /auth-logout to clear the httpOnly cookie
             await fetch(`${API_BASE}/auth-logout`, {
                 method: 'POST',
                 credentials: 'include',
@@ -110,75 +61,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } catch (error) {
             console.error('Logout API call failed:', error);
         }
-        // Clean up any legacy localStorage data
         clearAuthSession();
-        setToken(null);
-        setUserState(null);
+        queryClient.setQueryData(authKeys.session(), null);
         setUserTimezone(null);
         navigate('/login', { replace: true });
-    }, []);
+    }, [queryClient, navigate]);
 
     /**
-     * Refresh session - check if still valid via /auth-me endpoint
+     * Refresh session — invalidates the React Query cache, triggering a re-fetch
      */
-    const refreshSession = useCallback(async () => {
-        try {
-            const response = await fetch(`${API_BASE}/auth-me`, {
-                method: 'GET',
-                credentials: 'include',
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.user) {
-                    setUserState(data.user);
-                    setUserTimezone(data.user.timezone || null);
-                    setToken('cookie');
-                    return;
-                }
-            }
-
-            // Session expired or invalid
-            setToken(null);
-            setUserState(null);
-            setUserTimezone(null);
-        } catch (error) {
-            console.error('Failed to refresh session:', error);
-            // Don't clear session on network errors - keep current state
-        }
-    }, []);
-
-    // Load user on mount
-    useEffect(() => {
-        loadUser();
-    }, [loadUser]);
-
-    // Periodic session check
-    useEffect(() => {
-        const interval = setInterval(() => {
-            refreshSession();
-        }, SESSION_CHECK_INTERVAL);
-
-        return () => clearInterval(interval);
-    }, [refreshSession]);
-
-    // Multi-tab support: Listen for visibility changes to refresh session when tab becomes visible
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                refreshSession();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [refreshSession]);
+    const refreshSession = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: authKeys.session() });
+    }, [queryClient]);
 
     const value: AuthContextType = {
-        user,
+        user: user ?? null,
         isLoading,
-        isAuthenticated: user !== null && token !== null,
-        token,
+        isAuthenticated: user != null,
+        token: user != null ? 'cookie' : null,
         setUser,
         logout,
         refreshSession,

@@ -14,29 +14,14 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Navigation Links - 2 Columns */}
-          <div className="lg:col-span-5 grid grid-cols-2 gap-8 sm:gap-12">
-            {/* Column 1 */}
+          {/* Navigation Links */}
+          <div className="lg:col-span-5">
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Company</h3>
               <nav className="flex flex-col gap-3">
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Works</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Approach</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Pricing</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Case Studies</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Contact</a>
-              </nav>
-            </div>
-
-            {/* Column 2 */}
-            <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Resources</h3>
-              <nav className="flex flex-col gap-3">
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Blog</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Portfolio</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">FAQs</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">About Us</a>
-                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Careers</a>
+                <a href="/about" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">About Us</a>
+                <a href="/work" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Works</a>
+                <a href="/contact" className="text-sm text-gray-400 hover:text-white transition-colors duration-200">Contact</a>
               </nav>
             </div>
           </div>
@@ -46,7 +31,7 @@ export default function Footer() {
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Get Started</h3>
               <a href="#video-style-quiz" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold text-sm shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 transform hover:scale-105">
-                <span>Start Your Project</span>
+                <span>Get Started</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
               </a>
             </div>
@@ -54,16 +39,16 @@ export default function Footer() {
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Follow Us</h3>
               <div className="flex items-center gap-4">
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.instagram.com/motionifyco/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">IN</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.linkedin.com/company/motionify/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">LI</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.facebook.com/motionify/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">FB</span>
                 </a>
-                <a href="#" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
+                <a href="https://www.youtube.com/channel/UCK9Ja6n4m4cRbZKo5I2zDOw" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 ring-1 ring-white/10 hover:ring-white/20 flex items-center justify-center transition-all duration-200 group">
                   <span className="text-gray-400 group-hover:text-white text-xs font-medium">YT</span>
                 </a>
               </div>
@@ -73,7 +58,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">© 2025 Motionify.Studio. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© 2026 Motionify.Studio. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <a href="/terms" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Terms and Conditions</a>
             <a href="/privacy" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</a>

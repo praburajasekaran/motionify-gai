@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   fetchProjectFiles,
   createProjectFile,
@@ -19,6 +19,7 @@ export function useProjectFiles(projectId: string | undefined) {
     enabled: !!projectId,
     refetchInterval: POLL_INTERVAL,
     refetchIntervalInBackground: false,
+    placeholderData: keepPreviousData,
     throwOnError: false,
   });
 }

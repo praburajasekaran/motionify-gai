@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { PrefetchLink } from '../shared/components/PrefetchLink';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { TAB_INDEX_MAP } from '../constants';
@@ -13,7 +14,7 @@ import { isSuperAdmin, isClient, getRoleLabel } from '../lib/permissions';
 import { NotificationBell } from './notifications';
 
 const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
-  <Link to={path}>
+  <PrefetchLink to={path}>
     <div
       className={cn(
         "group flex items-center justify-between w-full px-3 py-2 text-[14px] font-medium rounded-md transition-colors duration-150",
@@ -32,7 +33,7 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
         </span>
       )}
     </div>
-  </Link>
+  </PrefetchLink>
 );
 
 // Simplified RevisionBattery Component (no line graph)
@@ -41,18 +42,18 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
   const percentage = Math.round((remaining / max) * 100);
 
   // Determine color based on remaining percentage
-  let colorClass = "bg-emerald-500";
-  let textColor = "text-emerald-700";
+  let colorClass = "bg-[var(--studio-teal)]";
+  let textColor = "text-[var(--studio-teal)]";
   if (percentage <= 20) {
-    colorClass = "bg-red-500";
-    textColor = "text-red-700";
+    colorClass = "bg-destructive";
+    textColor = "text-destructive";
   } else if (percentage <= 50) {
-    colorClass = "bg-amber-500";
-    textColor = "text-amber-700";
+    colorClass = "bg-primary";
+    textColor = "text-primary";
   }
 
   return (
-    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg shadow-sm">
+    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg">
       {/* Label */}
       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         Revisions
@@ -202,7 +203,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Accessibility: Skip to content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-primary transition-all"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:ring-2 focus:ring-primary transition-all"
       >
         Skip to content
       </a>
@@ -214,19 +215,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+            className="fixed top-14 inset-x-0 bottom-0 bg-black/30 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar — same bg as canvas, border-only separation */}
         <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col h-full",
+          "fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto lg:inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          {/* Logo */}
-          <div className="h-14 flex items-center px-4 shrink-0 border-b border-border">
-            <Link to="/" className="flex items-center cursor-pointer">
+          {/* Logo — desktop only; on mobile the header is always visible above the sidebar */}
+          <div className="h-14 hidden lg:flex items-center px-4 shrink-0 border-b border-border">
+            <PrefetchLink to="/" className="flex items-center cursor-pointer">
               <img
                 src={mounted && resolvedTheme === 'dark'
                   ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
@@ -234,7 +235,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 alt="Motionify Studio"
                 className="h-10 w-auto object-contain"
               />
-            </Link>
+            </PrefetchLink>
           </div>
 
           {/* Nav sections */}
@@ -278,12 +279,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 System
               </div>
               <div className="space-y-0.5">
-                <SidebarItem
-                  icon={Settings}
-                  label="Settings"
-                  path="/settings"
-                  active={location.pathname === '/settings'}
-                />
                 {isSuperAdmin(user) && (
                   <SidebarItem
                     icon={UserIcon}
@@ -300,8 +295,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="p-3 border-t border-border shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div
-                  className="flex items-center gap-2.5 p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 w-full p-2 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group text-left"
                   aria-label="User menu"
                 >
                   <Avatar src={user?.avatar} fallback={user?.name?.[0] || 'U'} className="h-7 w-7" />
@@ -309,8 +305,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     <p className="text-[14px] font-medium truncate text-foreground">{user?.name || 'User'}</p>
                     <p className="text-[12px] text-muted-foreground truncate">{user?.role ? getRoleLabel(user.role) : 'User'}</p>
                   </div>
-                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                </div>
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56">
                 <DropdownMenuLabel className="font-normal">
@@ -319,10 +315,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/settings" onClick={() => setSidebarOpen(false)}>
+                  <PrefetchLink to="/settings" onClick={() => setSidebarOpen(false)}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
-                  </Link>
+                  </PrefetchLink>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -344,12 +340,23 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           className="flex-1 flex flex-col min-w-0 bg-background h-full relative focus:outline-none"
         >
           {/* Top bar — minimal, functional */}
-          <header className="h-14 border-b border-border z-40 shrink-0 sticky top-0 bg-background">
+          <header className="h-14 border-b border-border z-[60] shrink-0 sticky top-0 bg-background">
             <div className="h-full flex items-center justify-between px-6">
               <div className="flex items-center">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(true)} id="mobile-menu-btn">
+                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(prev => !prev)} id="mobile-menu-btn">
                   <Menu className="h-4 w-4" />
                 </Button>
+
+                {/* Logo — mobile only (sidebar logo is hidden on mobile) */}
+                <PrefetchLink to="/" className="lg:hidden mr-3">
+                  <img
+                    src={mounted && resolvedTheme === 'dark'
+                      ? `${import.meta.env.BASE_URL}motionify-dark-logo.png`
+                      : `${import.meta.env.BASE_URL}motionify-studio-dark.png`}
+                    alt="Motionify Studio"
+                    className="h-8 w-auto object-contain"
+                  />
+                </PrefetchLink>
 
                 <nav className="hidden md:flex items-center text-[14px] text-muted-foreground">
                   <span className="hover:text-foreground cursor-pointer transition-colors">Workspace</span>
