@@ -11,7 +11,6 @@
 import {
     query,
     getCorsHeaders,
-    requireAuthAndRole,
     validateRequest,
     updateUserSchema,
     uuidSchema,

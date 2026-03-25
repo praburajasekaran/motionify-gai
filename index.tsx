@@ -3,6 +3,12 @@ import './index.css';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { initWebVitals } from './lib/vitals';
+import { initSentry } from './lib/sentry';
+import { installCSRFProtection } from './lib/csrf';
+
+// Initialize security and monitoring before React renders
+installCSRFProtection();
+initSentry();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

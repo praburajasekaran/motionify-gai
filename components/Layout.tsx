@@ -279,12 +279,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 System
               </div>
               <div className="space-y-0.5">
-                <SidebarItem
-                  icon={Settings}
-                  label="Settings"
-                  path="/settings"
-                  active={location.pathname === '/settings'}
-                />
                 {isSuperAdmin(user) && (
                   <SidebarItem
                     icon={UserIcon}
