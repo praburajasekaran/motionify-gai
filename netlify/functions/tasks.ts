@@ -460,7 +460,7 @@ export const handler = compose(
       // For client users: strip restricted fields and force visible_to_client = true
       // Clients can only assign tasks to themselves (self-assignment)
       if (isClientUser) {
-        if (taskData.assignedTo && taskData.assignedTo !== auth?.user?.id) {
+        if (taskData.assignedTo && taskData.assignedTo !== auth?.user?.userId) {
           taskData.assignedTo = undefined;
         }
         taskData.priority = undefined;
@@ -882,7 +882,7 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Admin/PM can delete any task; creators can delete their own
+      // Permission check: Admin/support can delete any task; creators can delete their own
       const deleteUserRole = auth?.user?.role;
       const deleteAllowedRoles = ['super_admin', 'support'];
 
