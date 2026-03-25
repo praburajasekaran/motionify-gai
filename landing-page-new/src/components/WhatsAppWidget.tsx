@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
 
-// TODO: Replace with real WhatsApp number (country code + number, no + or spaces)
-const WHATSAPP_NUMBER = "919999999999";
+const WHATSAPP_NUMBER = "919952993324";
 
 type QuizSelections = {
   niche: string | null;

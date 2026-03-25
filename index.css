@@ -28,7 +28,7 @@
 
   /* --- Muted: Warm grey — not cold, not loud --- */
   --muted: #f2f0ed;
-  --muted-foreground: #78716c;
+  --muted-foreground: #57534e;
 
   /* --- Accent surface: Warm-tinted for hover/active states --- */
   --accent: #f5f0e8;
@@ -62,7 +62,7 @@
 
   /* --- Typography: IBM Plex Sans for everything in the portal --- */
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-serif: 'Merriweather', Georgia, serif;
   --font-mono: 'IBM Plex Mono', Menlo, monospace;
   --font-inter: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-fraunces: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -217,7 +217,7 @@
   --secondary: #2a2825;
   --secondary-foreground: #e7e5e0;
   --muted: #242220;
-  --muted-foreground: #8a8580;
+  --muted-foreground: #ada8a3;
   --accent: #2a2520;
   --accent-foreground: #d4a03a;
   --destructive: #d45a42;
@@ -240,7 +240,7 @@
   --sidebar-ring: #d4a03a;
   --radius: 0.5rem;
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-serif: 'Merriweather', Georgia, serif;
   --font-mono: 'IBM Plex Mono', Menlo, monospace;
   --shadow-color: transparent;
   --shadow-opacity: 0;
@@ -350,14 +350,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Base typography - landing page uses Fraunces for headings */
+/* Base typography - landing page uses Merriweather for headings */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-fraunces), Georgia, serif;
+  font-family: var(--font-serif);
   font-weight: 600;
   line-height: 1.3;
 }

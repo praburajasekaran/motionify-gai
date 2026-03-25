@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { getInquiries, getInquiriesByClientUserId, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -63,6 +63,7 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
 }
 
 export function InquiryDashboard() {
+  const navigate = useNavigate();
   const { user, isLoading } = useAuthContext();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([]);
@@ -321,10 +322,10 @@ export function InquiryDashboard() {
             ) : (
               <div className="divide-y divide-border">
                 {filteredInquiries.map((inquiry) => (
-                  <Link
+                  <div
                     key={inquiry.id}
-                    to={`/admin/inquiries/${inquiry.id}`}
-                    className="block p-4 hover:bg-muted transition-colors group"
+                    onClick={() => navigate(`/admin/inquiries/${inquiry.id}`)}
+                    className="block p-4 hover:bg-muted transition-colors group cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -373,7 +374,7 @@ export function InquiryDashboard() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            window.location.hash = `/admin/inquiries/${inquiry.id}/proposal`;
+                            navigate(`/admin/inquiries/${inquiry.id}/proposal`);
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -383,7 +384,7 @@ export function InquiryDashboard() {
                       )}
                     </div>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}

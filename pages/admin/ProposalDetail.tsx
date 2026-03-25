@@ -4,28 +4,14 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, MessageSquare, Lock, Send } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { CommentThread } from '../../components/proposals';
 import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PromptDialog } from '../../components/ui/PromptDialog';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
-
-/**
- * Sanitize HTML to prevent XSS attacks.
- * Strips script tags, event handlers, and dangerous attributes.
- */
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/data\s*:\s*text\/html/gi, '');
-}
+import { sanitizeHtml } from '../../lib/sanitize';
 
 interface DeliverableInput {
   id: string;
@@ -63,6 +49,7 @@ export function ProposalDetail() {
   const [promptDialog, setPromptDialog] = useState<{ open: boolean; type: 'reject' | 'revise' | null }>({ open: false, type: null });
   const [showForceEditDialog, setShowForceEditDialog] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [hasBeenEdited, setHasBeenEdited] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -264,6 +251,7 @@ export function ProposalDetail() {
       });
 
       setProposal(updatedProposal);
+      setHasBeenEdited(true);
       alert('Proposal updated successfully!');
       setIsEditMode(false);
     } catch (error) {
@@ -459,6 +447,7 @@ export function ProposalDetail() {
 
   const handleResend = async () => {
     if (!proposal || proposal.status !== 'changes_requested') return;
+    if (!hasBeenEdited) return;
 
     setIsResending(true);
     try {
@@ -575,23 +564,28 @@ export function ProposalDetail() {
 
               {/* Resend button for revision cycle */}
               {proposal.status === 'changes_requested' && (
-                <button
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50"
+                <div
+                  title={!hasBeenEdited ? "Save your changes to the proposal before resending" : undefined}
+                  className="inline-block"
                 >
-                  {isResending ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-green-700/30 border-t-green-700 rounded-full animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Resend to Client
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleResend}
+                    disabled={isResending || !hasBeenEdited}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-green-700/30 border-t-green-700 rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Resend to Client
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -961,16 +955,6 @@ export function ProposalDetail() {
               </div>
             )}
           </div>
-        )}
-
-        {/* Comments Section */}
-        {proposal && user && (
-          <CommentThread
-            proposalId={proposal.id}
-            currentUserId={user.id}
-            currentUserName={user.name}
-            isAuthenticated={!!user}
-          />
         )}
 
         {/* Response Tracking */}

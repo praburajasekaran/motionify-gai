@@ -128,6 +128,7 @@ export const StartProductionRequest = () => {
         try {
             const response = await fetch(`${API_BASE}/client-project-request`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -135,7 +136,6 @@ export const StartProductionRequest = () => {
                     title: formData.title.trim(),
                     description: formData.description.trim(),
                     tentativeDeadline: formData.tentativeDeadline,
-                    clientUserId: user.id,
                 }),
             });
 

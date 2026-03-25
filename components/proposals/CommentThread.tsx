@@ -35,6 +35,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
+    const lastPolledAtRef = useRef<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
     const { addNotification } = useNotifications();
@@ -106,9 +107,12 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
             setComments(fetchedComments);
             if (fetchedComments.length > 0) {
                 const latest = fetchedComments[fetchedComments.length - 1];
+                lastPolledAtRef.current = latest.createdAt;
                 setLastPolledAt(latest.createdAt);
             } else {
-                setLastPolledAt(new Date().toISOString());
+                const now = new Date().toISOString();
+                lastPolledAtRef.current = now;
+                setLastPolledAt(now);
             }
         } catch (err) {
             setError('Failed to load comments');
@@ -120,7 +124,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
 
     const pollForNewComments = async () => {
         try {
-            const newComments = await getComments(proposalId, lastPolledAt || undefined);
+            const newComments = await getComments(proposalId, lastPolledAtRef.current || undefined);
             if (newComments.length > 0) {
                 // Check if user was near bottom before new comments arrived
                 const wasNearBottom = isNearBottom();
@@ -155,6 +159,7 @@ export function CommentThread({ proposalId, currentUserId, currentUserName, isAu
                     return [...prev, ...trulyNew];
                 });
                 const latest = newComments[newComments.length - 1];
+                lastPolledAtRef.current = latest.createdAt;
                 setLastPolledAt(latest.createdAt);
 
                 // Auto-scroll to new comment if user was near bottom

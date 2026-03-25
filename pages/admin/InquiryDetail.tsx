@@ -23,6 +23,7 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
 };
 
 
+
 export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

@@ -217,7 +217,7 @@ export default function SolutionsSlider() {
                 </div>
                 <div className="p-5 pt-8 bg-white relative z-20">
                   <h3 className="text-base font-medium tracking-tight text-gray-900">{s.title}</h3>
-                  <p className="mt-1 text-sm text-gray-500 line-clamp-2">{s.desc}</p>
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">{s.desc}</p>
                 </div>
               </div>
             ))}
