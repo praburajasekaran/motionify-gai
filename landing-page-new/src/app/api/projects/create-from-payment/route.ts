@@ -41,11 +41,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch proposal from PostgreSQL first, fallback to local JSON
+        // Accept proposals in 'sent' or 'accepted' status — paying implies acceptance
         let proposal: any = null;
         try {
             const dbResult = await query(
-                'SELECT * FROM proposals WHERE id = $1 AND status = $2',
-                [proposalId, 'accepted']
+                'SELECT * FROM proposals WHERE id = $1 AND status IN ($2, $3)',
+                [proposalId, 'accepted', 'sent']
             );
             if (dbResult.rows.length > 0) {
                 const row = dbResult.rows[0];
@@ -61,12 +62,12 @@ export async function POST(request: NextRequest) {
 
         if (!proposal) {
             const proposals = await readJSON<any>(STORAGE_FILES.PROPOSALS);
-            proposal = proposals.find((p: any) => p.id === proposalId && p.status === 'accepted');
+            proposal = proposals.find((p: any) => p.id === proposalId && (p.status === 'accepted' || p.status === 'sent'));
         }
 
         if (!proposal) {
             return NextResponse.json(
-                { error: 'Accepted proposal not found' },
+                { error: 'Proposal not found or not in a payable state' },
                 { status: 404 }
             );
         }
@@ -220,6 +221,14 @@ export async function POST(request: NextRequest) {
                      VALUES ($1, $2, 'support', false, NOW())
                      ON CONFLICT (user_id, project_id) DO NOTHING`,
                     [supportUser.id, newProject.id]
+                );
+            }
+
+            // Mark proposal as accepted (payment = implicit acceptance)
+            if (proposal.status !== 'accepted') {
+                await client.query(
+                    `UPDATE proposals SET status = 'accepted', updated_at = NOW() WHERE id = $1`,
+                    [proposalId]
                 );
             }
 
