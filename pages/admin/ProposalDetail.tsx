@@ -947,6 +947,14 @@ export function ProposalDetail() {
                               Mark as Paid
                             </button>
                           )}
+                          {payment.status === 'completed' && !payment.project_id && (
+                            <button
+                              onClick={() => handleMarkAsPaid(payment.id)}
+                              className="text-orange-600 hover:text-orange-900"
+                            >
+                              Retry Project Creation
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
