@@ -5,6 +5,13 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { ArrowRight, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { requestMagicLink, verifyMagicLink } from '../lib/auth';
 
+function getSafeNextPath(next: string | null): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) {
+    return '/';
+  }
+  return next;
+}
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -19,14 +26,17 @@ export const Login: React.FC = () => {
   const [verifyError, setVerifyError] = useState('');
 
   useEffect(() => {
-    if (user) navigate('/');
-  }, [user, navigate]);
+    if (user) navigate(getSafeNextPath(searchParams.get('next')), { replace: true });
+  }, [user, navigate, searchParams]);
 
   const verificationAttempted = React.useRef<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
     const emailParam = searchParams.get('email');
+    if (emailParam && !token) {
+      setEmail(emailParam);
+    }
     if (token && verificationAttempted.current !== token) {
       verificationAttempted.current = token;
       handleVerification(token, emailParam || undefined);
@@ -40,6 +50,7 @@ export const Login: React.FC = () => {
       const result = await verifyMagicLink(token, email);
       if (result.success && result.data) {
         setUser(result.data.user);
+        navigate(getSafeNextPath(searchParams.get('next')), { replace: true });
       } else {
         setVerifyError(result.error?.message || result.message || 'Verification failed. The link may have expired.');
       }
@@ -57,7 +68,12 @@ export const Login: React.FC = () => {
     setSendError('');
     setSendSuccess(false);
     try {
-      const result = await requestMagicLink({ email, rememberMe });
+      const next = getSafeNextPath(searchParams.get('next'));
+      const result = await requestMagicLink({
+        email,
+        rememberMe,
+        ...(next !== '/' ? { next } : {}),
+      });
       if (result.success) {
         setSendSuccess(true);
       } else {

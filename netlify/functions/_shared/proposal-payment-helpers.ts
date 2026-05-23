@@ -14,10 +14,20 @@ interface DbClient {
   query(queryText: string, values?: any[]): Promise<{ rows: any[] }>;
 }
 
+export interface ProjectActivationResult {
+  projectId: string | null;
+  projectNumber?: string;
+  clientUserId?: string;
+  clientEmail?: string;
+  clientName?: string;
+  created: boolean;
+  activated: boolean;
+}
+
 export async function acceptProposalAndCreateProject(
   client: DbClient,
   paymentId: string
-): Promise<{ projectId: string | null }> {
+): Promise<ProjectActivationResult> {
   // Fetch payment
   const paymentResult = await client.query(
     `SELECT id, proposal_id, payment_type FROM payments WHERE id = $1`,
@@ -26,14 +36,14 @@ export async function acceptProposalAndCreateProject(
 
   if (paymentResult.rows.length === 0) {
     console.error('[acceptProposalAndCreateProject] Payment not found:', paymentId);
-    return { projectId: null };
+    return { projectId: null, created: false, activated: false };
   }
 
   const payment = paymentResult.rows[0];
 
   // Only advance payments trigger proposal acceptance and project creation
   if (payment.payment_type !== 'advance') {
-    return { projectId: null };
+    return { projectId: null, created: false, activated: false };
   }
 
   const proposalId = payment.proposal_id;
@@ -46,7 +56,7 @@ export async function acceptProposalAndCreateProject(
 
   if (proposalResult.rows.length === 0) {
     console.error('[acceptProposalAndCreateProject] Proposal not found:', proposalId);
-    return { projectId: null };
+    return { projectId: null, created: false, activated: false };
   }
 
   const proposal = proposalResult.rows[0];
@@ -73,7 +83,26 @@ export async function acceptProposalAndCreateProject(
       [projectId, paymentId]
     );
     console.log('[acceptProposalAndCreateProject] Project already exists:', projectId);
-    return { projectId };
+
+    const existingDetails = await client.query(
+      `SELECT p.id, p.project_number, p.client_user_id,
+              u.email as client_email, u.full_name as client_name
+       FROM projects p
+       LEFT JOIN users u ON p.client_user_id = u.id
+       WHERE p.id = $1`,
+      [projectId]
+    );
+
+    const details = existingDetails.rows[0] || {};
+    return {
+      projectId,
+      projectNumber: details.project_number,
+      clientUserId: details.client_user_id,
+      clientEmail: details.client_email,
+      clientName: details.client_name,
+      created: false,
+      activated: true,
+    };
   }
 
   // Fetch inquiry
@@ -84,27 +113,31 @@ export async function acceptProposalAndCreateProject(
 
   if (inquiryResult.rows.length === 0) {
     console.error('[acceptProposalAndCreateProject] Inquiry not found for proposal:', proposalId);
-    return { projectId: null };
+    return { projectId: null, created: false, activated: false };
   }
 
   const inquiry = inquiryResult.rows[0];
 
-  // Get or create client user
-  let clientUserId = proposal.client_user_id;
-  if (!clientUserId) {
-    const userResult = await client.query(
-      `SELECT id FROM users WHERE email = $1`,
-      [inquiry.contact_email]
+  // Get or create the Primary Client Contact from the inquiry relationship.
+  let clientUserId: string;
+  let clientEmail = inquiry.contact_email;
+  let clientName = inquiry.contact_name;
+  const userResult = await client.query(
+    `SELECT id, email, full_name FROM users WHERE email = $1`,
+    [inquiry.contact_email]
+  );
+  if (userResult.rows.length > 0) {
+    clientUserId = userResult.rows[0].id;
+    clientEmail = userResult.rows[0].email;
+    clientName = userResult.rows[0].full_name || inquiry.contact_name;
+  } else {
+    const newUserResult = await client.query(
+      `INSERT INTO users (email, full_name, role) VALUES ($1, $2, 'client') RETURNING id, email, full_name`,
+      [inquiry.contact_email, inquiry.contact_name]
     );
-    if (userResult.rows.length > 0) {
-      clientUserId = userResult.rows[0].id;
-    } else {
-      const newUserResult = await client.query(
-        `INSERT INTO users (email, full_name, role) VALUES ($1, $2, 'client') RETURNING id`,
-        [inquiry.contact_email, inquiry.contact_name]
-      );
-      clientUserId = newUserResult.rows[0].id;
-    }
+    clientUserId = newUserResult.rows[0].id;
+    clientEmail = newUserResult.rows[0].email;
+    clientName = newUserResult.rows[0].full_name;
   }
 
   // Generate project number
@@ -171,5 +204,13 @@ export async function acceptProposalAndCreateProject(
 
   console.log(`[acceptProposalAndCreateProject] Project ${projectNumber} created for proposal ${proposalId}`);
 
-  return { projectId: project.id };
+  return {
+    projectId: project.id,
+    projectNumber: project.project_number,
+    clientUserId,
+    clientEmail,
+    clientName,
+    created: true,
+    activated: true,
+  };
 }

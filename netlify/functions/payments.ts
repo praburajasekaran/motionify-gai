@@ -1,5 +1,5 @@
 import Razorpay from 'razorpay';
-import { query as dbQuery } from './_shared/db';
+import { query as dbQuery, transaction } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -158,37 +158,42 @@ export const handler = compose(
         const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = validation.data;
 
         try {
-        const result = await dbQuery(
-          `UPDATE payments
-           SET razorpay_order_id = $1,
-               razorpay_payment_id = $2,
-               razorpay_signature = $3,
-               status = 'completed',
-               paid_at = NOW()
-           WHERE id = $4
-           RETURNING *`,
-          [razorpayOrderId, razorpayPaymentId, razorpaySignature, paymentId]
-        );
+        const { payment, activation } = await transaction(async (client) => {
+          const result = await client.query(
+            `UPDATE payments
+             SET razorpay_order_id = $1,
+                 razorpay_payment_id = $2,
+                 razorpay_signature = $3,
+                 status = 'completed',
+                 paid_at = NOW()
+             WHERE id = $4
+             RETURNING *`,
+            [razorpayOrderId, razorpayPaymentId, razorpaySignature, paymentId]
+          );
 
-        if (result.rows.length === 0) {
-          return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: 'Payment not found' }),
-          };
-        }
+          if (result.rows.length === 0) {
+            const notFoundError = new Error('Payment not found');
+            (notFoundError as any).statusCode = 404;
+            throw notFoundError;
+          }
 
-        const payment = result.rows[0];
+          const payment = result.rows[0];
+          const activation = await acceptProposalAndCreateProject(client, payment.id);
 
-        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
+          if (payment.payment_type === 'advance' && !activation.projectId) {
+            throw new Error('Project activation failed after advance payment');
+          }
 
-        if (newProjectId) {
-          await logActivity(client, {
+          return { payment, activation };
+        });
+
+        if (activation.projectId && activation.created) {
+          await logActivity({
             type: 'PROJECT_CREATED',
             userId: auth?.user?.userId || '',
             userName: auth?.user?.fullName || 'System',
-            projectId: newProjectId,
-            proposalId: payment.proposal_id || null,
+            projectId: activation.projectId,
+            proposalId: payment.proposal_id || undefined,
             details: {},
           });
         }
@@ -198,18 +203,29 @@ export const handler = compose(
           type: 'PAYMENT_RECEIVED',
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
-          projectId: payment.project_id || null,
-          proposalId: payment.proposal_id || null,
+          projectId: activation.projectId || payment.project_id || undefined,
+          proposalId: payment.proposal_id || undefined,
           details: { amount: payment.amount, currency: payment.currency, paymentType: payment.payment_type },
         });
 
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows[0]),
+          body: JSON.stringify({
+            ...payment,
+            project_id: activation.projectId || payment.project_id,
+            activation,
+          }),
         };
         } catch (verifyError: any) {
           console.error('Payment verification error:', verifyError);
+          if (verifyError?.statusCode === 404) {
+            return {
+              statusCode: 404,
+              headers,
+              body: JSON.stringify({ error: 'Payment not found' }),
+            };
+          }
           return {
             statusCode: 500,
             headers,
@@ -235,17 +251,41 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const { paymentId } = validation.data;
 
-        const result = await dbQuery(
-          `UPDATE payments
-           SET status = 'completed',
-               paid_at = NOW(),
-               notes = 'Marked as paid manually by admin'
-           WHERE id = $1
-           RETURNING *`,
-          [paymentId]
-        );
+        let payment: any;
+        let activation: any;
+        try {
+          const completed = await transaction(async (client) => {
+            const result = await client.query(
+              `UPDATE payments
+               SET status = 'completed',
+                   paid_at = NOW(),
+                   notes = 'Marked as paid manually by admin'
+               WHERE id = $1
+               RETURNING *`,
+              [paymentId]
+            );
 
-        if (result.rows.length === 0) {
+            if (result.rows.length === 0) {
+              const notFoundError = new Error('Payment not found');
+              (notFoundError as any).statusCode = 404;
+              throw notFoundError;
+            }
+
+            const payment = result.rows[0];
+            const activation = await acceptProposalAndCreateProject(client, payment.id);
+
+            if (payment.payment_type === 'advance' && !activation.projectId) {
+              throw new Error('Project activation failed after manual advance payment completion');
+            }
+
+            return { payment, activation };
+          });
+          payment = completed.payment;
+          activation = completed.activation;
+        } catch (error: any) {
+          if (error?.statusCode !== 404) {
+            throw error;
+          }
           return {
             statusCode: 404,
             headers,
@@ -253,17 +293,13 @@ export const handler = compose(
           };
         }
 
-        const payment = result.rows[0];
-
-        const { projectId: newProjectId } = await acceptProposalAndCreateProject(client, payment.id);
-
-        if (newProjectId) {
-          await logActivity(client, {
+        if (activation.projectId && activation.created) {
+          await logActivity({
             type: 'PROJECT_CREATED',
             userId: auth?.user?.userId || '',
             userName: auth?.user?.fullName || 'Admin',
-            projectId: newProjectId,
-            proposalId: payment.proposal_id || null,
+            projectId: activation.projectId,
+            proposalId: payment.proposal_id || undefined,
             details: {},
           });
         }
@@ -273,15 +309,19 @@ export const handler = compose(
           type: 'PAYMENT_RECEIVED',
           userId: auth?.user?.userId || '',
           userName: auth?.user?.fullName || 'Unknown',
-          projectId: payment.project_id || null,
-          proposalId: payment.proposal_id || null,
+          projectId: activation.projectId || payment.project_id || undefined,
+          proposalId: payment.proposal_id || undefined,
           details: { amount: payment.amount, paymentType: 'manual' },
         });
 
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify(result.rows[0]),
+          body: JSON.stringify({
+            ...payment,
+            project_id: activation.projectId || payment.project_id,
+            activation,
+          }),
         };
       }
 

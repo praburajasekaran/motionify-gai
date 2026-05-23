@@ -40,6 +40,8 @@ export function Payment() {
 
     const [proposal, setProposal] = useState<Proposal | null>(null);
     const [inquiryNumber, setInquiryNumber] = useState<string>('');
+    const [clientEmail, setClientEmail] = useState<string>('');
+    const [activatedProjectId, setActivatedProjectId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentComplete, setPaymentComplete] = useState(false);
@@ -65,6 +67,7 @@ export function Payment() {
                     const fetchedInquiry = await getInquiryById(fetchedProposal.inquiryId);
                     if (fetchedInquiry) {
                         setInquiryNumber(fetchedInquiry.inquiryNumber);
+                        setClientEmail(fetchedInquiry.contactEmail);
                     }
                 }
             } catch (error) {
@@ -128,6 +131,10 @@ export function Payment() {
                         });
 
                         if (verifyResponse.ok) {
+                            const verifyData = await verifyResponse.json().catch(() => ({}));
+                            const activation = verifyData.activation || {};
+                            setActivatedProjectId(activation.projectId || verifyData.project_id || verifyData.projectId || null);
+                            setClientEmail(activation.clientEmail || clientEmail);
                             setPaymentComplete(true);
                         } else {
                             const errorData = await verifyResponse.json().catch(() => ({}));
@@ -196,13 +203,23 @@ export function Payment() {
                     </div>
                     <h1 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h1>
                     <p className="text-muted-foreground mb-8">
-                        Thank you for your payment. Your project has been moved to the setup phase.
+                        Thank you for your payment. Your project is ready to open.
                     </p>
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => {
+                            if (activatedProjectId) {
+                                const params = new URLSearchParams({
+                                    projectId: activatedProjectId,
+                                    ...(clientEmail ? { email: clientEmail } : {}),
+                                });
+                                navigate(`/project-access?${params.toString()}`);
+                            } else {
+                                navigate('/');
+                            }
+                        }}
                         className="w-full py-3 px-4 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
                     >
-                        Go to Dashboard
+                        Open Project
                     </button>
                 </div>
             </div>

@@ -21,6 +21,7 @@ const isDevelopment = import.meta.env.DEV;
 export interface MagicLinkRequestBody {
     email: string;
     rememberMe?: boolean;
+    next?: string;
 }
 
 export interface MagicLinkRequestResponse {
