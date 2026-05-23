@@ -47,6 +47,16 @@ interface RazorpayWebhookPayload {
   created_at: number;
 }
 
+function getPortalBaseUrl(): string {
+  const rawBaseUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || process.env.URL || 'http://localhost:5173';
+  return rawBaseUrl.replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
+}
+
+function buildProjectAccessUrl(projectId: string, email: string): string {
+  const params = new URLSearchParams({ projectId, email });
+  return `${getPortalBaseUrl()}/portal/project-access?${params.toString()}`;
+}
+
 /**
  * Verify Razorpay webhook signature using HMAC SHA256
  */
@@ -176,11 +186,12 @@ async function handlePaymentCaptured(
   // Send success email (non-blocking)
   try {
     // Fetch client and project info for email
-    const paymentInfo = await client.query(
-      `SELECT
-        p.payment_type, p.amount, p.currency,
-        proj.project_number,
-        u.email as client_email, u.full_name as client_name
+      const paymentInfo = await client.query(
+        `SELECT
+          p.payment_type, p.amount, p.currency,
+          proj.id as project_id,
+          proj.project_number,
+          u.email as client_email, u.full_name as client_name
       FROM payments p
       LEFT JOIN projects proj ON p.project_id = proj.id
       LEFT JOIN users u ON proj.client_user_id = u.id
@@ -190,8 +201,9 @@ async function handlePaymentCaptured(
 
     if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
       const info = paymentInfo.rows[0];
-      const baseUrl = process.env.URL || 'http://localhost:5173';
-      const projectUrl = `${baseUrl}/portal/projects`;
+      const projectUrl = info.project_id && info.client_email
+        ? buildProjectAccessUrl(info.project_id, info.client_email)
+        : `${getPortalBaseUrl()}/portal/projects`;
 
       console.log('[Webhook] Sending payment success email for payment:', paymentId);
 

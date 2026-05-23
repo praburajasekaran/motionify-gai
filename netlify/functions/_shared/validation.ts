@@ -76,6 +76,7 @@ export const updateUserSchema = z.object({
 export const magicLinkRequestSchema = z.object({
     email: emailSchema,
     rememberMe: z.boolean().optional().default(false),
+    next: z.string().max(1000).optional(),
 });
 
 export const magicLinkVerifySchema = z.object({

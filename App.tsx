@@ -2,7 +2,7 @@
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import React from 'react';
 import { ThemeProvider } from 'next-themes';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { isClient } from './lib/permissions';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
@@ -20,6 +20,7 @@ const ProjectSettings = React.lazy(() => import('./pages/ProjectSettings').then(
 const CreateProject = React.lazy(() => import('./pages/CreateProject').then(m => ({ default: m.CreateProject })));
 const NewProjectRouter = React.lazy(() => import('./pages/NewProjectRouter').then(m => ({ default: m.NewProjectRouter })));
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const ProjectAccess = React.lazy(() => import('./pages/ProjectAccess').then(m => ({ default: m.ProjectAccess })));
 const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const InquiryTracking = React.lazy(() => import('./pages/InquiryTracking').then(m => ({ default: m.InquiryTracking })));
 const PermissionTest = React.lazy(() => import('./pages/PermissionTest'));
@@ -36,6 +37,7 @@ const Payment = React.lazy(() => import('./pages/client/Payment').then(m => ({ d
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthContext();
+  const location = useLocation();
 
   // Show layout shell with skeleton content while checking authentication
   if (isLoading) {
@@ -55,7 +57,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const next = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }
 
   // Render children with layout if authenticated
@@ -93,6 +96,7 @@ function App() {
                         <Route path="/landing" element={<LandingPage />} />
                         <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
                         <Route path="/login" element={<Login />} />
+                        <Route path="/project-access" element={<ProjectAccess />} />
 
                         {/* Protected routes - with layout */}
                         <Route path="/" element={<ProtectedRoute><ClientHomeRedirect /></ProtectedRoute>} />
@@ -134,4 +138,3 @@ function App() {
 }
 
 export default App;
-

@@ -89,10 +89,10 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
     // Validate request body
     const validation = validateRequest(event.body, magicLinkRequestSchema, origin);
     if (!validation.success) {
-        return validation.response;
+        return (validation as { response: NetlifyResponse }).response;
     }
 
-    const { email, rememberMe } = validation.data;
+        const { email, rememberMe, next } = validation.data;
 
     // Rate limit check
     const rateLimitResult = await rateLimitMagicLink(email);
@@ -141,7 +141,14 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         // Build magic link URL - strip any trailing /api or /portal suffixes
         const rawPortalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
         const portalUrl = rawPortalUrl.replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
-        const magicLink = `${portalUrl}/portal/login?token=${token}&email=${encodeURIComponent(email)}`;
+        const magicLinkParams = new URLSearchParams({
+            token,
+            email,
+        });
+        if (next && next.startsWith('/') && !next.startsWith('//')) {
+            magicLinkParams.set('next', next);
+        }
+        const magicLink = `${portalUrl}/portal/login?${magicLinkParams.toString()}`;
         logger.info('Magic link generated', { portalUrl });
 
         // Log full magic link in local development for easy access
