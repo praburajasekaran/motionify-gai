@@ -1,11 +1,11 @@
-# Motionify PM Portal - Agent Instructions
+# Motionify Studio Portal - Agent Instructions
 
-This document helps AI agents understand the Motionify codebase. It is updated after each successful task completion with learnings.
+This document helps AI agents understand the Motionify Studio codebase. It is updated after each successful task completion with learnings.
 
 ## Project Overview
 
-Motionify PM Portal is a client collaboration platform for video production. It enables:
-- **Motionify Team** (Super Admin, Project Manager, Team Member) to manage projects
+Motionify Studio Portal is a client collaboration platform for video production. It enables:
+- **Motionify Studio Team** (Super Admin, Project Manager, Team Member) to manage projects
 - **Clients** (Primary Contact, Team Member) to review and approve deliverables
 
 ## Key Directories

@@ -294,7 +294,7 @@ function processEmailQueue() {
 
 **Batched Email Format:**
 ```
-Subject: [Motionify] You have 3 new notifications - Project Name
+Subject: [Motionify Studio] You have 3 new notifications - Project Name
 
 Body:
 - Notification 1: Task assigned
@@ -306,7 +306,7 @@ Body:
 
 **Immediate Email Format:**
 ```
-Subject: [Motionify] Action Required: Approve Deliverable - Project Name
+Subject: [Motionify Studio] Action Required: Approve Deliverable - Project Name
 
 Body:
 - Single notification with clear call-to-action

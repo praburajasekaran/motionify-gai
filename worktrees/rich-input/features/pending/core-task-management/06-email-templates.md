@@ -29,7 +29,7 @@ Deliverable: {{deliverableName}}
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ### 2. Task Status Changed
@@ -48,7 +48,7 @@ Status: {{oldStatus}} → {{newStatus}}
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ### 3. Task Ready for Client Review
@@ -68,7 +68,7 @@ Delivery Notes:
 [Review Task]({{taskUrl}})
 
 ---
-Motionify Studios
+Motionify Studio
 ```
 
 ### 4. Task Approved
@@ -85,7 +85,7 @@ Hi {{userName}},
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ### 5. Revision Requested
@@ -105,7 +105,7 @@ Feedback:
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ### 6. Comment Added
@@ -141,7 +141,7 @@ Hi {{userName}},
 [View Comment]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ### 8. Deadline Reminder (24h)
@@ -161,7 +161,7 @@ Status: {{currentStatus}}
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ## Client Email Templates
@@ -189,7 +189,7 @@ Next steps:
 Questions? Reply to this email.
 
 ---
-Motionify Studios
+Motionify Studio
 {{supportEmail}}
 ```
 
@@ -209,7 +209,7 @@ We'll continue with the next tasks.
 [View Project]({{projectUrl}})
 
 ---
-Motionify Studios
+Motionify Studio
 ```
 
 ### 11. Revision Acknowledged
@@ -231,7 +231,7 @@ We'll make the adjustments and notify you when ready.
 [Track Progress]({{taskUrl}})
 
 ---
-Motionify Studios
+Motionify Studio
 ```
 
 ## Overdue Task
@@ -255,7 +255,7 @@ Please update the task.
 [View Task]({{taskUrl}})
 
 ---
-Motionify PM Portal
+Motionify Studio Portal
 ```
 
 ## Email Variables

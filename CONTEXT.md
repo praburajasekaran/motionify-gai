@@ -1,6 +1,6 @@
-# Motionify PM Portal
+# Motionify Studio Portal
 
-Motionify PM Portal manages the commercial handoff from a video production inquiry to an active client project. This glossary defines the domain language agents should use when discussing the portal.
+Motionify Studio Portal manages the commercial handoff from a video production inquiry to an active client project. This glossary defines the domain language agents should use when discussing the portal.
 
 ## Language
 

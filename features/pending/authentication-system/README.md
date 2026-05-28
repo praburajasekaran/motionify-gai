@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Authentication System provides secure, passwordless access to the Motionify PM Portal using magic link technology. Users receive a one-time login link via email, eliminating password management while maintaining security through JWT tokens and HTTP-only cookies. The system supports session persistence across browser tabs, automatic token refresh for active users, and role-based access control for the platform's four user types.
+The Authentication System provides secure, passwordless access to the Motionify Studio Portal using magic link technology. Users receive a one-time login link via email, eliminating password management while maintaining security through JWT tokens and HTTP-only cookies. The system supports session persistence across browser tabs, automatic token refresh for active users, and role-based access control for the platform's four user types.
 
 ## Customer Journey Summary
 

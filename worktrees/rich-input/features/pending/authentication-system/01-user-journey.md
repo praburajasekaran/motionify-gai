@@ -32,8 +32,8 @@ Sends email via Amazon SES (<30 seconds delivery)
 STEP 4: User Receives Email
     ↓
 User sees success message: "Check your inbox for magic link"
-Email arrives with subject: "Your Motionify Portal Login Link"
-Email contains branded button: "Log In to Motionify Portal"
+Email arrives with subject: "Your Motionify Studio Portal Login Link"
+Email contains branded button: "Log In to Motionify Studio Portal"
     ↓
 
 STEP 5: User Clicks Magic Link

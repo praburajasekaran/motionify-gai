@@ -47,7 +47,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 │                        │    MOTIONIFY LOGO       │                         │
 │                        └─────────────────────────┘                         │
 │                                                                             │
-│                   Welcome to Motionify PM Portal                            │
+│                   Welcome to Motionify Studio Portal                            │
 │                                                                             │
 │              Log in with your email - no password needed                    │
 │                                                                             │
@@ -128,7 +128,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 │   │ ℹ️  What to do next:                                              │    │
 │   │                                                                    │    │
 │   │ 1. Check your email inbox (and spam folder)                       │    │
-│   │ 2. Click the "Log In to Motionify Portal" button                  │    │
+│   │ 2. Click the "Log In to Motionify Studio Portal" button                  │    │
 │   │ 3. You'll be automatically logged in                              │    │
 │   │                                                                    │    │
 │   │ ⏱️  The magic link expires in 15 minutes.                         │    │
@@ -517,7 +517,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 - `<Spinner>` - Loading states
 
 **Design Tokens:**
-- Primary color: Motionify brand blue (#0066FF)
+- Primary color: Motionify Studio brand blue (#0066FF)
 - Success: Green (#00C853)
 - Error: Red (#D32F2F)
 - Warning: Orange (#FF9800)

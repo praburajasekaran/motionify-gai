@@ -1,6 +1,6 @@
 # Production Deployment Checklist
 
-This document provides a comprehensive checklist for deploying the Motionify Portal to production.
+This document provides a comprehensive checklist for deploying the Motionify Studio Portal to production.
 
 ## Pre-Deployment Checklist
 

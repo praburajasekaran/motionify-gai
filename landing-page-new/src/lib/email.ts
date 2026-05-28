@@ -28,7 +28,7 @@ export interface EmailOptions {
  */
 export async function sendEmail(options: EmailOptions) {
     const mailOptions = {
-        from: '"Motionify" <hello@motionify.com>',
+        from: '"Motionify Studio" <hello@motionify.com>',
         ...options,
     };
 
@@ -61,7 +61,7 @@ export async function sendWelcomeEmail(data: {
       <div style="text-align: center; margin-bottom: 32px;">
         <img src="https://motionify.studio/motionify-studio-dark.png" alt="Motionify Studio" width="180" style="display: inline-block;" />
       </div>
-      <h1 style="color: #7c3aed;">Welcome to Motionify!</h1>
+      <h1 style="color: #7c3aed;">Welcome to Motionify Studio!</h1>
       <p>Hi ${data.name},</p>
       <p>We're excited to work with you on your project.</p>
       
@@ -88,14 +88,14 @@ export async function sendWelcomeEmail(data: {
       
       <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
       <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-        &copy; ${new Date().getFullYear()} Motionify. All rights reserved.
+        &copy; ${new Date().getFullYear()} Motionify Studio. All rights reserved.
       </p>
     </div>
   `;
 
     return sendEmail({
         to: data.email,
-        subject: `Welcome to Motionify - Project ${data.projectNumber}`,
+        subject: `Welcome to Motionify Studio - Project ${data.projectNumber}`,
         html,
     });
 }

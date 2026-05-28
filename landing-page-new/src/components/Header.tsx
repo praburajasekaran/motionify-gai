@@ -30,7 +30,7 @@ export default function Header() {
           <Link href="/" className="inline-flex items-center gap-3 group">
             <Image
               src="/images/motionify-light-logo.png"
-              alt="Motionify.Studio"
+              alt="Motionify Studio"
               width={120}
               height={36}
               className={`w-auto transition-all duration-300 group-hover:opacity-90 ${isScrolled ? 'h-7 sm:h-8' : 'h-8 sm:h-9'

@@ -1,6 +1,6 @@
-# Motionify PM Portal Test Cases
+# Motionify Studio Portal Test Cases
 
-Comprehensive test cases for the Motionify Project Management Portal - a client collaboration platform for video production.
+Comprehensive test cases for the Motionify Studio Project Management Portal - a client collaboration platform for video production.
 
 **Last Updated:** 2026-01-12  
 **Total Test Cases:** 85  
@@ -267,7 +267,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ---
 
-### TC-PM-006: Assign Motionify Team (Admin) ✅ COMPLETE
+### TC-PM-006: Assign Motionify Studio Team (Admin) ✅ COMPLETE
 **Priority:** High  
 **Type:** Functional  
 **Status:** ✅ Implemented in `ManageTeamModal.tsx`
@@ -318,7 +318,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 ## 3. TASK MANAGEMENT TESTS
 
-### TC-TM-001: Create Task (Motionify Team) ✅ COMPLETE
+### TC-TM-001: Create Task (Motionify Studio Team) ✅ COMPLETE
 **Priority:** Critical  
 **Type:** Functional  
 **Status:** ✅ Verified 2026-01-10 - Implemented in `ProjectDetail.tsx`, `TaskEditModal.tsx`
@@ -359,7 +359,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Expected Results:**
 - ✅ "Create Task" button NOT visible
 - ✅ If API called directly: 403 Forbidden
-- ✅ Error: "Only Motionify team can create tasks"
+- ✅ Error: "Only Motionify Studio team can create tasks"
 
 > **Implementation Notes:** Add Task button and quick-add form hidden for clients via `isInternalUser` check (line 147, 180, 187). API POST /tasks returns 403 with code `PERMISSION_DENIED` for client roles (Primary Contact, Team Member).
 
@@ -373,7 +373,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Test Steps:**
 1. Task in "Pending" status
 2. Move to "In Progress" (any team member)
-3. Move to "Awaiting Approval" (Motionify team only)
+3. Move to "Awaiting Approval" (Motionify Studio team only)
 4. Client approves → "Completed"
 
 **Expected Results:**
@@ -388,10 +388,10 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 ### TC-TM-004: ~~Client Approves Task~~ ❌ NOT APPLICABLE
 **Priority:** N/A  
 **Type:** Functional  
-**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients approve **Deliverables**, not Tasks. See TC-DA-002.
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify Studio team members only. Clients approve **Deliverables**, not Tasks. See TC-DA-002.
 
-> **Note:** This test case was incorrectly specified. In Motionify:
-> - **Tasks** = Internal work items for Motionify team (PM, Team Members)
+> **Note:** This test case was incorrectly specified. In Motionify Studio:
+> - **Tasks** = Internal work items for Motionify Studio team (PM, Team Members)
 > - **Deliverables** = Client-facing outputs that require approval
 >
 > For client approval flow, see: **TC-DA-002: Approve Deliverable** ✅ COMPLETE
@@ -401,7 +401,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 ### TC-TM-005: ~~Client Requests Revision~~ ❌ NOT APPLICABLE
 **Priority:** N/A  
 **Type:** Functional  
-**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients request revisions on **Deliverables**, not Tasks. See TC-DA-003.
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify Studio team members only. Clients request revisions on **Deliverables**, not Tasks. See TC-DA-003.
 
 > **Note:** This test case was incorrectly specified. For client revision requests, see: **TC-DA-003: Request Revision (Within Quota)** ✅ COMPLETE
 
@@ -410,7 +410,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 ### TC-TM-006: ~~Only Client PM Can Approve~~ ❌ NOT APPLICABLE
 **Priority:** N/A  
 **Type:** Permission  
-**Status:** ❌ **INVALID TEST** - Tasks are for Motionify team members only. Clients don't approve tasks. See TC-AC-004.
+**Status:** ❌ **INVALID TEST** - Tasks are for Motionify Studio team members only. Clients don't approve tasks. See TC-AC-004.
 
 > **Note:** For deliverable approval permissions, see: **TC-AC-004: Client Team Cannot Approve** ✅ COMPLETE
 
@@ -466,7 +466,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 **Expected Results:**
 - ✅ Internal task NOT visible to client
-- ✅ Task visible to all Motionify roles
+- ✅ Task visible to all Motionify Studio roles
 - ✅ Client cannot access via direct URL (404)
 - ✅ Internal badge visible to team
 
@@ -629,7 +629,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 **Expected Results:**
 - ✅ Download returns 403 Forbidden with `FILES_EXPIRED` code
 - ✅ Error: "Files have expired. Contact support to restore access."
-- ✅ Motionify staff can still access
+- ✅ Motionify Studio staff can still access
 - ✅ Scheduled job runs daily at 2 AM UTC
 
 > **Implementation Notes:** Created `scheduled-file-expiry.ts` with Netlify's `@daily` schedule. Added `final_delivered_at` and `files_expired` columns to deliverables table via `add-file-expiry-tracking.sql`. Updated `deliverables.ts` to check `files_expired` flag and return 403 for expired files.
@@ -690,7 +690,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 - ✅ Status → "rejected" → "revision_requested"
 - ✅ Revision count: 2 of 3 used
 - ✅ Feedback stored
-- ✅ Motionify team notified
+- ✅ Motionify Studio team notified
 
 ---
 
@@ -954,7 +954,7 @@ Comprehensive test cases for the Motionify Project Management Portal - a client 
 
 **Test Steps:**
 1. Client requests revision on deliverable
-2. Check Motionify team's email
+2. Check Motionify Studio team's email
 
 **Expected Results:**
 - ✅ Email sent to project team

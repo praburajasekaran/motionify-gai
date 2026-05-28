@@ -262,7 +262,7 @@ export const handler = compose(
           headers,
           body: JSON.stringify({
             error: 'Access denied',
-            message: 'Only Motionify Support and Admins can create deliverables'
+            message: 'Only Motionify Studio Support and Admins can create deliverables'
           }),
         };
       }

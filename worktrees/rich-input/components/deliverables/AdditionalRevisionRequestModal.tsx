@@ -132,7 +132,7 @@ export const AdditionalRevisionRequestModal: React.FC<AdditionalRevisionRequestM
                     </div>
 
                     <p className="text-sm text-muted-foreground">
-                        This request will be sent to the Motionify team for approval.
+                        This request will be sent to the Motionify Studio team for approval.
                         Additional revisions may incur extra charges based on your agreement.
                     </p>
 

@@ -24,7 +24,7 @@
   - SDK/Client: `resend` v6.7.0
   - Auth: `RESEND_API_KEY`
   - Implementation: `netlify/functions/send-email.ts`, `landing-page-new/src/lib/email/emailService.ts`
-  - From address: `RESEND_FROM_EMAIL` (default: `Motionify <onboarding@resend.dev>`)
+  - From address: `RESEND_FROM_EMAIL` (default: `Motionify Studio <onboarding@resend.dev>`)
   - Use cases: Magic link authentication, mention notifications, payment receipts, invoice delivery
 
 - Nodemailer - Alternative email service (fallback/development)

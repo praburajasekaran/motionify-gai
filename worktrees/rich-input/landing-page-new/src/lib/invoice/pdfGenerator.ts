@@ -125,11 +125,11 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.companyDetails.name || 'Motionify', margin, 25);
+  doc.text(data.companyDetails.name || 'Motionify Studio', margin, 25);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.companyDetails.address || '123 Business Park, Tech City', margin, 33);
+  doc.text(data.companyDetails.address || 'Door no: F/22, 2nd Floor, F Block, Plot no: 264, 2nd Main Rd, Block F, Anna Nagar, Chennai, Tamil Nadu 600102', margin, 33);
   doc.text(`Email: ${data.companyDetails.email}`, margin, 39);
   if (data.companyDetails.phone) {
     doc.text(`Phone: ${data.companyDetails.phone}`, pageWidth - margin - 50, 33);
@@ -361,7 +361,7 @@ export async function generateReceiptPDF(paymentData: PaymentData): Promise<Blob
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Motionify', margin, 33);
+  doc.text('Motionify Studio', margin, 33);
   doc.text('Thank you for your payment!', pageWidth - margin - 60, 25);
 
   yPosition = 55;

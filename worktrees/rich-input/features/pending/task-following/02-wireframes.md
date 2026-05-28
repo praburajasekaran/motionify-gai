@@ -156,7 +156,7 @@ DELETE /api/tasks/TASK-123/follow
 │                                          │     (Client Lead)          │    │
 │                                          │                             │    │
 │                                          │  👤 Admin User             │    │
-│                                          │     (Motionify Admin)      │    │
+│                                          │     (Motionify Studio Admin)      │    │
 │                                          │                             │    │
 │                                          └─────────────────────────────┘    │
 │                                                                              │

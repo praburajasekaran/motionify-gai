@@ -199,8 +199,8 @@ This document contains comprehensive test scenarios for the Notifications System
 
 **Expected Results:**
 - ✅ Email received at Jane's email address
-- ✅ From: "Motionify Portal <hello@motionify.studio>"
-- ✅ Subject: "[Motionify] You were assigned to a task - Brand Video Campaign"
+- ✅ From: "Motionify Studio Portal <hello@motionify.studio>"
+- ✅ Subject: "[Motionify Studio] You were assigned to a task - Brand Video Campaign"
 - ✅ Email contains: task title, assigned by Mike, due date, description
 - ✅ "View Task in Portal" button links to correct task
 - ✅ Plain text version also sent (multipart/alternative)
@@ -225,7 +225,7 @@ This document contains comprehensive test scenarios for the Notifications System
 
 **Expected Results:**
 - ✅ Email received within 10 seconds (immediate, no batching)
-- ✅ Subject: "[Motionify] Sarah Williams mentioned you - Brand Video Campaign"
+- ✅ Subject: "[Motionify Studio] Sarah Williams mentioned you - Brand Video Campaign"
 - ✅ Email shows truncated comment text (max 200 chars)
 - ✅ Direct link to comment with #comment-{id} anchor
 - ✅ Email priority: High
@@ -251,7 +251,7 @@ This document contains comprehensive test scenarios for the Notifications System
 
 **Expected Results:**
 - ✅ Single digest email received (not 3 separate emails)
-- ✅ Subject: "[Motionify] You have 3 new notifications - Brand Video Campaign"
+- ✅ Subject: "[Motionify Studio] You have 3 new notifications - Brand Video Campaign"
 - ✅ Email body lists all 3 notifications with separators
 - ✅ Each notification has: icon, message, timestamp, individual "View" link
 - ✅ "View All Notifications" button at bottom

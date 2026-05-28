@@ -1,6 +1,6 @@
 # Amazon SES (Simple Email Service) Setup Guide
 
-## Why SES for Motionify?
+## Why SES for Motionify Studio?
 
 ✅ **Cost-effective**: $0.10 per 1,000 emails
 ✅ **Free tier**: 62,000 emails/month when sending from EC2 (or 3,000/month otherwise)
@@ -143,7 +143,7 @@ AWS_REGION=us-east-1
 AWS_SES_ACCESS_KEY_ID=AKIA...
 AWS_SES_SECRET_ACCESS_KEY=wJalrXUtn...
 SES_FROM_EMAIL=noreply@motionify.studio
-SES_FROM_NAME=Motionify PM Portal
+SES_FROM_NAME=Motionify Studio Portal
 ```
 
 ## Step 7: Test Email Sending
@@ -170,17 +170,17 @@ async function testSES() {
     },
     Message: {
       Subject: {
-        Data: "Test Email from Motionify PM Portal",
+        Data: "Test Email from Motionify Studio Portal",
       },
       Body: {
         Html: {
           Data: `
-            <h1>Hello from Motionify!</h1>
+            <h1>Hello from Motionify Studio!</h1>
             <p>This is a test email to verify SES setup.</p>
           `,
         },
         Text: {
-          Data: "Hello from Motionify! This is a test email.",
+          Data: "Hello from Motionify Studio! This is a test email.",
         },
       },
     },
@@ -212,7 +212,7 @@ node test-ses-email.js
 // utils/email-templates.js
 export const magicLinkEmail = (recipientName, magicLink) => {
   return {
-    subject: "Sign in to Motionify PM Portal",
+    subject: "Sign in to Motionify Studio Portal",
     html: `
       <!DOCTYPE html>
       <html>
@@ -222,7 +222,7 @@ export const magicLinkEmail = (recipientName, magicLink) => {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: #f8f9fa; padding: 24px; border-radius: 8px;">
-          <h1 style="color: #1a1a1a; margin-top: 0;">Sign in to Motionify PM Portal</h1>
+          <h1 style="color: #1a1a1a; margin-top: 0;">Sign in to Motionify Studio Portal</h1>
           <p>Hi ${recipientName},</p>
           <p>Click the button below to securely sign in to your project portal:</p>
           <div style="text-align: center; margin: 32px 0;">
@@ -239,13 +239,13 @@ export const magicLinkEmail = (recipientName, magicLink) => {
           </p>
         </div>
         <div style="margin-top: 24px; text-align: center; color: #666; font-size: 12px;">
-          <p>© ${new Date().getFullYear()} Motionify. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} Motionify Studio. All rights reserved.</p>
         </div>
       </body>
       </html>
     `,
     text: `
-Sign in to Motionify PM Portal
+Sign in to Motionify Studio Portal
 
 Hi ${recipientName},
 
@@ -254,7 +254,7 @@ ${magicLink}
 
 This link will expire in 15 minutes. If you didn't request this, please ignore this email.
 
-© ${new Date().getFullYear()} Motionify. All rights reserved.
+© ${new Date().getFullYear()} Motionify Studio. All rights reserved.
     `,
   };
 };
@@ -286,7 +286,7 @@ export const notificationEmail = (recipientName, title, content, ctaText, ctaLin
           ` : ''}
         </div>
         <div style="margin-top: 24px; text-align: center; color: #666; font-size: 12px;">
-          <p>© ${new Date().getFullYear()} Motionify. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} Motionify Studio. All rights reserved.</p>
         </div>
       </body>
       </html>
@@ -300,7 +300,7 @@ ${content}
 
 ${ctaLink ? `${ctaText}: ${ctaLink}` : ''}
 
-© ${new Date().getFullYear()} Motionify. All rights reserved.
+© ${new Date().getFullYear()} Motionify Studio. All rights reserved.
     `,
   };
 };
@@ -382,7 +382,7 @@ AWS_REGION=us-east-1
 AWS_SES_ACCESS_KEY_ID=AKIA...
 AWS_SES_SECRET_ACCESS_KEY=wJalrXUtn...
 SES_FROM_EMAIL=noreply@motionify.studio
-SES_FROM_NAME=Motionify PM Portal
+SES_FROM_NAME=Motionify Studio Portal
 SES_CONFIGURATION_SET=motionify-emails
 ```
 

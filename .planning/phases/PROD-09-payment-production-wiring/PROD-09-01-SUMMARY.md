@@ -56,7 +56,7 @@ completed: 2026-01-28
 
 ## Accomplishments
 
-- Added sendPaymentSuccessEmail() template with professional HTML and Motionify branding
+- Added sendPaymentSuccessEmail() template with professional HTML and Motionify Studio branding
 - Added POST handler to send-email.ts for cross-service webhook calls
 - Created sendPaymentEmails() wrapper utility in webhook handler
 - Wired success email into handlePaymentCaptured (fetches client/project info)

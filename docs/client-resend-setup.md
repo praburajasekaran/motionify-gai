@@ -45,7 +45,7 @@ Once added, click **Verify DNS Records** in Resend. It may take a few minutes to
 
 1. In the Resend dashboard, go to **API Keys** in the left sidebar
 2. Click **Create API Key**
-3. Give it a name like `Motionify App`
+3. Give it a name like `Motionify Studio App`
 4. Set permission to **Sending access**
 5. Click **Add** and **copy the API key** — you'll only see it once
 

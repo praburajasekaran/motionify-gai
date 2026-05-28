@@ -159,7 +159,7 @@ const TeamManagement = () => {
 
         <div className="mt-6 border-t pt-4 border-[var(--todoist-gray-200)]">
           <div className="flex justify-between items-center">
-            <h4 className="font-semibold text-[var(--todoist-gray-900)]">Motionify Team</h4>
+            <h4 className="font-semibold text-[var(--todoist-gray-900)]">Motionify Studio Team</h4>
             {isProjectManager && (
               <Button variant="secondary" onClick={() => setIsManageModalOpen(true)} className="text-xs px-2.5 py-1.5">
                 Manage

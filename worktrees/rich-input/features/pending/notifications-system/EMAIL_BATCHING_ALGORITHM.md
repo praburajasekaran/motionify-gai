@@ -419,7 +419,7 @@ describe('Email Batching - immediate override', () => {
 ### Immediate Send (Single Notification)
 
 ```html
-Subject: [Motionify] You were mentioned in a comment
+Subject: [Motionify Studio] You were mentioned in a comment
 
 Hi {{userName}},
 
@@ -437,7 +437,7 @@ Manage notification preferences: {{preferencesUrl}}
 ### Batched Send (Multiple Notifications)
 
 ```html
-Subject: [Motionify] You have {{count}} new notifications
+Subject: [Motionify Studio] You have {{count}} new notifications
 
 Hi {{userName}},
 

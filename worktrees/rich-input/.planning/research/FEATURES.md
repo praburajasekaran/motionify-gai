@@ -1,6 +1,6 @@
 # Comment Thread Feature Landscape
 
-**Project:** Motionify Proposal Comments Feature
+**Project:** Motionify Studio Proposal Comments Feature
 **Context:** 1:1 Client-Superadmin negotiation thread (not public forum)
 **Researched:** January 2025
 **Confidence:** HIGH - Based on multiple industry sources and best practices

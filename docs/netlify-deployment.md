@@ -1,4 +1,4 @@
-# Netlify Deployment Guide - Motionify PM Portal
+# Netlify Deployment Guide - Motionify Studio Portal
 
 ## Prerequisites
 
@@ -99,7 +99,7 @@ Variable: EMAIL_FROM
 Value: noreply@motionify.local
 
 Variable: EMAIL_FROM_NAME
-Value: Motionify PM Portal
+Value: Motionify Studio Portal
 ```
 
 #### Authentication
@@ -198,7 +198,7 @@ Once domain is verified in SES:
    AWS_SES_ACCESS_KEY_ID=AKIA...
    AWS_SES_SECRET_ACCESS_KEY=wJalrXUtn...
    SES_FROM_EMAIL=noreply@motionify.studio
-   SES_FROM_NAME=Motionify PM Portal
+   SES_FROM_NAME=Motionify Studio Portal
    ```
 
 2. Remove Mailtrap variables:

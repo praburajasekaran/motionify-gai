@@ -52,7 +52,7 @@ export default function ShippingPage() {
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">4. File Expiration</h2>
             <p className="text-gray-300 leading-relaxed">
-              After the 365-day period, files will be permanently deleted, and Motionify will not retain any backup copies.
+              After the 365-day period, files will be permanently deleted, and Motionify Studio will not retain any backup copies.
             </p>
           </section>
         </div>

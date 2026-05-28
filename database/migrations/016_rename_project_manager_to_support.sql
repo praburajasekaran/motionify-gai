@@ -3,7 +3,7 @@
 -- ============================================================================
 -- The project_manager role is being replaced with a support role.
 -- Support users are the single point of contact (SPOC) for clients.
--- They appear to clients as "Motionify Support" (no individual name).
+-- They appear to clients as "Motionify Studio Support" (no individual name).
 --
 -- Created: 2026-02-08
 -- Phase: role-rename

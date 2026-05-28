@@ -10,7 +10,7 @@ export default function ClosingSection() {
         <div className="text-center mb-16 sm:mb-20">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs text-white/90 ring-1 ring-white/20 backdrop-blur-sm mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
-            The Motionify Difference
+            The Motionify Studio Difference
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
             We Don't Just Make Videos —<br />

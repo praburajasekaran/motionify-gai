@@ -1,4 +1,4 @@
-# Production-Readiness Roadmap: Motionify Platform
+# Production-Readiness Roadmap: Motionify Studio Platform
 
 **Goal:** Make entire application production-ready for client demo
 **Scope:** Complete platform (Admin Portal + Client Portal + Backend)
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Systematic testing and hardening roadmap to take the Motionify platform from development state to production-ready for client demonstration. Organized into logical feature areas with clear acceptance criteria.
+Systematic testing and hardening roadmap to take the Motionify Studio platform from development state to production-ready for client demonstration. Organized into logical feature areas with clear acceptance criteria.
 
 ---
 

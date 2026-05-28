@@ -70,7 +70,7 @@ reply to this email or contact us at hello@motionify.studio.
 We're excited to bring your vision to life!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -124,7 +124,7 @@ Need to discuss payment terms or have questions?
 Reply to this email anytime - we're here to help!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -137,7 +137,7 @@ https://motionify.studio
 
 **File:** `payment-advance-confirmation.html`
 **Trigger:** Advance payment completed successfully
-**To:** Client lead + CC to Motionify admin
+**To:** Client lead + CC to Motionify Studio admin
 **Subject:** `Payment Received - Production Starting Soon | {{projectName}}`
 
 ```
@@ -173,7 +173,7 @@ Track your project progress anytime in the portal:
 Questions? Just reply to this email or contact us at hello@motionify.studio
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -188,7 +188,7 @@ https://motionify.studio
 
 **File:** `payment-balance-confirmation.html`
 **Trigger:** Balance payment completed successfully
-**To:** Client lead + CC to Motionify admin
+**To:** Client lead + CC to Motionify Studio admin
 **Subject:** `Final Payment Received - Deliverables Now Available | {{projectName}}`
 
 ```
@@ -239,7 +239,7 @@ If you're happy with the final result, we'd appreciate a testimonial:
 Thank you for choosing Motionify Studio!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -292,7 +292,7 @@ What to do next:
 Need help? Reply to this email or contact us at hello@motionify.studio
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -340,7 +340,7 @@ Once payment is received:
 Questions about payment or the project? Just reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -390,7 +390,7 @@ Complete your payment today to download your final files!
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -432,7 +432,7 @@ You can also access it anytime from your project dashboard:
 For any questions regarding this invoice, please reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -487,7 +487,7 @@ If you need to extend access to your files, please contact us at hello@motionify
 Additional charges may apply for extended storage.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -529,7 +529,7 @@ Note: File restoration may incur additional charges and is subject to availabili
 Thank you for working with Motionify Studio!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -572,7 +572,7 @@ Refund Details:
 If you have any questions about this refund, please reply to this email or contact us at hello@motionify.studio.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Motionify Studio | Video Production for Modern Brands
@@ -788,7 +788,7 @@ https://portal.motionify.studio/admin
 
 - **Client Emails**: Friendly, professional, encouraging
 - **Admin Emails**: Direct, informative, action-oriented
-- **Consistency**: Use Motionify brand voice throughout
+- **Consistency**: Use Motionify Studio brand voice throughout
 
 ### Accessibility
 

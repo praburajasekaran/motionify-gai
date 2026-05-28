@@ -86,7 +86,7 @@ export async function sendProposalStatusChangeEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ export async function sendProposalStatusChangeEmail(data: {
 
 This email template:
 - Works for both client and admin notifications
-- Includes professional Motionify branding
+- Includes professional Motionify Studio branding
 - Shows the new status prominently
 - Provides CTA button to view the proposal
 - Different subject line prefix for admin notifications
@@ -242,7 +242,7 @@ async function notifyStatusChange(
       // Send single admin email notification
       await sendProposalStatusChangeEmail({
         to: adminNotificationEmail,
-        recipientName: 'Motionify Team',
+        recipientName: 'Motionify Studio Team',
         proposalTitle: `Inquiry ${proposal.inquiry_number} (${proposal.contact_name})`,
         newStatus: statusConfig.adminLabel,
         statusDescription: `${proposal.contact_name} has ${newStatus === 'accepted' ? 'accepted' : newStatus === 'rejected' ? 'declined' : 'requested changes to'} the proposal.`,

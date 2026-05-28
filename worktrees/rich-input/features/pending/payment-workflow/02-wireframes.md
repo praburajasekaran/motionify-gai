@@ -391,7 +391,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 ### SCREEN 10: Admin Payment Dashboard
 
 **Route:** `portal.motionify.studio/admin/payments`
-**Role:** Motionify Admin only
+**Role:** Motionify Studio Admin only
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

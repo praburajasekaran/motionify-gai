@@ -1,4 +1,4 @@
-# Security Audit Report — Motionify PM Portal
+# Security Audit Report — Motionify Studio Portal
 
 **Date:** 2026-02-22
 **Scope:** Full codebase static analysis
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This audit identified **25 security findings** across the Motionify PM Portal codebase, including 5 Critical, 9 High, 8 Medium, and 3 Low severity issues. The most significant risks involve an API key exposed in the client-side bundle, duplicate JWT implementations with hardcoded fallback secrets, a missing authentication check on a data-access endpoint, XSS via unsanitized HTML rendering, and a timing-attack-vulnerable webhook signature comparison.
+This audit identified **25 security findings** across the Motionify Studio Portal codebase, including 5 Critical, 9 High, 8 Medium, and 3 Low severity issues. The most significant risks involve an API key exposed in the client-side bundle, duplicate JWT implementations with hardcoded fallback secrets, a missing authentication check on a data-access endpoint, XSS via unsanitized HTML rendering, and a timing-attack-vulnerable webhook signature comparison.
 
 | Severity | Count |
 |----------|-------|

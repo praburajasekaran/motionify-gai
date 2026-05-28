@@ -71,7 +71,7 @@ async function sendMagicLinkEmail(data: {
 
     return sendEmail({
         to: data.to,
-        subject: 'Log in to Motionify Portal',
+        subject: 'Log in to Motionify Studio Portal',
         html,
     });
 }

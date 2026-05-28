@@ -164,7 +164,7 @@ export const TeamTab: React.FC<TeamTabProps> = ({
         }
     };
 
-    // Split team into Motionify and Client groups
+    // Split team into Motionify Studio and Client groups
     const motionifyTeam = project.team.filter(m =>
         m.role === 'super_admin' || m.role === 'project_manager' || m.role === 'team_member'
     );
@@ -275,11 +275,11 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                 />
             ) : (
                 <div className="space-y-8">
-                    {/* Motionify Team */}
+                    {/* Motionify Studio Team */}
                     {motionifyTeam.length > 0 && (
                         <div>
                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                                Motionify Team ({motionifyTeam.length})
+                                Motionify Studio Team ({motionifyTeam.length})
                             </h4>
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {motionifyTeam.map(renderMemberCard)}

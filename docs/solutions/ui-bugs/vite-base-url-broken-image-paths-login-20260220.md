@@ -16,7 +16,7 @@ tags: [vite, base-url, static-assets, login, image-path, portal]
 
 ## Problem
 
-The Motionify logo on the login page rendered as a broken image because the `src` path used `/images/motionify-studio-dark-web.png` — a root-relative path that doesn't account for Vite's `base: '/portal/'` configuration. All public assets are served under `/portal/`, so the correct path must include the `/portal/` prefix.
+The Motionify Studio logo on the login page rendered as a broken image because the `src` path used `/images/motionify-studio-dark-web.png` — a root-relative path that doesn't account for Vite's `base: '/portal/'` configuration. All public assets are served under `/portal/`, so the correct path must include the `/portal/` prefix.
 
 ## Environment
 

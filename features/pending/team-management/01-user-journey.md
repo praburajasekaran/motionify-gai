@@ -33,7 +33,7 @@ Creates invitation record:
 STEP 3: Email Invitation Sent (Amazon SES)
     ↓
 Email sent to colleague@example.com
-Subject: "You've been invited to join [Project Name] on Motionify"
+Subject: "You've been invited to join [Project Name] on Motionify Studio"
     ↓
 Email contains:
 - Personal message from primary contact
@@ -145,9 +145,9 @@ Historical contributions remain visible but attributed to "[Removed User]"
 
 ---
 
-## Automatic Motionify SPOC Assignment
+## Automatic Motionify Studio SPOC Assignment
 
-Every project automatically includes a Motionify support contact as the primary Single Point of Contact (SPOC) for the client.
+Every project automatically includes a Motionify Studio support contact as the primary Single Point of Contact (SPOC) for the client.
 
 ### Auto-Invite Flow
 
@@ -163,7 +163,7 @@ System automatically adds support@motionify.studio to project team
 IF support@motionify.studio user account does NOT exist:
   ├─ System creates system user account:
   │    - email: support@motionify.studio
-  │    - fullName: "Motionify Support"
+  │    - fullName: "Motionify Studio Support"
   │    - role: 'project_manager'
   │    - isActive: true
   │    - status: 'active'
@@ -184,9 +184,9 @@ NO invitation email sent (system account)
 NO acceptance required (auto-added)
     ↓
 Result:
-✓ support@motionify.studio appears in Motionify Team section
+✓ support@motionify.studio appears in Motionify Studio Team section
 ✓ All project notifications sent to this email address
-✓ Client can see "Motionify Support" as their primary contact
+✓ Client can see "Motionify Studio Support" as their primary contact
 ✓ Cannot be removed from project (system-protected)
 ```
 
@@ -194,7 +194,7 @@ Result:
 
 **System User Properties:**
 - **Email:** `support@motionify.studio`
-- **Display Name:** `Motionify Support`
+- **Display Name:** `Motionify Studio Support`
 - **Role:** `project_manager` (full project access)
 - **Account Type:** System account (no password, cannot login to portal)
 - **Purpose:** Centralized support email for all project communications
@@ -210,7 +210,7 @@ Result:
 - Revision requests
 - Payment confirmations
 - Project milestone updates
-- Any notifications sent to "Motionify Team"
+- Any notifications sent to "Motionify Studio Team"
 
 **Business Logic:**
 ```typescript
@@ -249,7 +249,7 @@ async function getOrCreateSupportUser(): Promise<User> {
   // Create system user (one-time)
   return await createUser({
     email: 'support@motionify.studio',
-    fullName: 'Motionify Support',
+    fullName: 'Motionify Studio Support',
     role: 'project_manager',
     isActive: true,
     status: 'active',

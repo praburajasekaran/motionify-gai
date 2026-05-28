@@ -6,7 +6,7 @@ This document specifies all email notifications for the inquiry-to-project workf
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio` (verified sender)
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 - **Development:** Mailtrap for testing
 
@@ -16,12 +16,12 @@ This document specifies all email notifications for the inquiry-to-project workf
 
 **Trigger:** Immediately after inquiry submission
 **To:** Customer email from inquiry
-**Subject:** `Your Motionify Inquiry ({{inquiryNumber}})`
+**Subject:** `Your Motionify Studio Inquiry ({{inquiryNumber}})`
 
 ```
 Hi {{contactName}},
 
-Thank you for your interest in Motionify!
+Thank you for your interest in Motionify Studio!
 
 We've received your inquiry for a {{projectType}} project.
 
@@ -44,10 +44,10 @@ If you have any questions in the meantime, feel free to reply to this
 email or call us at +1 (555) 123-4567.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -96,10 +96,10 @@ We're here to help: hello@motionify.studio | +1 (555) 123-4567
 Looking forward to working with you!
 
 Best regards,
-{{primaryContactName}} & The Motionify Team
+{{primaryContactName}} & The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -138,10 +138,10 @@ We hope these adjustments work better for your needs. If you'd like to
 discuss further changes, just let us know!
 
 Best regards,
-{{primaryContactName}} & The Motionify Team
+{{primaryContactName}} & The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -185,10 +185,10 @@ Questions about payment or need to adjust the terms?
 Reply to this email or call us at +1 (555) 123-4567.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -243,10 +243,10 @@ Through the portal, you'll be able to:
 We're excited to bring your vision to life!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -256,7 +256,7 @@ https://motionify.studio
 
 **Trigger:** After account creation (triggered by payment webhook success)
 **To:** Customer email
-**Subject:** `Welcome to Motionify - Your Project Portal Access`
+**Subject:** `Welcome to Motionify Studio - Your Project Portal Access`
 
 **Note:** See wireframe Screen 14 for full content. Key elements:
 
@@ -296,10 +296,10 @@ perfectly for your needs.
 Questions in the meantime? Reply to this email anytime.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -345,7 +345,7 @@ Description:
 [Create Proposal] → {{adminProposalUrl}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Admin | Inquiry Management System
+Motionify Studio Admin | Inquiry Management System
 ```
 
 ---
@@ -400,7 +400,7 @@ NEXT STEPS:
 [Check Payment Status] → {{paymentStatusUrl}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Admin | Inquiry Management System
+Motionify Studio Admin | Inquiry Management System
 ```
 
 ---
@@ -485,7 +485,7 @@ NEXT STEPS:
 [View Project] → {{adminProjectUrl}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Admin | Project Management System
+Motionify Studio Admin | Project Management System
 ```
 
 ---
@@ -534,7 +534,7 @@ Daily Inquiry Summary - {{date}}
 [View All Inquiries] → {{adminDashboardUrl}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Admin | Inquiry Management System
+Motionify Studio Admin | Inquiry Management System
 ```
 
 ---
@@ -543,7 +543,7 @@ Motionify Admin | Inquiry Management System
 
 ### Branding
 - Use plain text format for better deliverability
-- Include Motionify logo in header (HTML version)
+- Include Motionify Studio logo in header (HTML version)
 - Consistent typography and spacing
 - Professional, friendly tone
 

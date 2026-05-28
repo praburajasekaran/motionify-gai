@@ -16,7 +16,7 @@ export default function ProcessTimeline() {
           <div className="text-center mb-12 sm:mb-16">
             <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500/15 to-fuchsia-500/15 px-4 py-1.5 text-xs font-medium text-violet-300 ring-1 ring-violet-500/30 backdrop-blur mb-4">
               <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 animate-pulse" />
-              Your Journey with Motionify
+              Your Journey with Motionify Studio
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">From Idea to Impact</h2>
             <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">Every frame, every milestone — crafted with clarity, creativity, and care.</p>

@@ -41,7 +41,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 ```
 Top Navigation Bar (Right Side)
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  [Motionify Logo]  Projects  Tasks  Files    [Search]    🔔 (4)  [Jane] │
+│  [Motionify Studio Logo]  Projects  Tasks  Files    [Search]    🔔 (4)  [Jane] │
 │                                                           ↑                │
 │                                                    Notification Bell       │
 │                                                    with Unread Badge       │
@@ -274,7 +274,7 @@ Hover State:
 │                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │ Revision Requested                                               │   │
-│  │ When clients request revisions (Motionify team only)            │   │
+│  │ When clients request revisions (Motionify Studio team only)            │   │
 │  │                                                                  │   │
 │  │   [✓] In-App Notification    [✓] Email Notification            │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
@@ -340,15 +340,15 @@ Hover State:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ From: Motionify Portal <hello@motionify.studio>                          │
+│ From: Motionify Studio Portal <hello@motionify.studio>                          │
 │ To: jane.smith@client.com                                                │
-│ Subject: [Motionify] You were assigned to a task - Brand Video Campaign  │
+│ Subject: [Motionify Studio] You were assigned to a task - Brand Video Campaign  │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                           │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  [Motionify Logo]                                                │   │
+│   │  [Motionify Studio Logo]                                                │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
 │   Hi Jane,                                                                │
@@ -378,7 +378,7 @@ Hover State:
 │                                                                           │
 │   ─────────────────────────────────────────────────────────────────────  │
 │                                                                           │
-│   Motionify PM Portal                                                     │
+│   Motionify Studio Portal                                                     │
 │   © 2025 Motionify Studio. All rights reserved.                          │
 │                                                                           │
 │   Unsubscribe from these emails | Update notification preferences        │
@@ -387,9 +387,9 @@ Hover State:
 ```
 
 **Email Properties:**
-- From: `Motionify Portal <hello@motionify.studio>`
+- From: `Motionify Studio Portal <hello@motionify.studio>`
 - Reply-To: `noreply@motionify.studio`
-- Subject Pattern: `[Motionify] {notification_message} - {project_name}`
+- Subject Pattern: `[Motionify Studio] {notification_message} - {project_name}`
 - Content-Type: `multipart/alternative` (plain text + HTML)
 
 **Dynamic Variables:**
@@ -412,15 +412,15 @@ Hover State:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ From: Motionify Portal <hello@motionify.studio>                          │
+│ From: Motionify Studio Portal <hello@motionify.studio>                          │
 │ To: jane.smith@client.com                                                │
-│ Subject: [Motionify] You have 3 new notifications - Brand Video Campaign │
+│ Subject: [Motionify Studio] You have 3 new notifications - Brand Video Campaign │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                           │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  [Motionify Logo]                                                │   │
+│   │  [Motionify Studio Logo]                                                │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
 │   Hi Jane,                                                                │
@@ -468,7 +468,7 @@ Hover State:
 │                                                                           │
 │   ─────────────────────────────────────────────────────────────────────  │
 │                                                                           │
-│   Motionify PM Portal                                                     │
+│   Motionify Studio Portal                                                     │
 │   © 2025 Motionify Studio. All rights reserved.                          │
 │                                                                           │
 │   Unsubscribe from these emails | Update notification preferences        │
@@ -477,9 +477,9 @@ Hover State:
 ```
 
 **Email Properties:**
-- From: `Motionify Portal <hello@motionify.studio>`
-- Subject Pattern: `[Motionify] You have {count} new notification(s) - {project_name}`
-  - If multiple projects: `[Motionify] You have {count} new notifications`
+- From: `Motionify Studio Portal <hello@motionify.studio>`
+- Subject Pattern: `[Motionify Studio] You have {count} new notification(s) - {project_name}`
+  - If multiple projects: `[Motionify Studio] You have {count} new notifications`
 - Batching: Group 2-10 notifications within 2-5 minute window
 
 **Dynamic Variables:**

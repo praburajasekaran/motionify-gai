@@ -200,7 +200,7 @@ export default function ProformaInvoicePage() {
         key: invoiceData.razorpayDetails.keyId,
         amount: order.amount,
         currency: order.currency,
-        name: 'Motionify',
+        name: 'Motionify Studio',
         description: `Advance Payment - Proforma ${invoiceData.invoiceNumber}`,
         order_id: order.id,
         prefill: {

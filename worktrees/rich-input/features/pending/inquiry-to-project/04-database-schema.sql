@@ -6,7 +6,7 @@
 -- Created: 2025-01-11
 --
 -- This schema defines the tables needed for the inquiry-to-project workflow.
--- It extends the existing Motionify portal database with new tables for:
+-- It extends the existing Motionify Studio portal database with new tables for:
 -- - Customer inquiries from the website
 -- - Proposals sent to customers
 -- - Proposal feedback/negotiation

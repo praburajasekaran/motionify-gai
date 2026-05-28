@@ -242,7 +242,7 @@ function SuccessContent() {
                   </linearGradient>
                 </defs>
               </svg>
-              <span className="text-xl font-bold">Motionify</span>
+              <span className="text-xl font-bold">Motionify Studio</span>
             </Link>
             <button
               onClick={() => setShowCelebration(!showCelebration)}

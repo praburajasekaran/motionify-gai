@@ -76,7 +76,7 @@ export async function sendPaymentSuccessEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
 

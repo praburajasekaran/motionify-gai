@@ -1,4 +1,4 @@
-# 🚀 Motionify PM Portal - Deployment Guide
+# 🚀 Motionify Studio Portal - Deployment Guide
 
 ## Overview
 

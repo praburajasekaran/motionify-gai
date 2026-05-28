@@ -12,7 +12,7 @@ interface User {
 }
 
 /**
- * Check if user is a Motionify admin (super admin or support)
+ * Check if user is a Motionify Studio admin (super admin or support)
  */
 export function isMotionifyAdmin(user: User | null): boolean {
   if (!user) return false;
@@ -36,7 +36,7 @@ export function isSupport(user: User | null): boolean {
 }
 
 /**
- * Check if user is Motionify team member (any internal role)
+ * Check if user is Motionify Studio team member (any internal role)
  */
 export function isMotionifyTeam(user: User | null): boolean {
   if (!user) return false;
@@ -59,7 +59,7 @@ export function isClient(user: User | null): boolean {
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
     super_admin: 'Super Admin',
-    support: 'Motionify Support',
+    support: 'Motionify Studio Support',
     team_member: 'Team Member',
     client: 'Client',
   };

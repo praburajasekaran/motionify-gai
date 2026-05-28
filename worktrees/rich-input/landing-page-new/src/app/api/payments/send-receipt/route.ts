@@ -63,7 +63,7 @@ async function generateInvoicePdf(
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
       doc.setFont('helvetica', 'bold');
-      doc.text('Motionify', 20, 25);
+      doc.text('Motionify Studio', 20, 25);
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -179,9 +179,9 @@ async function generateInvoicePdf(
 
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text('Thank you for choosing Motionify for your video production needs!', 105, 275, { align: 'center' });
+      doc.text('Thank you for choosing Motionify Studio for your video production needs!', 105, 275, { align: 'center' });
       doc.text('This is a computer-generated receipt. No signature required.', 105, 282, { align: 'center' });
-      doc.text(`Generated on ${formatDate(new Date().toISOString())} | Motionify | hello@motionify.com`, 105, 289, { align: 'center' });
+      doc.text(`Generated on ${formatDate(new Date().toISOString())} | Motionify Studio | hello@motionify.com`, 105, 289, { align: 'center' });
 
       const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
       resolve(pdfBuffer);
@@ -207,13 +207,13 @@ async function sendPaymentReceiptEmail(
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Payment Confirmation - Motionify</title>
+      <title>Payment Confirmation - Motionify Studio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
       <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <div style="background: linear-gradient(135deg, #7c3aed, #8b5cf6); padding: 32px 24px; text-align: center;">
-            <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0;">Motionify</h1>
+            <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0;">Motionify Studio</h1>
             <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 8px 0 0 0;">Payment Confirmation</p>
           </div>
 
@@ -272,7 +272,7 @@ async function sendPaymentReceiptEmail(
               <a href="mailto:hello@motionify.com" style="color: #7c3aed; text-decoration: none; font-weight: 500;">hello@motionify.com</a>
             </p>
             <p style="color: #9ca3af; font-size: 12px; margin: 16px 0 0 0;">
-              © ${new Date().getFullYear()} Motionify. All rights reserved.
+              © ${new Date().getFullYear()} Motionify Studio. All rights reserved.
             </p>
           </div>
         </div>
@@ -283,7 +283,7 @@ async function sendPaymentReceiptEmail(
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `Motionify <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+      from: `Motionify Studio <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
       to: [to],
       subject: `Payment Confirmed - Invoice #${invoiceNumber}`,
       html: htmlContent,

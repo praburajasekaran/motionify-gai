@@ -15,7 +15,7 @@ Project Created (from Inquiry)
     ↓
 Deliverables Defined (from Proposal)
     ↓
-Motionify Team Uploads Beta Deliverable
+Motionify Studio Team Uploads Beta Deliverable
     ↓
 Client Reviews Beta (with watermark)
     ↓

@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-16">
           {/* Logo and Intro */}
           <div className="lg:col-span-4 flex flex-col items-start gap-6 text-left">
-            <img src="/images/motionify-light-logo.png" alt="Motionify.Studio" className="h-10 w-auto object-contain" />
+            <img src="/images/motionify-light-logo.png" alt="Motionify Studio" className="h-10 w-auto object-contain" />
             <p className="text-sm text-gray-400 leading-relaxed max-w-sm">
               Crafting stories that connect and convert. From concept to final cut, we bring your vision to life with creativity and precision.
             </p>
@@ -59,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">© 2026 Motionify.Studio. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© 2026 Motionify Studio. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Terms and Conditions</Link>
             <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">Privacy Policy</Link>

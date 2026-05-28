@@ -41,7 +41,7 @@ class EmailServiceError extends Error {
 async function sendEmail(options: ResendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: EmailServiceError }> {
   try {
     const { data, error } = await resend.emails.send({
-      from: `Motionify <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+      from: `Motionify Studio <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
       to: [options.to],
       subject: options.subject,
       html: options.html,
@@ -303,7 +303,7 @@ export async function sendClientPaymentAndProjectEmail(
 
   return sendEmail({
     to,
-    subject: `Payment Confirmed & Project ${projectNumber} Started - Motionify`,
+    subject: `Payment Confirmed & Project ${projectNumber} Started - Motionify Studio`,
     html
   });
 }

@@ -89,7 +89,7 @@ export type TaskStatus =
 ```typescript
 export type TaskVisibility =
   | 'client_visible'       // Visible to all project team members (client + team)
-  | 'internal_only';       // Visible only to Motionify team members
+  | 'internal_only';       // Visible only to Motionify Studio team members
 ```
 
 ---
@@ -216,8 +216,8 @@ The following `ActivityType` values are commonly used for task activities (impor
 ```typescript
 export type UserRole =
   | 'super_admin'                // Full system access
-  | 'project_manager'            // Motionify team member (manages projects)
-  | 'team_member'                // Motionify team member (limited to assigned tasks)
+  | 'project_manager'            // Motionify Studio team member (manages projects)
+  | 'team_member'                // Motionify Studio team member (limited to assigned tasks)
   | 'client';                    // Client user
 ```
 
@@ -567,7 +567,7 @@ export function validateTaskStatusTransition(
 ┌─────────────┐
 │ in_progress │  ← Work in progress
 └────┬────────┘
-     │ Motionify team only
+     │ Motionify Studio team only
      │
      ├─────────────────┬───────────────────┬──────────────────┐
      │                 │                   │                  │
@@ -603,14 +603,14 @@ export function validateTaskStatusTransition(
 | From | To | Who Can Transition | Notes |
 |------|----|--------------------|-------|
 | pending | in_progress | Any team member | Start work |
-| in_progress | pending | Motionify team | Move back to backlog |
-| in_progress | awaiting_approval | Motionify team | Submit for client review (requires delivery notes if client-visible) |
-| in_progress | completed | Motionify team | Complete directly (internal tasks only) |
+| in_progress | pending | Motionify Studio team | Move back to backlog |
+| in_progress | awaiting_approval | Motionify Studio team | Submit for client review (requires delivery notes if client-visible) |
+| in_progress | completed | Motionify Studio team | Complete directly (internal tasks only) |
 | awaiting_approval | approved | Client primary contact | Approve work |
 | awaiting_approval | revision_requested | Client primary contact | Request changes |
-| awaiting_approval | in_progress | Motionify team | Pull back from review |
-| approved | completed | Motionify team | Mark as done |
-| revision_requested | in_progress | Motionify team | Start revisions |
+| awaiting_approval | in_progress | Motionify Studio team | Pull back from review |
+| approved | completed | Motionify Studio team | Mark as done |
+| revision_requested | in_progress | Motionify Studio team | Start revisions |
 | completed | in_progress | Admin only | Reopen task |
 
 ---

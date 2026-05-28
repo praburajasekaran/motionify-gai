@@ -4,7 +4,7 @@ export enum UserRole {
   PRIMARY_CONTACT = 'Primary Contact',
   TEAM_MEMBER = 'Team Member',
   PROJECT_MANAGER = 'Project Manager',
-  MOTIONIFY_MEMBER = 'Motionify Member',
+  MOTIONIFY_MEMBER = 'Motionify Studio Member',
 }
 
 export interface User {

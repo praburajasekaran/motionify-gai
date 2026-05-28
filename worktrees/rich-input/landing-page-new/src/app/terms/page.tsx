@@ -36,7 +36,7 @@ export default function TermsPage() {
             <ul className="list-disc list-inside text-gray-300 space-y-2">
               <li>Clients must register an account to place an order.</li>
               <li>You are responsible for maintaining the confidentiality of your account credentials and for all activities conducted under your account.</li>
-              <li>Motionify reserves the right to suspend or terminate any account found in violation of our policies.</li>
+              <li>Motionify Studio reserves the right to suspend or terminate any account found in violation of our policies.</li>
             </ul>
           </section>
 
@@ -64,7 +64,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">5. Delivery Policy</h2>
             <ul className="list-disc list-inside text-gray-300 space-y-2">
-              <li>Beta delivery is shared with Motionify watermark and limited resolution.</li>
+              <li>Beta delivery is shared with Motionify Studio watermark and limited resolution.</li>
               <li>Final delivery is provided upon approval and settlement of full payment.</li>
               <li>Source files delivery will not come with actual final delivery and it's addons scope from client and it's optional.</li>
               <li>Delivery files remain accessible in your portal account for 365 days after completion. After that, files are permanently deleted from our servers.</li>
@@ -84,7 +84,7 @@ export default function TermsPage() {
             <h2 className="text-2xl font-semibold text-white mb-4">7. Intellectual Property</h2>
             <ul className="list-disc list-inside text-gray-300 space-y-2">
               <li>All works are white-label and delivered under client branding.</li>
-              <li>Motionify retains full copyright ownership of project files and source files unless otherwise specified in the contract.</li>
+              <li>Motionify Studio retains full copyright ownership of project files and source files unless otherwise specified in the contract.</li>
               <li>If source files are required, they must be explicitly added as a paid add-on in the agreement.</li>
             </ul>
           </section>
@@ -105,7 +105,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">10. Limitation of Liability</h2>
-            <p className="text-gray-300 leading-relaxed mb-4">Motionify is not responsible for:</p>
+            <p className="text-gray-300 leading-relaxed mb-4">Motionify Studio is not responsible for:</p>
             <ul className="list-disc list-inside text-gray-300 space-y-2">
               <li>Delays caused by client feedback delays or third-party dependencies.</li>
               <li>Loss of files after the 365-day retention period.</li>

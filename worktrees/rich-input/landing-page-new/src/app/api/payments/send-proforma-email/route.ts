@@ -9,8 +9,8 @@ const corsHeaders = {
 };
 
 const MOTIONIFY_COMPANY_DETAILS = {
-  name: 'Motionify',
-  address: '123 Business Park, Tech City, India',
+  name: 'Motionify Studio',
+  address: 'Door no: F/22, 2nd Floor, F Block, Plot no: 264, 2nd Main Rd, Block F, Anna Nagar, Chennai, Tamil Nadu 600102',
   email: 'invoices@motionify.ai',
   phone: '+91 98765 43210',
   gstin: '22AAAAA0000A1Z5',
@@ -21,7 +21,7 @@ const BANK_DETAILS = {
   bankName: 'HDFC Bank',
   accountNumber: '50200012345678',
   ifscCode: 'HDFC0001234',
-  accountHolderName: 'Motionify Technologies Pvt Ltd',
+  accountHolderName: 'Motionify',
 };
 
 type ProposalStatus = 'sent' | 'accepted' | 'rejected' | 'changes_requested';
@@ -106,13 +106,13 @@ async function sendEmailWithResend(
     ] : undefined;
 
     const result = await resend.emails.send({
-      from: `Motionify <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+      from: `Motionify Studio <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
       to: [to],
-      subject: `Proforma Invoice #${invoiceNumber} - Motionify`,
+      subject: `Proforma Invoice #${invoiceNumber} - Motionify Studio`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #7C3AED, #8B5CF6); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Motionify</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Motionify Studio</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Proforma Invoice</p>
           </div>
           <div style="background: #ffffff; padding: 32px 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
@@ -128,7 +128,7 @@ async function sendEmailWithResend(
           </div>
           <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 13px;">
             <p>Questions? Contact us at invoices@motionify.ai</p>
-            <p>&copy; ${new Date().getFullYear()} Motionify. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Motionify Studio. All rights reserved.</p>
           </div>
         </div>
       `,

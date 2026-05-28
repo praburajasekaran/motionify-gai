@@ -29,7 +29,7 @@ Super Admin Login → Access Admin Dashboard → Manage Users/Projects/Logs
 
 ## Key Benefits
 
-- **Centralized User Management** - Add Motionify team members, assign roles, and deactivate users while preserving historical data
+- **Centralized User Management** - Add Motionify Studio team members, assign roles, and deactivate users while preserving historical data
 - **Comprehensive Audit Trail** - View and export detailed activity logs for compliance, debugging, and project tracking
 - **Project Lifecycle Control** - Manually manage project statuses with validation rules to ensure data integrity
 

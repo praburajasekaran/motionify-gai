@@ -131,7 +131,7 @@ export const handler = compose(
               razorpayKeyId: process.env.RAZORPAY_KEY_ID,
               amount: amount,
               currency: proposal.currency,
-              name: "Motionify",
+              name: "Motionify Studio",
               description: "Project Payment",
             }),
           };

@@ -15,7 +15,7 @@ import {
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const MOTIONIFY_BRANDING = {
-  companyName: 'Motionify',
+  companyName: 'Motionify Studio',
   websiteUrl: 'https://motionify.ai',
   supportEmail: 'support@motionify.ai',
   logoUrl: 'https://motionify.ai/logo.png',
@@ -37,7 +37,7 @@ class EmailServiceError extends Error {
 async function sendEmail(options: ResendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: EmailServiceError }> {
   try {
     const { data, error } = await resend.emails.send({
-      from: `Motionify <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+      from: `Motionify Studio <invoices@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
       to: [options.to],
       subject: options.subject,
       html: options.html,

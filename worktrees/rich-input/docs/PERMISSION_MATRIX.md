@@ -1,4 +1,4 @@
-# Motionify Permission Matrix
+# Motionify Studio Permission Matrix
 
 **Last Updated:** December 31, 2025  
 **Purpose:** Single source of truth for role-based permissions across all features  
@@ -75,8 +75,8 @@ Clients are differentiated by `is_primary_contact` flag in `project_team_members
 | Assign tasks | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Comment on tasks | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Team Management** |
-| Invite Motionify team | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Remove Motionify team | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Invite Motionify Studio team | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Remove Motionify Studio team | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Invite client team | ✅ | ✅ | ❌ | ✅ | ❌ |
 | Remove client team | ✅ | ✅ | ❌ | ✅ | ❌ |
 | **Files** |
@@ -164,7 +164,7 @@ Permissions.canViewAllProjects(user)
 ```
 
 **Permission Logic:**
-- **Motionify Team**: ✅ Can view all projects
+- **Motionify Studio Team**: ✅ Can view all projects
 - **Client**: ❌ Can only view assigned projects
 
 **Implemented In:**
@@ -195,7 +195,7 @@ canViewDeliverable(user, deliverable, project)
 ```
 
 **Permission Logic:**
-- **Motionify Team**: ✅ Always can view
+- **Motionify Studio Team**: ✅ Always can view
 - **Client**: ⚠️ Conditional
   - `pending`: ❌ Cannot view
   - `in_progress`: ❌ Cannot view
@@ -285,7 +285,7 @@ canEditDeliverable(user, deliverable)
 - **Team Member**: ✅ Can create
 - **Client**: ❌ Cannot create
 
-**Note:** All three Motionify roles can create tasks for collaboration.
+**Note:** All three Motionify Studio roles can create tasks for collaboration.
 
 #### 4.2 Edit Tasks (IMPLEMENTED)
 ```typescript
@@ -319,7 +319,7 @@ canEditTask(user: User, task?: Task): boolean
 #### 4.3 Visibility (Internal vs Client)
 **Permission Logic:**
 - Tasks have `visibility` field: `'internal'` or `'client'`
-- **Motionify Team**: Can see all tasks
+- **Motionify Studio Team**: Can see all tasks
 - **Client**: Can only see tasks marked `visibility: 'client'`
 
 **Implemented In:**

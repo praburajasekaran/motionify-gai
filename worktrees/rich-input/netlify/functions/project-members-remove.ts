@@ -82,7 +82,7 @@ export const handler = compose(
             // removing them would leave the project with NO PM.
             // (Unless we check for other 'team' members in invitations, but typically PM is the 'owner' of the project info)
 
-            // We check if there are any *other* Motionify team members linked via accepted invitations
+            // We check if there are any *other* Motionify Studio team members linked via accepted invitations
             // If yes, maybe we can't delete the MAIN PM unless we transfer? 
             // The requirement says "Cannot Delete Last Project Manager".
             // If there is another PM, we could perhaps allow it (by swapping?), but "Remove" usually implies "Unassign".

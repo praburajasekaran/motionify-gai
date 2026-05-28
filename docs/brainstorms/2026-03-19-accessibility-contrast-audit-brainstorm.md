@@ -5,7 +5,7 @@
 
 ## What We're Building
 
-An end-to-end accessibility color contrast audit and automated test suite for all screens in the Motionify PM Portal, covering both light and dark themes. The system will:
+An end-to-end accessibility color contrast audit and automated test suite for all screens in the Motionify Studio Portal, covering both light and dark themes. The system will:
 
 1. **Audit** all ~20 screens for WCAG 2.1 AAA contrast violations (7:1 for normal text, 4.5:1 for large text/UI elements)
 2. **Report** per-screen, per-element violations with actionable details

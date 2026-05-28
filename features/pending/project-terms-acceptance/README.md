@@ -174,7 +174,7 @@ Comprehensive test scenarios covering:
 
 ## Permission Matrix
 
-| Action | Client Primary Contact | Client Team | Motionify PM | Admin |
+| Action | Client Primary Contact | Client Team | Motionify Studio PM | Admin |
 |--------|----------------------|-------------|--------------|-------|
 | View terms | ✅ | ❌* | ✅ | ✅ |
 | Accept terms | ✅ | ❌ | ❌ | ❌ |

@@ -47,7 +47,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
   └───────────────────────────────────────────────────────────────────────┘
 
   ┌───────────────────────────────────────────────────────────────────────┐
-  │ @JaneDoe (Motionify Team)                              1 hour ago      │
+  │ @JaneDoe (Motionify Studio Team)                              1 hour ago      │
   ├───────────────────────────────────────────────────────────────────────┤
   │ @JohnSmith Good catch! I'll increase the saturation by 15% and        │
   │ also boost the vibrance slightly. Will have an updated version for    │
@@ -57,7 +57,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
   └───────────────────────────────────────────────────────────────────────┘
 
   ┌───────────────────────────────────────────────────────────────────────┐
-  │ @MikeDesigner (Motionify Team)                        30 mins ago      │
+  │ @MikeDesigner (Motionify Studio Team)                        30 mins ago      │
   ├───────────────────────────────────────────────────────────────────────┤
   │ FYI - I updated the master template so all future videos will use     │
   │ these new color settings automatically. ✅                             │
@@ -118,7 +118,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
   └───────────────────────────────────────────────────────────────────────┘
 
   ┌───────────────────────────────────────────────────────────────────────┐
-  │ @JaneDoe (Motionify Team)                              1 hour ago      │
+  │ @JaneDoe (Motionify Studio Team)                              1 hour ago      │
   ├───────────────────────────────────────────────────────────────────────┤
   │ @JohnSmith I'll add a 0.5s crossfade at 0:42. Will upload v3 in       │
   │ about an hour.                                                         │

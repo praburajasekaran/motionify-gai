@@ -6,7 +6,7 @@
 
 ## Summary
 
-This phase hardens the existing Motionify portal infrastructure for production load (~15 concurrent clients, ~10 active proposals). The codebase already has a foundation: `pg` Pool-based database connection, custom structured logger, and basic health endpoint. The hardening adds production-grade connection pooling, centralized error monitoring via Sentry, and robust environment validation.
+This phase hardens the existing Motionify Studio portal infrastructure for production load (~15 concurrent clients, ~10 active proposals). The codebase already has a foundation: `pg` Pool-based database connection, custom structured logger, and basic health endpoint. The hardening adds production-grade connection pooling, centralized error monitoring via Sentry, and robust environment validation.
 
 The key decision is to use `@neondatabase/serverless` driver instead of the current `pg` driver for optimized serverless connection handling. Sentry provides the unified error monitoring and breadcrumb-based logging, eliminating the need for a separate logging service. Environment validation uses Zod to fail fast on misconfiguration.
 

@@ -15,11 +15,11 @@ type QuizSelections = {
 
 function buildMessage(quiz: QuizSelections | null): string {
   if (!quiz || !quiz.niche) {
-    return "Hi! I'm interested in video production services from Motionify. Can we discuss my project?";
+    return "Hi! I'm interested in video production services from Motionify Studio. Can we discuss my project?";
   }
 
   const lines = [
-    "Hi! I'm interested in video production from Motionify.",
+    "Hi! I'm interested in video production from Motionify Studio.",
     "",
     "Here are my preferences from the quiz:",
     quiz.niche ? `• Niche: ${quiz.niche}` : null,

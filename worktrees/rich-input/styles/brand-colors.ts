@@ -1,5 +1,5 @@
 /**
- * Motionify Brand Color System
+ * Motionify Studio Brand Color System
  *
  * Signature Brand Color: "Motion Blue" - A vibrant, energetic blue representing
  * movement, creativity, and professional production quality.

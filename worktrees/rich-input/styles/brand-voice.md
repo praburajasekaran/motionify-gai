@@ -1,4 +1,4 @@
-# Motionify Brand Voice Guidelines
+# Motionify Studio Brand Voice Guidelines
 
 ## Core Identity
 
@@ -113,7 +113,7 @@ We communicate with clarity and conviction.
 
 ### Buttons & CTAs
 
-| Generic | Motionify |
+| Generic | Motionify Studio |
 |---------|-----------|
 | Create Project | Start a New Production |
 | Submit | Launch |
@@ -130,7 +130,7 @@ We communicate with clarity and conviction.
 
 ### Empty States
 
-| Generic | Motionify |
+| Generic | Motionify Studio |
 |---------|-----------|
 | No projects found | Your canvas is blank. Let's create something amazing. |
 | No deliverables yet | Ready to upload your first masterpiece? |
@@ -140,7 +140,7 @@ We communicate with clarity and conviction.
 
 ### Status Messages
 
-| Generic | Motionify |
+| Generic | Motionify Studio |
 |---------|-----------|
 | Processing... | Working our magic... |
 | Upload complete | Your files are ready to rock |
@@ -150,7 +150,7 @@ We communicate with clarity and conviction.
 
 ### Headings & Sections
 
-| Generic | Motionify |
+| Generic | Motionify Studio |
 |---------|-----------|
 | Dashboard | Welcome Back |
 | Projects | Productions in Motion |
@@ -251,7 +251,7 @@ Before publishing any copy, ask:
 - [ ] Is it **confident**? (Does it communicate with clarity?)
 - [ ] Is it **human**? (Would you say this to a colleague?)
 
-If you can answer "yes" to all five, you're speaking in Motionify's voice.
+If you can answer "yes" to all five, you're speaking in Motionify Studio's voice.
 
 ---
 

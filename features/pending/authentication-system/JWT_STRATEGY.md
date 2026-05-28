@@ -1,6 +1,6 @@
 # JWT Authentication Strategy
 
-This document defines the authentication strategy for the Motionify Portal. We use a **Hybrid Approach** combining stateless access tokens with stateful refresh tokens for optimal security and performance.
+This document defines the authentication strategy for the Motionify Studio Portal. We use a **Hybrid Approach** combining stateless access tokens with stateful refresh tokens for optimal security and performance.
 
 ---
 

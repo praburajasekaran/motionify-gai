@@ -4,7 +4,7 @@
 
 ## About Motionify Studio
 
-**Motionify Studio** is a creative services company that provides motion design, video production, and visual content services to businesses. Clients engage Motionify through a web-based platform where they can submit project requirements, receive proposals, make payments, and collaborate on their projects.
+**Motionify Studio** is a creative services company that provides motion design, video production, and visual content services to businesses. Clients engage Motionify Studio through a web-based platform where they can submit project requirements, receive proposals, make payments, and collaborate on their projects.
 
 **Website:** https://motionify.studio/
 
@@ -12,12 +12,12 @@
 
 ## Business Model
 
-Motionify operates on a **custom project basis**. There are no fixed product listings, shopping carts, or subscriptions. Each client engagement follows this lifecycle:
+Motionify Studio operates on a **custom project basis**. There are no fixed product listings, shopping carts, or subscriptions. Each client engagement follows this lifecycle:
 
 1. Client submits their project requirements through an interactive quiz on the website.
-2. The Motionify team reviews the requirements and prepares a custom proposal with deliverables and pricing.
+2. The Motionify Studio team reviews the requirements and prepares a custom proposal with deliverables and pricing.
 3. The client reviews the proposal and, upon agreement, makes an advance payment to begin the project.
-4. The project is executed, and the client collaborates with the Motionify team through the platform.
+4. The project is executed, and the client collaborates with the Motionify Studio team through the platform.
 5. Upon completion, the client pays the remaining balance.
 
 ---
@@ -32,13 +32,13 @@ We need Razorpay to **collect advance payments from clients** when they accept a
 
 ### Step 1: Client Submits Requirements (Quiz)
 
-A potential client visits the Motionify website ([https://motionify.studio/](https://motionify.studio/)) and fills out an interactive quiz/form describing their project needs — such as the type of video, style preferences, timeline, and budget range. This creates an inquiry in our system.
+A potential client visits the Motionify Studio website ([https://motionify.studio/](https://motionify.studio/)) and fills out an interactive quiz/form describing their project needs — such as the type of video, style preferences, timeline, and budget range. This creates an inquiry in our system.
 
 **Quiz URL:** [https://motionify.studio/#video-style-quiz](https://motionify.studio/#video-style-quiz)
 
-### Step 2: Motionify Team Creates a Proposal
+### Step 2: Motionify Studio Team Creates a Proposal
 
-The Motionify team reviews the inquiry and creates a detailed proposal that includes:
+The Motionify Studio team reviews the inquiry and creates a detailed proposal that includes:
 
 - List of deliverables (e.g., 30-second explainer video, social media assets)
 - Total project price
@@ -69,7 +69,7 @@ The client reviews the proposal on the platform. If they agree, they click **"Ac
 Once payment is confirmed:
 
 - The project becomes active on the platform.
-- The client can view progress, share feedback, and collaborate with the Motionify team.
+- The client can view progress, share feedback, and collaborate with the Motionify Studio team.
 - Deliverables are shared through the platform as they are completed.
 
 **Client Portal URL:** [https://motionify.studio/portal/projects](https://motionify.studio/portal/projects)
@@ -128,7 +128,7 @@ After the project deliverables are completed, the client pays the remaining bala
 | **Average transaction value** | Varies per project (custom pricing) |
 | **Payer** | Business clients (B2B) |
 | **Payee** | Motionify Studio |
-| **Refund policy** | Handled on a case-by-case basis by Motionify admin |
+| **Refund policy** | Handled on a case-by-case basis by Motionify Studio admin |
 
 ---
 

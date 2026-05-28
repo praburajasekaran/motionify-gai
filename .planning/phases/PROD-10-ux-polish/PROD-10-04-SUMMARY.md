@@ -11,7 +11,7 @@ requires:
 provides:
   - Email and in-app notifications for proposal status changes
   - Bidirectional notification flow (admin→client and client→admin)
-  - Professional email template with Motionify branding
+  - Professional email template with Motionify Studio branding
 affects: [proposal-workflow, client-communication, admin-alerts]
 
 # Tech tracking
@@ -46,7 +46,7 @@ completed: 2026-01-28
 
 # Phase PROD-10 Plan 04: Proposal Status Change Notifications Summary
 
-**Email and in-app notifications for proposal status changes with bidirectional flow (admin→client and client→admin) using professional Motionify branding**
+**Email and in-app notifications for proposal status changes with bidirectional flow (admin→client and client→admin) using professional Motionify Studio branding**
 
 ## Performance
 
@@ -57,7 +57,7 @@ completed: 2026-01-28
 - **Files modified:** 2
 
 ## Accomplishments
-- Professional status change email template with Motionify branding and status-specific colors
+- Professional status change email template with Motionify Studio branding and status-specific colors
 - Notification dispatch helper that determines recipient based on who changed status
 - Clients receive email + in-app notification when admin changes proposal status
 - All admins (super_admin and project_manager) receive email + in-app notification when client responds

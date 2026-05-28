@@ -239,7 +239,7 @@ export function UserManagement() {
                     >
                         <option value="all">All Roles</option>
                         <option value="super_admin">Super Admin</option>
-                        <option value="support">Motionify Support</option>
+                        <option value="support">Motionify Studio Support</option>
                         <option value="client">Client</option>
                         <option value="team_member">Team Member</option>
                     </select>
@@ -387,7 +387,7 @@ export function UserManagement() {
                                     className="mt-1 w-full px-3 py-2 border rounded-lg"
                                     required
                                 >
-                                    <option value="support">Motionify Support</option>
+                                    <option value="support">Motionify Studio Support</option>
                                     <option value="team_member">Team Member</option>
                                     <option value="client">Client</option>
                                     <option value="super_admin">Super Admin</option>

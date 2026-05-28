@@ -99,7 +99,7 @@ export default function PaymentPage() {
                 </linearGradient>
               </defs>
             </svg>
-            <span className="text-xl font-bold">Motionify</span>
+            <span className="text-xl font-bold">Motionify Studio</span>
           </Link>
         </div>
       </header>

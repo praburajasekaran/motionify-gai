@@ -1,4 +1,4 @@
-# Research Summary: Motionify Comment Thread Feature
+# Research Summary: Motionify Studio Comment Thread Feature
 
 **Project:** Real-time comment/thread system for 1:1 client-superadmin proposal negotiations  
 **Synthesized:** January 20, 2026  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This research synthesizes findings for implementing a real-time comment thread system into Motionify's existing infrastructure (Vite Admin SPA + Next.js Client Portal on Netlify Functions with PostgreSQL and Cloudflare R2). The system targets 1:1 proposal negotiations—a distinct context from public forums or multi-party discussions, requiring focused features like linear conversation flow, file attachments for contracts/documents, and professional notification systems.
+This research synthesizes findings for implementing a real-time comment thread system into Motionify Studio's existing infrastructure (Vite Admin SPA + Next.js Client Portal on Netlify Functions with PostgreSQL and Cloudflare R2). The system targets 1:1 proposal negotiations—a distinct context from public forums or multi-party discussions, requiring focused features like linear conversation flow, file attachments for contracts/documents, and professional notification systems.
 
 **Core Recommendation:** Implement with **Ably** for real-time messaging (chosen over Pusher/Supabase for superior Netlify Functions integration), **PostgreSQL adjacency list pattern** with recursive CTEs for comment threading, and **Cloudflare R2 presigned URLs** for direct file uploads. The recommended build sequence is: database schema + API (Phase 1), core comment UI + polling (Phase 2), file attachments (Phase 3), and Ably real-time upgrades (Phase 4).
 
@@ -24,7 +24,7 @@ This research synthesizes findings for implementing a real-time comment thread s
 |-------|------------|-----------|
 | **Real-time Messaging** | Ably | Official Netlify integration, serverless-optimized, 6M free messages/month, proven at scale (HubSpot, Spotify, Webflow) |
 | **Database** | PostgreSQL 15+ | Existing infrastructure, robust recursive CTE support for threaded queries, connection pooling via pg-pool |
-| **File Storage** | Cloudflare R2 | Zero egress fees, S3-compatible API, existing Motionify infrastructure |
+| **File Storage** | Cloudflare R2 | Zero egress fees, S3-compatible API, existing Motionify Studio infrastructure |
 | **API Layer** | Netlify Functions + Express + Zod | Existing patterns, automatic scaling, type-safe validation |
 | **Frontend State** | TanStack Query + @ably/sdk | Caching, optimistic updates, real-time subscriptions |
 
@@ -99,7 +99,7 @@ This research synthesizes findings for implementing a real-time comment thread s
 - Eventual consistency delays → broadcast on write, read-your-writes consistency
 - Large file timeouts → chunked uploads, resumable uploads
 
-**Motionify-Specific High Priority:**
+**Motionify Studio-Specific High Priority:**
 - Tenant isolation is non-negotiable for client-superadmin 1:1 conversations
 - File upload security critical given wpDiscuz CVE affecting 70,000+ sites
 - Migration safety required (production app, zero downtime)
@@ -203,12 +203,12 @@ This research synthesizes findings for implementing a real-time comment thread s
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | Technologies align with existing Motionify infrastructure; Ably has official Netlify integration |
+| **Stack** | HIGH | Technologies align with existing Motionify Studio infrastructure; Ably has official Netlify integration |
 | **Features** | HIGH | Category analysis (table stakes/differentiators/anti-features) well-supported by industry sources |
 | **Architecture** | MEDIUM-HIGH | Patterns are proven; Ably integration needs validation; dual-app integration is straightforward |
 | **Pitfalls** | HIGH | Comprehensive coverage of critical/moderate/minor risks with specific prevention strategies |
 
-**Overall Confidence:** HIGH - Research synthesizes well-documented patterns with Motionify-specific context.
+**Overall Confidence:** HIGH - Research synthesizes well-documented patterns with Motionify Studio-specific context.
 
 ---
 
@@ -227,5 +227,5 @@ This research synthesizes findings for implementing a real-time comment thread s
 
 - STACK.md: Netlify Ably Integration, Ably Netlify Template, Aleksandra Codes Comment DB Model, Stephen J. Lu Cloudflare R2
 - FEATURES.md: Arena.im Comment System Features, GetStream In-App Chat, Liveblocks Commenting Experience, HubSpot Response Time Research
-- ARCHITECTURE.md: Existing Motionify infrastructure patterns, Ably + Neon serverless integration, Socket.IO troubleshooting
+- ARCHITECTURE.md: Existing Motionify Studio infrastructure patterns, Ably + Neon serverless integration, Socket.IO troubleshooting
 - PITFALLS.md: OWASP File Upload Cheat Sheet, WordPress wpDiscuz CVE-2020-24186, PostgreSQL ltree documentation, GitLab polymorphic association guidance

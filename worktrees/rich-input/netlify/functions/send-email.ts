@@ -5,7 +5,7 @@ import type { Handler } from '@netlify/functions';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // From email - use Resend's default domain for development, or your verified domain
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify Studio <onboarding@resend.dev>';
 
 export interface EmailOptions {
   to: string;
@@ -57,7 +57,7 @@ export async function sendMentionNotification(data: {
       </div>
       
       <p style="color: #6b7280; font-size: 14px;">
-        Motionify Notifier
+        Motionify Studio Notifier
       </p>
     </div>
   `;
@@ -93,7 +93,7 @@ export async function sendTaskAssignmentEmail(data: {
       </div>
       
       <p style="color: #6b7280; font-size: 14px;">
-        Motionify Notifier
+        Motionify Studio Notifier
       </p>
     </div>
   `;
@@ -129,7 +129,7 @@ export async function sendDeliverableReadyEmail(data: {
       </div>
       
       <p style="color: #6b7280; font-size: 14px;">
-        Motionify Notifier
+        Motionify Studio Notifier
       </p>
     </div>
   `;
@@ -165,7 +165,7 @@ export async function sendRevisionRequestEmail(data: {
       </div>
       
       <p style="color: #6b7280; font-size: 14px;">
-        Motionify Notifier
+        Motionify Studio Notifier
       </p>
     </div>
   `;
@@ -205,7 +205,7 @@ export async function sendFinalDeliverablesEmail(data: {
       </p>
       
       <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-        Motionify Notifier
+        Motionify Studio Notifier
       </p>
     </div>
   `;
@@ -249,7 +249,7 @@ export async function sendPaymentReminderEmail(data: {
       </p>
       
       <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-        Motionify Billing
+        Motionify Studio Billing
       </p>
     </div>
   `;
@@ -271,7 +271,7 @@ export async function sendInquiryVerificationEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
       
@@ -327,7 +327,7 @@ export async function sendProposalNotificationEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
       
@@ -389,7 +389,7 @@ export async function sendNewInquiryNotificationEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
       
@@ -434,7 +434,7 @@ export async function sendNewInquiryNotificationEmail(data: {
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
       
       <p style="color: #6b7280; font-size: 14px; text-align: center;">
-        Motionify Admin Notifications
+        Motionify Studio Admin Notifications
       </p>
     </div>
   `;
@@ -462,7 +462,7 @@ export async function sendCommentNotificationEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
       
@@ -479,7 +479,7 @@ export async function sendCommentNotificationEmail(data: {
       </div>
       
       <p style="color: #6b7280; font-size: 14px; text-align: center;">
-        Motionify Notifications<br>
+        Motionify Studio Notifications<br>
         <a href="https://motionify.studio" style="color: #7c3aed;">motionify.studio</a>
       </p>
     </div>
@@ -509,7 +509,7 @@ export async function sendPaymentFailureNotificationEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
 
@@ -558,7 +558,7 @@ export async function sendPaymentFailureNotificationEmail(data: {
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
       <p style="color: #6b7280; font-size: 14px; text-align: center;">
-        Motionify Admin Notifications
+        Motionify Studio Admin Notifications
       </p>
     </div>
   `;
@@ -585,7 +585,7 @@ export async function sendPaymentSuccessEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
 
@@ -688,7 +688,7 @@ export async function sendProposalStatusChangeEmail(data: {
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="display: inline-block; background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); padding: 12px 20px; border-radius: 12px;">
-          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify</span>
+          <span style="color: white; font-size: 24px; font-weight: bold;">Motionify Studio</span>
         </div>
       </div>
 

@@ -8,7 +8,7 @@
 import { User, UserRole, Deliverable, DeliverableStatus, Project, ProjectStatus, Task } from '@/types';
 
 /**
- * Helper: Check if user is a Motionify team member (Admin, PM, or Team Member)
+ * Helper: Check if user is a Motionify Studio team member (Admin, PM, or Team Member)
  */
 export function isMotionifyTeam(user: User): boolean {
   return ['super_admin', 'support', 'team_member'].includes(user.role);
@@ -72,7 +72,7 @@ export function canViewDeliverable(
     return user.role === 'super_admin' || user.role === 'support';
   }
 
-  // Motionify team can always view (except archived)
+  // Motionify Studio team can always view (except archived)
   if (isMotionifyTeam(user)) {
     return true;
   }
@@ -208,7 +208,7 @@ export function canViewApprovalHistory(
   user: User,
   project: Project
 ): boolean {
-  // Motionify team can always view
+  // Motionify Studio team can always view
   if (isMotionifyTeam(user)) {
     return true;
   }
@@ -274,7 +274,7 @@ export function canEditDeliverable(
     return user.role === 'super_admin';
   }
 
-  // Only Motionify team can edit
+  // Only Motionify Studio team can edit
   if (isMotionifyTeam(user)) {
     return true;
   }
@@ -473,7 +473,7 @@ export function getPermissionDeniedReason(
       return 'You do not have permission to upload beta files';
 
     case 'upload_final':
-      if (user.role === 'team_member') return 'Only Motionify Support and Admins can upload final files';
+      if (user.role === 'team_member') return 'Only Motionify Studio Support and Admins can upload final files';
       if (isClient(user)) return 'Clients cannot upload files';
       if (project.status === 'On Hold') return 'Project is on hold';
       return 'You do not have permission to upload final files';
@@ -493,7 +493,7 @@ export function getPermissionDeniedReason(
 
     case 'create':
       if (project.status !== 'Active' && project.status !== 'Draft') return 'Project must be active';
-      if (user.role === 'team_member' || isClient(user)) return 'Only Motionify Support and Admins can create deliverables';
+      if (user.role === 'team_member' || isClient(user)) return 'Only Motionify Studio Support and Admins can create deliverables';
       return 'You do not have permission to create deliverables';
 
     case 'view_history':
@@ -521,7 +521,7 @@ export function getPermissionDeniedReason(
       return 'All authenticated users can create tasks';
 
     case 'send_for_review':
-      if (isClient(user)) return 'Only the Motionify team can send deliverables for review';
+      if (isClient(user)) return 'Only the Motionify Studio team can send deliverables for review';
       if (user.role === 'team_member') return 'Only Admins and Support can send deliverables for review';
       if (deliverable?.status !== 'beta_ready') return 'Deliverable must be in beta ready status';
       if (project.status === 'On Hold') return 'Project is on hold';
@@ -567,6 +567,6 @@ export function canDeleteProjectFile(
     return false;
   }
 
-  // Motionify team can delete
+  // Motionify Studio team can delete
   return true;
 }

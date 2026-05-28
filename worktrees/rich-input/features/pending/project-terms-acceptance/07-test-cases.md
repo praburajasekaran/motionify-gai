@@ -56,7 +56,7 @@ Each test case includes:
 - ✓ Database: `project_terms.status` → `accepted`
 - ✓ Database: `project_terms.accepted_at` → current timestamp
 - ✓ Database: New record in `project_terms_acceptance` table
-- ✓ Email sent to Motionify admin: "Terms Accepted"
+- ✓ Email sent to Motionify Studio admin: "Terms Accepted"
 
 ---
 
@@ -371,18 +371,18 @@ Each test case includes:
 
 ---
 
-### TC-PT-019: Motionify Team Member Bypasses Terms
+### TC-PT-019: Motionify Studio Team Member Bypasses Terms
 **Priority:** Medium
 **Feature:** Internal User Access
 
 **Steps:**
 1. Create project with pending terms (not accepted by client)
-2. Log in as Motionify PM or admin
+2. Log in as Motionify Studio PM or admin
 3. Navigate to project
 
 **Expected:**
 - ✓ No terms modal shown
-- ✓ Full project access (Motionify team doesn't need client approval)
+- ✓ Full project access (Motionify Studio team doesn't need client approval)
 - ✓ Can view all project content
 - ✓ Can manage project settings
 

@@ -1,6 +1,6 @@
-# Roadmap: Motionify Comment Thread System
+# Roadmap: Motionify Studio Comment Thread System
 
-**Project:** Motionify Comment Thread System
+**Project:** Motionify Studio Comment Thread System
 **Depth:** Quick (3-4 phases)
 **Mode:** YOLO
 **Created:** 2026-01-20

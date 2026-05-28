@@ -6,7 +6,7 @@ This document specifies all email notifications for the Project Terms & Acceptan
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 - **Character Limit:** 10,000 characters per email (plain text)
 
@@ -29,7 +29,7 @@ You now have full access to the project portal. Here's what you can do next:
 • View project deliverables and timeline
 • Track tasks and progress
 • Upload and download files
-• Communicate with the Motionify team
+• Communicate with the Motionify Studio team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -49,10 +49,10 @@ Final Deadline: {{finalDeadline}}
 If you have any questions, reply to this email or contact your project manager.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -100,10 +100,10 @@ To continue working on your project, please:
 If you have additional concerns or questions about these changes, please reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -155,7 +155,7 @@ NEXT STEPS:
                         └──────────────────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Portal
+Motionify Studio Portal
 Automated notification - do not reply
 ```
 
@@ -217,7 +217,7 @@ REMINDER: Project access is blocked until client accepts terms.
 Expected response time: Within 24 hours.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify Portal
+Motionify Studio Portal
 Automated notification - do not reply
 ```
 
@@ -297,7 +297,7 @@ Before deploying email templates:
 
 ### Spam Prevention
 
-- **SPF Record**: Add Motionify domain to SES
+- **SPF Record**: Add Motionify Studio domain to SES
 - **DKIM**: Enable in SES for domain verification
 - **DMARC**: Configure policy for domain
 - **Content**: Avoid spam trigger words:

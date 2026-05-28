@@ -178,7 +178,7 @@ export const StartProductionRequest = () => {
                         Request Submitted! 🎉
                     </h1>
                     <p className="text-lg text-muted-foreground mb-6">
-                        Your project request has been sent to the Motionify team.
+                        Your project request has been sent to the Motionify Studio team.
                     </p>
 
                     {/* Request Number Badge */}

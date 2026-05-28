@@ -5,7 +5,7 @@ import type { Handler } from '@netlify/functions';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // From email - use Resend's default domain for development, or your verified domain
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify Studio <onboarding@resend.dev>';
 
 const LOGO_URL = 'https://motionify.studio/motionify-studio-dark.png';
 
@@ -566,7 +566,7 @@ export async function sendProjectInvitationEmail(data: {
   const roleLabels: Record<string, string> = {
     client: 'Client',
     team_member: 'Team Member',
-    support: 'Motionify Support',
+    support: 'Motionify Studio Support',
   };
   const roleLabel = roleLabels[data.role] || data.role;
   const expiryDays = data.expiresInDays || 7;
@@ -588,7 +588,7 @@ export async function sendProjectInvitationEmail(data: {
 
   return sendEmail({
     to: data.to,
-    subject: `You're invited to ${data.projectName} on Motionify`,
+    subject: `You're invited to ${data.projectName} on Motionify Studio`,
     html: emailWrapper(content),
   });
 }

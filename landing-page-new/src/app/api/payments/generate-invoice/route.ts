@@ -52,7 +52,7 @@ function generateInvoicePdf(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
-  doc.text('Motionify', 20, 25);
+  doc.text('Motionify Studio', 20, 25);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -164,9 +164,9 @@ function generateInvoicePdf(
 
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
-  doc.text('Thank you for choosing Motionify for your video production needs!', 105, 275, { align: 'center' });
+  doc.text('Thank you for choosing Motionify Studio for your video production needs!', 105, 275, { align: 'center' });
   doc.text('This is a computer-generated receipt. No signature required.', 105, 282, { align: 'center' });
-  doc.text(`Generated on ${formatDate(receiptDate)} | Motionify | hello@motionify.com`, 105, 289, { align: 'center' });
+  doc.text(`Generated on ${formatDate(receiptDate)} | Motionify Studio | hello@motionify.com`, 105, 289, { align: 'center' });
 
   return Buffer.from(doc.output('arraybuffer'));
 }

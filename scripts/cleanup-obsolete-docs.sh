@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Motionify PM Portal - Obsolete Documentation Cleanup Script
+# Motionify Studio Portal - Obsolete Documentation Cleanup Script
 # Created: 2026-01-12
 # 
 # This script moves obsolete/duplicate markdown files to an archive directory.
@@ -34,7 +34,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  Motionify Docs Cleanup Script${NC}"
+echo -e "${BLUE}  Motionify Studio Docs Cleanup Script${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 

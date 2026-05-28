@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-This document catalogs critical pitfalls specific to implementing real-time comment thread systems, with particular attention to the Motionify context: existing production app, 1:1 conversation model (client ↔ superadmin), and serverless infrastructure. The most dangerous pitfalls fall into three categories: real-time synchronization failures during network instability, database schema design for threaded conversations at scale, and file attachment security vulnerabilities that can lead to server compromise. Each pitfall includes warning signs, prevention strategies, and phase mapping for when the issue should be addressed during roadmap execution.
+This document catalogs critical pitfalls specific to implementing real-time comment thread systems, with particular attention to the Motionify Studio context: existing production app, 1:1 conversation model (client ↔ superadmin), and serverless infrastructure. The most dangerous pitfalls fall into three categories: real-time synchronization failures during network instability, database schema design for threaded conversations at scale, and file attachment security vulnerabilities that can lead to server compromise. Each pitfall includes warning signs, prevention strategies, and phase mapping for when the issue should be addressed during roadmap execution.
 
 ---
 
@@ -23,7 +23,7 @@ Mistakes that cause complete system failures, data loss, or security breaches. T
 
 **Real-World Example:** After a deployment, 50,000 clients hit the `/ws` endpoint simultaneously. The server exhausts its connection pool and file descriptors immediately, crashing before it can accept any connections.
 
-**Motionify-Specific Risk:** Medium. If the real-time system serves many concurrent users and deployment causes simultaneous disconnections, this could impact availability during the transition period.
+**Motionify Studio-Specific Risk:** Medium. If the real-time system serves many concurrent users and deployment causes simultaneous disconnections, this could impact availability during the transition period.
 
 **Warning Signs:**
 - Server crashes or connection timeouts immediately after deployments
@@ -502,21 +502,21 @@ Mistakes that cause annoyance, minor bugs, or require cleanup but are fixable wi
 
 ---
 
-## Motionify-Specific Concerns
+## Motionify Studio-Specific Concerns
 
-Based on the codebase analysis and this domain research, Motionify should pay special attention to:
+Based on the codebase analysis and this domain research, Motionify Studio should pay special attention to:
 
-### High Priority for Motionify
+### High Priority for Motionify Studio
 
 1. **Tenant Isolation (Pitfall #8):** The 1:1 conversation model (client ↔ superadmin) requires absolute tenant isolation. Context bleeding would expose client data across tenants, which is a critical compliance issue.
 
-2. **File Upload Security (Pitfall #5):** Adding file attachments to existing comments is a common attack vector. The wpDiscuz vulnerability (70,000+ sites) demonstrates how catastrophic this can be. Motionify should implement magic byte validation and presigned URLs from day one.
+2. **File Upload Security (Pitfall #5):** Adding file attachments to existing comments is a common attack vector. The wpDiscuz vulnerability (70,000+ sites) demonstrates how catastrophic this can be. Motionify Studio should implement magic byte validation and presigned URLs from day one.
 
 3. **Migration Safety (Pitfall #10):** The existing production app means migrations must be zero-downtime. Use `CREATE INDEX CONCURRENTLY` and three-step nullable column additions.
 
 4. **Date Handling (Pitfall #9):** Consistent UTC handling is critical for audit trails and legal compliance in proposal management. Server timestamps only.
 
-### Medium Priority for Motionify
+### Medium Priority for Motionify Studio
 
 5. **WebSocket Reconnection (Pitfall #1):** If superadmins and clients both use real-time chat, deployment-related disconnections should be graceful.
 
@@ -532,7 +532,7 @@ Based on the codebase analysis and this domain research, Motionify should pay sp
 | Database schema pitfalls | HIGH | Standard patterns from production systems |
 | File attachment security | HIGH | OWASP guidelines and CVE analyses |
 | Migration strategies | HIGH | PostgreSQL documentation and case studies |
-| Motionify-specific concerns | MEDIUM | Applied domain knowledge to Motionify context |
+| Motionify Studio-specific concerns | MEDIUM | Applied domain knowledge to Motionify Studio context |
 
 ---
 

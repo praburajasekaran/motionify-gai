@@ -1,4 +1,4 @@
-# Architecture Patterns: Real-Time Comment System for Motionify
+# Architecture Patterns: Real-Time Comment System for Motionify Studio
 
 **Project:** Comment Thread Feature Integration
 **Researched:** 2026-01-20
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This architecture document outlines a **real-time comment system** designed for Motionify's dual-app architecture (Vite admin SPA + Next.js client portal) deployed on **Netlify Functions** with **PostgreSQL** storage. The system must integrate seamlessly with existing proposal detail pages while adhering to Motionify's established patterns for authentication, file attachments (R2 presigned URLs), and notifications.
+This architecture document outlines a **real-time comment system** designed for Motionify Studio's dual-app architecture (Vite admin SPA + Next.js client portal) deployed on **Netlify Functions** with **PostgreSQL** storage. The system must integrate seamlessly with existing proposal detail pages while adhering to Motionify Studio's established patterns for authentication, file attachments (R2 presigned URLs), and notifications.
 
 **Key Architecture Decisions:**
 
@@ -1043,7 +1043,7 @@ netlify deploy --dir=.next
 
 ## Sources
 
-1. **Existing Motionify Infrastructure**
+1. **Existing Motionify Studio Infrastructure**
    - `/netlify/functions/_shared/db.ts` - Database pooling pattern
    - `/netlify/functions/r2-presign.ts` - R2 presigned URL generation
    - `/contexts/NotificationContext.tsx` - Notification system

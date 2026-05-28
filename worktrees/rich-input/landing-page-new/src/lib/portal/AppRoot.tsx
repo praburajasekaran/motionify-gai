@@ -127,7 +127,7 @@ const AppRoot: React.FC = () => {
     setCurrentUser(user);
     // Fix Bug #5: Use safe localStorage setter
     setLocalStorageItem('portal_user', user);
-    // Only auto-select a project for client-side users, as Motionify members can be on multiple projects.
+    // Only auto-select a project for client-side users, as Motionify Studio members can be on multiple projects.
     if (user.role === UserRole.PRIMARY_CONTACT || user.role === UserRole.TEAM_MEMBER) {
       // Find the project this user belongs to and select it
       const projectForUser = projectsData.find(p =>

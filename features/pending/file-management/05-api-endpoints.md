@@ -249,7 +249,7 @@ All file management endpoints require authentication:
 
 **Description**: Update file metadata (move to different deliverable, update description)
 
-**Authorization**: Motionify team members only (not clients)
+**Authorization**: Motionify Studio team members only (not clients)
 
 **Request Body**:
 ```json
@@ -287,7 +287,7 @@ All file management endpoints require authentication:
 
 **Description**: Soft-delete file (marks as deleted, preserves for data retention)
 
-**Authorization**: Motionify admins or file uploader
+**Authorization**: Motionify Studio admins or file uploader
 
 **Response (200 OK)**:
 ```json

@@ -538,7 +538,7 @@ export default function PermissionTest() {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Is Motionify Team:</span>
+                  <span className="text-muted-foreground">Is Motionify Studio Team:</span>
                   <Badge variant={permissions.isTeam ? 'success' : 'default'}>
                     {permissions.isTeam ? 'Yes' : 'No'}
                   </Badge>

@@ -93,7 +93,7 @@ STEP 3: Email Batching Logic (Background Job Every 2 Minutes)
 STEP 4: Email Sent via Amazon SES
     ↓
 [Email template populated with notification data]
-[Subject: "[Motionify] You have 3 new notifications - Brand Video Campaign"]
+[Subject: "[Motionify Studio] You have 3 new notifications - Brand Video Campaign"]
 [Body includes: All 3 notifications, "View in Portal" button, unsubscribe link]
 [SES sends email to Jane's address]
 [Email queue status: pending → sent]
@@ -278,7 +278,7 @@ Click item         Filter by:
 | Comment @mention | Mentioned users | `comment_mention` | Immediate |
 | File uploaded | Project team | `file_uploaded` | Immediate |
 | Deliverable awaiting approval | Client primary contact | `approval_request` | Immediate |
-| Revision requested | Motionify PM + Admin | `revision_requested` | Immediate |
+| Revision requested | Motionify Studio PM + Admin | `revision_requested` | Immediate |
 | Team member added | New team member | `team_member_added` | Immediate |
 | Team member removed | Removed member | `team_member_removed` | Immediate |
 

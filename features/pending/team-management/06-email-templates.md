@@ -6,7 +6,7 @@ This document specifies all email notifications for Team Management (US-021, US-
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 - **Format:** React Email templates (TSX components)
 
@@ -18,7 +18,7 @@ This document specifies all email notifications for Team Management (US-021, US-
 
 **Trigger:** Primary contact or PM sends invitation to join project
 **To:** Invitee
-**Subject:** `🎬 You've been invited to join {{projectName}} on Motionify`
+**Subject:** `🎬 You've been invited to join {{projectName}} on Motionify Studio`
 **Template File:** `team-invitation.tsx`
 
 ```
@@ -59,10 +59,10 @@ This invitation expires in {{daysUntilExpiry}} days ({{expiryDate}}).
 Questions about this invitation? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -110,10 +110,10 @@ They now have full access to project deliverables, files, and updates.
 Your project team now has {{totalMembers}} members.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -165,10 +165,10 @@ Project team:
 Need help? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -211,10 +211,10 @@ What's preserved:
 If you believe this was a mistake, contact {{primaryContactName}} at {{primaryContactEmail}}.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -256,10 +256,10 @@ Their contributions remain visible ({{tasksCount}} tasks, {{commentsCount}} comm
 Your project team now has {{totalMembers}} active members.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -294,7 +294,7 @@ Invitation details:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -326,7 +326,7 @@ Want to invite them again?
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
