@@ -1,12 +1,12 @@
 # Technology Stack: Real-Time Comment/Thread System
 
-**Project:** Motionify Proposal Comments Feature  
+**Project:** Motionify Studio Proposal Comments Feature
 **Researched:** January 20, 2026  
 **Overall Confidence:** HIGH
 
 ## Executive Summary
 
-For implementing a real-time comment/thread system in the existing Motionify infrastructure (Vite + Next.js + Netlify Functions + PostgreSQL + Cloudflare R2), the recommended stack consists of **Ably** for real-time messaging, **PostgreSQL with recursive CTEs** for comment threading, and **Cloudflare R2 with presigned URLs** for file attachments.
+For implementing a real-time comment/thread system in the existing Motionify Studio infrastructure (Vite + Next.js + Netlify Functions + PostgreSQL + Cloudflare R2), the recommended stack consists of **Ably** for real-time messaging, **PostgreSQL with recursive CTEs** for comment threading, and **Cloudflare R2 with presigned URLs** for file attachments.
 
 This combination addresses the core constraint of Netlify Functions compatibility while providing production-ready scalability. Ably's official Netlify integration and serverless-optimized architecture make it the clear choice over alternatives like Pusher or Supabase Realtime, which either lack deep Netlify integration or introduce unnecessary complexity. The recommended PostgreSQL schema uses an adjacency list pattern with recursive CTEs, which balances query flexibility with implementation simplicity for Fiverr/Upwork-style proposal negotiations.
 
@@ -81,7 +81,7 @@ For fetching nested comment trees, the recursive CTE approach is well-documented
 
 **Why R2 with Presigned URLs:**
 
-Cloudflare R2 is already part of the Motionify infrastructure and provides significant cost advantages over S3 with zero egress fees. For comment attachments, the recommended approach uses presigned URLs that allow clients to upload directly to R2 without routing through Netlify Functions, reducing function invocations and improving performance.
+Cloudflare R2 is already part of the Motionify Studio infrastructure and provides significant cost advantages over S3 with zero egress fees. For comment attachments, the recommended approach uses presigned URLs that allow clients to upload directly to R2 without routing through Netlify Functions, reducing function invocations and improving performance.
 
 A complete implementation reference demonstrates this pattern using Cloudflare Workers to handle R2 operations with proper CORS configuration [Stephen J. Lu - Comments Field with R2](https://docs.stephenjlu.com/docs-stephenjlu/projects/using-cloudflare-r2-object-storage-to-serve-a-comments-field). Key considerations include:
 
@@ -112,7 +112,7 @@ A complete implementation reference demonstrates this pattern using Cloudflare W
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Motionify Architecture                       │
+│                     Motionify Studio Architecture                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌─────────────┐     ┌─────────────────┐     ┌───────────────┐  │

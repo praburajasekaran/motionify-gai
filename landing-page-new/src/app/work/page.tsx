@@ -5,7 +5,7 @@ import ProcessTimeline from "@/components/ProcessTimeline/ProcessTimeline";
 import ReadyToTellYourStory from "@/components/ReadyToTellYourStory";
 
 export const metadata: Metadata = {
-  title: "Our Work — Motionify.Studio",
+  title: "Our Work — Motionify Studio",
   description: "See our portfolio of brand films, explainers, product launches, and more. Discover our approach and transparent pricing.",
 };
 

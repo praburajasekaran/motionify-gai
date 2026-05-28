@@ -76,9 +76,9 @@ export default function CancellationRefundPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">5. Motionify's Right to Cancel</h2>
+            <h2 className="text-2xl font-semibold text-white mb-4">5. Motionify Studio's Right to Cancel</h2>
             <p className="text-gray-300 leading-relaxed">
-              Motionify reserves the right to cancel any order due to unforeseen operational or technical reasons.
+              Motionify Studio reserves the right to cancel any order due to unforeseen operational or technical reasons.
               In such cases, the client will receive a full refund of any payments made.
             </p>
           </section>

@@ -201,7 +201,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                             className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors bg-card"
                         >
                             <option value="client">Client Team Member</option>
-                            {canInviteTeam && <option value="team">Motionify Team</option>}
+                            {canInviteTeam && <option value="team">Motionify Studio Team</option>}
                         </select>
                         <p className="mt-1.5 text-xs text-muted-foreground">
                             {role === 'client'

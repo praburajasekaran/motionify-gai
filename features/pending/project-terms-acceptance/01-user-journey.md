@@ -53,7 +53,7 @@ STEP 5B: Change Request Submitted
     ↓
 [System updates proposal status → "revision_requested"]
 [System updates inquiry status → "negotiating"]
-[Email sent to Motionify admin: "Client Requested Proposal/Term Changes"]
+[Email sent to Motionify Studio admin: "Client Requested Proposal/Term Changes"]
 [Client sees: "Your request has been sent. We'll review and respond within 24 hours."]
     ↓
 
@@ -171,7 +171,7 @@ Option A: Accept Proposal                    Option B: Request Changes
   Immediate access after payment          ↓
   ↓                                          ↓
 [Proposal & terms accepted]              [Change request created]
-[Email to Motionify team]                [Email to admin]
+[Email to Motionify Studio team]                [Email to admin]
 [Payment request triggered]              [Must wait for response]
 ```
 
@@ -196,8 +196,8 @@ Option A: Update Terms                    Option B: Decline Changes
 
 | Trigger Event | Recipients | Email Type | Timing |
 |--------------|------------|------------|--------|
-| Proposal accepted (with terms) | Motionify admin, PM | `proposal-accepted` | Immediate |
-| Client requests proposal/term changes | Motionify admin | `proposal-change-requested` | Immediate |
+| Proposal accepted (with terms) | Motionify Studio admin, PM | `proposal-accepted` | Immediate |
+| Client requests proposal/term changes | Motionify Studio admin | `proposal-change-requested` | Immediate |
 | Admin updates proposal/terms | Client primary contact | `proposal-updated` | Immediate |
 | Admin responds to change request | Client primary contact | `proposal-change-response` | Immediate |
 
@@ -230,7 +230,7 @@ Day 0, 9:01 AM:   Client receives proposal review email
 Day 0, 10:30 AM:  Client reviews proposal and terms
 Day 0, 10:35 AM:  Client accepts proposal (with terms) (5 min review)
 Day 0, 10:35 AM:  Terms accepted as part of proposal acceptance
-Day 0, 10:36 AM:  Motionify team receives acceptance notification
+Day 0, 10:36 AM:  Motionify Studio team receives acceptance notification
 Day 0, 11:00 AM:  Admin creates project structure, triggers payment request
 Day 1, 2:00 PM:   Client pays advance payment
 Day 1, 2:01 PM:   Project created automatically, client receives access

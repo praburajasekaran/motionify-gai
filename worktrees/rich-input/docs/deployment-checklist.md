@@ -1,4 +1,4 @@
-# Deployment Checklist - Motionify PM Portal
+# Deployment Checklist - Motionify Studio Portal
 
 Use this checklist to ensure a smooth deployment to production.
 
@@ -61,7 +61,7 @@ Copy from `.env.example` and add to Netlify:
 - [ ] `SMTP_USER`
 - [ ] `SMTP_PASS`
 - [ ] `EMAIL_FROM` (noreply@motionify.local)
-- [ ] `EMAIL_FROM_NAME` (Motionify PM Portal)
+- [ ] `EMAIL_FROM_NAME` (Motionify Studio Portal)
 - [ ] `JWT_SECRET` (64+ character random string)
 - [ ] `JWT_EXPIRES_IN` (7d)
 
@@ -182,7 +182,7 @@ Add SES variables:
 - [ ] `AWS_SES_ACCESS_KEY_ID`
 - [ ] `AWS_SES_SECRET_ACCESS_KEY`
 - [ ] `SES_FROM_EMAIL` (noreply@motionify.studio)
-- [ ] `SES_FROM_NAME` (Motionify PM Portal)
+- [ ] `SES_FROM_NAME` (Motionify Studio Portal)
 
 ### Update Code
 
@@ -404,4 +404,4 @@ Deployment is successful when:
 
 ---
 
-**Congratulations! Your Motionify PM Portal is now live! 🎉**
+**Congratulations! Your Motionify Studio Portal is now live! 🎉**

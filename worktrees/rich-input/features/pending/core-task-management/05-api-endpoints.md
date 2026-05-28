@@ -34,7 +34,7 @@ Create a new task within a project deliverable.
 POST /api/projects/:projectId/tasks
 ```
 
-**Authentication:** Required (Motionify team only)
+**Authentication:** Required (Motionify Studio team only)
 
 **Request Body:**
 ```json
@@ -207,7 +207,7 @@ Update task properties (not status, use separate endpoint for status changes).
 PATCH /api/tasks/:taskId
 ```
 
-**Authentication:** Required (Motionify team only)
+**Authentication:** Required (Motionify Studio team only)
 
 **Request Body:**
 ```json
@@ -315,7 +315,7 @@ Update delivery notes (within 1-hour edit window).
 PATCH /api/tasks/:taskId/delivery-notes
 ```
 
-**Authentication:** Required (Motionify team only)
+**Authentication:** Required (Motionify Studio team only)
 
 **Request Body:**
 ```json

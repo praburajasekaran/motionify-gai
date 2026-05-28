@@ -138,7 +138,7 @@ POST /api/projects/:projectId/terms/accept
 - Updates `project_terms.status` → `accepted`
 - Updates `project_terms.accepted_at` → current timestamp
 - Logs activity: "Project terms accepted by [client name]"
-- Sends email to Motionify admin and PM
+- Sends email to Motionify Studio admin and PM
 
 **Error Responses:**
 - `400 Bad Request`: Validation failed or terms already accepted
@@ -201,7 +201,7 @@ POST /api/projects/:projectId/terms/request-revision
 - Creates `project_terms_revisions` record
 - Updates `project_terms.status` → `revision_requested`
 - Logs activity: "Client requested term changes"
-- Sends email to Motionify admin with request details
+- Sends email to Motionify Studio admin with request details
 
 **Error Responses:**
 - `400 Bad Request`: Validation failed (e.g., requested changes too short)

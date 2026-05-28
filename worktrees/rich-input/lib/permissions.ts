@@ -12,7 +12,7 @@ interface User {
 }
 
 /**
- * Check if user is a Motionify admin (super admin or project manager)
+ * Check if user is a Motionify Studio admin (super admin or project manager)
  */
 export function isMotionifyAdmin(user: User | null): boolean {
   if (!user) return false;
@@ -36,7 +36,7 @@ export function isProjectManager(user: User | null): boolean {
 }
 
 /**
- * Check if user is Motionify team member (any internal role)
+ * Check if user is Motionify Studio team member (any internal role)
  */
 export function isMotionifyTeam(user: User | null): boolean {
   if (!user) return false;

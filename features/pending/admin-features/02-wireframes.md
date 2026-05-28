@@ -35,7 +35,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  Motionify Portal - Admin        [🔔]  [Profile ▼]                          [Logout]│
+│  Motionify Studio Portal - Admin        [🔔]  [Profile ▼]                          [Logout]│
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  Dashboard  |  User Management  |  Activity Logs  |  Settings                       │
 └─────────────────────────────────────────────────────────────────────────────────────┘
@@ -216,7 +216,7 @@ PATCH /api/admin/users/:userId
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  Motionify Portal - Admin        [🔔]  [Profile ▼]                          [Logout]│
+│  Motionify Studio Portal - Admin        [🔔]  [Profile ▼]                          [Logout]│
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  Dashboard  |  User Management  |  Activity Logs  |  Settings                       │
 └─────────────────────────────────────────────────────────────────────────────────────┘
@@ -346,7 +346,7 @@ GET /api/projects/:id/activities?
 │  • Start Date: Jan 15, 2025                                                          │
 │  • Target End: Mar 1, 2025                                                           │
 │  • Deliverables: 2 of 4 approved (50%)                                              │
-│  • Team Members: 5 (3 Motionify, 2 Client)                                          │
+│  • Team Members: 5 (3 Motionify Studio, 2 Client)                                          │
 │                                                                                       │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 

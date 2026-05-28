@@ -6,7 +6,7 @@ This document specifies email notifications for task followers.
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 
 ## Notification Strategy
@@ -69,10 +69,10 @@ You're receiving this because you're following this task.
 To stop receiving updates, click "Unfollow" on the task page.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -128,10 +128,10 @@ You're receiving this because you're following this task.
 To stop receiving updates, click "Unfollow" on the task page.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -187,10 +187,10 @@ You're receiving this because you're following this task.
 To stop receiving updates, click "Unfollow" on the task page.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 

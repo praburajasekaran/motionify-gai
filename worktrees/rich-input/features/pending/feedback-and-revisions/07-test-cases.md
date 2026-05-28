@@ -231,7 +231,7 @@ Each test case includes:
 - ✓ project.usedRevisions incremented
 - ✓ deliverable.status → 'rejected' → 'revision_requested'
 - ✓ RevisionRequest created
-- ✓ Email sent to Motionify team
+- ✓ Email sent to Motionify Studio team
 - ✓ Activity logged
 
 ---

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This feature manages the complete feedback and revision workflow for Motionify video production projects. It enables clients to provide structured feedback on deliverables, request revisions with context, and track revision quota usage. The system integrates comments on tasks and files, revision request workflows, and quota management to ensure clear communication and scope control.
+This feature manages the complete feedback and revision workflow for Motionify Studio video production projects. It enables clients to provide structured feedback on deliverables, request revisions with context, and track revision quota usage. The system integrates comments on tasks and files, revision request workflows, and quota management to ensure clear communication and scope control.
 
 ## Customer Journey Summary
 

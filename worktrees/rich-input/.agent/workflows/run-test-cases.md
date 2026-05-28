@@ -1,8 +1,8 @@
 ---
-description: Execute Motionify portal test cases, implement missing features, and update test documentation
+description: Execute Motionify Studio portal test cases, implement missing features, and update test documentation
 ---
 
-# Motionify Test Case Execution Workflow
+# Motionify Studio Test Case Execution Workflow
 
 ## Overview
 This workflow guides you through finding pending test cases, testing them against the running application, implementing missing functionality if needed, and updating the test cases document with results.

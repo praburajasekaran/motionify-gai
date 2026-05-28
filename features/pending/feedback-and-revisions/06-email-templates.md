@@ -6,7 +6,7 @@ This document specifies all email notifications for comments, revisions, and quo
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 
 ## Customer Email Templates
@@ -41,10 +41,10 @@ Task: {{taskName}}
 Questions? Reply to this email or comment in the portal.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -84,7 +84,7 @@ File: {{fileName}}
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -118,7 +118,7 @@ Context:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -126,7 +126,7 @@ The Motionify Team
 ### 4. Revision Requested
 
 **Trigger:** Client requests revision on deliverable
-**To:** Motionify team, project manager
+**To:** Motionify Studio team, project manager
 **Subject:** `🔄 Revision Requested: {{deliverableName}} ({{projectName}})`
 
 ```
@@ -161,7 +161,7 @@ Hi Team,
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -207,7 +207,7 @@ The revised beta is now ready for your review (watermarked preview).
 Questions about the changes? Reply to this email!
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -215,7 +215,7 @@ The Motionify Team
 ### 6. Revision Quota Warning
 
 **Trigger:** 1 revision remaining
-**To:** Client PRIMARY_CONTACT, Motionify PM
+**To:** Client PRIMARY_CONTACT, Motionify Studio PM
 **Subject:** `⚠️  Revision Quota Alert: 1 Remaining ({{projectName}})`
 
 ```
@@ -257,7 +257,7 @@ will be reviewed by our team (usually approved within 2 hours).
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -312,7 +312,7 @@ Or review in admin portal: {{adminLink}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Motionify Admin System
+Motionify Studio Admin System
 ```
 
 ---
@@ -350,7 +350,7 @@ You can now request revisions on your deliverables.
 Questions? Just reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -392,7 +392,7 @@ a call with your project manager to explore alternative solutions.
 We're committed to delivering exceptional results for your project.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---

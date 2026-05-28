@@ -40,7 +40,7 @@ export default function PaymentButton({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
         amount: order.amount,
         currency: order.currency,
-        name: 'Motionify',
+        name: 'Motionify Studio',
         description: `Advance Payment - ${proposalId}`,
         order_id: order.id,
         prefill: {

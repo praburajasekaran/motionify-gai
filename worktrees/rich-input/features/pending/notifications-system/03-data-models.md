@@ -646,7 +646,7 @@ const sampleEmailQueue: EmailNotificationQueue = {
     "aa0e8400-e29b-41d4-a716-446655440005",
   ],
   emailType: "digest",
-  subject: "[Motionify] You have 2 new notifications - Brand Video Campaign",
+  subject: "[Motionify Studio] You have 2 new notifications - Brand Video Campaign",
   bodyHtml: "<html>...</html>",
   bodyText: "Plain text version...",
   retryCount: 0,

@@ -88,7 +88,7 @@ export default function ReceiptPage() {
                     {/* Header */}
                     <div className="bg-slate-900 p-8 text-white flex justify-between items-start">
                         <div>
-                            <h1 className="text-3xl font-bold mb-2">Motionify</h1>
+                            <h1 className="text-3xl font-bold mb-2">Motionify Studio</h1>
                             <p className="text-slate-400">Premium Video Production</p>
                         </div>
                         <div className="text-right">
@@ -163,7 +163,7 @@ export default function ReceiptPage() {
                     {/* Bottom Branding */}
                     <div className="bg-gray-50 p-6 text-center border-t border-gray-100">
                         <p className="text-sm text-gray-500">
-                            Motionify | hello@motionify.com | motionify.com
+                            Motionify Studio | hello@motionify.com | motionify.com
                         </p>
                     </div>
                 </div>

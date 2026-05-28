@@ -8,7 +8,7 @@
 
 ## Overview
 
-User accounts can be created through three distinct paths in the Motionify portal. This document provides a comprehensive guide to each path, their triggers, and the resulting user state.
+User accounts can be created through three distinct paths in the Motionify Studio portal. This document provides a comprehensive guide to each path, their triggers, and the resulting user state.
 
 ---
 

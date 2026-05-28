@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 
 export const metadata = {
   title: 'About Us - Motionify Studio',
-  description: 'Motionify is an award-winning video production and 3D animation agency, formerly known as RootsBridge, founded in 2017.',
+  description: 'Motionify Studio is an award-winning video production and 3D animation agency, formerly known as RootsBridge, founded in 2017.',
 };
 
 export default function AboutPage() {
@@ -19,17 +19,17 @@ export default function AboutPage() {
 
         <div className="prose prose-invert prose-lg max-w-none space-y-8">
           <p className="text-gray-300 leading-relaxed">
-            As a production house, Motionify brings to the table the best production and post-production team in the industry, with leading names in the world of cinematography, animation, visual effects, sound technology, and editing working under the Motionify banner.
+            As a production house, Motionify Studio brings to the table the best production and post-production team in the industry, with leading names in the world of cinematography, animation, visual effects, sound technology, and editing working under the Motionify Studio banner.
           </p>
 
           <p className="text-gray-300 leading-relaxed">
-            Motionify&apos;s thoughtful concepts, effortless presentation, and convincing production, enhanced by brilliant quality, can put your video pitch ahead of anything your competitors have. We work with our clients to realize their dream by translating their thoughts into visuals.
+            Motionify Studio&apos;s thoughtful concepts, effortless presentation, and convincing production, enhanced by brilliant quality, can put your video pitch ahead of anything your competitors have. We work with our clients to realize their dream by translating their thoughts into visuals.
           </p>
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">Our Story</h2>
             <p className="text-gray-300 leading-relaxed">
-              Founded in 2017 and formerly known as RootsBridge, Motionify has grown into an award-winning video production and 3D animation agency. Operating from Chennai and Bangalore, our work has been noticed, discussed, and awarded around the world, and has been recognized on various elite platforms.
+              Founded in 2017 and formerly known as RootsBridge, Motionify Studio has grown into an award-winning video production and 3D animation agency. Operating from Chennai and Bangalore, our work has been noticed, discussed, and awarded around the world, and has been recognized on various elite platforms.
             </p>
           </section>
 

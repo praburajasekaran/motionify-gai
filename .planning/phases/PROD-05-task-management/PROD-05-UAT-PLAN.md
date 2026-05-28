@@ -25,7 +25,7 @@ PENDING → IN_PROGRESS → AWAITING_APPROVAL → COMPLETED
 | COMPLETED | IN_PROGRESS (reopen) |
 
 ### Key Permissions
-| Action | Motionify Team | Client PM | Client Member |
+| Action | Motionify Studio Team | Client PM | Client Member |
 |--------|----------------|-----------|---------------|
 | Create task | ✅ | ❌ | ❌ |
 | Edit task | ✅ | ❌ | ❌ |

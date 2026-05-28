@@ -33,7 +33,7 @@ Authorization: Bearer <jwt_token>
 
 ### 1. Create New User
 
-Create a new Motionify team member and send welcome email.
+Create a new Motionify Studio team member and send welcome email.
 
 ```
 POST /api/admin/users

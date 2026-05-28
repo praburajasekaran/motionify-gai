@@ -6,7 +6,7 @@ This document specifies all email notifications for File Management (US-015, US-
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 - **Format:** React Email templates (TSX components)
 
@@ -48,10 +48,10 @@ You can download or preview this file in the project portal.
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -101,10 +101,10 @@ The file has been successfully uploaded and is now available to the project team
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -158,10 +158,10 @@ What happens next:
 Need help? Reply to this email or contact us at hello@motionify.studio.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -207,10 +207,10 @@ Comment:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -262,10 +262,10 @@ File can be restored within 30 days if needed.
 This is an automated notification.
 
 Best regards,
-The Motionify System
+The Motionify Studio System
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -285,7 +285,7 @@ https://motionify.studio
 
 - **Font:** System font stack (Arial, Helvetica, sans-serif)
 - **Text Color:** #333333 (body), #666666 (secondary)
-- **Link Color:** #4A90E2 (Motionify brand blue)
+- **Link Color:** #4A90E2 (Motionify Studio brand blue)
 - **Button:** Blue background (#4A90E2), white text, 8px border radius
 - **Spacing:** 20px vertical rhythm
 - **Max Width:** 600px
@@ -393,7 +393,7 @@ export default function FileUploadedEmail({
             <br />
             Best regards,
             <br />
-            The Motionify Team
+            The Motionify Studio Team
           </Text>
         </Container>
       </Body>

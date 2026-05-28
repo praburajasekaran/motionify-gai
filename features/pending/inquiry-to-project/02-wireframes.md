@@ -327,7 +327,7 @@ Reference:       🔗 https://youtube.com/example1                      [Edit]
 
 ────────────────────────────────────────────────────────────────────────────
 
- ✓  I agree to be contacted by Motionify regarding this inquiry
+ ✓  I agree to be contacted by Motionify Studio regarding this inquiry
 
               ┌──────────────────────────────────────┐
               │  Submit Inquiry [Lucide: Send]       │
@@ -378,7 +378,7 @@ POST /api/inquiries
 │                                                                           │
 │                     ✓  Inquiry Submitted Successfully!                   │
 │                                                                           │
-│            Thank you for your interest in Motionify!                     │
+│            Thank you for your interest in Motionify Studio!                     │
 │                                                                           │
 │   Our team will review your project details and get back to you within  │
 │                           1-2 business days.                             │
@@ -426,7 +426,7 @@ Proposal #PROP-2025-042-v1                           Sent: Jan 11, 2025
 
 Hi John,
 
-Thank you for your interest in working with Motionify! We're excited about
+Thank you for your interest in working with Motionify Studio! We're excited about
 your product explainer video project. Below is our detailed proposal.
 
 INVESTMENT
@@ -688,15 +688,15 @@ Questions? We're here to help: hello@motionify.studio
 **Authentication:** Magic link token
 
 ```
-From: Motionify <hello@motionify.studio>
+From: Motionify Studio <hello@motionify.studio>
 To: john@acme.com
-Subject: Welcome to Motionify - Your Project Portal Access
+Subject: Welcome to Motionify Studio - Your Project Portal Access
 
 ────────────────────────────────────────────────────────────────────────────
 
 Hi John,
 
-Welcome to Motionify! Your project is officially underway. 🎉
+Welcome to Motionify Studio! Your project is officially underway. 🎉
 
 PROJECT DETAILS
 ────────────────────────────────────────────────────────────────────────────
@@ -736,7 +736,7 @@ Questions? Reply to this email or contact your project manager directly
 through the portal.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ────────────────────────────────────────────────────────────────────────────
 ```
@@ -1276,7 +1276,7 @@ ADDITIONAL NOTES
 - Retry mechanisms for critical actions
 
 ### Branding
-- Use Motionify brand colors and fonts
+- Use Motionify Studio brand colors and fonts
 - Consistent spacing and layout grid
 - Lucide React icons throughout
 - Professional, clean aesthetic matching Todoist/Linear style

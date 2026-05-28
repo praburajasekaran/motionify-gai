@@ -3,7 +3,7 @@
 
 export type UserRole =
     | 'client'              // Customer who owns projects
-    | 'support'             // Motionify support (SPOC for clients)
+    | 'support'             // Motionify Studio support (SPOC for clients)
     | 'admin'               // Admin with limited permissions
     | 'super_admin';        // Full admin access
 
@@ -225,7 +225,7 @@ export const AUTH_CONFIG = {
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
     client: 'Client',
-    support: 'Motionify Support',
+    support: 'Motionify Studio Support',
     admin: 'Admin',
     super_admin: 'Super Admin',
 } as const;

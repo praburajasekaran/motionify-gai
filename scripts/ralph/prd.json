@@ -1,7 +1,7 @@
 {
-    "project": "Motionify PM Portal",
+    "project": "Motionify Studio Portal",
     "version": "1.0.0",
-    "description": "Complete pending test cases for Motionify PM Portal - client collaboration platform for video production",
+    "description": "Complete pending test cases for Motionify Studio Portal - client collaboration platform for video production",
     "branchName": "ralph/complete-features",
     "created": "2026-01-09",
     "techStack": {
@@ -132,7 +132,7 @@
                 "Navigate to project → Tasks",
                 "'Create Task' button NOT visible",
                 "If API called directly: 403 Forbidden",
-                "Error: 'Only Motionify team can create tasks'",
+                "Error: 'Only Motionify Studio team can create tasks'",
                 "Typecheck passes"
             ],
             "implementationHints": "UI restriction exists, needs API enforcement",
@@ -141,7 +141,7 @@
                 "netlify/functions/"
             ],
             "passes": true,
-            "notes": "Implemented 2026-01-10. UI: Add Task button and quick-add form hidden for clients via isInternalUser check in TaskList.tsx. API: POST /tasks returns 403 'Only Motionify team can create tasks' for client roles."
+            "notes": "Implemented 2026-01-10. UI: Add Task button and quick-add form hidden for clients via isInternalUser check in TaskList.tsx. API: POST /tasks returns 403 'Only Motionify Studio team can create tasks' for client roles."
         },
         {
             "id": "TC-TM-009",
@@ -155,7 +155,7 @@
                 "Login as Client",
                 "View project tasks",
                 "Internal task NOT visible to client",
-                "Task visible to all Motionify roles",
+                "Task visible to all Motionify Studio roles",
                 "Client cannot access via direct URL",
                 "Internal badge visible to team",
                 "Typecheck passes"
@@ -418,7 +418,7 @@
             "description": "Team receives email when client requests revision",
             "acceptanceCriteria": [
                 "Client requests revision on deliverable",
-                "Check Motionify team's email",
+                "Check Motionify Studio team's email",
                 "Email sent to project team",
                 "Contains: feedback, deliverable name",
                 "Revision count shown: '2 of 3 used'",
@@ -858,7 +858,7 @@
                 "Client attempts to download",
                 "Download returns 403 Forbidden with FILES_EXPIRED code",
                 "Error message: 'Files have expired. Contact support to restore.'",
-                "Motionify staff can still access via admin override",
+                "Motionify Studio staff can still access via admin override",
                 "Scheduled job runs daily to mark expired files",
                 "Typecheck passes"
             ],

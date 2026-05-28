@@ -276,7 +276,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 
 **Purpose:** Move file to a different deliverable
 **Route:** Modal overlay on file detail view
-**Authentication:** Required (Motionify team only)
+**Authentication:** Required (Motionify Studio team only)
 **User Stories:** US-017 (Organize Files)
 
 ```

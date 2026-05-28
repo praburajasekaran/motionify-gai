@@ -59,7 +59,7 @@ export function ProjectAccess() {
           <AlertCircle className="mx-auto h-9 w-9 text-amber-600 mb-4" />
           <h1 className="text-lg font-semibold text-foreground mb-2">We're setting up your project</h1>
           <p className="text-sm text-muted-foreground">
-            Your payment was received, but the project link is not ready yet. The Motionify team has been notified.
+            Your payment was received, but the project link is not ready yet. The Motionify Studio team has been notified.
           </p>
         </Card>
       </div>

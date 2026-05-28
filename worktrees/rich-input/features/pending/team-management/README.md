@@ -17,7 +17,7 @@ Invite → Email Sent → Accept Link → Account Creation → Auto-Added to Pro
 ## Key Benefits
 
 - **Secure Invitations** - Token-based email invitations with automatic expiration prevent unauthorized access
-- **Role-Based Collaboration** - Clear distinction between Motionify team, client leads, and client team members
+- **Role-Based Collaboration** - Clear distinction between Motionify Studio team, client leads, and client team members
 - **Data Integrity** - Historical contributions (tasks, comments, files) preserved even after team member removal
 - **Access Control** - Immediate access revocation upon removal while maintaining audit trail
 

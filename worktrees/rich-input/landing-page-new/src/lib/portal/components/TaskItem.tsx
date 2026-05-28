@@ -281,7 +281,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onEdit, onDelete }) => {
                         key={status}
                         value={status}
                         disabled={isDisabled}
-                        title={isDisabled ? "A comment from a Motionify team member is required to complete a pending task." : ""}
+                        title={isDisabled ? "A comment from a Motionify Studio team member is required to complete a pending task." : ""}
                       >
                         {status}
                       </option>

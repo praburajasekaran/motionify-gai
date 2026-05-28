@@ -8,7 +8,7 @@ date: 2026-02-02
 
 ## Overview
 
-When a client views a deliverable in `beta_ready` status, they see no Approve/Reject buttons. The approval buttons only appear when the status is `awaiting_approval`, but there is no mechanism for the Motionify team (or auto-transition) to move a deliverable from `beta_ready` → `awaiting_approval`. Additionally, the `sendForReview` function is referenced in `DeliverableReview.tsx` but never implemented in `DeliverableContext.tsx`, causing a runtime error.
+When a client views a deliverable in `beta_ready` status, they see no Approve/Reject buttons. The approval buttons only appear when the status is `awaiting_approval`, but there is no mechanism for the Motionify Studio team (or auto-transition) to move a deliverable from `beta_ready` → `awaiting_approval`. Additionally, the `sendForReview` function is referenced in `DeliverableReview.tsx` but never implemented in `DeliverableContext.tsx`, causing a runtime error.
 
 **Root cause:** The `DeliverableContextType` interface and `DeliverableProvider` are missing the `sendForReview` function. The sidebar also doesn't accept or render a "Send for Review" button for team members.
 
@@ -22,7 +22,7 @@ From the screenshot: the client ("Ekalaivan") sees a deliverable with "BETA READ
 
 ## Proposed Solution
 
-Add the complete `sendForReview` flow so that Motionify team members (admin/PM) can transition a deliverable from `beta_ready` → `awaiting_approval`, which then unlocks the Approve/Reject buttons for clients.
+Add the complete `sendForReview` flow so that Motionify Studio team members (admin/PM) can transition a deliverable from `beta_ready` → `awaiting_approval`, which then unlocks the Approve/Reject buttons for clients.
 
 ## Files to Modify
 
@@ -39,7 +39,7 @@ Add the complete `sendForReview` flow so that Motionify team members (admin/PM) 
 
 - Add a new exported function `canSendForReview(user, deliverable, project)`:
   - Returns `true` only if:
-    - User is Motionify team (`super_admin` or `project_manager`)
+    - User is Motionify Studio team (`super_admin` or `project_manager`)
     - Deliverable status is `beta_ready`
     - Project is not `On Hold` or `Archived`
   - Returns `false` for clients and team_members (team members shouldn't send for review without PM approval)
@@ -71,7 +71,7 @@ Add the complete `sendForReview` flow so that Motionify team members (admin/PM) 
 **File:** `components/deliverables/DeliverableMetadataSidebar.tsx`
 
 - Add `onSendForReview` and `isSendingForReview` to `DeliverableMetadataSidebarProps` interface
-- Add a new condition in the action buttons section: when `deliverable.status === 'beta_ready'` and user `isTeamMember` (Motionify team), show a "Send for Client Review" button
+- Add a new condition in the action buttons section: when `deliverable.status === 'beta_ready'` and user `isTeamMember` (Motionify Studio team), show a "Send for Client Review" button
 - The button should:
   - Use `Send` icon from lucide-react
   - Have a distinct style (e.g., `bg-indigo-600 hover:bg-indigo-700 text-white`)
@@ -81,7 +81,7 @@ Add the complete `sendForReview` flow so that Motionify team members (admin/PM) 
 
 ## Acceptance Criteria
 
-- [ ] Motionify admin/PM sees a "Send for Client Review" button on `beta_ready` deliverables
+- [ ] Motionify Studio admin/PM sees a "Send for Client Review" button on `beta_ready` deliverables
 - [ ] Clicking the button shows the existing confirmation dialog and transitions status to `awaiting_approval`
 - [ ] Client is notified via email (existing backend logic at `deliverables.ts:420-439`)
 - [ ] After transition, client sees Approve/Reject buttons on the deliverable

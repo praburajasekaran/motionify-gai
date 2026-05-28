@@ -6,7 +6,7 @@ This document specifies all email notifications for the authentication system.
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 
 ## Customer Email Templates
@@ -15,12 +15,12 @@ This document specifies all email notifications for the authentication system.
 
 **Trigger:** User requests magic link login  
 **To:** User's email address  
-**Subject:** `Your Motionify Portal Login Link`
+**Subject:** `Your Motionify Studio Portal Login Link`
 
 ```
 Hi there,
 
-You requested a login link for the Motionify Portal.
+You requested a login link for the Motionify Studio Portal.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -47,10 +47,10 @@ If you didn't request this login link, you can safely ignore this email.
 Questions? Reply to this email or contact us at hello@motionify.studio
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -65,12 +65,12 @@ https://motionify.studio
 
 **Trigger:** User's first successful login via magic link  
 **To:** User's email address  
-**Subject:** `Welcome to Motionify Portal - Your Account is Ready!`
+**Subject:** `Welcome to Motionify Studio Portal - Your Account is Ready!`
 
 ```
 Hi {{fullName}},
 
-Welcome to the Motionify Portal! Your account is now active and ready to use.
+Welcome to the Motionify Studio Portal! Your account is now active and ready to use.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -107,10 +107,10 @@ Need help getting started? We're here for you!
 Reply to this email or contact us at hello@motionify.studio
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -132,7 +132,7 @@ https://motionify.studio
 ```
 Hi {{fullName}},
 
-This is a friendly reminder that your Motionify Portal session will expire in 24 hours.
+This is a friendly reminder that your Motionify Studio Portal session will expire in 24 hours.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -158,10 +158,10 @@ your account after {{expiryDate}}.
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -274,7 +274,7 @@ Motionify Studio Admin
 - Plain text format for maximum deliverability
 - Professional, friendly tone
 - Clear call-to-action buttons (ASCII art boxes)
-- Motionify branding in footer
+- Motionify Studio branding in footer
 
 ### Security
 - Clear expiry times for time-sensitive links

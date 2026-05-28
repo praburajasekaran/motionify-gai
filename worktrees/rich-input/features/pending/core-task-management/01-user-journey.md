@@ -7,7 +7,7 @@
 │                    CORE TASK MANAGEMENT WORKFLOW                         │
 └─────────────────────────────────────────────────────────────────────────┘
 
-STEP 1: Motionify Team Creates Task
+STEP 1: Motionify Studio Team Creates Task
     ↓
 User clicks "Create Task" button in project view
 Fills in task details:
@@ -26,7 +26,7 @@ Activity logged: "Task created by [user]"
 STEP 2: Task Assignment
     ↓
 Team member assigns task to one or more users:
-  - Can assign to Motionify team members
+  - Can assign to Motionify Studio team members
   - Can assign to client team members (if client-visible)
   - Assignees automatically become followers
     ↓
@@ -47,12 +47,12 @@ Notification sent to: creator, other assignees, followers
 
 STEP 4: Work Completion
     ↓
-Motionify team member completes work
+Motionify Studio team member completes work
 Adds delivery notes (required for client-visible tasks)
 Changes status: 'in_progress' → 'awaiting_approval'
     ↓
 System validates:
-  - Only Motionify team can transition to awaiting_approval
+  - Only Motionify Studio team can transition to awaiting_approval
   - Delivery notes required if client-visible
   - Sends email to Client Primary Contact (if client-visible)
 Activity logged: "Status changed to Awaiting Approval by [user]"
@@ -73,7 +73,7 @@ Status: 'approved'            Status: 'revision_requested'
 Activity logged:              Activity logged:
 "Task approved by [client]"   "Revision requested by [client]"
            ↓                         ↓
-Email to Motionify team:      Client provides feedback
+Email to Motionify Studio team:      Client provides feedback
 "Task approved"               Team reviews feedback
            ↓                         ↓
 Manually mark 'completed'     Status: 'revision_requested' → 'in_progress'
@@ -90,12 +90,12 @@ Status: 'completed'
 ```
 Internal-Only Task Created
     ↓
-Only Motionify team members can see task
+Only Motionify Studio team members can see task
     ↓
 Work progresses: pending → in_progress → completed
     ↓
 No client approval required
-Motionify team can directly mark as 'completed'
+Motionify Studio team can directly mark as 'completed'
 ```
 
 ## State Transition Diagrams
@@ -111,7 +111,7 @@ Motionify team can directly mark as 'completed'
 ┌──────────────┐
 │ in_progress  │  ← Work in progress
 └────┬─────────┘
-     │ (Motionify team only)
+     │ (Motionify Studio team only)
      ↓
 ┌──────────────────────┐
 │ awaiting_approval    │  ← Ready for client review (client-visible only)
@@ -154,7 +154,7 @@ pending → in_progress → awaiting_approval → approved → completed
 **Rules:**
 - Tasks marked as "Client-Visible" MUST follow this flow
 - `awaiting_approval` state is REQUIRED before completion
-- Only Motionify team can transition to `awaiting_approval`
+- Only Motionify Studio team can transition to `awaiting_approval`
 - Only Client Primary Contact can approve or request revision
 - Delivery notes are REQUIRED when transitioning to `awaiting_approval`
 - After approval, task can be manually marked as `completed`
@@ -166,7 +166,7 @@ pending → in_progress → completed (direct)
 
 **Rules:**
 - Tasks marked as "Internal-Only" can skip approval entirely
-- Motionify team can transition directly from `in_progress` to `completed`
+- Motionify Studio team can transition directly from `in_progress` to `completed`
 - No delivery notes required (optional)
 - Client team CANNOT see these tasks at all
 - Used for internal project management, administrative tasks, etc.
@@ -187,7 +187,7 @@ Task Created
          │               │
          ↓               ↓
 Visible to:        Visible to:
-- Motionify team   - Motionify team ONLY
+- Motionify Studio team   - Motionify Studio team ONLY
 - Client team      - Hidden from ALL clients
          │               │
          ↓               ↓
@@ -308,7 +308,7 @@ Payment may trigger               No revision quota consumed
 
 ### Typical Flow: Simple Task (Client-Visible)
 ```
-Day 0:   Motionify team creates task, assigns to team member
+Day 0:   Motionify Studio team creates task, assigns to team member
          → Email notification sent
 Day 1:   Assignee starts work (pending → in_progress)
          → Status notification sent to followers

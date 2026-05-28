@@ -83,7 +83,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 │  │                                                                   │   │
 │  │  👤  Alex Kim                                      PROJECT       │   │
 │  │      alex@motionify.studio                         MANAGER       │   │
-│  │      Motionify Team • Joined Oct 28, 2025                        │   │
+│  │      Motionify Studio Team • Joined Oct 28, 2025                        │   │
 │  │                                                                   │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
@@ -91,7 +91,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 │  │                                                                   │   │
 │  │  👤  Jordan Martinez                              CREATIVE       │   │
 │  │      jordan@motionify.studio                      LEAD           │   │
-│  │      Motionify Team • Joined Oct 28, 2025                        │   │
+│  │      Motionify Studio Team • Joined Oct 28, 2025                        │   │
 │  │                                                                   │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
@@ -119,10 +119,10 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 ```
 
 **Validation Rules:**
-- Only primary contact or Motionify PM can see [Invite] button
-- Only primary contact or Motionify PM can see [Remove] button
+- Only primary contact or Motionify Studio PM can see [Invite] button
+- Only primary contact or Motionify Studio PM can see [Remove] button
 - Cannot remove self, primary contact, or last PM
-- Motionify team members show role badge (PROJECT MANAGER, CREATIVE LEAD)
+- Motionify Studio team members show role badge (PROJECT MANAGER, CREATIVE LEAD)
 
 **User Actions:**
 - Click "Invite Team Member" → Opens invite modal
@@ -673,7 +673,7 @@ Response: {
 ### SCREEN 6: Empty State (No Team Members)
 
 **Purpose:** Encourage inviting first team member
-**Route:** `portal.motionify.studio/projects/:projectId/team` (when project has only Motionify team)
+**Route:** `portal.motionify.studio/projects/:projectId/team` (when project has only Motionify Studio team)
 **Authentication:** Required (project access)
 
 ```
@@ -692,7 +692,7 @@ Response: {
 │  │                                                                   │   │
 │  │  👤  Alex Kim                                      PROJECT       │   │
 │  │      alex@motionify.studio                         MANAGER       │   │
-│  │      Motionify Team • Joined Oct 28, 2025                        │   │
+│  │      Motionify Studio Team • Joined Oct 28, 2025                        │   │
 │  │                                                                   │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
@@ -700,7 +700,7 @@ Response: {
 │  │                                                                   │   │
 │  │  👤  Jordan Martinez                              CREATIVE       │   │
 │  │      jordan@motionify.studio                      LEAD           │   │
-│  │      Motionify Team • Joined Oct 28, 2025                        │   │
+│  │      Motionify Studio Team • Joined Oct 28, 2025                        │   │
 │  │                                                                   │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
@@ -723,7 +723,7 @@ Response: {
 
 **User Actions:**
 - Click "Invite Team Member" → Opens invite modal
-- Shows Motionify team members by default (cannot be removed)
+- Shows Motionify Studio team members by default (cannot be removed)
 
 ---
 

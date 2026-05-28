@@ -196,7 +196,7 @@ export function Settings() {
                         <CardTitle>Email Notifications</CardTitle>
                     </div>
                     <CardDescription>
-                        Choose what emails you want to receive from Motionify.
+                        Choose what emails you want to receive from Motionify Studio.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6">

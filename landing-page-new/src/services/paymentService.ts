@@ -132,7 +132,7 @@ export async function createProjectFromPayment(proposalId: string): Promise<Proj
 
   console.log('Welcome email sent:', {
     to: project.clientEmail,
-    subject: `Welcome to Motionify - Project ${project.id}`,
+    subject: `Welcome to Motionify Studio - Project ${project.id}`,
     body: `Your project has been created and is ready to begin...`,
     timestamp: new Date().toISOString(),
   });

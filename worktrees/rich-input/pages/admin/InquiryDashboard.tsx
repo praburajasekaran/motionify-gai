@@ -140,7 +140,7 @@ export function InquiryDashboard() {
     );
   }
 
-  // Permission check - Only Motionify admins can access inquiry management
+  // Permission check - Only Motionify Studio admins can access inquiry management
   if (!Permissions.canManageInquiries(user)) {
     return <Navigate to="/" replace />;
   }

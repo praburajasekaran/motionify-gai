@@ -22,7 +22,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Motionify.Studio — Human‑Centered Video Agency",
+  title: "Motionify Studio — Human‑Centered Video Agency",
   description: "Cinematic storytelling + data-driven strategy. We craft videos that connect & convert.",
 };
 

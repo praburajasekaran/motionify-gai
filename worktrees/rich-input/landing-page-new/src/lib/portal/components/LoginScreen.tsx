@@ -67,7 +67,7 @@ const MagicLinkSent = ({ email, onRequestNew }: { email: string; onRequestNew: (
             <p className="text-sm font-medium text-gray-700 mb-3">ℹ️  What to do next:</p>
             <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
               <li>Check your email inbox (and spam folder)</li>
-              <li>Click the "Log In to Motionify Portal" button</li>
+              <li>Click the "Log In to Motionify Studio Portal" button</li>
               <li>You'll be automatically logged in</li>
             </ol>
             <p className="text-sm text-gray-500 mt-4">
@@ -165,7 +165,7 @@ export default function LoginScreen() {
 
         <Card>
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome to Motionify PM Portal</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Welcome to Motionify Studio Portal</h2>
             <p className="text-gray-500 mt-2">Log in with your email - no password needed</p>
           </div>
 

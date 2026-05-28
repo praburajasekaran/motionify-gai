@@ -127,7 +127,7 @@ Advance Payment: $5,000
 2. **Review the proposal page**
 
 #### Expected Results:
-✅ Page loads with Motionify header
+✅ Page loads with Motionify Studio header
 ✅ Shows proposal header with:
    - "Proposal v1" badge
    - Status: "Awaiting Response"
@@ -372,7 +372,7 @@ Reason: Budget constraints at this time
 ## 🎨 Visual/UI Checks
 
 ### Proposal Review Page
-- [ ] Motionify logo and header render correctly
+- [ ] Motionify Studio logo and header render correctly
 - [ ] Version badge (v1, v2, etc.) is visible and styled (violet)
 - [ ] Status badge color-coded properly:
   - Sent: Purple

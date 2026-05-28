@@ -1,10 +1,10 @@
-# Motionify Invoice & Email Functionality Implementation Guide
+# Motionify Studio Invoice & Email Functionality Implementation Guide
 
-This document provides comprehensive documentation for the invoice generation, email delivery, payment processing, and receipt management system implemented in the Motionify application.
+This document provides comprehensive documentation for the invoice generation, email delivery, payment processing, and receipt management system implemented in the Motionify Studio application.
 
 ## 1. Overview
 
-The Motionify invoice and email system provides a complete payment and billing workflow for the video production service platform. The implementation includes:
+The Motionify Studio invoice and email system provides a complete payment and billing workflow for the video production service platform. The implementation includes:
 
 - **PDF Invoice Generation**: Create professional invoices and receipts using jsPDF library
 - **Automatic Email Delivery**: Send payment confirmations, proforma invoices, and reminders via Resend
@@ -72,7 +72,7 @@ The email service handles all billing-related communications using the Resend AP
    - Supports custom messages
 
 **Email Templates** (`src/lib/email/templates.ts`):
-- Responsive HTML design with Motionify branding
+- Responsive HTML design with Motionify Studio branding
 - Professional styling with primary color accent
 - Mobile-responsive layout
 - Invoice table with line items
@@ -456,7 +456,7 @@ Generates a proforma invoice for a proposal.
     "bankName": "HDFC Bank",
     "accountNumber": "50200012345678",
     "ifscCode": "HDFC0001234",
-    "accountHolderName": "Motionify Technologies Pvt Ltd"
+    "accountHolderName": "Motionify"
   },
   "razorpayDetails": {
     "keyId": "rzp_test_xxx",
@@ -563,7 +563,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:5174
 RAZORPAY_WEBHOOK_SECRET=whsec_xxxxxxxx
 
 # Email Branding
-NEXT_PUBLIC_COMPANY_NAME=Motionify
+NEXT_PUBLIC_COMPANY_NAME=Motionify Studio
 NEXT_PUBLIC_SUPPORT_EMAIL=support@motionify.ai
 
 # Invoice Settings
@@ -574,7 +574,7 @@ NEXT_PUBLIC_TAX_RATE=0
 BANK_NAME=HDFC Bank
 BANK_ACCOUNT_NUMBER=50200012345678
 BANK_IFSC_CODE=HDFC0001234
-BANK_ACCOUNT_HOLDER=Motionify Technologies Pvt Ltd
+BANK_ACCOUNT_HOLDER=Motionify
 ```
 
 ### 5.3 Configuration Validation
@@ -710,7 +710,7 @@ async function initiatePayment(proposalId: string, amount: number) {
       key: order.key_id,
       amount: order.amount,
       currency: order.currency,
-      name: 'Motionify',
+      name: 'Motionify Studio',
       description: 'Video Production - Advance Payment',
       order_id: order.id,
       prefill: {
@@ -899,8 +899,8 @@ describe('Invoice Generation', () => {
       invoiceDate: new Date().toISOString(),
       dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
       companyDetails: {
-        name: 'Motionify',
-        address: 'Test Address',
+        name: 'Motionify Studio',
+        address: 'Door no: F/22, 2nd Floor, F Block, Plot no: 264, 2nd Main Rd, Block F, Anna Nagar, Chennai, Tamil Nadu 600102',
         email: 'test@motionify.ai',
         phone: '+91 98765 43210',
       },
@@ -1226,4 +1226,4 @@ CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 
 **Document Version**: 1.0.0  
 **Last Updated**: January 5, 2025  
-**Maintained By**: Motionify Development Team
+**Maintained By**: Motionify Studio Development Team

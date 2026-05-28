@@ -38,7 +38,7 @@ The only missing record is the Resend DKIM TXT key. The value is unique to the c
 1. Client goes to Resend → **Domains** → click **Verify DNS Records** next to `motionify.studio`
 2. Should show **Verified** ✓ (wait 15–30 mins if not immediately)
 3. Update Netlify environment variables:
-   - `RESEND_FROM_EMAIL` → `Motionify <noreply@motionify.studio>`
+   - `RESEND_FROM_EMAIL` → `Motionify Studio <noreply@motionify.studio>`
    - `RESEND_DOMAIN` → `motionify.studio`
 4. Redeploy the site
 5. Send a test email — verify it lands in inbox, not spam

@@ -65,25 +65,25 @@ Automatic actions triggered:
     ↓
 Automatic notifications sent:
   - Client: "Payment received, production starting" + welcome email with portal access
-  - Motionify Team: "Advance payment received for Project #123"
+  - Motionify Studio Team: "Advance payment received for Project #123"
     ↓
 
 STEP 5: Production Phase
     ↓
-Motionify team works on project
+Motionify Studio team works on project
 Client can track progress in dashboard
     ↓
 
 STEP 6: Beta Delivery
     ↓
-Motionify uploads beta delivery with watermark/limited resolution
+Motionify Studio uploads beta delivery with watermark/limited resolution
 Client receives notification: "Beta delivery ready for review"
 Client reviews beta, provides feedback
     ↓
 
 STEP 7: Final Delivery Ready
     ↓
-Motionify marks deliverable as "Ready for Final Approval"
+Motionify Studio marks deliverable as "Ready for Final Approval"
 System checks: Has client paid balance? NO → Show payment prompt
 Client sees: "Pay [balance amount] to access final deliverable"
     ↓
@@ -97,7 +97,7 @@ Payment webhook received → System unlocks final deliverable
     ↓
 Automatic notifications sent:
   - Client: "Payment received, final files now available"
-  - Motionify Team: "Balance payment received, project complete"
+  - Motionify Studio Team: "Balance payment received, project complete"
     ↓
 
 STEP 9: Final Delivery Access
@@ -217,11 +217,11 @@ Beta delivery received - review and decide
 APPROVE                          REQUEST CHANGES
   │                                 │
   ↓                                 ↓
-Motionify prepares              Submit revision feedback
+Motionify Studio prepares              Submit revision feedback
 final deliverable               (within revision limit)
   │                                 │
   ↓                                 ↓
-System shows                    Motionify makes revisions
+System shows                    Motionify Studio makes revisions
 "Pay balance to                 Re-submits beta
 access final"                       │
                                     ↓
@@ -250,14 +250,14 @@ Show expiry date              "Pay ₹X,XXX to access final"
 
 | Trigger Event | Recipients | Email Type |
 |--------------|------------|------------|
-| Advance payment completed | Client + Motionify Admin | `payment-advance-confirmation.html` |
-| Balance payment completed | Client + Motionify Admin | `payment-balance-confirmation.html` |
+| Advance payment completed | Client + Motionify Studio Admin | `payment-advance-confirmation.html` |
+| Balance payment completed | Client + Motionify Studio Admin | `payment-balance-confirmation.html` |
 | Payment failed | Client | `payment-failed-retry.html` |
 | Invoice uploaded by admin | Client | `invoice-ready.html` |
 | Final deliverable unlocked | Client | `final-deliverable-ready.html` |
 | 7 days before access expiry | Client | `access-expiring-soon.html` |
 | Access expired | Client | `access-expired.html` |
-| Payment refund issued | Client + Motionify Admin | `refund-processed.html` |
+| Payment refund issued | Client + Motionify Studio Admin | `refund-processed.html` |
 
 ### Status Updates (Automatic)
 
@@ -300,7 +300,7 @@ Day 0:   Customer receives email and pays advance immediately
          → Admin uploads invoice (manually)
          → Client receives invoice email
 
-Day 1-7: Production phase (Motionify working)
+Day 1-7: Production phase (Motionify Studio working)
 
 Day 8:   Beta delivery uploaded with watermark
          → Client receives notification
@@ -308,7 +308,7 @@ Day 8:   Beta delivery uploaded with watermark
 
 Day 9:   Client approves beta (or requests minor revisions)
 
-Day 10-12: Motionify prepares final deliverable
+Day 10-12: Motionify Studio prepares final deliverable
 
 Day 13:  Final deliverable marked ready
          → Payment status: AWAITING_BALANCE
@@ -399,7 +399,7 @@ Day 10:  Client finally pays advance
 - **Description**: Client requests file access after 365-day expiry
 - **Expected behavior**: System shows "Access expired" message
 - **Resolution**:
-  - Client contacts Motionify support manually
+  - Client contacts Motionify Studio support manually
   - Admin can manually extend access (if approved)
   - Admin updates `expiry_date` field in deliverables table
   - System re-enables download links
@@ -465,7 +465,7 @@ Day 10:  Client finally pays advance
 
 ### Access Control
 - Only project client lead can initiate payments
-- Only Motionify admin can upload invoices
+- Only Motionify Studio admin can upload invoices
 - Only admin can issue refunds
 
 ### Audit Trail

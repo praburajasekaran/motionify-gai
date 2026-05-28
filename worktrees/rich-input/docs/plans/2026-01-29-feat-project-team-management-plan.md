@@ -152,7 +152,7 @@ VALUES ($creatorUserId, $projectId, $creatorRole, false);
 1. **Header avatars** (lines ~763-771) — Already renders `project.team.slice(0, 4)`. Once API returns real data, avatars appear automatically. Add onClick to the "+" button to navigate to Team tab.
 
 2. **Team tab** (lines ~964-1032) — Already renders `project.team.map(...)` cards. Will auto-populate once API returns data. Add sections:
-   - "Motionify Team" section (super_admin, project_manager, team_member roles)
+   - "Motionify Studio Team" section (super_admin, project_manager, team_member roles)
    - "Client Team" section (client role members)
    - "Pending Invitations" section (from API response)
 
@@ -195,7 +195,7 @@ Log to the existing `activities` table:
 ### Display
 - [x] Header avatars show first 4 team members with "+N" overflow indicator
 - [x] Clicking header people icon navigates to Team tab
-- [x] Team tab shows members grouped by Motionify Team and Client Team
+- [x] Team tab shows members grouped by Motionify Studio Team and Client Team
 - [x] Each member card shows: avatar, name, email, role, primary contact badge
 - [x] Pending invitations section shows email, role, status, expiry, with resend/revoke actions
 

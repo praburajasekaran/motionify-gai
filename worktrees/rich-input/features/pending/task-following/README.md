@@ -6,7 +6,7 @@
 
 ## Overview
 
-The **Task Following System** allows team members to stay informed about tasks they're interested in, even when they're not directly assigned. This feature enables collaborative awareness across the team—Motionify members can follow client tasks, clients can follow internal tasks, and anyone can track progress on critical work without cluttering assignments.
+The **Task Following System** allows team members to stay informed about tasks they're interested in, even when they're not directly assigned. This feature enables collaborative awareness across the team—Motionify Studio members can follow client tasks, clients can follow internal tasks, and anyone can track progress on critical work without cluttering assignments.
 
 This feature implements **User Story US-011** and is critical for MVP collaboration workflows.
 
@@ -153,7 +153,7 @@ Comprehensive test scenarios covering:
 
 ## Permission Matrix
 
-| Action | Motionify Admin | Motionify PM | Client Primary | Client Team | Non-Member |
+| Action | Motionify Studio Admin | Motionify Studio PM | Client Primary | Client Team | Non-Member |
 |--------|----------------|--------------|----------------|-------------|------------|
 | Follow task | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Unfollow task | ✅ | ✅ | ✅ | ✅ | ❌ |

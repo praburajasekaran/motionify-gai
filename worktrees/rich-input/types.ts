@@ -1,15 +1,15 @@
 
 // Database values for user roles (use these for permission checks)
 export type UserRole =
-  | 'super_admin'       // Motionify Admin (full system access)
-  | 'project_manager'   // Motionify Project Manager (manages projects)
-  | 'team_member'       // Motionify Team Member (assigned to tasks)
+  | 'super_admin'       // Motionify Studio Admin (full system access)
+  | 'project_manager'   // Motionify Studio Project Manager (manages projects)
+  | 'team_member'       // Motionify Studio Team Member (assigned to tasks)
   | 'client';           // Client (check is_primary_contact for permissions)
 
 // Display labels for roles (use these for UI display only)
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   'super_admin': 'Super Admin',
-  'project_manager': 'Motionify Support',
+  'project_manager': 'Motionify Studio Support',
   'team_member': 'Team Member',
   'client': 'Client',
 } as const;
@@ -63,7 +63,7 @@ export interface Task {
 
 // Deliverable status workflow
 export type DeliverableStatus =
-  | 'pending'           // Motionify team can upload, clients CANNOT view
+  | 'pending'           // Motionify Studio team can upload, clients CANNOT view
   | 'in_progress'       // Team uploads files, clients still CANNOT view
   | 'beta_ready'        // Clients CAN view beta (watermarked), cannot approve yet
   | 'awaiting_approval' // Client PM can approve/reject, team CANNOT edit (locked)

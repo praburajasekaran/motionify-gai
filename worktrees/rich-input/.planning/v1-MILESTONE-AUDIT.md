@@ -16,7 +16,7 @@ tech_debt:
 
 # v1 Milestone Audit Report
 
-**Project:** Motionify Comment Thread System
+**Project:** Motionify Studio Comment Thread System
 **Milestone:** v1
 **Audited:** 2026-01-25
 **Re-audit:** Yes (post schema fix)

@@ -119,7 +119,7 @@ Remove the `newTaskInput` state variable and `handleAddTask` function from Proje
 - [x] Submitting creates the task via the existing API and it appears in the task list immediately
 - [x] Form resets after successful submission but stays expanded
 - [x] Cancel button or Escape key collapses the form and clears fields
-- [x] Only Motionify team members see the form (not clients) — preserve existing `!isClient(user)` gate
+- [x] Only Motionify Studio team members see the form (not clients) — preserve existing `!isClient(user)` gate
 - [x] Keyboard: Enter on the Title field submits; Escape collapses
 - [x] Loading state shown on "Create Task" button during submission
 - [x] Error toast shown if API call fails

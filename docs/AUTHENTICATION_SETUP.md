@@ -1,6 +1,6 @@
 # Authentication System Setup Guide
 
-This guide documents the authentication system setup, common issues, and deployment procedures for the Motionify Portal.
+This guide documents the authentication system setup, common issues, and deployment procedures for the Motionify Studio Portal.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ This guide documents the authentication system setup, common issues, and deploym
 
 ## Overview
 
-The Motionify Portal uses a **magic link authentication** system:
+The Motionify Studio Portal uses a **magic link authentication** system:
 - Users request a login link via email
 - Click the link to authenticate (no passwords)
 - JWT tokens are used for session management

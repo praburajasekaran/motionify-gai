@@ -16,7 +16,7 @@ tags: [vite, base-url, static-assets, sidebar, image-path, portal]
 
 ## Problem
 
-The Motionify logo in the portal sidebar rendered as a broken image because `<img src>` paths used root-relative paths (`/motionify-dark-logo.png`) that don't account for Vite's `base: '/portal/'` config. This is a second occurrence of the same root cause as the login page logo fix — this time in `components/Layout.tsx`.
+The Motionify Studio logo in the portal sidebar rendered as a broken image because `<img src>` paths used root-relative paths (`/motionify-dark-logo.png`) that don't account for Vite's `base: '/portal/'` config. This is a second occurrence of the same root cause as the login page logo fix — this time in `components/Layout.tsx`.
 
 ## Environment
 
@@ -27,7 +27,7 @@ The Motionify logo in the portal sidebar rendered as a broken image because `<im
 
 ## Symptoms
 
-- Sidebar shows broken image icon where Motionify logo should appear
+- Sidebar shows broken image icon where Motionify Studio logo should appear
 - Browser network tab shows 404 for `/motionify-dark-logo.png` and `/motionify-studio-dark.png`
 - Logo files exist in `public/` — the problem is path prefix, not missing files
 

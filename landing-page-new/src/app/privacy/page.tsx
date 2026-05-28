@@ -29,7 +29,7 @@ export default function PrivacyPage() {
             <p className="text-gray-300 leading-relaxed mb-4">We may collect the following types of data:</p>
             <ul className="list-disc list-inside text-gray-300 space-y-2">
               <li>Personal Information (name, email, phone, company name)</li>
-              <li>Payment and billing details (via secure gateways; Motionify does not store card details)</li>
+              <li>Payment and billing details (via secure gateways; Motionify Studio does not store card details)</li>
               <li>Project-related content and file uploads</li>
               <li>Portal usage and communication records</li>
               <li>Technical data (IP address, browser type, cookies, and device information)</li>

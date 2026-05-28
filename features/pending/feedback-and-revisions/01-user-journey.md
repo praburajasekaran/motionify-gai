@@ -85,7 +85,7 @@ System automatically:
   - Updates related tasks status: → 'Revision Requested'
   - Creates RevisionRequest record with feedback
   - Logs activity: "Revision requested by [Client] (X/Y used)"
-  - Sends email to Motionify team with feedback
+  - Sends email to Motionify Studio team with feedback
     ↓
 
 STEP 4: Team Receives Revision Request
@@ -369,12 +369,12 @@ System:               - Preserve metadata
 |--------------|------------|----------------|
 | Comment added on task | Task assignees, followers, @mentions | `task-comment-added` |
 | Comment added on file | File uploader, @mentions | `file-comment-added` |
-| Revision requested | Motionify team, project manager | `revision-requested` |
+| Revision requested | Motionify Studio team, project manager | `revision-requested` |
 | Additional revisions requested | Admin team | `additional-revisions-requested` |
 | Additional revisions approved | Client PRIMARY_CONTACT | `additional-revisions-approved` |
 | Additional revisions declined | Client PRIMARY_CONTACT | `additional-revisions-declined` |
 | Revised beta ready | Client PRIMARY_CONTACT | `revised-beta-ready` |
-| Quota warning (1 remaining) | Client PRIMARY_CONTACT, Motionify PM | `revision-quota-warning` |
+| Quota warning (1 remaining) | Client PRIMARY_CONTACT, Motionify Studio PM | `revision-quota-warning` |
 | Comment reply (@mention) | Mentioned user | `comment-mention` |
 
 ### Status Updates (Automatic)
@@ -503,7 +503,7 @@ Total: 4 days including admin approval
 
 ### Revision Request Permissions
 
-| Action | Client Team | Client PRIMARY_CONTACT | Motionify Team | Admin |
+| Action | Client Team | Client PRIMARY_CONTACT | Motionify Studio Team | Admin |
 |--------|-------------|------------------------|----------------|-------|
 | Request revision | ❌ | ✅ | ❌ | ✅ (override) |
 | Request additional revisions | ❌ | ✅ | ❌ | ✅ (override) |

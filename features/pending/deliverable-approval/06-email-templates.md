@@ -38,7 +38,7 @@ What's Next:
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -78,7 +78,7 @@ Payment Methods: UPI, Cards, Net Banking, Wallets
 Questions? Reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---
@@ -115,7 +115,7 @@ EXPIRES: {{expiryDate}} (365 days from now)
 We'd love to hear your feedback! Reply to this email to share your experience.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 ```
 
 ---

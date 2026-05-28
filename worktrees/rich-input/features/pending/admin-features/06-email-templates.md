@@ -6,7 +6,7 @@ This document specifies all email notifications for admin features.
 
 - **Provider:** Amazon SES
 - **From Address:** `hello@motionify.studio`
-- **From Name:** `Motionify`
+- **From Name:** `Motionify Studio`
 - **Reply-To:** `hello@motionify.studio`
 
 ## User Management Email Templates
@@ -15,12 +15,12 @@ This document specifies all email notifications for admin features.
 
 **Trigger:** Admin creates new user account
 **To:** New user
-**Subject:** `Welcome to Motionify PM Portal`
+**Subject:** `Welcome to Motionify Studio Portal`
 
 ```
 Hi {{fullName}},
 
-Welcome to the Motionify Project Management Portal! Your account has been
+Welcome to the Motionify Studio Project Management Portal! Your account has been
 created and you're ready to start collaborating on video production projects.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -76,10 +76,10 @@ If you have any questions or need assistance getting started, reply to
 this email or reach out to your project manager.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -94,7 +94,7 @@ https://motionify.studio
 ```
 Hi {{adminName}},
 
-Good news! {{fullName}} has successfully activated their Motionify account
+Good news! {{fullName}} has successfully activated their Motionify Studio account
 and is now ready to start working on projects.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -128,10 +128,10 @@ Next Steps:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -141,12 +141,12 @@ https://motionify.studio
 
 **Trigger:** Admin deactivates user account
 **To:** Deactivated user
-**Subject:** `Your Motionify Portal access has been deactivated`
+**Subject:** `Your Motionify Studio Portal access has been deactivated`
 
 ```
 Hi {{fullName}},
 
-Your access to the Motionify Project Management Portal has been deactivated.
+Your access to the Motionify Studio Project Management Portal has been deactivated.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -177,10 +177,10 @@ If you believe this was done in error or have questions, please contact
 your administrator or reply to this email.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -190,12 +190,12 @@ https://motionify.studio
 
 **Trigger:** Admin updates user's role
 **To:** User whose role changed
-**Subject:** `Your role has been updated in Motionify Portal`
+**Subject:** `Your role has been updated in Motionify Studio Portal`
 
 ```
 Hi {{fullName}},
 
-Your role in the Motionify Project Management Portal has been updated.
+Your role in the Motionify Studio Project Management Portal has been updated.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -247,10 +247,10 @@ Questions about your new role? Reply to this email and we'll be happy
 to help.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -260,12 +260,12 @@ https://motionify.studio
 
 **Trigger:** Admin reactivates previously deactivated user
 **To:** Reactivated user
-**Subject:** `Your Motionify Portal access has been reactivated`
+**Subject:** `Your Motionify Studio Portal access has been reactivated`
 
 ```
 Hi {{fullName}},
 
-Welcome back! Your access to the Motionify Project Management Portal has
+Welcome back! Your access to the Motionify Studio Project Management Portal has
 been reactivated.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -301,10 +301,10 @@ All your historical work has been preserved:
 Questions? Reply to this email or contact your project manager.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -315,7 +315,7 @@ https://motionify.studio
 ### 6. Project Completed Notification
 
 **Trigger:** Admin marks project as completed
-**To:** All project team members (Motionify + Client)
+**To:** All project team members (Motionify Studio + Client)
 **Subject:** `Project "{{projectName}}" marked as Completed`
 
 ```
@@ -358,15 +358,15 @@ The project remains accessible in read-only mode for reference and future
 review.
 
 {{#if isClient}}
-Thank you for choosing Motionify! We hope you're thrilled with the final
+Thank you for choosing Motionify Studio! We hope you're thrilled with the final
 results. We'd love to work with you again on future projects.
 {{/if}}
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -418,10 +418,10 @@ If you need to work on this project again, please contact your project
 manager to create a new project.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 
@@ -470,10 +470,10 @@ Contains: {{#each columns}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 Questions? Reply to this email and we'll be happy to help.
 
 Best regards,
-The Motionify Team
+The Motionify Studio Team
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Motionify | Video Production for Modern Brands
+Motionify Studio | Video Production for Modern Brands
 https://motionify.studio
 ```
 

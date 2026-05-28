@@ -1,5 +1,5 @@
 /**
- * Motionify Logo - Geometric & Modern Design
+ * Motionify Studio Logo - Geometric & Modern Design
  *
  * Design Concept:
  * - Three overlapping frames representing video frames in motion
@@ -169,7 +169,7 @@ const LogoWordmark: React.FC<{
       )}
       style={{ fontSize: `${size}px`, lineHeight: 1 }}
     >
-      Motionify
+      Motionify Studio
     </span>
   );
 };

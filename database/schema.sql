@@ -1,4 +1,4 @@
--- Motionify PM Portal - Vertical Slice Database Schema
+-- Motionify Studio Portal - Vertical Slice Database Schema
 -- Created: 2025-12-30
 -- Purpose: Complete schema for inquiry → deliverable vertical slice
 
@@ -442,7 +442,7 @@ CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 -- ============================================================================
 
 INSERT INTO users (email, full_name, role) VALUES
-  ('admin@motionify.com', 'Motionify Admin', 'super_admin'),
+  ('admin@motionify.com', 'Motionify Studio Admin', 'super_admin'),
   ('saravanan@motionify.co', 'Saravanan', 'super_admin')
 ON CONFLICT (email) DO NOTHING;
 

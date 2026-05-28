@@ -22,8 +22,8 @@ function getCorsHeaders(request: Request): Record<string, string> {
 }
 
 const MOTIONIFY_COMPANY_DETAILS = {
-  name: 'Motionify',
-  address: '123 Business Park, Tech City, India',
+  name: 'Motionify Studio',
+  address: 'Door no: F/22, 2nd Floor, F Block, Plot no: 264, 2nd Main Rd, Block F, Anna Nagar, Chennai, Tamil Nadu 600102',
   email: 'invoices@motionify.ai',
   phone: '+91 98765 43210',
   gstin: '22AAAAA0000A1Z5',
@@ -34,7 +34,7 @@ const BANK_DETAILS = {
   bankName: 'HDFC Bank',
   accountNumber: '50200012345678',
   ifscCode: 'HDFC0001234',
-  accountHolderName: 'Motionify Technologies Pvt Ltd',
+  accountHolderName: 'Motionify',
 };
 
 type ProposalStatus = 'sent' | 'accepted' | 'rejected' | 'changes_requested';

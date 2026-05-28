@@ -5,7 +5,7 @@ This document specifies all email notification templates sent via Amazon SES.
 ## Email Configuration
 
 **Email Provider:** Amazon SES  
-**From Address:** `Motionify Portal <hello@motionify.studio>`  
+**From Address:** `Motionify Studio Portal <hello@motionify.studio>`
 **Reply-To:** `noreply@motionify.studio`  
 **Content-Type:** `multipart/alternative` (plain text + HTML)  
 **Character Encoding:** UTF-8
@@ -41,7 +41,7 @@ This document specifies all email notification templates sent via Amazon SES.
 
 ### Subject Line
 ```
-[Motionify] You were assigned to a task - {{project_name}}
+[Motionify Studio] You were assigned to a task - {{project_name}}
 ```
 
 ### Plain Text Version
@@ -66,7 +66,7 @@ View Task: {{action_url}}
 Need to update your notification settings?
 Manage your preferences: {{preferences_url}}
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -90,7 +90,7 @@ Unsubscribe: {{unsubscribe_url}}
           <!-- Header -->
           <tr>
             <td style="padding: 32px 40px; border-bottom: 1px solid #e5e7eb;">
-              <img src="{{logo_url}}" alt="Motionify" height="32">
+              <img src="{{logo_url}}" alt="Motionify Studio" height="32">
             </td>
           </tr>
           
@@ -154,7 +154,7 @@ Unsubscribe: {{unsubscribe_url}}
           <tr>
             <td style="padding: 24px 40px; border-top: 1px solid #e5e7eb; background-color: #f9fafb;">
               <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px; line-height: 16px;">
-                Motionify PM Portal
+                Motionify Studio Portal
               </p>
               <p style="margin: 0 0 8px; color: #9ca3af; font-size: 12px; line-height: 16px;">
                 © 2025 Motionify Studio. All rights reserved.
@@ -183,7 +183,7 @@ Unsubscribe: {{unsubscribe_url}}
 - `{{action_url}}` - Direct link to task in portal
 - `{{preferences_url}}` - Link to notification preferences
 - `{{unsubscribe_url}}` - Unsubscribe link
-- `{{logo_url}}` - Motionify logo URL
+- `{{logo_url}}` - Motionify Studio logo URL
 
 ---
 
@@ -195,7 +195,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] {{actor_name}} mentioned you - {{project_name}}
+[Motionify Studio] {{actor_name}} mentioned you - {{project_name}}
 ```
 
 ### Plain Text Version
@@ -213,7 +213,7 @@ View Comment: {{action_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -237,7 +237,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] New file uploaded - {{project_name}}
+[Motionify Studio] New file uploaded - {{project_name}}
 ```
 
 ### Plain Text Version
@@ -255,7 +255,7 @@ View File: {{action_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -271,7 +271,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] Deliverable awaiting your approval - {{project_name}}
+[Motionify Studio] Deliverable awaiting your approval - {{project_name}}
 ```
 
 ### Plain Text Version
@@ -289,7 +289,7 @@ View Deliverable: {{action_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -305,7 +305,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] Revision requested - {{project_name}}
+[Motionify Studio] Revision requested - {{project_name}}
 ```
 
 ### Plain Text Version
@@ -325,7 +325,7 @@ View Deliverable: {{action_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -341,7 +341,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] Welcome to {{project_name}}
+[Motionify Studio] Welcome to {{project_name}}
 ```
 
 ### Plain Text Version
@@ -359,7 +359,7 @@ View Project: {{action_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Unsubscribe: {{unsubscribe_url}}
@@ -375,7 +375,7 @@ Unsubscribe: {{unsubscribe_url}}
 
 ### Subject Line
 ```
-[Motionify] You have {{notification_count}} new notification{{#if multiple}}s{{/if}}{{#if project_name}} - {{project_name}}{{/if}}
+[Motionify Studio] You have {{notification_count}} new notification{{#if multiple}}s{{/if}}{{#if project_name}} - {{project_name}}{{/if}}
 ```
 
 ### Plain Text Version
@@ -398,7 +398,7 @@ View All Notifications: {{view_all_url}}
 
 ---
 
-Motionify PM Portal
+Motionify Studio Portal
 © 2025 Motionify Studio. All rights reserved.
 
 Update notification preferences: {{preferences_url}}

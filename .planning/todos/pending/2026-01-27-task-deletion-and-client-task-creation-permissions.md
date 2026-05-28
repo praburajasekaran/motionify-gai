@@ -16,7 +16,7 @@ Current task permissions have two gaps:
 2. **Client Task Creation:** Clients are currently blocked from creating tasks (line 446-461 in tasks.ts returns 403 for client roles). However, clients should be able to create tasks for themselves and their team members within their own projects.
 
 The current permission model:
-- Only Motionify team can create tasks (clients get 403)
+- Only Motionify Studio team can create tasks (clients get 403)
 - Task deletion exists but permission scope unclear
 
 ## Solution

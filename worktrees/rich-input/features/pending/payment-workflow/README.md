@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Payment Workflow manages the complete financial lifecycle of Motionify projects from initial configurable advance payment through final balance payment. This system integrates with Razorpay payment gateway, handles automated payment request emails, controls deliverable access based on payment status, and implements a 365-day access expiry policy.
+The Payment Workflow manages the complete financial lifecycle of Motionify Studio projects from initial configurable advance payment through final balance payment. This system integrates with Razorpay payment gateway, handles automated payment request emails, controls deliverable access based on payment status, and implements a 365-day access expiry policy.
 
 **Core Functions:**
 - Configurable advance payment structure (set per-project by super admin: 40%, 50%, 60%, etc.)
@@ -40,7 +40,7 @@ Pay Balance → Final Deliverable Unlocked (no watermark) →
   - Instant access to final files after payment
   - 365-day download access with expiry warnings
 
-- **For Motionify:**
+- **For Motionify Studio:**
   - Configurable advance payment percentage per project (40%, 50%, 60%, etc.)
   - Automated payment request emails with Razorpay links
   - Automated payment tracking and reminders

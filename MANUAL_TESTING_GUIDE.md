@@ -1,8 +1,8 @@
-# Manual Testing Guide - Motionify Admin Portal
+# Manual Testing Guide - Motionify Studio Admin Portal
 
 ## Overview
 
-This guide provides comprehensive manual testing procedures for the Motionify admin portal. Since the project uses **Playwright for E2E testing** but has **no unit testing framework**, manual testing is essential for validating functionality that isn't covered by automated tests.
+This guide provides comprehensive manual testing procedures for the Motionify Studio admin portal. Since the project uses **Playwright for E2E testing** but has **no unit testing framework**, manual testing is essential for validating functionality that isn't covered by automated tests.
 
 **Project Stack:**
 - React + Vite frontend

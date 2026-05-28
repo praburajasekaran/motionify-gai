@@ -6,14 +6,14 @@
 
 ## Overview
 
-This feature provides the core task management system for the Motionify PM Portal. Tasks are the fundamental unit of work organization, allowing Motionify team members to break down project deliverables into actionable items, assign work to team members (both internal and client), track progress through defined workflows, and maintain visibility across the entire team.
+This feature provides the core task management system for the Motionify Studio Portal. Tasks are the fundamental unit of work organization, allowing Motionify Studio team members to break down project deliverables into actionable items, assign work to team members (both internal and client), track progress through defined workflows, and maintain visibility across the entire team.
 
 Tasks support visibility controls (client-visible vs. internal-only), multi-assignee collaboration, follower notifications, status-driven workflows with state machine validation, and integrated activity logging. This creates a transparent, organized system for managing video production project work.
 
 ## Customer Journey Summary
 
 ```
-Motionify Team Creates Task
+Motionify Studio Team Creates Task
     ↓
 Links to Project Deliverable
     ↓
@@ -196,12 +196,12 @@ Comprehensive test scenarios covering:
 ## Business Rules
 
 1. **Task Creation Permissions:**
-   - Only Motionify team members (super_admin, project_manager) can create tasks
+   - Only Motionify Studio team members (super_admin, project_manager) can create tasks
    - Clients cannot create tasks but can comment and approve
 
 2. **Assignment Rules:**
    - Tasks can have 0 or more assignees
-   - Assignees can be any project team member (Motionify or client)
+   - Assignees can be any project team member (Motionify Studio or client)
    - Assignees automatically become followers
    - Assignees can remove themselves from tasks
 
@@ -213,10 +213,10 @@ Comprehensive test scenarios covering:
 4. **Status Transition Rules:**
    ```
    pending → in_progress (any team member)
-   in_progress → awaiting_approval (Motionify team only)
+   in_progress → awaiting_approval (Motionify Studio team only)
    awaiting_approval → approved (Client Primary Contact only)
    awaiting_approval → revision_requested (Client Primary Contact only)
-   revision_requested → in_progress (Motionify team only)
+   revision_requested → in_progress (Motionify Studio team only)
    approved → completed (auto or manual by team)
    completed → in_progress (reopen, admin only)
    ```
@@ -224,7 +224,7 @@ Comprehensive test scenarios covering:
 5. **Visibility Rules:**
    - "Client-Visible" tasks appear in client portal
    - "Internal-Only" tasks hidden from all client users
-   - Motionify team sees all tasks regardless of visibility
+   - Motionify Studio team sees all tasks regardless of visibility
 
 6. **Delivery Notes:**
    - Required when transitioning to "awaiting_approval"

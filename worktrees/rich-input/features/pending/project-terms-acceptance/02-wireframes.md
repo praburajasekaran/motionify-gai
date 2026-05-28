@@ -292,7 +292,7 @@ POST /api/projects/:id/terms/request-revision
 
 **Success Behavior:**
 - Show success message: "✓ Change request submitted. We'll review and respond within 24 hours."
-- Return to login screen with message: "Your change request has been sent to the Motionify team. You'll receive an email when we respond. Project access will be granted once terms are accepted."
+- Return to login screen with message: "Your change request has been sent to the Motionify Studio team. You'll receive an email when we respond. Project access will be granted once terms are accepted."
 - Send email to admin with change request details
 
 ---

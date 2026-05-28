@@ -18,10 +18,10 @@ Comprehensive test scenarios for the Core Task Management feature. Total: 45 tes
 ### TC-TASK-001: Create Basic Task
 **Priority:** High
 **Feature:** Task Creation
-**Scenario:** Motionify team member creates a client-visible task
+**Scenario:** Motionify Studio team member creates a client-visible task
 
 **Steps:**
-1. Login as Motionify team member
+1. Login as Motionify Studio team member
 2. Navigate to project deliverable
 3. Click "Create Task"
 4. Enter title: "Color grading scene 2"
@@ -85,7 +85,7 @@ Comprehensive test scenarios for the Core Task Management feature. Total: 45 tes
 **Expected Result:**
 - Task created successfully
 - Task NOT visible in client portal
-- Task visible to Motionify team
+- Task visible to Motionify Studio team
 - No client notifications sent
 
 ---
@@ -282,7 +282,7 @@ Comprehensive test scenarios for the Core Task Management feature. Total: 45 tes
 3. Try to change status to "in_progress"
 
 **Expected Result:**
-- Error: "Only Motionify team can set this status"
+- Error: "Only Motionify Studio team can set this status"
 - Status unchanged
 
 ---
@@ -484,8 +484,8 @@ Comprehensive test scenarios for the Core Task Management feature. Total: 45 tes
 **Scenario:** Verify who can assign tasks
 
 **Steps:**
-1. Test as Motionify admin (should work)
-2. Test as Motionify team (should work)
+1. Test as Motionify Studio admin (should work)
+2. Test as Motionify Studio team (should work)
 3. Test as client (should work for their team)
 
 **Expected Result:**

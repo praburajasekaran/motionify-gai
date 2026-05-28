@@ -1,6 +1,6 @@
 # Cloudflare R2 Setup Guide
 
-## Why R2 for Motionify?
+## Why R2 for Motionify Studio?
 
 ✅ **Zero egress fees** (downloading files is free!)
 ✅ **S3-compatible API** (easy to integrate)
@@ -164,7 +164,7 @@ async function testR2() {
     const uploadParams = {
       Bucket: process.env.R2_BUCKET_NAME,
       Key: "test/hello.txt",
-      Body: "Hello from Motionify PM Portal!",
+      Body: "Hello from Motionify Studio Portal!",
       ContentType: "text/plain",
     };
 

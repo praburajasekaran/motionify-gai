@@ -218,11 +218,11 @@ test.describe('Razorpay Payment Flow', () => {
     const url = page.url();
     console.log(`  Page URL: ${url}`);
 
-    // Verify Motionify branding
-    const hasBranding = await page.locator('text=Motionify, img[alt*="Motionify"]').first().isVisible({ timeout: 5000 });
+    // Verify Motionify Studio branding
+    const hasBranding = await page.locator('text=Motionify Studio, img[alt*="Motionify Studio"]').first().isVisible({ timeout: 5000 });
 
     if (hasBranding) {
-      console.log('✓ Motionify branding displayed');
+      console.log('✓ Motionify Studio branding displayed');
     }
 
     // Check for security/trust indicators

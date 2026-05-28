@@ -171,7 +171,7 @@ export interface RateLimitEntry {
 ```typescript
 export type UserRole =
   | 'client'              // Customer who owns projects
-  | 'project_manager'     // Motionify project manager
+  | 'project_manager'     // Motionify Studio project manager
   | 'admin'               // Admin with limited permissions
   | 'super_admin';        // Full admin access
 ```

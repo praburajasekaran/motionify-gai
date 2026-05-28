@@ -1,6 +1,6 @@
-# Lessons Learned: Motionify Project
+# Lessons Learned: Motionify Studio Project
 
-A retrospective analysis of patterns, mistakes, and frameworks for becoming a better software engineer — based on the full development journey of the Motionify portal (2026-01-20 to 2026-01-29).
+A retrospective analysis of patterns, mistakes, and frameworks for becoming a better software engineer — based on the full development journey of the Motionify Studio portal (2026-01-20 to 2026-01-29).
 
 ---
 
@@ -408,4 +408,4 @@ Use this for your next project. Check each item DURING development, not after.
 
 ---
 
-*Generated from analysis of 100+ commits, 19 phases, and 960+ lines of project state across the Motionify portal development (2026-01-20 to 2026-01-29).*
+*Generated from analysis of 100+ commits, 19 phases, and 960+ lines of project state across the Motionify Studio portal development (2026-01-20 to 2026-01-29).*

@@ -409,7 +409,7 @@ _Note: See WIREFRAME_CONFLICT_ANALYSIS.md for complete standardization details_
 │    Status: IN PROGRESS                   Due: Nov 22 (4 days left)      │
 │    Assigned: @alex                       Last updated: 1h ago            │
 │                                                                           │
-│    Motionify is working on this task. You'll be notified when it's      │
+│    Motionify Studio is working on this task. You'll be notified when it's      │
 │    ready for your review.                                                │
 │                                                                           │
 │    [View Details]                                                         │

@@ -96,9 +96,9 @@ export interface ProjectTeamMember {
 
 ```typescript
 export type UserRole =
-  | 'super_admin'        // Motionify admin (full system access)
-  | 'project_manager'    // Motionify PM (manages projects)
-  | 'team_member'        // Motionify team member (limited to assigned tasks)
+  | 'super_admin'        // Motionify Studio admin (full system access)
+  | 'project_manager'    // Motionify Studio PM (manages projects)
+  | 'team_member'        // Motionify Studio team member (limited to assigned tasks)
   | 'client';            // Client user (view/upload on their projects)
 ```
 
@@ -620,7 +620,7 @@ const primaryContact: ProjectTeamMember = {
   isPrimaryContact: true, // ← Primary contact flag
 
   addedAt: new Date("2025-11-01T10:00:00Z"),
-  addedBy: "user_admin123", // Added by Motionify admin
+  addedBy: "user_admin123", // Added by Motionify Studio admin
 };
 ```
 

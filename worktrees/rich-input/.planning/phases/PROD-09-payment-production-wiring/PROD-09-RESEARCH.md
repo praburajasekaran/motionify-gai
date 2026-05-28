@@ -308,7 +308,7 @@ psql $DATABASE_URL -c "SELECT event, status, signature_verified FROM payment_web
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify Studio <onboarding@resend.dev>';
 
 export async function sendEmail(options: EmailOptions) {
   try {

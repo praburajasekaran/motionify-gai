@@ -801,7 +801,7 @@ export const ProjectSettings = () => {
                                                                 onValueChange={(v) => updateTeamRole(user.id, v)}
                                                                 options={[
                                                                     { label: 'Super Admin', value: 'super_admin' },
-                                                                    { label: 'Motionify Support', value: 'project_manager' },
+                                                                    { label: 'Motionify Studio Support', value: 'project_manager' },
                                                                     { label: 'Team Member', value: 'team_member' },
                                                                     { label: 'Client', value: 'client' },
                                                                 ]}

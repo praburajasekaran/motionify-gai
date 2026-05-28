@@ -1,4 +1,4 @@
-# State: Motionify Comment Thread System
+# State: Motionify Studio Comment Thread System
 
 **Project Reference**
 

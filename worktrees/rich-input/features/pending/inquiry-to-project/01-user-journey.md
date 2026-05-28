@@ -9,7 +9,7 @@
 
 STEP 1: Customer Discovery
     ↓
-Customer visits Motionify landing page
+Customer visits Motionify Studio landing page
 Interested in video production services
     ↓
 
@@ -24,7 +24,7 @@ Customer fills out 5-step quiz/form:
     ↓
 System creates Inquiry (status: 'new')
 System sends confirmation email to customer
-System sends alert email to Motionify admin
+System sends alert email to Motionify Studio admin
     ↓
 
 STEP 3: Admin Review

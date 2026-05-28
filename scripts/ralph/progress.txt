@@ -1,4 +1,4 @@
-# Ralph Progress Log - Motionify PM Portal
+# Ralph Progress Log - Motionify Studio Portal
 Started: 2026-01-09
 Branch: ralph/complete-features
 
@@ -90,7 +90,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 - **What was implemented:** Permission check to prevent clients from creating tasks - both UI restriction (hiding Add Task button and quick-add form) and API enforcement (403 response for client roles).
 - **Files changed:**
   - `landing-page-new/src/lib/portal/components/TaskList.tsx` - Wrapped quick-add form with `isInternalUser` conditional (Add Task button was already hidden)
-  - `netlify/functions/tasks.ts` - Added role check in POST /tasks handler, returns 403 with "Only Motionify team can create tasks" for client roles
+  - `netlify/functions/tasks.ts` - Added role check in POST /tasks handler, returns 403 with "Only Motionify Studio team can create tasks" for client roles
 - **Learnings for future iterations:**
   - Portal components are in `landing-page-new/src/lib/portal/` not root `components/`
   - The `isInternalUser` pattern (checking for MOTIONIFY_MEMBER or PROJECT_MANAGER roles) is already established in TaskList.tsx

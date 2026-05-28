@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Fiverr/Upwork-style comment thread for proposal negotiations in the Motionify portal. Enables clients and superadmins to have free-flowing conversations during proposal review, replacing the current turn-based model where one party must wait for the other to respond before commenting again. **v1.0 shipped with full feature set including real-time polling, file attachments, and email + in-app notifications.**
+A Fiverr/Upwork-style comment thread for proposal negotiations in the Motionify Studio portal. Enables clients and superadmins to have free-flowing conversations during proposal review, replacing the current turn-based model where one party must wait for the other to respond before commenting again. **v1.0 shipped with full feature set including real-time polling, file attachments, and email + in-app notifications.**
 
 ## Core Value
 
