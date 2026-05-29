@@ -163,10 +163,10 @@ export default function CreativeControlRoom() {
                     <div className="text-xs text-white/50">3 files available</div>
                   </div>
                 </div>
-                <button type="button" className="group px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-sm font-medium text-white shadow-lg flex items-center">
+                <a href="/portal" className="group px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-sm font-medium text-white shadow-lg flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   <span className="hidden sm:inline ml-2">Download</span>
-                </button>
+                </a>
               </div>
             </div>
 
@@ -195,7 +195,6 @@ function Feature({ icon, label, color }: { icon: React.ReactNode; label: string;
     </div>
   );
 }
-
 
 
 
