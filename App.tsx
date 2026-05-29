@@ -28,6 +28,7 @@ const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.L
 const ProjectAccess = React.lazy(() => import('./pages/ProjectAccess').then(m => ({ default: m.ProjectAccess })));
 const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const ContactPage = React.lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const AboutPage = React.lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const InquiryTracking = React.lazy(() => import('./pages/InquiryTracking').then(m => ({ default: m.InquiryTracking })));
 const PermissionTest = React.lazy(() => import('./pages/PermissionTest'));
 const DeliverableReview = React.lazy(() => import('./pages/DeliverableReview').then(m => ({ default: m.DeliverableReview })));
@@ -151,6 +152,7 @@ function App() {
                   }>
                     <Routes>
                       <Route path="/" element={<LandingPage />} />
+                      <Route path="/about" element={<AboutPage />} />
                       <Route path="/contact" element={<ContactPage />} />
                       <Route path="/proposal/:proposalId" element={<PublicProposalPage />} />
                       <Route path="/payment/:proposalId" element={<PublicPaymentPage />} />
