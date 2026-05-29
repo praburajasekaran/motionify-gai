@@ -2,14 +2,14 @@
 
 ## Current Setup
 
-- **Admin Portal**: http://localhost:5177 (Vite/React)
-- **Landing Page**: http://localhost:5174 (Next.js)
+- **Motionify Studio app**: http://localhost:5173 (Vite/React)
+- **Portal**: http://localhost:5173/portal
 
 ## The Problem Solved
 
-**Before:** Proposal links didn't work because localStorage is port-specific
-- Admin creates proposal → stores in localStorage:5177
-- Client opens link → tries to read from localStorage:5174
+**Before:** Proposal links didn't work because the old dual-runtime setup used port-specific localStorage.
+- Admin created proposal data on one local origin
+- Client opened the proposal link on another local origin
 - Result: "Proposal not found"
 
 **After:** Proposal data is encoded in URL parameters
@@ -21,7 +21,7 @@
 
 ### 1. Create a Test Proposal
 
-1. Open admin portal: `http://localhost:5177/admin/inquiries`
+1. Open admin portal: `http://localhost:5173/portal/admin/inquiries`
 2. Click on any inquiry (use the seeded samples)
 3. Click "Create Proposal"
 4. Fill in:
@@ -39,7 +39,7 @@ You'll see an alert like:
 Proposal created successfully!
 
 Share this link with client:
-http://localhost:5174/proposal/abc-123-def-456?data=eyJwcm9wb3NhbC...
+http://localhost:5173/proposal/abc-123-def-456?data=eyJwcm9wb3NhbC...
 
 ✅ Email notification logged to console.
 ```
@@ -92,7 +92,7 @@ Inquiry: INQ-2025-XXX
 The proposal data is **encoded in the URL** using Base64:
 
 ```
-http://localhost:5174/proposal/[id]?data=[base64-encoded-json]
+http://localhost:5173/proposal/[id]?data=[base64-encoded-json]
 ```
 
 The JSON contains:

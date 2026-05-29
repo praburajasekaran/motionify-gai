@@ -6,7 +6,6 @@ import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, S
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
-import { encodeBase64 } from '../../utils/encoding';
 
 interface DeliverableInput {
   id: string;
@@ -203,36 +202,7 @@ export function ProposalBuilder() {
         revisionsDescription: revisionsDescription.trim() || undefined,
       });
 
-      // Generate proposal link with data parameter
-      const proposalData = {
-        proposal: {
-          id: proposal.id,
-          inquiryId: proposal.inquiryId,
-          status: proposal.status,
-          version: proposal.version,
-          createdAt: proposal.createdAt,
-          updatedAt: proposal.updatedAt,
-          description: proposal.description,
-          deliverables: proposal.deliverables,
-          currency: proposal.currency,
-          totalPrice: proposal.totalPrice,
-          advancePercentage: proposal.advancePercentage,
-          advanceAmount: proposal.advanceAmount,
-          balanceAmount: proposal.balanceAmount,
-          revisionsIncluded: proposal.revisionsIncluded,
-        },
-        inquiry: {
-          id: inquiry.id,
-          inquiryNumber: inquiry.inquiryNumber,
-          contactName: inquiry.contactName,
-          contactEmail: inquiry.contactEmail,
-          companyName: inquiry.companyName,
-        }
-      };
-      
-      // Encode data for URL
-      const encodedData = encodeBase64(JSON.stringify(proposalData));
-      const proposalLink = `http://localhost:5174/proposal/${proposal.id}?data=${encodedData}`;
+      const proposalLink = proposal.proposalReviewUrl || `/proposal/${proposal.id}`;
 
       // Console log "email sent" with proposal link
       console.log('📧 EMAIL SENT TO CLIENT:');

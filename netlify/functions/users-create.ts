@@ -20,6 +20,7 @@ import {
 } from './_shared';
 import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -84,10 +85,8 @@ export const handler = compose(
             [email.toLowerCase(), token, expiresAt]
         );
 
-        // Build magic link URL - points to /auth/verify which handles token verification
-        const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
-        const appUrl = rawAppUrl.replace(/\/(api|portal)\/?$/, '');
-        const magicLink = `${appUrl}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+        const appUrl = appOriginFromEnv(process.env);
+        const magicLink = absolutePortalLoginUrl({ token, email }, appUrl);
 
         // If the new user is support, auto-add them to all existing projects
         if (role === 'support') {

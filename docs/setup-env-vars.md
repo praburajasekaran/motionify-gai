@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-Create a `.env` file in the **project root** (not in `landing-page/`):
+Create a `.env` file in the **project root**:
 
 ```env
 # Database (Neon PostgreSQL)
@@ -33,7 +33,7 @@ R2_BUCKET_NAME=motionify-portal-files
 R2_PUBLIC_URL=https://files.motionify.studio
 
 # Application URL
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+APP_URL=http://localhost:5173
 ```
 
 ## Generate Secure JWT_SECRET
@@ -85,33 +85,30 @@ Copy the output and use it as your `JWT_SECRET`.
 - Start in sandbox mode (limited)
 - Request production access for unlimited sending
 
-### NEXT_PUBLIC_APP_URL
+### APP_URL
 - Used for generating magic link URLs
-- **Development:** `http://localhost:3000`
+- **Development:** `http://localhost:5173`
 - **Production:** `https://yourdomain.com`
 - Must match where users access the app
 
 ## File Location
 
 ```
-motionify-portal-1/
+motionify-gai/
 ├── .env                    ← CREATE THIS FILE HERE
 ├── .env.example           ← Example template
 ├── netlify.toml           ← Loads .env automatically
-├── landing-page/
-│   └── ...
 └── netlify/
     └── functions/         ← These functions access .env variables
 ```
 
-**❌ Wrong:** `landing-page/.env`
 **✅ Correct:** `.env` (project root)
 
 ## Setup Steps
 
 1. **Create .env file:**
    ```bash
-   cd /path/to/motionify-portal-1
+   cd /path/to/motionify-gai
    touch .env
    # Edit with your values
    ```
@@ -125,13 +122,14 @@ motionify-portal-1/
    Check `netlify.toml` has:
    ```toml
    [dev]
-     command = "cd landing-page && npm run dev"
-     port = 3000
+     command = "vite"
+     port = 8888
+     targetPort = 5173
    ```
 
-4. **Start Netlify Dev:**
+4. **Start local development:**
    ```bash
-   netlify dev
+   npm run dev:all
    ```
 
 5. **Verify variables loaded:**
@@ -144,8 +142,8 @@ motionify-portal-1/
 **Cause:** Environment variables not loaded by Netlify functions
 
 **Fix:**
-1. Ensure `.env` is in project root (not `landing-page/`)
-2. Restart Netlify Dev completely: `Ctrl+C` then `netlify dev`
+1. Ensure `.env` is in project root
+2. Restart local development completely: `Ctrl+C` then `npm run dev:all`
 3. Check `netlify.toml` is in project root
 4. Verify file has correct format (no quotes around values)
 
@@ -161,7 +159,7 @@ motionify-portal-1/
 
 ### ❌ Magic link shows localhost in production
 
-**Cause:** `NEXT_PUBLIC_APP_URL` still set to localhost
+**Cause:** `APP_URL` still set to localhost
 
 **Fix:** Update to production domain in Netlify environment variables
 
@@ -177,7 +175,7 @@ MAGIC_LINK_EXPIRY
 SES_ACCESS_KEY_ID
 SES_SECRET_ACCESS_KEY
 SES_REGION
-NEXT_PUBLIC_APP_URL
+APP_URL
 ```
 
 ### How to Set in Netlify
@@ -197,7 +195,7 @@ NEXT_PUBLIC_APP_URL
 - [ ] JWT_SECRET is a secure random string (32+ bytes)
 - [ ] Database uses SSL (sslmode=require)
 - [ ] Production uses AWS SES, not Mailtrap
-- [ ] NEXT_PUBLIC_APP_URL uses HTTPS in production
+- [ ] APP_URL uses HTTPS in production
 - [ ] Different JWT_SECRET for dev/staging/production
 
 ## Verification Script
@@ -211,7 +209,7 @@ console.log('Environment Check:');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✓ Set' : '✗ Missing');
 console.log('MAILTRAP_USER:', process.env.MAILTRAP_USER ? '✓ Set' : '✗ Missing');
-console.log('APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
+console.log('APP_URL:', process.env.APP_URL);
 "
 ```
 
@@ -220,5 +218,3 @@ console.log('APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
 - See full setup guide: `docs/AUTHENTICATION_SETUP.md`
 - Check Netlify Functions logs for specific errors
 - Test authentication: `node scripts/test-magic-link.js`
-
-

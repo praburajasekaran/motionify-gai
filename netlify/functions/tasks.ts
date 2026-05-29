@@ -7,6 +7,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
+import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 // Validate task status transitions
 const isValidUUID = (id: string): boolean => {
@@ -256,11 +257,12 @@ export const handler = compose(
 
             // Fetch task details for the email
             const taskDetailsResult = await dbQuery(
-              `SELECT title FROM tasks WHERE id = $1`,
+              `SELECT title, project_id FROM tasks WHERE id = $1`,
               [taskId]
             );
             const taskTitle = taskDetailsResult.rows[0]?.title || 'Task';
-            const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${taskId}`; // Simplified URL
+            const taskProjectId = taskDetailsResult.rows[0]?.project_id || taskId;
+            const taskUrl = absolutePortalProjectUrl(taskProjectId, { task: taskId }, appOriginFromEnv(process.env));
 
             // Send emails if user has mentions enabled
             await Promise.all(usersResult.rows.map(async (user: any) => {
@@ -524,7 +526,7 @@ export const handler = compose(
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
             const assignee = assigneeResult.rows[0];
-            const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${taskData.project_id}?task=${newTask.id}`;
+            const taskUrl = absolutePortalProjectUrl(taskData.projectId, { task: newTask.id }, appOriginFromEnv(process.env));
 
             // Check user preferences
             const prefResult = await dbQuery(
@@ -684,7 +686,7 @@ export const handler = compose(
             // Limit emails to admins/PMs
             const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
 
-            const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${projectId}?task=${taskId}`;
+            const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
 
             const emailPromises = teamRes.rows.map(async (admin) => {
@@ -832,7 +834,7 @@ export const handler = compose(
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
             const assignee = assigneeResult.rows[0];
-            const taskUrl = `${process.env.URL || 'http://localhost:5173'}/project/${projectId}?task=${taskId}`;
+            const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
 
             // Check user preferences
             const prefResult = await dbQuery(

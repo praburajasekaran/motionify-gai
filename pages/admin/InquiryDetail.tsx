@@ -7,6 +7,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { encodeBase64 } from '../../utils/encoding';
 import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
+import { absoluteProposalReviewUrl } from '../../lib/canonical-links';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -110,7 +111,7 @@ export function InquiryDetail() {
     };
 
     const encodedData = encodeBase64(JSON.stringify(proposalData));
-    const link = `http://localhost:5174/proposal/${inquiry.proposalId}?data=${encodedData}`;
+    const link = absoluteProposalReviewUrl(inquiry.proposalId, { data: encodedData });
 
     navigator.clipboard.writeText(link);
     setCopied(true);

@@ -1,27 +1,24 @@
-# ⚡ Quick Start Guide
+# Quick Start Guide
 
 Get up and running in 5 minutes!
 
 ---
 
-## 📦 Step 1: Install Dependencies
+## Step 1: Install Dependencies
 
 ```bash
 # Install root dependencies
 npm install
-
-# Install landing page dependencies (happens automatically)
-cd landing-page-new && npm install && cd ..
 ```
 
 This will install:
-- ✅ TanStack Query (state management)
-- ✅ Zod (API validation)
-- ✅ All other dependencies
+- TanStack Query (state management)
+- Zod (API validation)
+- All active Vite and Netlify Function dependencies
 
 ---
 
-## 🔧 Step 2: Setup Environment
+## Step 2: Setup Environment
 
 Create `.env` in the root directory:
 
@@ -47,7 +44,7 @@ MAILTRAP_PASS=xxxxx
 
 ---
 
-## 🗄️ Step 3: Setup Database
+## Step 3: Setup Database
 
 ```bash
 # Connect to your Neon database
@@ -64,29 +61,29 @@ You should see tables: `users`, `sessions`, `inquiries`, `proposals`, `projects`
 
 ---
 
-## 🚀 Step 4: Run Locally
+## Step 4: Run Locally
 
 ```bash
-# Run both apps simultaneously
+# Run the Vite app and Netlify Functions together
 npm run dev:all
 ```
 
 **Access:**
-- 🎨 **Portal**: http://localhost:5173 (Admin & Client dashboard)
-- 🌐 **Landing**: http://localhost:5174 (Marketing + Quiz)
-- ⚙️ **API**: http://localhost:8888/.netlify/functions
+- **Public Site**: http://localhost:5173
+- **Portal**: http://localhost:5173/portal/login
+- **API**: http://localhost:8888/.netlify/functions
 
 ---
 
-## 🧪 Step 5: Test It Works
+## Step 5: Test It Works
 
-### Test Landing Page
-1. Go to http://localhost:5174
+### Test Public Site
+1. Go to http://localhost:5173
 2. Should see the marketing page
 3. Try the quiz form
 
 ### Test Portal
-1. Go to http://localhost:5173
+1. Go to http://localhost:5173/portal/login
 2. Should redirect to login
 3. For dev: Use localStorage to mock login:
    ```javascript
@@ -122,7 +119,7 @@ useEffect(() => {
     .then(setInquiries);
 }, []);
 
-// NEW way ✨
+// NEW way
 import { useInquiries } from '@/shared/hooks';
 const { data: inquiries, isLoading } = useInquiries();
 ```
@@ -150,7 +147,7 @@ await api.inquiries.create({
 
 ---
 
-## 📚 Learn More
+## Learn More
 
 - **State Management**: See `USING_STATE_MANAGEMENT.md`
 - **Deployment**: See `DEPLOYMENT_GUIDE.md`
@@ -158,7 +155,7 @@ await api.inquiries.create({
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Cannot find module '@tanstack/react-query'"
 ```bash
@@ -182,15 +179,15 @@ lsof -ti:5173 | xargs kill -9
 
 ---
 
-## ✅ You're Ready!
+## You're Ready!
 
 Your stack:
-- ✅ **Frontend**: React 19 + Vite + Next.js 16
-- ✅ **State**: TanStack Query
-- ✅ **Validation**: Zod
-- ✅ **Backend**: Netlify Functions
-- ✅ **Database**: PostgreSQL (Neon)
-- ✅ **Deployment**: Netlify
+- **Frontend**: React 19 + Vite
+- **State**: TanStack Query
+- **Validation**: Zod
+- **Backend**: Netlify Functions
+- **Database**: PostgreSQL (Neon)
+- **Deployment**: Netlify
 
 **Next Steps:**
 1. Customize the landing page

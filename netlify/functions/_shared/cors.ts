@@ -22,14 +22,11 @@ const ALLOWED_ORIGINS_DEV = [
     'http://localhost:3000',
     'http://localhost:3003',
     'http://localhost:5173',
-    'http://localhost:5174',
     'http://localhost:8888',
     'http://localhost:9999',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
     'http://192.168.0.116:5173',
-    'http://192.168.0.116:5174',
 ];
 
 // Get additional allowed origins from environment

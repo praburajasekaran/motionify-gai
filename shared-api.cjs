@@ -1,7 +1,9 @@
 /**
- * Simple API Server for Shared Data
- * Serves proposals, inquiries, and projects to both Next.js and React admin portal
+ * Legacy local API Server for Shared Data
+ * Serves proposals, inquiries, and projects to the Vite portal during old manual demos.
  * Runs on port 5175
+ *
+ * Production and normal local development use Netlify Functions instead.
  */
 
 const express = require('express');
@@ -12,7 +14,7 @@ const PORT = 5175;
 
 // Enable CORS for development
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: ['http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
@@ -36,7 +38,7 @@ let storage = {
 // Initialize with any existing data from localStorage (for migration)
 try {
   const fs = require('fs');
-  const localStoragePath = '/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/landing-page-new/.next/server/chunks';
+  const localStoragePath = '/tmp/motionify-legacy-local-storage';
   
   if (fs.existsSync(localStoragePath)) {
     console.log('📁 Migrating existing localStorage data...');

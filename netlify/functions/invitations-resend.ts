@@ -2,6 +2,7 @@ import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
@@ -43,8 +44,7 @@ export const handler = compose(
     const invitation = result.rows[0];
 
     // Resend email (log in development)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const inviteLink = `${appUrl}/invitation/accept?token=${invitation.token}`;
+    const inviteLink = absolutePortalLoginUrl({ token: invitation.token }, appOriginFromEnv(process.env));
     console.log(`[Mock Email] Resent invitation to ${invitation.email}:`);
     console.log(`  Link: ${inviteLink}`);
     console.log(`  Expires: ${new Date(invitation.expires_at).toISOString()}`);

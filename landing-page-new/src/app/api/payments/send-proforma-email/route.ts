@@ -27,7 +27,7 @@ const MOTIONIFY_COMPANY_DETAILS = {
   email: 'invoices@motionify.ai',
   phone: '+91 98765 43210',
   gstin: '22AAAAA0000A1Z5',
-  website: 'https://motionify.ai',
+  website: 'https://motionify.studio',
 };
 
 const BANK_DETAILS = {
@@ -133,7 +133,7 @@ async function sendEmailWithResend(
             <p style="color: #4b5563; margin-bottom: 24px;">Please find attached the proforma invoice #${invoiceNumber} for your review.</p>
             <p style="color: #4b5563; margin-bottom: 32px;">This proforma invoice is valid for 15 days from the date of issue. After this date, prices and availability may change.</p>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai'}" 
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio'}" 
                  style="display: inline-block; background: linear-gradient(135deg, #7C3AED, #8B5CF6); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
                 Complete Payment
               </a>

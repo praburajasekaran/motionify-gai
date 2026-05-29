@@ -7,6 +7,7 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendPaymentReminderEmail } from './send-email';
 import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
+import { absolutePortalProjectUrl, absoluteUrl, appOriginFromEnv, portalPath } from '../../shared/canonical-links';
 
 async function logActivity(params: {
   type: string;
@@ -397,10 +398,9 @@ export const handler = compose(
         const displayAmount = (Number(payment.amount) / 100).toFixed(2);
 
         // Build payment URL
-        const baseUrl = process.env.URL || 'http://localhost:3000';
         const paymentUrl = payment.project_id
-          ? `${baseUrl}/portal/projects/${payment.project_id}`
-          : `${baseUrl}/portal`;
+          ? absolutePortalProjectUrl(payment.project_id, { tab: 'payments' }, appOriginFromEnv(process.env))
+          : absoluteUrl(portalPath(), appOriginFromEnv(process.env));
 
         // Send the reminder email
         const emailResult = await sendPaymentReminderEmail({

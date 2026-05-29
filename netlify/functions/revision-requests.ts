@@ -15,6 +15,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendEmail } from './send-email';
+import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 export const handler = compose(
   withCORS(['GET', 'POST']),
@@ -191,7 +192,7 @@ export const handler = compose(
         };
       }
 
-      const projectUrl = `${process.env.URL || 'http://localhost:5173'}/projects/${deliverable.project_number}?tab=deliverables`;
+      const projectUrl = absolutePortalProjectUrl(deliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env));
       const userName = auth?.user?.fullName || auth?.user?.email || 'Client';
 
       // Execute all DB writes in a transaction

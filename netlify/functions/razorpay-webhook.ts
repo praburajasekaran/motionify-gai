@@ -20,6 +20,7 @@ import {
   sendPaymentFailureNotificationEmail,
 } from './send-email';
 import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
+import { absoluteProjectAccessUrl, absoluteUrl, appOriginFromEnv, portalPath } from '../../shared/canonical-links';
 
 /**
  * Razorpay webhook payload structure
@@ -47,14 +48,8 @@ interface RazorpayWebhookPayload {
   created_at: number;
 }
 
-function getPortalBaseUrl(): string {
-  const rawBaseUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || process.env.URL || 'http://localhost:5173';
-  return rawBaseUrl.replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
-}
-
 function buildProjectAccessUrl(projectId: string, email: string): string {
-  const params = new URLSearchParams({ projectId, email });
-  return `${getPortalBaseUrl()}/portal/project-access?${params.toString()}`;
+  return absoluteProjectAccessUrl({ projectId, email }, appOriginFromEnv(process.env));
 }
 
 /**
@@ -203,7 +198,7 @@ async function handlePaymentCaptured(
       const info = paymentInfo.rows[0];
       const projectUrl = info.project_id && info.client_email
         ? buildProjectAccessUrl(info.project_id, info.client_email)
-        : `${getPortalBaseUrl()}/portal/projects`;
+        : absoluteUrl(portalPath('/projects'), appOriginFromEnv(process.env));
 
       console.log('[Webhook] Sending payment success email for payment:', paymentId);
 

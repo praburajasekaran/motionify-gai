@@ -8,6 +8,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { deleteMultipleFromR2 } from './_shared/r2';
+import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 // Correlated subquery to determine dominant file category by priority (video > image > document > script)
 const DOMINANT_FILE_CATEGORY_SQL = `
@@ -388,7 +389,7 @@ export const handler = compose(
                 clientName: full_name,
                 projectNumber: project_number,
                 deliverableName: updatedDeliverable.name,
-                deliverableUrl: `${process.env.URL}/projects/${project_number}?tab=deliverables`,
+                deliverableUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
                 deliveryNotes: updatedDeliverable.description
               });
               console.log('✅ Deliverable ready email sent to:', email);
@@ -429,7 +430,7 @@ export const handler = compose(
                 clientName: full_name,
                 projectNumber: project_number,
                 deliverableName: updatedDeliverable.name,
-                downloadUrl: `${process.env.URL}/projects/${project_number}?tab=deliverables`,
+                downloadUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
                 expiryDays: 365
               });
               console.log('✅ Final deliverables email sent to:', email);

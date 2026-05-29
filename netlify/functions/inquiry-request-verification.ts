@@ -4,6 +4,7 @@ import { sendInquiryVerificationEmail } from './send-email';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { absoluteInquiryVerificationUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 interface QuizSelections {
     niche?: string | null;
@@ -67,9 +68,8 @@ export const handler = compose(
             ]
         );
 
-        // Generate magic link
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const magicLink = `${appUrl}/auth/verify?token=${token}&type=inquiry`;
+        // Generate public inquiry verification link
+        const magicLink = absoluteInquiryVerificationUrl({ token }, appOriginFromEnv(process.env));
 
         // Log for dev (keep for debugging)
         console.log(`✨ Inquiry Verification Magic Link for ${contactEmail}:`);

@@ -4,6 +4,7 @@ import { SCHEMAS } from './_shared/schemas';
 import { query } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
 import crypto from 'crypto';
+import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 export const handler = compose(
   withCORS(['POST']),
@@ -73,8 +74,7 @@ export const handler = compose(
 
     // TODO: Send email with invitation link
     // For development, log the invitation link
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const inviteLink = `${appUrl}/invitation/accept?token=${token}`;
+    const inviteLink = absolutePortalLoginUrl({ token }, appOriginFromEnv(process.env));
     console.log(`[Invitation] Sent to ${email}:`);
     console.log(`  Link: ${inviteLink}`);
     console.log(`  Expires: ${expiresAt.toISOString()}`);

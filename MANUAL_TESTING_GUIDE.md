@@ -196,7 +196,7 @@ npm run dev:all
 
 **Expected Results:**
 - ✅ Link copied to clipboard
-- ✅ Link format: `http://localhost:5174/proposal/[uuid]`
+- ✅ Link format: `http://localhost:5173/proposal/[uuid]`
 - ✅ Version number displayed if applicable
 
 #### 4.3 Client Proposal Review (Manual Browser Test)

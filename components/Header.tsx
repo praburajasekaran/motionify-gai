@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { portalLoginPath, portalPath } from "@/lib/canonical-links";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,34 +29,12 @@ export default function Header() {
           <div className="hidden sm:flex items-center gap-8">
             <a href="/work" className="text-sm text-white/80 hover:text-white transition">Work</a>
             <a href="/about" className="text-sm text-white/80 hover:text-white transition">About</a>
-            
-            {!isLoading && (
-              <>
-                {user ? (
-                  // Logged in state
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-white/80">Welcome, {user.name}</span>
-                    <button
-                      onClick={() => navigate('/dashboard')}
-                      aria-label="Go to dashboard"
-                      className={`inline-flex items-center gap-2 rounded-lg bg-[var(--studio-amber)] text-white font-medium hover:bg-[var(--studio-amber-hover)] transition-all duration-300 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'}`}
-                    >
-                      Dashboard
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                    </button>
-                  </div>
-                ) : (
-                  // Not logged in state
-                  <>
-                    <a href="/login" className="text-sm text-white/80 hover:text-white transition">Login</a>
-                    <a href="/contact" className={`inline-flex items-center gap-2 rounded-lg bg-[var(--studio-amber)] text-white font-medium hover:bg-[var(--studio-amber-hover)] transition-all duration-300 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'}`}>
-                      Get in touch
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                    </a>
-                  </>
-                )}
-              </>
-            )}
+            <a href={portalLoginPath()} className="text-sm text-white/80 hover:text-white transition">Login</a>
+            <a href={portalPath()} className="text-sm text-white/80 hover:text-white transition">Portal</a>
+            <a href="/contact" className={`inline-flex items-center gap-2 rounded-lg bg-[var(--studio-amber)] text-white font-medium hover:bg-[var(--studio-amber-hover)] transition-all duration-300 ${isScrolled ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm'}`}>
+              Get in touch
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+            </a>
           </div>
           <button aria-label="Open menu" className="sm:hidden inline-flex items-center bg-[var(--studio-amber)] text-white px-2.5 py-2 rounded-lg hover:bg-[var(--studio-amber-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path></svg>

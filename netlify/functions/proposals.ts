@@ -5,6 +5,8 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { absoluteProposalReviewUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { createProposalReviewToken } from './_shared/proposal-review-access';
 
 async function logActivity(params: {
   type: string;
@@ -86,8 +88,8 @@ async function notifyStatusChange(
 
     const proposal = proposalResult.rows[0];
     const proposalTitle = `Proposal ${proposal.inquiry_number}`;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const proposalUrl = `${appUrl}/proposal/${proposalId}`;
+    const reviewToken = await createProposalReviewToken(proposalId);
+    const proposalUrl = absoluteProposalReviewUrl(proposalId, { token: reviewToken.token }, appOriginFromEnv(process.env));
 
     const isAdminChange = proposal.changed_by_role !== 'client';
 
@@ -104,6 +106,7 @@ async function notifyStatusChange(
           isClientRecipient: true,
           changedBy: proposal.changed_by_name,
           feedback,
+          proposalUrl,
         });
         console.log(`✅ Status change email sent to client: ${proposal.client_email}`);
       } catch (emailError) {
@@ -209,7 +212,7 @@ export const handler = compose(
 
       // Block direct acceptance — proposal can only become 'accepted' after payment
       if (updates.status === 'accepted') {
-        const paymentCheck = await client.query(
+        const paymentCheck = await dbQuery(
           `SELECT id FROM payments
            WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
            LIMIT 1`,
@@ -358,7 +361,7 @@ export const handler = compose(
 
       // Block direct acceptance — proposal can only become 'accepted' after payment
       if (status === 'accepted') {
-        const paymentCheck = await client.query(
+        const paymentCheck = await dbQuery(
           `SELECT id FROM payments
            WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
            LIMIT 1`,
@@ -563,8 +566,8 @@ export const handler = compose(
 
       // Send proposal notification email to client
       const newProposalId = result.rows[0].id;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const proposalUrl = `${appUrl}/proposal/${newProposalId}`;
+      const reviewToken = await createProposalReviewToken(newProposalId);
+      const proposalUrl = absoluteProposalReviewUrl(newProposalId, { token: reviewToken.token }, appOriginFromEnv(process.env));
 
       // Format price for email (convert from smallest unit if needed)
       const formattedPrice = (payload.totalPrice / 100).toLocaleString('en-IN');
@@ -600,7 +603,11 @@ export const handler = compose(
       return {
         statusCode: 201,
         headers,
-        body: JSON.stringify(result.rows[0]),
+        body: JSON.stringify({
+          ...result.rows[0],
+          proposalReviewToken: reviewToken.token,
+          proposalReviewUrl: proposalUrl,
+        }),
       };
     }
 

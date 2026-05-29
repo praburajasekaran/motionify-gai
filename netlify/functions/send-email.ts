@@ -1,5 +1,12 @@
 import { Resend } from 'resend';
 import type { Handler } from '@netlify/functions';
+import {
+  absolutePortalAdminProposalUrl,
+  absoluteProposalReviewUrl,
+  absoluteUrl,
+  appOriginFromEnv,
+  portalPath,
+} from '../../shared/canonical-links';
 
 // Initialize Resend with API key from environment
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -419,7 +426,7 @@ export async function sendCommentNotificationEmail(data: {
 }) {
   const roleLabel = data.commenterRole === 'client' ? 'Client' : 'Admin';
   const proposalDisplay = data.proposalNumber ? `Proposal ${data.proposalNumber}` : 'your proposal';
-  const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/portal/admin/proposals/${data.proposalId}`;
+  const proposalUrl = absolutePortalAdminProposalUrl(data.proposalId, appOriginFromEnv(process.env));
 
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">New Comment on Your Proposal</h2>
@@ -450,10 +457,9 @@ export async function sendPaymentFailureNotificationEmail(data: {
   errorDescription?: string;
   proposalId?: string;
 }) {
-  const portalUrl = process.env.URL || 'http://localhost:5173';
   const actionUrl = data.proposalId
-    ? `${portalUrl}/admin/proposals/${data.proposalId}`
-    : `${portalUrl}/admin/payments`;
+    ? absolutePortalAdminProposalUrl(data.proposalId, appOriginFromEnv(process.env))
+    : absoluteUrl(portalPath('/admin/payments'), appOriginFromEnv(process.env));
 
   const content = `
     <h2 style="color: #dc2626; text-align: center; margin: 0 0 16px;">Payment Verification Failed</h2>
@@ -602,9 +608,9 @@ export async function sendProposalStatusChangeEmail(data: {
   isClientRecipient: boolean;
   changedBy?: string;
   feedback?: string;
+  proposalUrl?: string;
 }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const proposalUrl = `${appUrl}/proposal/${data.proposalId}`;
+  const proposalUrl = data.proposalUrl || absoluteProposalReviewUrl(data.proposalId, undefined, appOriginFromEnv(process.env));
 
   // Map status to user-friendly labels
   const statusLabels = {

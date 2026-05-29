@@ -25,7 +25,7 @@ node scripts/check-user-tokens.js
 - [ ] All environment variables configured in Netlify UI
 - [ ] JWT_SECRET is production-ready (32+ bytes, cryptographically secure)
 - [ ] DATABASE_URL uses pooled connection
-- [ ] NEXT_PUBLIC_APP_URL points to production domain
+- [ ] APP_URL points to production domain
 - [ ] Email service configured (AWS SES, not Mailtrap)
 - [ ] SES credentials valid and verified
 - [ ] SES domain verified and out of sandbox mode
@@ -38,7 +38,7 @@ MAGIC_LINK_EXPIRY=15
 SES_ACCESS_KEY_ID=<aws-key>
 SES_SECRET_ACCESS_KEY=<aws-secret>
 SES_REGION=us-east-1
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
+APP_URL=https://yourdomain.com
 R2_ACCOUNT_ID=<cloudflare-account>
 R2_ACCESS_KEY_ID=<r2-key>
 R2_SECRET_ACCESS_KEY=<r2-secret>
@@ -145,9 +145,9 @@ aws ses get-send-quota
    - Select repository
 
 2. **Configure build settings:**
-   - Base directory: `landing-page`
-   - Build command: `npm install && npm run build`
-   - Publish directory: `landing-page/.next`
+   - Base directory: leave empty
+   - Build command: `npm run build`
+   - Publish directory: `dist`
    - Functions directory: `netlify/functions`
 
 3. **Set environment variables:**
@@ -183,7 +183,7 @@ aws ses get-send-quota
 ### Step 4: Post-Deployment Verification
 
 1. **Test authentication flow:**
-   - Go to https://yourdomain.com/login
+   - Go to https://yourdomain.com/portal/login
    - Enter your email
    - Check email inbox (not Mailtrap!)
    - Click magic link
@@ -264,7 +264,7 @@ If deployment fails or issues arise:
 
 2. **Via CLI:**
    ```bash
-   netlify deploy --prod --dir=landing-page/.next
+   netlify deploy --prod --dir=dist
    ```
 
 ### Full Rollback
@@ -425,10 +425,10 @@ WHERE expires_at < NOW();
 
 ### Frontend
 
-1. **Next.js optimization:**
-   - Enable ISR (Incremental Static Regeneration)
-   - Use image optimization
-   - Code splitting
+1. **Vite optimization:**
+   - Keep route-level code splitting healthy
+   - Keep public assets content-hashed and cached
+   - Review large bundle chunks after production builds
 
 2. **Caching:**
    - Set appropriate cache headers

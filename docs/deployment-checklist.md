@@ -1,6 +1,18 @@
-# Deployment Checklist - Motionify Studio Portal
+# Deployment Checklist - Motionify Studio
 
 Use this checklist to ensure a smooth deployment to production.
+
+## Production Runtime Contract
+
+- [ ] Production build command is `npm run build`
+- [ ] Production publish directory is `dist`
+- [ ] Netlify Functions directory is `netlify/functions`
+- [ ] Netlify Next plugin is not configured for production
+- [ ] Legacy Next reference is not used by default install, build, or publish
+- [ ] `npm run verify:production-flip` passes
+- [ ] `npm run verify:runtime-retirement` passes
+- [ ] `npm run build` passes
+- [ ] Smoke checks from `docs/production-flip.md` pass
 
 ---
 
@@ -47,8 +59,8 @@ Use this checklist to ensure a smooth deployment to production.
 - [ ] Netlify account created
 - [ ] Repository connected to Netlify
 - [ ] Build settings verified:
-  - Build command: `cd client && npm run build`
-  - Publish directory: `client/dist`
+  - Build command: `npm run build`
+  - Publish directory: `dist`
   - Functions directory: `netlify/functions`
 
 ### Environment Variables
@@ -80,7 +92,8 @@ Copy from `.env.example` and add to Netlify:
 ### Manual Testing
 
 - [ ] Visit Netlify URL
-- [ ] Redirected to `/login` page
+- [ ] Public Site loads at `/`
+- [ ] Portal login loads at `/portal/login`
 - [ ] Login page loads correctly (no console errors)
 - [ ] Enter test email (`admin@motionify.studio`)
 - [ ] Check "Remember me" checkbox
