@@ -27,7 +27,7 @@ const MOTIONIFY_COMPANY_DETAILS = {
   email: 'invoices@motionify.ai',
   phone: '+91 98765 43210',
   gstin: '22AAAAA0000A1Z5',
-  website: 'https://motionify.ai',
+  website: 'https://motionify.studio',
 };
 
 const BANK_DETAILS = {
@@ -167,7 +167,7 @@ function buildProformaInvoiceData(
     bankDetails: BANK_DETAILS,
     razorpayDetails: {
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_xxxxxxxx',
-      paymentLink: `${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai'}/payments/proforma/${proposal.id}`,
+      paymentLink: `${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio'}/payments/proforma/${proposal.id}`,
     },
   };
 }
@@ -232,7 +232,7 @@ export async function GET(
       notes: invoiceData.notes,
       bankDetails: invoiceData.bankDetails,
       razorpayDetails: invoiceData.razorpayDetails,
-      paymentUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payments/proforma/${proposalId}`,
+      paymentUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio'}/payments/proforma/${proposalId}`,
     }, { status: 200, headers: getCorsHeaders(request) });
 
   } catch (error) {

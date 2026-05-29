@@ -1,30 +1,27 @@
-# 🚀 Motionify Studio Portal - Deployment Guide
+# Motionify Studio Portal - Deployment Guide
 
 ## Overview
 
-This guide walks you through deploying both apps (Landing Page + Portal) to Netlify with a single deployment.
+This guide walks you through deploying the single Vite frontend and Netlify Functions backend to Netlify.
 
 ### Architecture
 
 ```
 motionify-gai-1/
-├── Portal (Vite + React) → Served at /portal
-├── Landing Page (Next.js) → Served at / (root)
-└── API (Netlify Functions) → Served at /.netlify/functions
+├── Public Site (Vite + React) -> Served at /
+├── Portal (Vite + React) -> Served at /portal
+└── API (Netlify Functions) -> Served at /.netlify/functions
 ```
 
 ---
 
-## 📋 Pre-Deployment Checklist
+## Pre-Deployment Checklist
 
 ### Step 1: Install Dependencies
 
 ```bash
 # Install root dependencies
 npm install
-
-# Install landing page dependencies (happens automatically via postinstall)
-# Or manually: cd landing-page-new && npm install
 ```
 
 ### Step 2: Setup Environment Variables
@@ -66,18 +63,18 @@ MAILTRAP_PASS=xxxxx
 ### Step 4: Test Locally
 
 ```bash
-# Run both apps
+# Run the Vite app and functions
 npm run dev:all
 
 # Test URLs:
-# - Portal: http://localhost:5173
-# - Landing: http://localhost:5174
+# - Public Site: http://localhost:5173
+# - Portal: http://localhost:5173/portal/login
 # - Functions: http://localhost:8888/.netlify/functions
 ```
 
 ---
 
-## 🌐 Deploy to Netlify
+## Deploy to Netlify
 
 ### Option 1: GitHub → Netlify (Recommended)
 
@@ -103,8 +100,8 @@ git push -u origin main
 4. Configure build settings:
 
    ```
-   Build command: npm run build:all
-   Publish directory: landing-page-new/.next
+   Build command: npm run build
+   Publish directory: dist
    Functions directory: netlify/functions
    ```
 
@@ -148,12 +145,12 @@ netlify deploy --prod
 
 ---
 
-## ✅ Post-Deployment Verification
+## Post-Deployment Verification
 
 ### Test Your Deployment
 
-1. **Landing Page**: `https://your-site.netlify.app`
-2. **Portal**: `https://your-site.netlify.app/portal`
+1. **Public Site**: `https://your-site.netlify.app`
+2. **Portal**: `https://your-site.netlify.app/portal/login`
 3. **API Test**: `https://your-site.netlify.app/.netlify/functions/inquiries`
 
 ### Common Issues & Fixes
@@ -174,7 +171,7 @@ netlify deploy --prod
 # Verify netlify.toml has portal redirects:
 [[redirects]]
   from = "/portal/*"
-  to = "/portal/:splat"
+  to = "/index.html"
   status = 200
 ```
 
@@ -188,7 +185,7 @@ netlify deploy --prod
 
 ---
 
-## 🔄 Making Updates
+## Making Updates
 
 ### Deploy New Changes
 
@@ -208,7 +205,7 @@ In Netlify Dashboard:
 
 ---
 
-## 📊 Monitoring
+## Monitoring
 
 ### Netlify Analytics
 
@@ -227,7 +224,7 @@ In Netlify Dashboard:
 
 ---
 
-## 🔐 Production Checklist
+## Production Checklist
 
 Before going live:
 
@@ -243,7 +240,7 @@ Before going live:
 
 ---
 
-## 📚 Next Steps
+## Next Steps
 
 1. **State Management**: Already set up with TanStack Query!
 2. **API Contracts**: Already using Zod validation!
@@ -253,7 +250,7 @@ Before going live:
 
 ---
 
-## 🆘 Need Help?
+## Need Help?
 
 - Netlify Docs: https://docs.netlify.com
 - TanStack Query: https://tanstack.com/query

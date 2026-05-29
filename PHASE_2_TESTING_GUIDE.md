@@ -15,24 +15,14 @@ This guide will help you test the complete **Proposal Acceptance Flow** that was
 
 ## 📁 Files Created
 
-### Landing Page (Next.js)
+### Public Site (Vite)
 ```
-landing-page-new/src/
-├── lib/
-│   └── proposals.ts                           ✅ NEW - Proposal data access + versioning
-├── app/
-│   ├── proposal/
-│   │   └── [proposalId]/
-│   │       └── page.tsx                       ✅ NEW - Proposal review page
-│   └── payment/
-│       ├── [proposalId]/
-│       │   └── page.tsx                       ✅ NEW - Payment placeholder
-│       └── pending/
-│           └── page.tsx                       ✅ NEW - Generic placeholder
-└── components/
-    └── proposal/
-        ├── ProposalReview.tsx                 ✅ NEW - Display component
-        └── ProposalActions.tsx                ✅ NEW - Action buttons + modals
+pages/public/
+├── PublicProposalPage.tsx                     ✅ Proposal review page
+└── PublicPaymentPage.tsx                      ✅ Advance payment handoff page
+
+components/proposal/
+└── PublicProposalReview.tsx                   ✅ Display and action component
 ```
 
 ### Admin Portal (React)
@@ -51,9 +41,9 @@ pages/admin/
 
 ### Prerequisites
 
-1. **Both apps must be running on port 5174**
-   - Landing page (Next.js): `npm run dev` in `landing-page-new/`
-   - Admin portal (React): `npm run dev` in root directory
+1. **The Vite app and Netlify Functions must be running**
+   - Vite app: `npm run dev`
+   - Netlify Functions: `npm run dev:functions`
    
 2. **Clear browser console** - We'll be checking console.log outputs
 
@@ -70,7 +60,7 @@ pages/admin/
 ### TEST 1: Create Initial Proposal (Admin)
 
 #### Steps:
-1. **Navigate to Admin Portal** (http://localhost:5174)
+1. **Navigate to Admin Portal** (http://localhost:5173)
 2. **Go to Inquiries Dashboard**
    - Click on an inquiry with status "new"
    - Or use one of the seeded sample inquiries
@@ -91,7 +81,7 @@ pages/admin/
 Proposal created successfully!
 
 Share this link with client:
-http://localhost:5174/proposal/[uuid]
+http://localhost:5173/proposal/[uuid]
 
 ✅ Email notification logged to console.
 ```
@@ -103,7 +93,7 @@ http://localhost:5174/proposal/[uuid]
 To: client@example.com
 Subject: Proposal for INQ-2025-XXX
 
-Proposal Link: http://localhost:5174/proposal/[uuid]
+Proposal Link: http://localhost:5173/proposal/[uuid]
 Total Amount: $10,000
 Advance Payment: $5,000
 ========================================
@@ -123,7 +113,7 @@ Advance Payment: $5,000
 
 #### Steps:
 1. **Open proposal link** in browser (or new tab)
-   - Format: `http://localhost:5174/proposal/[uuid]`
+   - Format: `http://localhost:5173/proposal/[uuid]`
 2. **Review the proposal page**
 
 #### Expected Results:
@@ -301,7 +291,7 @@ Advance Due: $5,000 USD
 ========================================
 ```
 
-✅ **Redirected to payment page**: `http://localhost:5174/payment/[proposalId]`
+✅ **Redirected to payment page**: `http://localhost:5173/payment/[proposalId]`
 
 ✅ Payment page shows:
    - ✅ "Proposal Accepted!" with green checkmark
@@ -412,7 +402,7 @@ Reason: Budget constraints at this time
 ## 🐛 Edge Cases to Test
 
 ### 1. Invalid Proposal ID
-**Test:** Navigate to `http://localhost:5174/proposal/invalid-uuid-123`
+**Test:** Navigate to `http://localhost:5173/proposal/invalid-uuid-123`
 
 **Expected:**
 - "Proposal Not Found" message
@@ -437,8 +427,8 @@ Reason: Budget constraints at this time
 
 ### 4. localStorage Sharing
 **Test:** 
-1. Create proposal in admin (port 5174)
-2. Open proposal in same browser (port 5174)
+1. Create proposal in admin (port 5173)
+2. Open proposal in same browser (port 5173)
 
 **Expected:**
 - Data loads correctly (same localStorage)
@@ -463,7 +453,7 @@ Throughout testing, verify these console outputs appear:
   📧 EMAIL SENT TO CLIENT:
   ========================================
   To: ...
-  Proposal Link: http://localhost:5174/proposal/[id]
+  Proposal Link: http://localhost:5173/proposal/[id]
   ...
   ```
 
@@ -581,7 +571,7 @@ These are intentional for the vertical slice and will be addressed later:
 
 ### Issue: TypeScript errors in IDE
 **Solution:**
-- Run `npm install` in landing-page-new/
+- Run `npm install` at the repository root
 - Restart TypeScript server
 - The errors about missing components should resolve after build
 
@@ -622,7 +612,7 @@ If you encounter any issues during testing:
 2. **Review localStorage** data structure
 3. **Verify all files** were created correctly
 4. **Clear localStorage** and try fresh test
-5. **Check port** - both apps should be on 5174
+5. **Check port** - the Vite app should be on 5173
 
 ---
 

@@ -6,6 +6,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
+import { absoluteProposalReviewUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 interface Comment {
     id: string;
@@ -203,7 +204,7 @@ export const handler = compose(
                 if (recipientUserId && recipientUserId !== user.id) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
-                        const proposalUrl = `${process.env.URL || 'http://localhost:5173'}/proposal/${proposalId}`;
+                        const proposalUrl = absoluteProposalReviewUrl(proposalId, undefined, appOriginFromEnv(process.env));
 
                         await dbQuery(
                             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)

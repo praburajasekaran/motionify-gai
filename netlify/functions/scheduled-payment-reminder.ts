@@ -11,6 +11,7 @@
 import type { Config, Context } from '@netlify/functions';
 import { getPool, createLogger, generateCorrelationId } from './_shared';
 import { sendPaymentReminderEmail } from './send-email';
+import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 export default async function handler(req: Request, context: Context) {
     const correlationId = generateCorrelationId();
@@ -63,7 +64,11 @@ export default async function handler(req: Request, context: Context) {
                 minimumFractionDigits: 2,
             });
 
-            const paymentUrl = `${process.env.APP_URL || 'https://portal.motionify.studio'}/projects/${payment.project_id}?tab=payments`;
+            const paymentUrl = absolutePortalProjectUrl(
+                payment.project_id,
+                { tab: 'payments' },
+                appOriginFromEnv(process.env)
+            );
 
             try {
                 // Send actual email using Resend

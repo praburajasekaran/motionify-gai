@@ -39,6 +39,31 @@ export interface Proposal {
   rejectedAt?: string;
   feedback?: string;
   editHistory?: ProposalEditHistory[];
+  proposalReviewToken?: string;
+  proposalReviewUrl?: string;
+}
+
+function mapProposalFromApi(proposal: any): Proposal {
+  return {
+    ...proposal,
+    inquiryId: proposal.inquiry_id ?? proposal.inquiryId,
+    createdAt: proposal.created_at ?? proposal.createdAt,
+    updatedAt: proposal.updated_at ?? proposal.updatedAt,
+    totalPrice: proposal.total_price ?? proposal.totalPrice,
+    advancePercentage: proposal.advance_percentage ?? proposal.advancePercentage,
+    advanceAmount: proposal.advance_amount ?? proposal.advanceAmount,
+    balanceAmount: proposal.balance_amount ?? proposal.balanceAmount,
+    acceptedAt: proposal.accepted_at ?? proposal.acceptedAt,
+    rejectedAt: proposal.rejected_at ?? proposal.rejectedAt,
+    revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
+    revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
+    editHistory: proposal.edit_history ?? proposal.editHistory,
+    deliverables: typeof proposal.deliverables === 'string'
+      ? JSON.parse(proposal.deliverables)
+      : proposal.deliverables,
+    proposalReviewToken: proposal.proposalReviewToken,
+    proposalReviewUrl: proposal.proposalReviewUrl,
+  };
 }
 
 export async function getProposals(): Promise<Proposal[]> {
@@ -50,24 +75,7 @@ export async function getProposals(): Promise<Proposal[]> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.map((proposal: any) => ({
-      ...proposal,
-      inquiryId: proposal.inquiry_id,
-      createdAt: proposal.created_at,
-      updatedAt: proposal.updated_at,
-      totalPrice: proposal.total_price,
-      advancePercentage: proposal.advance_percentage,
-      advanceAmount: proposal.advance_amount,
-      balanceAmount: proposal.balance_amount,
-      acceptedAt: proposal.accepted_at,
-      rejectedAt: proposal.rejected_at,
-      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
-      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
-      editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string'
-        ? JSON.parse(proposal.deliverables)
-        : proposal.deliverables,
-    }));
+    return data.map(mapProposalFromApi);
   } catch (error) {
     console.error('Error fetching proposals:', error);
     return [];
@@ -84,24 +92,7 @@ export async function getProposalById(id: string): Promise<Proposal | null> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const proposal = await response.json();
-    return {
-      ...proposal,
-      inquiryId: proposal.inquiry_id,
-      createdAt: proposal.created_at,
-      updatedAt: proposal.updated_at,
-      totalPrice: proposal.total_price,
-      advancePercentage: proposal.advance_percentage,
-      advanceAmount: proposal.advance_amount,
-      balanceAmount: proposal.balance_amount,
-      acceptedAt: proposal.accepted_at,
-      rejectedAt: proposal.rejected_at,
-      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
-      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
-      editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string'
-        ? JSON.parse(proposal.deliverables)
-        : proposal.deliverables,
-    };
+    return mapProposalFromApi(proposal);
   } catch (error) {
     console.error('Error fetching proposal:', error);
     return null;
@@ -117,24 +108,7 @@ export async function getProposalsByInquiryId(inquiryId: string): Promise<Propos
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.map((proposal: any) => ({
-      ...proposal,
-      inquiryId: proposal.inquiry_id,
-      createdAt: proposal.created_at,
-      updatedAt: proposal.updated_at,
-      totalPrice: proposal.total_price,
-      advancePercentage: proposal.advance_percentage,
-      advanceAmount: proposal.advance_amount,
-      balanceAmount: proposal.balance_amount,
-      acceptedAt: proposal.accepted_at,
-      rejectedAt: proposal.rejected_at,
-      revisionsIncluded: proposal.revisions_included ?? proposal.revisionsIncluded ?? 2,
-      revisionsDescription: proposal.revisions_description ?? proposal.revisionsDescription ?? '',
-      editHistory: proposal.edit_history,
-      deliverables: typeof proposal.deliverables === 'string'
-        ? JSON.parse(proposal.deliverables)
-        : proposal.deliverables,
-    }));
+    return data.map(mapProposalFromApi);
   } catch (error) {
     console.error('Error fetching proposals by inquiry:', error);
     return [];
@@ -189,24 +163,21 @@ export async function createProposal(data: {
   }
 
   const result = await response.json();
-  return {
-    ...result,
-    inquiryId: result.inquiry_id,
-    createdAt: result.created_at,
-    updatedAt: result.updated_at,
-    totalPrice: result.total_price,
-    advancePercentage: result.advance_percentage,
-    advanceAmount: result.advance_amount,
-    balanceAmount: result.balance_amount,
-    acceptedAt: result.accepted_at,
-    rejectedAt: result.rejected_at,
-    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
-    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
-    editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string'
-      ? JSON.parse(result.deliverables)
-      : result.deliverables,
-  };
+  return mapProposalFromApi(result);
+}
+
+export async function getPublicProposalById(id: string, token?: string | null): Promise<{ proposal: Proposal | null; accessStatus?: string; error?: string }> {
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+
+  const response = await fetch(`${API_BASE_URL}/public-proposal/${id}${params.toString() ? `?${params.toString()}` : ''}`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return { proposal: null, accessStatus: data.accessStatus, error: data.message || data.error || 'Proposal link unavailable' };
+  }
+
+  return { proposal: mapProposalFromApi(data.proposal), accessStatus: data.accessStatus };
 }
 
 export async function updateProposal(id: string, updates: Partial<Proposal>): Promise<Proposal> {
@@ -238,24 +209,7 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
   }
 
   const result = await response.json();
-  return {
-    ...result,
-    inquiryId: result.inquiry_id,
-    createdAt: result.created_at,
-    updatedAt: result.updated_at,
-    totalPrice: result.total_price,
-    advancePercentage: result.advance_percentage,
-    advanceAmount: result.advance_amount,
-    balanceAmount: result.balance_amount,
-    acceptedAt: result.accepted_at,
-    rejectedAt: result.rejected_at,
-    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
-    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
-    editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string'
-      ? JSON.parse(result.deliverables)
-      : result.deliverables,
-  };
+  return mapProposalFromApi(result);
 }
 
 export async function updateProposalStatus(
@@ -278,24 +232,27 @@ export async function updateProposalStatus(
   }
 
   const result = await response.json();
-  return {
-    ...result,
-    inquiryId: result.inquiry_id,
-    createdAt: result.created_at,
-    updatedAt: result.updated_at,
-    totalPrice: result.total_price,
-    advancePercentage: result.advance_percentage,
-    advanceAmount: result.advance_amount,
-    balanceAmount: result.balance_amount,
-    acceptedAt: result.accepted_at,
-    rejectedAt: result.rejected_at,
-    revisionsIncluded: result.revisions_included ?? result.revisionsIncluded ?? 2,
-    revisionsDescription: result.revisions_description ?? result.revisionsDescription ?? '',
-    editHistory: result.edit_history,
-    deliverables: typeof result.deliverables === 'string'
-      ? JSON.parse(result.deliverables)
-      : result.deliverables,
-  };
+  return mapProposalFromApi(result);
+}
+
+export async function updatePublicProposalStatus(
+  id: string,
+  token: string,
+  status: Extract<ProposalStatus, 'rejected' | 'changes_requested'>,
+  additionalData?: { feedback?: string }
+): Promise<Proposal> {
+  const response = await fetch(`${API_BASE_URL}/public-proposal/${id}?token=${encodeURIComponent(token)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, feedback: additionalData?.feedback }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || error.error || 'Failed to update proposal status');
+  }
+
+  return mapProposalFromApi(await response.json());
 }
 
 export async function deleteProposal(id: string): Promise<void> {

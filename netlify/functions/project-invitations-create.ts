@@ -4,6 +4,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
 import { sendProjectInvitationEmail } from './send-email';
+import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 /**
  * Create a project-level invitation.
@@ -172,8 +173,7 @@ export const handler = compose(
     }
 
     // Send invitation email
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    const inviteLink = `${appUrl}/invitation/accept?token=${token}`;
+    const inviteLink = absolutePortalLoginUrl({ token }, appOriginFromEnv(process.env));
 
     // Fetch project name for the email
     let projectName = projectId;

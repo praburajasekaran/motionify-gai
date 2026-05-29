@@ -258,7 +258,7 @@ async function sendPaymentReceiptEmail(
             </p>
 
             <div style="text-align: center;">
-              <a href="https://motionify.ai/portal/dashboard" style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; transition: transform 0.2s, box-shadow 0.2s;">
+              <a href="https://motionify.studio/portal" style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; transition: transform 0.2s, box-shadow 0.2s;">
                 View Your Dashboard
               </a>
             </div>

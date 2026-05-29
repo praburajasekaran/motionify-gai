@@ -3,8 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright Configuration for Payment Flow Tests
  *
- * This config is specifically for testing the Next.js landing page
- * payment functionality which runs on port 5174.
+ * This config tests the Vite-hosted public payment handoff surface.
  *
  * Run with: npx playwright test --config=playwright.payment.config.ts
  */
@@ -19,7 +18,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: 'http://localhost:8899',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -33,8 +32,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev:landing',
-    url: 'http://localhost:5174',
+    command: 'npm run build && ./node_modules/.bin/vite preview --host 127.0.0.1 --port 8899',
+    url: 'http://localhost:8899',
     reuseExistingServer: !process.env.CI,
     timeout: 60000,
     stdout: 'pipe',

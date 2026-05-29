@@ -44,7 +44,7 @@ User authenticated
 
 ### Required Environment Variables
 
-Create a `.env` file in the **project root** (not in `landing-page/`):
+Create a `.env` file in the **project root**:
 
 ```bash
 # Database (Neon PostgreSQL)
@@ -72,7 +72,7 @@ MAILTRAP_PASS=your_mailtrap_password
 # SES_REGION=us-east-1
 
 # Application URL
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+APP_URL=http://localhost:5173
 ```
 
 ### Environment Variables in Netlify
@@ -80,8 +80,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 For production deployment on Netlify:
 
 1. Go to Site Settings → Environment Variables
-2. Add all the variables from `.env` (except `NEXT_PUBLIC_*` ones)
-3. `NEXT_PUBLIC_*` variables should be added as build-time environment variables
+2. Add all production variables from `.env`
+3. Use `APP_URL=https://motionify.studio` in production so magic links and handoff links use the canonical origin
 
 **Important:** Netlify functions need environment variables to be set in the Netlify UI, not just in `.env` files.
 
@@ -168,11 +168,8 @@ This script will:
 
 1. **Clone the repository and install dependencies:**
    ```bash
-   cd motionify-portal-1
+   cd motionify-gai
    npm install
-   cd landing-page
-   npm install
-   cd ..
    ```
 
 2. **Set up environment variables:**
@@ -198,18 +195,17 @@ This script will:
 
 5. **Start the development server:**
    ```bash
-   # IMPORTANT: Run from project root, not landing-page/
-   netlify dev
+   npm run dev:all
    ```
 
    This command will:
    - Start Netlify Functions on `http://localhost:8888`
-   - Start Next.js on `http://localhost:3000`
+   - Start the Vite app on `http://localhost:5173`
    - Load environment variables from `.env`
 
 6. **Access the application:**
-   - Open `http://localhost:3000`
-   - Go to `/login` and enter your email
+   - Open `http://localhost:5173/portal/login`
+   - Enter your email
    - Check Mailtrap for the magic link
    - **Note:** Magic link URL will also be logged to terminal in development
 
@@ -225,26 +221,21 @@ As of January 2026, mock authentication has been removed from the codebase for s
 ### Project Structure
 
 ```
-motionify-portal-1/
+motionify-gai/
 ├── .env                          # Environment variables (DO NOT COMMIT)
 ├── netlify.toml                  # Netlify configuration
+├── App.tsx                       # Vite app route shell
+├── pages/
+│   ├── Login.tsx                 # Portal login page
+│   └── public/                   # Public handoff routes
+├── contexts/
+│   └── AuthContext.tsx           # Authentication context
 ├── netlify/
 │   └── functions/                # Netlify serverless functions
-│       ├── auth-request-magic-link.js
-│       ├── auth-verify-magic-link.js
-│       ├── auth-me.js
-│       └── auth-logout.js
-├── landing-page/                 # Next.js application
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── login/           # Login page
-│   │   │   ├── auth/verify/     # Magic link verification
-│   │   │   └── portal/          # Protected portal pages
-│   │   ├── context/
-│   │   │   └── AuthContext.tsx  # Authentication context
-│   │   └── lib/portal/api/
-│   │       └── auth.api.ts      # Auth API client
-│   └── netlify.toml             # Next.js specific config
+│       ├── auth-request-magic-link.ts
+│       ├── auth-verify-magic-link.ts
+│       ├── auth-me.ts
+│       └── auth-logout.ts
 ├── database/
 │   ├── schema.sql               # Database schema
 │   └── sample-data.sql          # Sample data
@@ -270,7 +261,7 @@ motionify-portal-1/
 
 **Solution:**
 1. Ensure `.env` file exists in project root
-2. Restart Netlify Dev: `Ctrl+C` then `netlify dev`
+2. Restart local development: `Ctrl+C` then `npm run dev:all`
 3. Check environment variables are loading:
    ```bash
    # Add this to any function temporarily:
@@ -331,7 +322,7 @@ node scripts/fix-sessions-table.js
 - Request a new magic link
 - Adjust `MAGIC_LINK_EXPIRY` in `.env` if needed
 
-### Issue 6: Multiple Netlify Dev Processes
+### Issue 6: Multiple Local Dev Processes
 
 **Symptoms:**
 - Port conflicts
@@ -339,13 +330,13 @@ node scripts/fix-sessions-table.js
 
 **Solution:**
 ```bash
-# Kill all Netlify Dev processes
+# Kill stale local dev processes
 killall node
 # or more specifically:
-pkill -f "netlify dev"
+pkill -f "vite|netlify functions:serve"
 
 # Restart from project root only
-netlify dev
+npm run dev:all
 ```
 
 ---
@@ -359,7 +350,7 @@ netlify dev
 - [ ] Email service configured (SES for production)
 - [ ] JWT_SECRET is a secure random string (32+ bytes)
 - [ ] Database connection string uses pooled connection
-- [ ] NEXT_PUBLIC_APP_URL points to production domain
+- [ ] APP_URL points to production domain
 - [ ] Test authentication flow in staging environment
 
 ### Netlify Configuration
@@ -372,12 +363,9 @@ The `netlify.toml` in the root configures:
 
 ```toml
 [build]
-  base = "landing-page"
-  command = "npm install && npm run build"
-  publish = ".next"
-
-[functions]
-  directory = "netlify/functions"
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
 
 [[redirects]]
   from = "/api/*"
@@ -385,11 +373,10 @@ The `netlify.toml` in the root configures:
   status = 200
 
 [dev]
-  command = "cd landing-page && npm run dev"
-  port = 3000
-  targetPort = 3000
-  publish = "landing-page/.next"
-  autoLaunch = false
+  command = "vite"
+  port = 8888
+  targetPort = 5173
+  framework = "#custom"
 ```
 
 ### Environment Variables for Production
@@ -403,7 +390,7 @@ MAGIC_LINK_EXPIRY=15
 SES_ACCESS_KEY_ID=<aws-key>
 SES_SECRET_ACCESS_KEY=<aws-secret>
 SES_REGION=us-east-1
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
+APP_URL=https://yourdomain.com
 ```
 
 ### Email Configuration
@@ -489,7 +476,7 @@ node scripts/test-magic-link.js
 Output:
 ```
 📧 Magic Link:
-http://localhost:3000/auth/verify?token=...&email=client@example.com
+http://localhost:5173/portal/login?token=...&email=client@example.com
 
 🔑 Token: ...
 ⏰ Expires: 2025-11-20T11:50:51.889Z
@@ -514,7 +501,7 @@ Creates/updates `client@example.com` user.
 
 ### Browser Testing
 
-1. Go to `http://localhost:3000/login`
+1. Go to `http://localhost:5173/portal/login`
 2. Enter email: `client@example.com`
 3. Check Mailtrap inbox for magic link
 4. Click link (only once!)
@@ -620,7 +607,6 @@ netlify functions:log auth-verify-magic-link
 ## Additional Resources
 
 - [Netlify Functions Documentation](https://docs.netlify.com/functions/overview/)
-- [Next.js Authentication](https://nextjs.org/docs/authentication)
 - [Neon PostgreSQL](https://neon.tech/docs)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
 - [Magic Link Authentication Guide](https://magic.link/docs)

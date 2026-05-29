@@ -1,8 +1,3 @@
-# Build settings are in the root netlify.toml
-# Do not add [build] here — it overrides the root config
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-
-
+# Retired legacy reference only.
+# Production deploy settings live in the root netlify.toml.
+# Do not add a Next plugin or build settings here.

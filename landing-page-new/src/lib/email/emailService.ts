@@ -285,7 +285,7 @@ export async function sendClientPaymentAndProjectEmail(
     };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio';
   const projectDashboardUrl = `${appUrl}/projects/${projectId}`;
 
   const html = clientPaymentProjectTemplate({
@@ -324,7 +324,7 @@ export async function sendAdminPaymentAndProjectEmail(
     };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.ai';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio';
   const adminProjectUrl = `${appUrl}/admin/projects/${projectId}`;
 
   const html = adminPaymentProjectTemplate({

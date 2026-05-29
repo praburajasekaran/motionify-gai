@@ -1,4 +1,26 @@
-# Netlify Deployment Guide - Motionify Studio Portal
+# Netlify Deployment Guide - Motionify Studio
+
+## Current Production Shape
+
+Motionify Studio deploys as one Vite frontend runtime plus Netlify Functions.
+
+**Build settings:**
+- **Base directory**: (leave empty)
+- **Build command**: `npm run build`
+- **Publish directory**: `dist`
+- **Functions directory**: `netlify/functions`
+
+The legacy `landing-page-new/` Next implementation is retained only as non-runtime historical reference. Its scripts intentionally fail, it is not installed by the default lifecycle, it is not the production publish directory, and the Netlify Next plugin is not part of the production deploy path.
+
+Before publishing a deploy, run:
+
+```bash
+npm run verify:production-flip
+npm run verify:runtime-retirement
+npm run build
+```
+
+See [production-flip.md](production-flip.md) for Slice C smoke checks and rollback notes.
 
 ## Prerequisites
 
@@ -52,8 +74,8 @@ Netlify should auto-detect settings from `netlify.toml`, but verify:
 
 **Build settings:**
 - **Base directory**: (leave empty)
-- **Build command**: `cd client && npm run build`
-- **Publish directory**: `client/dist`
+- **Build command**: `npm run build`
+- **Publish directory**: `dist`
 - **Functions directory**: `netlify/functions`
 
 Click **"Deploy site"**
@@ -347,10 +369,9 @@ In `netlify.toml`, add caching headers:
 
 ```toml
 [build]
-  command = "cd client && npm ci && npm run build"
+  command = "npm run build"
+  publish = "dist"
 ```
-
-Using `npm ci` instead of `npm install` is faster for production builds.
 
 ---
 

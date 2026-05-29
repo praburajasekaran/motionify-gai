@@ -43,6 +43,27 @@ export interface ContactInfo {
   projectNotes?: string;
 }
 
+export function mapInquiryFromApi(inquiry: any): Inquiry {
+  return {
+    ...inquiry,
+    inquiryNumber: inquiry.inquiry_number ?? inquiry.inquiryNumber,
+    contactName: inquiry.contact_name ?? inquiry.contactName,
+    contactEmail: inquiry.contact_email ?? inquiry.contactEmail,
+    companyName: inquiry.company_name ?? inquiry.companyName,
+    contactPhone: inquiry.contact_phone ?? inquiry.contactPhone,
+    projectNotes: inquiry.project_notes ?? inquiry.projectNotes,
+    quizAnswers: inquiry.quiz_answers ?? inquiry.quizAnswers,
+    recommendedVideoType: inquiry.recommended_video_type ?? inquiry.recommendedVideoType,
+    proposalId: inquiry.proposal_id ?? inquiry.proposalId,
+    convertedToProjectId: inquiry.converted_to_project_id ?? inquiry.convertedToProjectId,
+    convertedAt: inquiry.converted_at ?? inquiry.convertedAt,
+    assignedToAdminId: inquiry.assigned_to_admin_id ?? inquiry.assignedToAdminId,
+    clientUserId: inquiry.client_user_id ?? inquiry.clientUserId,
+    createdAt: inquiry.created_at ?? inquiry.createdAt,
+    updatedAt: inquiry.updated_at ?? inquiry.updatedAt,
+  };
+}
+
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
@@ -62,24 +83,7 @@ export async function getInquiries(): Promise<Inquiry[]> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.map((inquiry: any) => ({
-      ...inquiry,
-      inquiryNumber: inquiry.inquiry_number,
-      contactName: inquiry.contact_name,
-      contactEmail: inquiry.contact_email,
-      companyName: inquiry.company_name,
-      contactPhone: inquiry.contact_phone,
-      projectNotes: inquiry.project_notes,
-      quizAnswers: inquiry.quiz_answers,
-      recommendedVideoType: inquiry.recommended_video_type,
-      proposalId: inquiry.proposal_id,
-      convertedToProjectId: inquiry.converted_to_project_id,
-      convertedAt: inquiry.converted_at,
-      assignedToAdminId: inquiry.assigned_to_admin_id,
-      clientUserId: inquiry.client_user_id,
-      createdAt: inquiry.created_at,
-      updatedAt: inquiry.updated_at,
-    }));
+    return data.map(mapInquiryFromApi);
   } catch (error) {
     console.error('Error fetching inquiries:', error);
     return [];
@@ -96,24 +100,7 @@ export async function getInquiryById(id: string): Promise<Inquiry | null> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const inquiry = await response.json();
-    return {
-      ...inquiry,
-      inquiryNumber: inquiry.inquiry_number,
-      contactName: inquiry.contact_name,
-      contactEmail: inquiry.contact_email,
-      companyName: inquiry.company_name,
-      contactPhone: inquiry.contact_phone,
-      projectNotes: inquiry.project_notes,
-      quizAnswers: inquiry.quiz_answers,
-      recommendedVideoType: inquiry.recommended_video_type,
-      proposalId: inquiry.proposal_id,
-      convertedToProjectId: inquiry.converted_to_project_id,
-      convertedAt: inquiry.converted_at,
-      assignedToAdminId: inquiry.assigned_to_admin_id,
-      clientUserId: inquiry.client_user_id,
-      createdAt: inquiry.created_at,
-      updatedAt: inquiry.updated_at,
-    };
+    return mapInquiryFromApi(inquiry);
   } catch (error) {
     console.error('Error fetching inquiry:', error);
     return null;

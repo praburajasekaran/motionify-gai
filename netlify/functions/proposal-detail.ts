@@ -22,9 +22,8 @@ export const handler = compose(
     };
   }
 
-  // Conditional auth: GET is public (clients view proposals via shared links),
-  // PUT and PATCH require authentication
-  if (event.httpMethod === 'PUT' || event.httpMethod === 'PATCH') {
+  // Proposal detail is now Portal-authenticated. Public review uses public-proposal with a review token.
+  if (event.httpMethod === 'GET' || event.httpMethod === 'PUT' || event.httpMethod === 'PATCH') {
     const auth = await requireAuthFromCookie(event);
     if (!auth.authorized) {
       return {
@@ -139,7 +138,7 @@ export const handler = compose(
 
       // Block direct acceptance — proposal can only become 'accepted' after payment
       if (status === 'accepted') {
-        const paymentCheck = await client.query(
+        const paymentCheck = await dbQuery(
           `SELECT id FROM payments
            WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
            LIMIT 1`,

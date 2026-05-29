@@ -1,19 +1,16 @@
 [build]
-  # Build both Portal (Vite) and Landing Page (Next.js)
-  command = "npm run build:all"
-  publish = "landing-page-new/.next"
+  # Slice C production flip: publish the single Vite runtime only.
+  command = "npm run build"
+  publish = "dist"
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
 # Staging branch deploys
 [context.staging]
-  command = "npm run build:all"
+  command = "npm run build"
 
 [context.staging.environment]
   CONTEXT = "staging"
@@ -31,17 +28,62 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Vite Portal SPA fallback
-# Static assets (JS, CSS) in /portal/ are served directly by Netlify
-# Non-file routes fall through to index.html for client-side routing
+# Legacy portal subdomain links normalize to the canonical product origin.
+[[redirects]]
+  from = "/*"
+  to = "https://motionify.studio/:splat"
+  status = 301
+  force = true
+  conditions = {Host = ["portal.motionify.studio"]}
+
+# Block sourcemap access - sourcemaps are for error reporting uploads only.
+[[redirects]]
+  from = "/assets/*.map"
+  to = "/404"
+  status = 404
+  force = true
+
+# Slice B compatibility aliases for public handoff links
+[[redirects]]
+  from = "/auth/verify"
+  to = "/verify-inquiry"
+  status = 302
+
+[[redirects]]
+  from = "/inquiry/verify"
+  to = "/verify-inquiry"
+  status = 302
+
+[[redirects]]
+  from = "/verify-inquiry"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/proposal/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/payment/*"
+  to = "/index.html"
+  status = 200
+
+# Vite SPA fallbacks. Public Site, public handoff routes, and Portal routes
+# all boot through the single Vite entrypoint in dist/index.html.
 [[redirects]]
   from = "/portal/*"
-  to = "/portal/index.html"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 # Long-term cache for Vite content-hashed assets
 [[headers]]
-  for = "/portal/assets/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
@@ -62,15 +104,28 @@
   [headers.values]
     Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; connect-src 'self' https://*.ingest.sentry.io https://*.r2.cloudflarestorage.com; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
-# Landing page CSP (Next.js)
+# Public Site and handoff CSP (Vite)
 [[headers]]
   for = "/"
   [headers.values]
     Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.ingest.sentry.io; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
-# Block sourcemap access — return 404 for .map files (sourcemaps for Sentry upload only)
-[[redirects]]
-  from = "/portal/assets/*.map"
-  to = "/404"
-  status = 404
-  force = true
+[[headers]]
+  for = "/verify-inquiry"
+  [headers.values]
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.ingest.sentry.io; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+[[headers]]
+  for = "/proposal/*"
+  [headers.values]
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.ingest.sentry.io; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+[[headers]]
+  for = "/payment/*"
+  [headers.values]
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.ingest.sentry.io; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+[[headers]]
+  for = "/inquiry-status/*"
+  [headers.values]
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.ingest.sentry.io; frame-src https://api.razorpay.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"

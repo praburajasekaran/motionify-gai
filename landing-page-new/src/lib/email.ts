@@ -54,7 +54,7 @@ export async function sendWelcomeEmail(data: {
     projectNumber: string;
     projectId: string;
 }) {
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5174'}/login?email=${encodeURIComponent(data.email)}`;
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://motionify.studio'}/portal/login?email=${encodeURIComponent(data.email)}`;
 
     const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">

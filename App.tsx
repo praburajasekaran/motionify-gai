@@ -11,6 +11,11 @@ import { SentryUserSync } from './components/SentryUserSync';
 import { QueryProvider } from './shared/providers/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShimmerSkeleton, StatGridSkeleton, ActivityFeedSkeleton, CardGridSkeleton } from './components/ui/SkeletonLoaders';
+import { PublicProposalPage } from './pages/public/PublicProposalPage';
+import { PublicPaymentPage } from './pages/public/PublicPaymentPage';
+import { InquiryVerification } from './pages/public/InquiryVerification';
+import { classifyRoute } from './lib/route-classification';
+import { resolveRouteAlias } from './shared/route-aliases';
 
 // Lazy-loaded page components for route-based code splitting
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -76,13 +81,21 @@ function ClientHomeRedirect() {
 }
 
 function App() {
+  const alias = resolveRouteAlias(window.location.pathname, window.location.search);
+  if (alias) {
+    window.history.replaceState(null, '', alias.canonicalPath);
+  }
+
+  const routeKind = classifyRoute(window.location.pathname);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryProvider>
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary onReset={reset}>
-              <BrowserRouter basename="/portal">
+              {routeKind === 'portal' ? (
+                <BrowserRouter basename="/portal">
                 <AuthProvider>
                   <NotificationProvider>
                     <SentryUserSync />
@@ -93,7 +106,6 @@ function App() {
                     }>
                       <Routes>
                         {/* Public routes - no layout */}
-                        <Route path="/landing" element={<LandingPage />} />
                         <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/project-access" element={<ProjectAccess />} />
@@ -128,7 +140,29 @@ function App() {
                     </React.Suspense>
                   </NotificationProvider>
                 </AuthProvider>
-              </BrowserRouter>
+                </BrowserRouter>
+              ) : (
+                <BrowserRouter>
+                  <React.Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                    </div>
+                  }>
+                    <Routes>
+                      <Route path="/" element={<LandingPage />} />
+                      <Route path="/proposal/:proposalId" element={<PublicProposalPage />} />
+                      <Route path="/payment/:proposalId" element={<PublicPaymentPage />} />
+                      <Route path="/verify-inquiry" element={<InquiryVerification />} />
+                      <Route path="/inquiry/verify" element={<InquiryVerification />} />
+                      <Route path="/auth/verify" element={<InquiryVerification />} />
+                      <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
+                      <Route path="/login" element={<Navigate to="/portal/login" replace />} />
+                      <Route path="/project-access" element={<Navigate to={`/portal/project-access${window.location.search}`} replace />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </React.Suspense>
+                </BrowserRouter>
+              )}
             </ErrorBoundary>
           )}
         </QueryErrorResetBoundary>

@@ -4,8 +4,8 @@ import { query } from './_shared/db';
 
 export const handler = compose(
     withCORS(['GET']),
-    withRateLimit(RATE_LIMITS.api, 'auth_me'),
-    withAuth()
+    withAuth(),
+    withRateLimit(RATE_LIMITS.api, 'auth_me')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
     // Fetch timezone and project count in parallel (both non-critical, fall back gracefully)
     let timezone: string | null = null;

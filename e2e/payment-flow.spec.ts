@@ -22,7 +22,7 @@ test.describe('Razorpay Payment Flow', () => {
   test('payment page - loads and displays correctly', async ({ page }) => {
     // Navigate directly to a payment page (using a mock proposal ID)
     // In real scenario, this would be reached via proposal acceptance
-    await page.goto('http://localhost:5174/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
+    await page.goto('/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
 
     // Wait for either payment content or "not found" message to appear
     await Promise.race([
@@ -63,7 +63,7 @@ test.describe('Razorpay Payment Flow', () => {
     // This test verifies the payment breakdown component structure
     // We'll create a test page or check for the component elements
 
-    await page.goto('http://localhost:5174/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
+    await page.goto('/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
 
     // Wait for content to load
     await Promise.race([
@@ -92,7 +92,7 @@ test.describe('Razorpay Payment Flow', () => {
   });
 
   test('payment button - exists and is interactive', async ({ page }) => {
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
     await page.waitForLoadState('networkidle');
 
     // Look for pay/payment button
@@ -116,82 +116,30 @@ test.describe('Razorpay Payment Flow', () => {
     }
   });
 
-  test('payment success page - renders correctly', async ({ page }) => {
-    // Navigate to success page
-    await page.goto('http://localhost:5174/payment/success?paymentId=test_payment_123');
+  test('legacy payment success path is handled by the Vite payment surface', async ({ page }) => {
+    await page.goto('/payment/success?paymentId=test_payment_123');
     await page.waitForLoadState('networkidle');
 
-    // Verify success message
-    await expect(page.locator('text=/Payment.*Success|Success|Confirmed|Complete/i').first()).toBeVisible({ timeout: 10000 });
-
-    // Look for success indicators
-    const hasCheckmark = await page.locator('[class*="check"], [class*="success"]').first().isVisible({ timeout: 3000 });
-
-    if (hasCheckmark) {
-      console.log('✓ Success indicator (checkmark) displayed');
-    }
-
-    // Verify payment ID is displayed
-    const hasPaymentId = await page.locator('text=/test_payment_123|Payment.*ID/i').first().isVisible({ timeout: 3000 });
-
-    if (hasPaymentId) {
-      console.log('✓ Payment ID displayed');
-    }
-
-    // Look for next steps or confirmation text
-    const hasNextSteps = await page.locator('text=/Next.*Steps|What.*Next|Confirmation/i').first().isVisible({ timeout: 3000 });
-
-    if (hasNextSteps) {
-      console.log('✓ Next steps information displayed');
-    }
+    await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Payment Not Found|Complete Your Advance Payment/i').first()).toBeVisible({ timeout: 10000 });
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/payment-success.png', fullPage: true });
   });
 
-  test('payment failure page - renders correctly', async ({ page }) => {
-    // Navigate to failure page with error message
-    await page.goto('http://localhost:5174/payment/failure?error=Payment%20declined%20by%20bank');
+  test('legacy payment failure path is handled by the Vite payment surface', async ({ page }) => {
+    await page.goto('/payment/failure?error=Payment%20declined%20by%20bank');
     await page.waitForLoadState('networkidle');
 
-    // Verify failure message
-    await expect(page.locator('text=/Payment.*Failed|Failed|Error|Declined/i').first()).toBeVisible({ timeout: 10000 });
-
-    // Look for error indicator
-    const hasErrorIcon = await page.locator('[class*="error"], [class*="fail"]').first().isVisible({ timeout: 3000 });
-
-    if (hasErrorIcon) {
-      console.log('✓ Error indicator displayed');
-    }
-
-    // Verify error message from query param is displayed
-    const hasErrorMessage = await page.locator('text=/declined|bank/i').first().isVisible({ timeout: 3000 });
-
-    if (hasErrorMessage) {
-      console.log('✓ Error message displayed');
-    }
-
-    // Look for retry button
-    const retryButton = page.locator('button:has-text("Try Again"), button:has-text("Retry"), a:has-text("Try Again")').first();
-
-    if (await retryButton.isVisible({ timeout: 3000 })) {
-      console.log('✓ Retry button found');
-
-      // Click retry button
-      await retryButton.click();
-
-      // Should navigate away from failure page
-      await page.waitForTimeout(1000);
-      const currentUrl = page.url();
-      console.log(`  Redirected to: ${currentUrl}`);
-    }
+    await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Payment Not Found|Complete Your Advance Payment/i').first()).toBeVisible({ timeout: 10000 });
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/payment-failure.png', fullPage: true });
   });
 
   test('currency conversion - displays both INR and USD', async ({ page }) => {
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
     await page.waitForLoadState('networkidle');
 
     // Check for currency symbols
@@ -211,7 +159,7 @@ test.describe('Razorpay Payment Flow', () => {
   });
 
   test('payment page - security and branding', async ({ page }) => {
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
     await page.waitForLoadState('networkidle');
 
     // Verify secure connection (HTTPS in production)
@@ -243,7 +191,7 @@ test.describe('Razorpay Payment Flow', () => {
   test('payment page - responsive design', async ({ page }) => {
     // Test mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
     await page.waitForLoadState('networkidle');
 
     // Take mobile screenshot
@@ -253,7 +201,7 @@ test.describe('Razorpay Payment Flow', () => {
 
     // Test tablet viewport
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
     await page.waitForLoadState('networkidle');
 
     // Take tablet screenshot
@@ -278,7 +226,7 @@ test.describe('Payment API Integration (Mock)', () => {
     console.log('  POST /api/payments/verify');
 
     // Verify the payment page attempts to load necessary scripts
-    await page.goto('http://localhost:5174/payment/test-proposal-id');
+    await page.goto('/payment/test-proposal-id');
 
     // Check if Razorpay script loading is attempted
     await page.waitForTimeout(2000);

@@ -10,7 +10,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { useAuthContext } from './AuthContext';
 import { API_BASE } from '@/lib/api-config';
 
-// Notification types matching the existing pattern from landing-page-new
+// Notification types shared by the Vite Portal and Netlify Functions.
 export type NotificationType =
     | 'task_assigned'
     | 'task_status_changed'

@@ -25,6 +25,7 @@ import {
     createLogger,
     getCorrelationId,
 } from './_shared';
+import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -138,17 +139,15 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             [email.toLowerCase(), token, expiresAt, rememberMe]
         );
 
-        // Build magic link URL - strip any trailing /api or /portal suffixes
-        const rawPortalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || process.env.PORTAL_URL || 'http://localhost:5173';
-        const portalUrl = rawPortalUrl.replace(/\/(api|portal)\/?$/, '').replace(/\/+$/, '');
-        const magicLinkParams = new URLSearchParams({
+        const portalUrl = appOriginFromEnv(process.env);
+        const magicLinkParams: { token: string; email: string; next?: string } = {
             token,
             email,
-        });
+        };
         if (next && next.startsWith('/') && !next.startsWith('//')) {
-            magicLinkParams.set('next', next);
+            magicLinkParams.next = next;
         }
-        const magicLink = `${portalUrl}/portal/login?${magicLinkParams.toString()}`;
+        const magicLink = absolutePortalLoginUrl(magicLinkParams, portalUrl);
         logger.info('Magic link generated', { portalUrl });
 
         // Log full magic link in local development for easy access
