@@ -6,14 +6,24 @@ import { geoMercator, geoPath } from "d3-geo";
 import { json } from "d3-fetch";
 import { feature } from "topojson-client";
 
-type Region = { name: string; coords: [number, number]; color: string; clients: string[] };
+type Region = {
+  name: string;
+  coords: [number, number];
+  color: string;
+  clients: string[];
+  labelOffset?: [number, number];
+};
 
 const keyRegions: Region[] = [
   { name: 'North America', coords: [-100, 40], color: '#06b6d4', clients: ['Tech Giants','SaaS Leaders','Fortune 500'] },
   { name: 'Europe', coords: [10, 50], color: '#8b5cf6', clients: ['EU Agencies','UK Brands','Nordic Startups'] },
   { name: 'India', coords: [78, 22], color: '#f59e0b', clients: ['Tech Hubs','E-commerce','EdTech'] },
   { name: 'Southeast Asia', coords: [105, 10], color: '#14b8a6', clients: ['APAC Brands','Fintech','Gaming'] },
-  { name: 'Middle East', coords: [50, 28], color: '#c084fc', clients: ['Dubai Media','Gulf Ventures','Tourism'] },
+  { name: 'Middle East', coords: [50, 28], color: '#c084fc', clients: ['Dubai Media','Gulf Ventures','Tourism'], labelOffset: [0, -26] },
+  { name: 'Australia', coords: [134, -25], color: '#22c55e', clients: ['Brand Films','Product Launches','Training'] },
+  { name: 'Denmark', coords: [10, 56], color: '#38bdf8', clients: ['Nordic Brands','Sustainability','Maritime'] },
+  { name: 'Saudi Arabia', coords: [45, 24], color: '#fb7185', clients: ['Vision Projects','Enterprise','Tourism'], labelOffset: [-36, 28] },
+  { name: 'Dubai', coords: [55.27, 25.2], color: '#f97316', clients: ['Media','Real Estate','Events'], labelOffset: [34, 28] },
 ];
 
 export function useWorldMap(svgSelector: string, containerSelector: string) {
@@ -83,12 +93,13 @@ export function useWorldMap(svgSelector: string, containerSelector: string) {
             .on('mousemove', (event: MouseEvent) => { tooltip.style('left', `${event.pageX+15}px`).style('top', `${event.pageY-15}px`); })
             .on('click', () => { /* placeholder for navigation */ });
 
-          svg.append('text').attr('x',x).attr('y',y+30).attr('text-anchor','middle')
+          const [labelX, labelY] = r.labelOffset ?? [0, 30];
+          svg.append('text').attr('x',x+labelX).attr('y',y+labelY).attr('text-anchor','middle')
             .attr('fill','rgba(255,255,255,.7)').attr('font-size','12px').attr('font-weight','500')
             .style('fontFamily','Inter, sans-serif').text(r.name);
         });
 
-        const connections: [number, number][] = [[0,1],[1,2],[2,3],[3,4],[1,4]];
+        const connections: [number, number][] = [[0,1],[1,2],[2,3],[3,4],[1,4],[3,5],[1,6],[4,7],[4,8]];
         connections.forEach(([i,j], idx) => {
           const s = projection(keyRegions[i].coords)!;
           const e = projection(keyRegions[j].coords)!;
@@ -129,6 +140,5 @@ export function useWorldMap(svgSelector: string, containerSelector: string) {
     };
   }, [svgSelector, containerSelector]);
 }
-
 
 
