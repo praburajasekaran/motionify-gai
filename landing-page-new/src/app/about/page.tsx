@@ -4,94 +4,95 @@ import Header from '@/components/Header';
 
 export const metadata = {
   title: 'About Us - Motionify Studio',
-  description: 'Motionify Studio is an award-winning video production and 3D animation agency, formerly known as RootsBridge, founded in 2017.',
+  description: 'Motionify Studio is a transparent creative production workspace for planning, creating, tracking, and scaling high-performing visual stories.',
 };
+
+const pillars = [
+  'Cinematic storytelling',
+  'Strategic thinking',
+  'Efficient workflows',
+];
+
+const countriesServed = [
+  'India',
+  'Australia',
+  'Denmark',
+  'Saudi Arabia',
+  'United Arab Emirates',
+];
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-6 pt-24 pb-16">
-        <h1 className="text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-          About Us
+      <main className="max-w-4xl mx-auto px-6 pt-24 pb-16 overflow-hidden">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+          Create with clarity
+        </div>
+
+        <h1 className="mt-5 max-w-3xl text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          Where ideas turn into high-performing visual stories
         </h1>
 
-        <div className="prose prose-invert prose-lg max-w-none space-y-8">
+        <div className="prose prose-invert prose-lg max-w-none space-y-10">
           <p className="text-gray-300 leading-relaxed">
-            As a production house, Motionify Studio brings to the table the best production and post-production team in the industry, with leading names in the world of cinematography, animation, visual effects, sound technology, and editing working under the Motionify Studio banner.
+            At Motionify Studio, we have reimagined how creative production works. No endless back-and-forth. No unclear timelines. No hidden processes.
           </p>
 
           <p className="text-gray-300 leading-relaxed">
-            Motionify Studio&apos;s thoughtful concepts, effortless presentation, and convincing production, enhanced by brilliant quality, can put your video pitch ahead of anything your competitors have. We work with our clients to realize their dream by translating their thoughts into visuals.
+            Just a seamless, transparent, and structured platform where you can plan, create, track, and scale your visual content - all in one place.
           </p>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Our Story</h2>
+            <h2 className="text-2xl font-semibold text-white mb-4">
+              Create with clarity. Track with confidence. Deliver with impact.
+            </h2>
             <p className="text-gray-300 leading-relaxed">
-              Founded in 2017 and formerly known as RootsBridge, Motionify Studio has grown into an award-winning video production and 3D animation agency. Operating from Chennai and Bangalore, our work has been noticed, discussed, and awarded around the world, and has been recognized on various elite platforms.
+              Motionify Studio Portal is your all-in-one creative production workspace, designed for brands, startups, and teams that want cinematic storytelling powered by efficiency and performance.
+            </p>
+            <p className="text-gray-300 leading-relaxed">
+              From selecting services to final delivery, every step is streamlined - so you can focus on what matters most: your story and your results.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">What We Do</h2>
+            <h2 className="text-2xl font-semibold text-white mb-4">Why Motionify Studio?</h2>
             <p className="text-gray-300 leading-relaxed">
-              We are your go-to agency for 3D animation and corporate video production, enhancing brand storytelling with creativity, quality, and timely delivery. You get a full team of professionals who have loads of experience working together, along with a full-service experience from the first meeting to the final produced video including audio, video, and post-production.
+              Because great stories deserve more than just creativity - they deserve structure, strategy, and execution that drives results.
             </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Our Process</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                'Brief & Kick-off Call',
-                'Script Writing',
-                'Design & Storyboard',
-                'Music & Voice Over',
-                'Visual Scenes & Animation',
-                'Compositing & Delivery',
-              ].map((step, i) => (
-                <div key={step} className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-3 ring-1 ring-white/10">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-400 text-sm font-semibold">
-                    {i + 1}
-                  </span>
-                  <span className="text-gray-300 text-sm">{step}</span>
+            <div className="not-prose grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {pillars.map((pillar) => (
+                <div key={pillar} className="rounded-lg bg-white/5 px-4 py-4 ring-1 ring-white/10">
+                  <span className="text-sm font-semibold text-orange-300">{pillar}</span>
                 </div>
               ))}
             </div>
+            <p className="text-gray-300 leading-relaxed">
+              So every project does not just look good - it performs.
+            </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Industries We Serve</h2>
-            <div className="flex flex-wrap gap-2">
-              {[
-                'Healthcare', 'Wellness', 'Real Estate', 'Manufacturing',
-                'Oil & Gas', 'Robotics', 'Infrastructure', 'Education',
-                'Automotive', 'Logistics', 'Food', 'Cosmetics',
-                'Information Technology',
-              ].map((industry) => (
+            <h2 className="text-2xl font-semibold text-white mb-4">Countries We Serve</h2>
+            <div className="not-prose flex flex-wrap gap-2">
+              {countriesServed.map((country) => (
                 <span
-                  key={industry}
+                  key={country}
                   className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-gray-300 ring-1 ring-white/10"
                 >
-                  {industry}
+                  {country}
                 </span>
               ))}
             </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Awards & Recognition</h2>
-            <ul className="space-y-3 text-gray-300">
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 h-2 w-2 rounded-full bg-orange-500 shrink-0" />
-                <span>Futuristic & Creative Video Production & Digital Agency of the Year 2023</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 h-2 w-2 rounded-full bg-orange-500 shrink-0" />
-                <span>Most Creative Video Production Company of the Year — Right Choice Awards 2023</span>
-              </li>
-            </ul>
+          <section className="not-prose rounded-lg bg-white/5 px-5 py-6 ring-1 ring-white/10">
+            <h2 className="text-2xl font-semibold text-white">Start Your First Project Today</h2>
+            <p className="mt-3 text-gray-300 leading-relaxed">
+              Step into a smarter way of creating content. Explore Motionify Studio and bring your ideas to life - faster, better, and with purpose.
+            </p>
           </section>
         </div>
 

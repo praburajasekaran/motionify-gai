@@ -1,29 +1,18 @@
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-const processSteps = [
-  'Brief & Kick-off Call',
-  'Script Writing',
-  'Design & Storyboard',
-  'Music & Voice Over',
-  'Visual Scenes & Animation',
-  'Compositing & Delivery',
+const pillars = [
+  'Cinematic storytelling',
+  'Strategic thinking',
+  'Efficient workflows',
 ];
 
-const industries = [
-  'Healthcare',
-  'Wellness',
-  'Real Estate',
-  'Manufacturing',
-  'Oil & Gas',
-  'Robotics',
-  'Infrastructure',
-  'Education',
-  'Automotive',
-  'Logistics',
-  'Food',
-  'Cosmetics',
-  'Information Technology',
+const countriesServed = [
+  'India',
+  'Australia',
+  'Denmark',
+  'Saudi Arabia',
+  'United Arab Emirates',
 ];
 
 export function AboutPage() {
@@ -46,73 +35,67 @@ export function AboutPage() {
         <div className="mx-auto max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-            Production, animation, and post-production
+            Create with clarity
           </div>
 
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-            About Us
+          <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            Where ideas turn into high-performing visual stories
           </h1>
 
-          <div className="mt-8 space-y-8 text-white/75">
+          <div className="mt-8 space-y-10 text-white/75">
             <p className="text-base leading-7 sm:text-lg">
-              As a production house, Motionify Studio brings to the table the best production and post-production team in the industry, with leading names in cinematography, animation, visual effects, sound technology, and editing working under the Motionify Studio banner.
+              At Motionify Studio, we have reimagined how creative production works. No endless back-and-forth. No unclear timelines. No hidden processes.
             </p>
 
             <p className="text-base leading-7 sm:text-lg">
-              Motionify Studio's thoughtful concepts, effortless presentation, and convincing production, enhanced by brilliant quality, can put your video pitch ahead of anything your competitors have. We work with our clients to realize their dream by translating their thoughts into visuals.
+              Just a seamless, transparent, and structured platform where you can plan, create, track, and scale your visual content - all in one place.
             </p>
 
             <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-white">Our Story</h2>
-              <p className="leading-7">
-                Founded in 2017 and formerly known as RootsBridge, Motionify Studio has grown into an award-winning video production and 3D animation agency. Operating from Chennai and Bangalore, our work has been noticed, discussed, and awarded around the world, and has been recognized on various elite platforms.
+              <h2 className="text-2xl font-semibold text-white">
+                Create with clarity. Track with confidence. Deliver with impact.
+              </h2>
+              <p className="leading-7 sm:text-lg">
+                Motionify Studio Portal is your all-in-one creative production workspace, designed for brands, startups, and teams that want cinematic storytelling powered by efficiency and performance.
               </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-white">What We Do</h2>
               <p className="leading-7">
-                We are your go-to agency for 3D animation and corporate video production, enhancing brand storytelling with creativity, quality, and timely delivery. You get a full team of professionals who have loads of experience working together, along with a full-service experience from the first meeting to the final produced video including audio, video, and post-production.
+                From selecting services to final delivery, every step is streamlined - so you can focus on what matters most: your story and your results.
               </p>
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-2xl font-semibold text-white">Our Process</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {processSteps.map((step, index) => (
-                  <div key={step} className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-3 ring-1 ring-white/10">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-sm font-semibold text-orange-300">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm text-white/75">{step}</span>
+              <h2 className="text-2xl font-semibold text-white">Why Motionify Studio?</h2>
+              <p className="leading-7">
+                Because great stories deserve more than just creativity - they deserve structure, strategy, and execution that drives results.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {pillars.map((pillar) => (
+                  <div key={pillar} className="rounded-lg bg-white/5 px-4 py-4 ring-1 ring-white/10">
+                    <span className="text-sm font-semibold text-orange-300">{pillar}</span>
                   </div>
                 ))}
               </div>
+              <p className="leading-7">
+                So every project does not just look good - it performs.
+              </p>
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-2xl font-semibold text-white">Industries We Serve</h2>
+              <h2 className="text-2xl font-semibold text-white">Countries We Serve</h2>
               <div className="flex flex-wrap gap-2">
-                {industries.map((industry) => (
-                  <span key={industry} className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-white/75 ring-1 ring-white/10">
-                    {industry}
+                {countriesServed.map((country) => (
+                  <span key={country} className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-white/75 ring-1 ring-white/10">
+                    {country}
                   </span>
                 ))}
               </div>
             </section>
 
-            <section className="space-y-4">
-              <h2 className="text-2xl font-semibold text-white">Awards & Recognition</h2>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-orange-400" />
-                  <span>Futuristic & Creative Video Production & Digital Agency of the Year 2023</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-orange-400" />
-                  <span>Most Creative Video Production Company of the Year - Right Choice Awards 2023</span>
-                </li>
-              </ul>
+            <section className="space-y-3 rounded-lg bg-white/5 px-5 py-6 ring-1 ring-white/10">
+              <h2 className="text-2xl font-semibold text-white">Start Your First Project Today</h2>
+              <p className="leading-7">
+                Step into a smarter way of creating content. Explore Motionify Studio and bring your ideas to life - faster, better, and with purpose.
+              </p>
             </section>
           </div>
         </div>
