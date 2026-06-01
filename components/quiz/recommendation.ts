@@ -7,9 +7,29 @@ export type Recommendation = {
   description: string;
   gradient: string;
   styleTags: string[];
+  youtubeId: string;
 };
 
 export function generateRecommendation(selections: QuizSelections): Recommendation {
+  return withStyleVideo(generateRecommendationContent(selections), selections.style);
+}
+
+const YOUTUBE_IDS_BY_STYLE: Record<string, string> = {
+  'Live Action': 'sd2dd7tmY-Y',
+  'Animation': 'gxPuAgTcxp4',
+  'Mixed Media': 'BaDfOeN9SLA',
+  'Motion Graphics': 'By8VKDeZ4Sc',
+  'Minimal Explainer': 'VUz3VfAezBA',
+};
+
+function withStyleVideo(recommendation: Omit<Recommendation, 'youtubeId'>, style: string | null): Recommendation {
+  return {
+    ...recommendation,
+    youtubeId: YOUTUBE_IDS_BY_STYLE[style ?? ''] ?? YOUTUBE_IDS_BY_STYLE['Mixed Media'],
+  };
+}
+
+function generateRecommendationContent(selections: QuizSelections): Omit<Recommendation, 'youtubeId'> {
   const { niche, audience, style, mood, duration } = selections;
 
   if (niche === 'Tech' && audience === 'Businesses' && style === 'Mixed Media' && mood === 'Bold') {
@@ -151,6 +171,16 @@ export function generateRecommendation(selections: QuizSelections): Recommendati
       description: 'Get the best of all worlds by combining live-action footage, animation, and graphics for a rich, multi-layered storytelling experience.',
       gradient: 'linear-gradient(135deg, rgba(217,70,239,.3), rgba(139,92,246,.3), rgba(59,130,246,.3))',
       styleTags: ['Collage', 'Textured', 'Layered']
+    };
+  }
+  if (style === 'Minimal Explainer') {
+    return {
+      id: 'generic-minimal-explainer',
+      title: 'Minimal Explainer Video',
+      subtitle: 'Clear & Focused',
+      description: 'Distill your message into a clean, streamlined explainer that keeps attention on the core idea and guides viewers toward action.',
+      gradient: 'linear-gradient(135deg, rgba(99,102,241,.3), rgba(79,70,229,.3), rgba(45,212,191,.3))',
+      styleTags: ['Minimalist', 'Structured', 'Clarity-first']
     };
   }
 

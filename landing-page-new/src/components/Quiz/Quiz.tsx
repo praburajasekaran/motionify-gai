@@ -35,11 +35,11 @@ export default function Quiz() {
   } = useQuiz();
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [loadingStep, setLoadingStep] = useState(0);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const lastGeneratedIdRef = useRef<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const recommendation = useMemo(() => {
     return isComplete ? generateRecommendation(selections) : null;
@@ -47,12 +47,41 @@ export default function Quiz() {
 
   const reset = () => {
     resetQuiz();
-    setVideoUrl(null);
-    setIsGenerating(false);
-    setLoadingStep(0);
     setIsSubmitting(false);
-    lastGeneratedIdRef.current = null;
+    setIsMuted(false);
+    setIsFullscreen(false);
   };
+
+  const sendPlayerCommand = (func: string) => {
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func, args: [] }),
+      '*'
+    );
+  };
+
+  const toggleMute = () => {
+    const nextMuted = !isMuted;
+    sendPlayerCommand(nextMuted ? 'mute' : 'unMute');
+    setIsMuted(nextMuted);
+  };
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+
+    previewRef.current?.requestFullscreen?.();
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === previewRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const handleContactSubmit = async (contactInfo: ContactInfo) => {
     if (!recommendation) return;
@@ -82,8 +111,6 @@ export default function Quiz() {
 
   useEffect(() => {
     if (!recommendation) return;
-    if (lastGeneratedIdRef.current === recommendation.id) return;
-    lastGeneratedIdRef.current = recommendation.id;
 
     // Start UI transition
     if (placeholderRef.current && cardRef.current) {
@@ -97,42 +124,7 @@ export default function Quiz() {
         });
       }, 300);
     }
-
-    // Trigger Generation
-    const generate = async () => {
-      setIsGenerating(true);
-      setLoadingStep(0);
-
-      // Progress simulation timer
-      const timer = setInterval(() => {
-        setLoadingStep((prev: number) => (prev < 3 ? prev + 1 : prev));
-      }, 1000);
-
-      try {
-        const res = await fetch('/api/generate-video', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(recommendation),
-        });
-        const data = await res.json();
-        setVideoUrl(data.url);
-      } catch (err) {
-        console.error("Generation failed", err);
-      } finally {
-        clearInterval(timer);
-        setIsGenerating(false);
-      }
-    };
-
-    generate();
   }, [recommendation]);
-
-  const LOADING_STEPS = [
-    "Analyzing your inputs...",
-    "Dreaming up concepts...",
-    "Generating video with Veo 3...",
-    "Finalizing render..."
-  ];
 
   const questions: { title: string; help: string; key: Option["key"]; options: string[] }[] = [
     { title: "What's your niche?", help: "Help us understand your industry", key: "niche", options: ["Tech", "Healthcare", "Retail", "Real Estate", "Education", "Other"] },
@@ -300,33 +292,48 @@ export default function Quiz() {
               </div>
 
               <div ref={cardRef} className="rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur overflow-hidden opacity-0 transition-opacity duration-500" style={{ display: 'none' }}>
-                <div className="aspect-video relative overflow-hidden bg-black">
-                  {isGenerating ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-20">
-                      <div className="h-12 w-12 rounded-full border-4 border-white/20 border-t-fuchsia-500 animate-spin mb-4" />
-                      <p className="text-sm font-medium text-white/90 animate-pulse">{LOADING_STEPS[Math.min(loadingStep, LOADING_STEPS.length - 1)]}</p>
-                    </div>
-                  ) : videoUrl ? (
-                    <video
-                      src={videoUrl}
-                      className="w-full h-full object-cover"
-                      controls
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                    />
+                <div ref={previewRef} className="aspect-video group relative overflow-hidden bg-black">
+                  {recommendation?.youtubeId ? (
+                    <>
+                      <iframe
+                        ref={iframeRef}
+                        src={`https://www.youtube-nocookie.com/embed/${recommendation.youtubeId}?autoplay=1&loop=1&playlist=${recommendation.youtubeId}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&fs=0&enablejsapi=1`}
+                        title={`${recommendation.title} preview video`}
+                        className="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                      <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+                        <button
+                          type="button"
+                          onClick={toggleMute}
+                          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white ring-1 ring-white/15 backdrop-blur hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                          aria-label={isMuted ? 'Unmute preview video' : 'Mute preview video'}
+                        >
+                          {isMuted ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="m22 9-6 6" /><path d="m16 9 6 6" /></svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={toggleFullscreen}
+                          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white ring-1 ring-white/15 backdrop-blur hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                          aria-label={isFullscreen ? 'Exit preview video fullscreen' : 'Open preview video fullscreen'}
+                        >
+                          {isFullscreen ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
                       <div className="text-white/50">Video Unavailable</div>
-                    </div>
-                  )}
-                  {/* Veo 3 Badge */}
-                  {!isGenerating && videoUrl && (
-                    <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 z-10">
-                      {/* Google Logo minimal */}
-                      <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.333.533 12S5.867 24 12.48 24c3.44 0 6.013-1.133 8.053-3.24 2.107-2.107 2.773-5.227 2.773-7.76 0-.773-.08-1.52-.213-2.227h-10.613z" /></svg>
-                      <span className="text-[10px] font-medium text-white/90 tracking-wide">Veo 3</span>
                     </div>
                   )}
                 </div>
