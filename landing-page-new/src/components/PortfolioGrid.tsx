@@ -2,29 +2,29 @@
 export default function PortfolioGrid() {
   const videos = [
     {
-      title: "Creativity in Motion",
-      type: "YouTube Showcase",
-      src: "https://www.youtube.com/embed/ZDzXCMLkl1c",
+      title: "Live Action",
+      type: "YouTube",
+      src: "https://www.youtube.com/embed/sd2dd7tmY-Y",
     },
     {
-      title: "Brand Film 01",
-      type: "Vimeo — Brand Film",
-      src: "https://player.vimeo.com/video/751616114",
+      title: "Animation",
+      type: "YouTube",
+      src: "https://www.youtube.com/embed/gxPuAgTcxp4",
     },
     {
-      title: "Explainer 3D Walkthrough",
-      type: "Vimeo — Explainer",
-      src: "https://player.vimeo.com/video/760954768",
+      title: "Mixed Media",
+      type: "YouTube",
+      src: "https://www.youtube.com/embed/BaDfOeN9SLA",
     },
     {
-      title: "Product Launch Reel",
-      type: "Vimeo — Launch Reel",
-      src: "https://player.vimeo.com/video/600744481",
+      title: "Motion Graphics",
+      type: "YouTube",
+      src: "https://www.youtube.com/embed/By8VKDeZ4Sc",
     },
     {
-      title: "Training & Education",
-      type: "Vimeo — Training",
-      src: "https://player.vimeo.com/video/600803860",
+      title: "Minimal Explainer",
+      type: "YouTube",
+      src: "https://www.youtube.com/embed/VUz3VfAezBA",
     },
   ];
 
@@ -85,7 +85,6 @@ export default function PortfolioGrid() {
     </section>
   );
 }
-
 
 
 

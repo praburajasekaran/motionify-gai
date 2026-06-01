@@ -1,22 +1,43 @@
 "use client";
 
 // Using standard img tags
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export default function SolutionsSlider() {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [cardWidth, setCardWidth] = useState(320 + 20);
+  const [loopWidth, setLoopWidth] = useState(0);
   const [cardsPerView, setCardsPerView] = useState(1);
   const [active, setActive] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCenteredRef = useRef(false);
 
   // Calculate total pages based on cards per view
   const totalPages = Math.ceil(solutions.length / cardsPerView);
   const dots = useMemo(() => Array.from({ length: totalPages }, (_, i) => i), [totalPages]);
+  const loopedSolutions = useMemo(() => [...solutions, ...solutions, ...solutions], []);
+  const oneSetWidth = loopWidth || solutions.length * cardWidth;
+  const middleSetStart = oneSetWidth;
+
+  const jumpToMiddleSet = useCallback((offset = 0) => {
+    const track = trackRef.current;
+    if (!track || !oneSetWidth) return;
+    track.scrollTo({ left: middleSetStart + offset, behavior: "auto" });
+  }, [middleSetStart, oneSetWidth]);
+
+  const normalizeLoopPosition = useCallback(() => {
+    const track = trackRef.current;
+    if (!track || !oneSetWidth) return;
+
+    if (track.scrollLeft >= middleSetStart + oneSetWidth) {
+      track.scrollTo({ left: track.scrollLeft - oneSetWidth, behavior: "auto" });
+    } else if (track.scrollLeft < middleSetStart) {
+      track.scrollTo({ left: track.scrollLeft + oneSetWidth, behavior: "auto" });
+    }
+  }, [middleSetStart, oneSetWidth]);
 
   // Calculate card width and cards per view
   useEffect(() => {
@@ -33,9 +54,12 @@ export default function SolutionsSlider() {
       const perView = Math.floor((trackWidth + gap) / (cardW + gap));
       setCardsPerView(Math.max(1, perView));
       setCardWidth(cardW + gap);
-
-      // Detect if mobile (< 640px, sm breakpoint)
-      setIsMobile(window.innerWidth < 640);
+      const cards = track.querySelectorAll<HTMLDivElement>("[data-solution-card]");
+      const firstCardOffset = cards[0]?.offsetLeft;
+      const secondSetOffset = cards[solutions.length]?.offsetLeft;
+      if (firstCardOffset !== undefined && secondSetOffset !== undefined) {
+        setLoopWidth(secondSetOffset - firstCardOffset);
+      }
 
       // Update scroll button states
       updateScrollState();
@@ -52,8 +76,9 @@ export default function SolutionsSlider() {
     const track = trackRef.current;
     if (!track) return;
 
-    setCanScrollLeft(track.scrollLeft > 1);
-    setCanScrollRight(track.scrollLeft < track.scrollWidth - track.clientWidth - 1);
+    const canScroll = track.scrollWidth > track.clientWidth + 1;
+    setCanScrollLeft(canScroll);
+    setCanScrollRight(canScroll);
   };
 
   // Track scroll position and update active page
@@ -65,9 +90,12 @@ export default function SolutionsSlider() {
     const onScroll = () => {
       if (t) window.clearTimeout(t);
       t = window.setTimeout(() => {
+        normalizeLoopPosition();
+
         // Calculate which page we're on
         const pageWidth = cardsPerView * cardWidth;
-        const currentPage = Math.round(track.scrollLeft / pageWidth);
+        const loopOffset = ((track.scrollLeft - middleSetStart) % oneSetWidth + oneSetWidth) % oneSetWidth;
+        const currentPage = Math.round(loopOffset / pageWidth);
         setActive(Math.max(0, Math.min(currentPage, totalPages - 1)));
 
         // Update button states
@@ -77,29 +105,40 @@ export default function SolutionsSlider() {
 
     track.addEventListener("scroll", onScroll);
     return () => track.removeEventListener("scroll", onScroll);
-  }, [cardWidth, cardsPerView, totalPages]);
+  }, [cardWidth, cardsPerView, middleSetStart, normalizeLoopPosition, oneSetWidth, totalPages]);
 
-  // Auto-scroll on mobile
   useEffect(() => {
-    if (!isMobile || hasUserInteracted) return;
+    if (!loopWidth || hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    jumpToMiddleSet();
+  }, [jumpToMiddleSet, loopWidth]);
 
+  const startAutoScroll = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
+    if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
 
+    autoScrollIntervalRef.current = setInterval(() => {
+      normalizeLoopPosition();
+      track.scrollTo({ left: track.scrollLeft + cardWidth, behavior: "smooth" });
+    }, 3000);
+  }, [cardWidth, normalizeLoopPosition]);
+
+  const pauseAutoScroll = useCallback(() => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => startAutoScroll(), 5000);
+  }, [startAutoScroll]);
+
+  // Auto-scroll across all viewport sizes, with an infinite looped track.
+  useEffect(() => {
     // Start auto-scroll after a brief delay
     const startDelay = setTimeout(() => {
-      autoScrollIntervalRef.current = setInterval(() => {
-        const maxScroll = track.scrollWidth - track.clientWidth;
-        const nextScrollLeft = track.scrollLeft + cardWidth;
-
-        // If we've reached the end, loop back to start
-        if (nextScrollLeft >= maxScroll) {
-          track.scrollTo({ left: 0, behavior: "smooth" });
-        } else {
-          track.scrollTo({ left: nextScrollLeft, behavior: "smooth" });
-        }
-      }, 3000); // Scroll every 3 seconds
-    }, 1000); // Wait 1 second before starting
+      startAutoScroll();
+    }, 1000);
 
     return () => {
       clearTimeout(startDelay);
@@ -107,54 +146,51 @@ export default function SolutionsSlider() {
         clearInterval(autoScrollIntervalRef.current);
         autoScrollIntervalRef.current = null;
       }
-    };
-  }, [isMobile, hasUserInteracted, cardWidth]);
-
-  // Stop auto-scroll on user interaction
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track || !isMobile) return;
-
-    const handleInteraction = () => {
-      setHasUserInteracted(true);
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current);
-        autoScrollIntervalRef.current = null;
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
       }
     };
+  }, [startAutoScroll]);
 
-    // Listen for touch and scroll events
+  // Pause auto-scroll briefly on user interaction, then resume.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const handleInteraction = () => pauseAutoScroll();
+
     track.addEventListener("touchstart", handleInteraction);
     track.addEventListener("mousedown", handleInteraction);
+    track.addEventListener("wheel", handleInteraction, { passive: true });
 
     return () => {
       track.removeEventListener("touchstart", handleInteraction);
       track.removeEventListener("mousedown", handleInteraction);
+      track.removeEventListener("wheel", handleInteraction);
     };
-  }, [isMobile]);
+  }, [pauseAutoScroll]);
 
   const scrollBy = (dir: -1 | 1) => {
     const track = trackRef.current;
     if (!track) return;
+    pauseAutoScroll();
+    normalizeLoopPosition();
 
     // Scroll by full page (cardsPerView cards)
     const scrollAmount = cardsPerView * cardWidth;
     const newScrollLeft = track.scrollLeft + (dir * scrollAmount);
-    const maxScroll = track.scrollWidth - track.clientWidth;
 
-    // Clamp to valid range
-    const targetScroll = Math.max(0, Math.min(newScrollLeft, maxScroll));
-    track.scrollTo({ left: targetScroll, behavior: "smooth" });
+    track.scrollTo({ left: newScrollLeft, behavior: "smooth" });
   };
 
   const scrollToPage = (pageIndex: number) => {
     const track = trackRef.current;
     if (!track) return;
+    pauseAutoScroll();
 
     // Scroll to the start of the page
-    const scrollAmount = pageIndex * cardsPerView * cardWidth;
-    const maxScroll = track.scrollWidth - track.clientWidth;
-    const targetScroll = Math.min(scrollAmount, maxScroll);
+    const targetScroll = middleSetStart + (pageIndex * cardsPerView * cardWidth);
 
     track.scrollTo({ left: targetScroll, behavior: "smooth" });
   };
@@ -197,8 +233,8 @@ export default function SolutionsSlider() {
           <div ref={trackRef} id="solutionsTrack" className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-2 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <style>{`#solutionsTrack::-webkit-scrollbar{display:none;}`}</style>
 
-            {solutions.map((s, i) => (
-              <div key={s.title} className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm hover:shadow-xl transition ease-out hover:-translate-y-0.5 overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
+            {loopedSolutions.map((s, i) => (
+              <div key={`${s.title}-${i}`} data-solution-card className="snap-start shrink-0 w-[260px] sm:w-[300px] md:w-[320px] rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm hover:shadow-xl transition ease-out hover:-translate-y-0.5 overflow-hidden" style={{ viewTimelineName: `--reveal${i + 1}`, viewTimelineAxis: 'block', animationTimeline: `--reveal${i + 1}`, animationName: i % 2 === 0 ? 'fadeUp' : 'slideIn', animationRange: 'entry 15% cover 30%', animationFillMode: 'both' }}>
                 {/* Solution image/illustration */}
                 <div className={`h-32 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}>
                   <img
@@ -290,8 +326,5 @@ const solutions = [
     ),
   },
 ];
-
-
-
 
 
