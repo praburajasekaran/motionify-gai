@@ -57,7 +57,7 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-300"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 3v18"></path><path d="M3 7.5h4"></path><path d="M3 12h18"></path><path d="M3 16.5h4"></path><path d="M17 3v18"></path><path d="M17 7.5h4"></path><path d="M17 16.5h4"></path></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">500+ Videos Created</p>
+                    <p className="text-sm text-white/70">500+ Videos</p>
                     <p className="text-sm font-medium tracking-tight">Across industries</p>
                   </div>
                 </div>
@@ -66,8 +66,8 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-300"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" x2="9.01" y1="9" y2="9"></line><line x1="15" x2="15.01" y1="9" y2="9"></line></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">98% Client Satisfaction</p>
-                    <p className="text-sm font-medium tracking-tight">Measured post‑launch</p>
+                    <p className="text-sm text-white/70">98% Satisfaction</p>
+                    <p className="text-sm font-medium tracking-tight">Client-verified</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 ring-1 ring-emerald-500/20 px-4 py-3 backdrop-blur hover:ring-emerald-500/40 transition-all duration-300">
@@ -75,8 +75,8 @@ export default function Hero() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-300"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
                   </div>
                   <div>
-                    <p className="text-sm text-white/70">Trusted by leading brands</p>
-                    <p className="text-sm font-medium tracking-tight">From seed to enterprise</p>
+                    <p className="text-sm text-white/70">Trusted Brands</p>
+                    <p className="text-sm font-medium tracking-tight">Seed to enterprise</p>
                   </div>
                 </div>
               </div>
@@ -111,5 +111,4 @@ export default function Hero() {
     </section>
   );
 }
-
 
