@@ -1,3 +1,5 @@
+import { landingButtonVariants } from "@/components/landing/LandingButton";
+
 export default function ReadyToTellYourStory() {
   return (
     <section className="relative overflow-hidden py-20 sm:py-28 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 text-gray-900">
@@ -37,7 +39,7 @@ export default function ReadyToTellYourStory() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <a
                 href="#video-style-quiz"
-                className="group inline-flex items-center gap-3 px-8 py-4 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-lg shadow-2xl shadow-orange-500/30 hover:shadow-orange-500/50 transform transition-all duration-300 hover:scale-105 ring-2 ring-orange-400/30"
+                className={landingButtonVariants({ variant: "primaryOrange", size: "xl", className: "gap-3 text-lg font-bold" })}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg>
                 <span>Start Your Video Journey</span>
@@ -45,7 +47,7 @@ export default function ReadyToTellYourStory() {
 
               <a
                 href="/contact"
-                className="group inline-flex items-center gap-3 px-8 py-4 rounded-lg bg-white/80 backdrop-blur text-gray-900 font-semibold text-lg ring-2 ring-gray-300 hover:ring-gray-400 hover:bg-white transition-all duration-300"
+                className={landingButtonVariants({ variant: "secondaryLight", size: "xl", className: "gap-3 text-lg font-semibold backdrop-blur" })}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 <span>Talk to Our Team</span>

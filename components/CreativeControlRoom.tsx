@@ -1,4 +1,5 @@
 import React from "react";
+import { landingButtonVariants } from "@/components/landing/LandingButton";
 
 export default function CreativeControlRoom() {
   return (
@@ -147,7 +148,7 @@ export default function CreativeControlRoom() {
 
                 <div className="mt-4 flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl ring-1 ring-white/5 group">
                   <input type="text" placeholder="Type your message..." readOnly className="flex-1 bg-transparent text-sm text-white/60 placeholder:text-white/30 outline-none cursor-not-allowed" />
-                  <button type="button" className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center opacity-50 cursor-not-allowed">
+                  <button type="button" className={landingButtonVariants({ variant: "secondaryDark", size: "iconSm", className: "h-8 w-8 opacity-50 cursor-not-allowed" })}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/60"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                   </button>
                 </div>
@@ -163,7 +164,7 @@ export default function CreativeControlRoom() {
                     <div className="text-xs text-white/50">3 files available</div>
                   </div>
                 </div>
-                <a href="/portal" className="group px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-sm font-medium text-white shadow-lg inline-flex items-center">
+                <a href="/portal" className={landingButtonVariants({ variant: "primaryViolet", size: "sm" })}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   <span className="hidden sm:inline ml-2">Download</span>
                 </a>
@@ -195,7 +196,6 @@ function Feature({ icon, label, color }: { icon: React.ReactNode; label: string;
     </div>
   );
 }
-
 
 
 

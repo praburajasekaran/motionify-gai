@@ -2,6 +2,7 @@
 
 import { CheckCircle2, ArrowRight, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import { landingButtonVariants } from '@/components/landing/LandingButton';
 
 interface InquirySuccessProps {
   inquiryNumber: string;
@@ -46,7 +47,7 @@ export default function InquirySuccess({ inquiryNumber, contactEmail, onReset }:
             </code>
             <button
               onClick={handleCopy}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              className={landingButtonVariants({ variant: 'secondaryDark', size: 'iconMd' })}
               aria-label="Copy inquiry number"
             >
               {copied ? (
@@ -101,7 +102,7 @@ export default function InquirySuccess({ inquiryNumber, contactEmail, onReset }:
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={onReset}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-medium bg-white/5 ring-1 ring-white/10 text-white/90 hover:bg-white/10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          className={landingButtonVariants({ variant: 'secondaryDark', size: 'xl', width: 'flex' })}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -123,7 +124,7 @@ export default function InquirySuccess({ inquiryNumber, contactEmail, onReset }:
 
         <a
           href={`/#/inquiry-status/${inquiryNumber}`}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-6 py-3.5 text-base font-medium text-white shadow-lg hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+          className={landingButtonVariants({ variant: 'primaryViolet', size: 'xl', width: 'flex' })}
         >
           <span>Track My Inquiry</span>
           <ArrowRight size={18} />
