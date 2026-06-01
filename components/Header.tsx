@@ -22,9 +22,9 @@ export default function Header() {
         <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-3' : 'py-5'}`}>
           <a href="/" className="inline-flex items-center gap-3 group">
             <img
-              src="/motionify-light-logo.png"
+              src="/images/motionify-studio-web.png"
               alt="Motionify Studio"
-              className={`w-auto transition-all duration-300 group-hover:opacity-90 ${isScrolled ? 'h-7 sm:h-8' : 'h-8 sm:h-9'}`}
+              className={`w-auto transition-all duration-300 group-hover:opacity-90 ${isScrolled ? 'h-10 sm:h-11' : 'h-12 sm:h-14'}`}
             />
           </a>
           <div className="hidden sm:flex items-center gap-8">
