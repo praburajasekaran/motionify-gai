@@ -2,6 +2,7 @@
 
 // Using standard img tags
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { landingButtonVariants } from "@/components/landing/LandingButton";
 
 export default function SolutionsSlider() {
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -215,7 +216,7 @@ export default function SolutionsSlider() {
               aria-label="Previous"
               onClick={() => scrollBy(-1)}
               disabled={!canScrollLeft}
-              className={`h-9 w-9 rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 flex items-center justify-center transition-all ${canScrollLeft ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+              className={landingButtonVariants({ variant: "iconLight", size: "iconSm", className: `rounded-full ${canScrollLeft ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}` })}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
@@ -224,7 +225,7 @@ export default function SolutionsSlider() {
               aria-label="Next"
               onClick={() => scrollBy(1)}
               disabled={!canScrollRight}
-              className={`h-9 w-9 rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 flex items-center justify-center transition-all ${canScrollRight ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+              className={landingButtonVariants({ variant: "iconLight", size: "iconSm", className: `rounded-full ${canScrollRight ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}` })}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </button>
@@ -326,5 +327,3 @@ const solutions = [
     ),
   },
 ];
-
-

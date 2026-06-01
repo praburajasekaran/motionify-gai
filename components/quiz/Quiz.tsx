@@ -6,6 +6,7 @@ import { generateRecommendation } from "./recommendation";
 import ContactForm from "./ContactForm";
 import InquirySuccess from "./InquirySuccess";
 import type { ContactInfo } from "../../lib/inquiries";
+import { landingButtonVariants } from "@/components/landing/LandingButton";
 
 type Option = { key: keyof ReturnType<typeof useQuiz>["selections"]; value: string; label: string };
 
@@ -160,7 +161,7 @@ export default function Quiz() {
                 </p>
                 <button
                   onClick={startQuiz}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-8 py-4 text-base font-medium text-white shadow-lg hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                  className={landingButtonVariants({ variant: "primaryViolet", size: "xl" })}
                 >
                   <span>Get Started</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -187,7 +188,7 @@ export default function Quiz() {
                       {current > 0 && (
                         <div className="mb-4">
                           <button
-                            className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 ring-1 ring-white/10 text-white/80 hover:bg-white/10 transition"
+                            className={landingButtonVariants({ variant: "secondaryDark", size: "xs", className: "text-white/80" })}
                             onClick={() => goBack()}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80"><path d="M15 18l-6-6 6-6" /></svg>
@@ -201,13 +202,13 @@ export default function Quiz() {
                         {q.options.map((opt) => (
                           <button
                             key={opt}
-                            className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-all
-                            ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
-                            bg-white/5 ring-white/10 text-white/90 hover:bg-white/10 hover:ring-white/20 hover:shadow-md
-                            ${selections[q.key] === opt ?
-                                'bg-gradient-to-r from-fuchsia-500/20 via-violet-500/20 to-blue-500/20 ring-violet-400/40 text-white shadow-[0_8px_24px_rgba(139,92,246,.25)]' :
-                                ''}
-                          `}
+                            className={landingButtonVariants({
+                              variant: "secondaryDark",
+                              size: "sm",
+                              className: selections[q.key] === opt
+                                ? "bg-gradient-to-r from-fuchsia-500/20 via-violet-500/20 to-blue-500/20 text-white ring-violet-400/40 shadow-[0_8px_24px_rgba(139,92,246,.25)] hover:from-fuchsia-500/25 hover:via-violet-500/25 hover:to-blue-500/25"
+                                : "",
+                            })}
                             aria-pressed={selections[q.key] === opt}
                             onClick={() => select(q.key, opt)}
                           >
@@ -270,7 +271,7 @@ export default function Quiz() {
                         <button
                           type="button"
                           onClick={toggleMute}
-                          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white ring-1 ring-white/15 backdrop-blur hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                          className={landingButtonVariants({ variant: "iconDark", size: "iconMd", className: "pointer-events-auto rounded-full backdrop-blur" })}
                           aria-label={isMuted ? 'Unmute preview video' : 'Mute preview video'}
                         >
                           {isMuted ? (
@@ -282,7 +283,7 @@ export default function Quiz() {
                         <button
                           type="button"
                           onClick={toggleFullscreen}
-                          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white ring-1 ring-white/15 backdrop-blur hover:bg-black/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                          className={landingButtonVariants({ variant: "iconDark", size: "iconMd", className: "pointer-events-auto rounded-full backdrop-blur" })}
                           aria-label={isFullscreen ? 'Exit preview video fullscreen' : 'Open preview video fullscreen'}
                         >
                           {isFullscreen ? (
@@ -319,13 +320,13 @@ export default function Quiz() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={showContactForm}
-                      className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-6 py-3 text-sm font-medium text-white shadow-lg hover:brightness-110 transition"
+                      className={landingButtonVariants({ variant: "primaryViolet", size: "lg" })}
                     >
                       <span>Start This Project</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                     </button>
                     <button
-                      className="inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-medium bg-white/5 ring-1 ring-white/10 text-white/90 hover:bg-white/10 transition"
+                      className={landingButtonVariants({ variant: "secondaryDark", size: "lg" })}
                       onClick={() => {
                         // Show placeholder again and hide card
                         if (placeholderRef.current) {

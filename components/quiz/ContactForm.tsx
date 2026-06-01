@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Mail, User, Building2, Phone, FileText } from 'lucide-react';
 import { isValidEmail, isValidPhone, type ContactInfo } from '../../lib/inquiries';
+import { landingButtonVariants } from '@/components/landing/LandingButton';
 
 interface ContactFormProps {
   onSubmit: (contactInfo: ContactInfo) => void;
@@ -116,7 +117,7 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
       <div className="mb-4">
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 ring-1 ring-white/10 text-white/80 hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className={landingButtonVariants({ variant: 'secondaryDark', size: 'xs', className: 'text-white/80' })}
           onClick={onBack}
           disabled={isSubmitting}
         >
@@ -289,7 +290,7 @@ export default function ContactForm({ onSubmit, onBack, isSubmitting = false }: 
           <button
             type="submit"
             disabled={!isFormValid || isSubmitting}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-6 py-3.5 text-base font-medium text-white shadow-lg hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100"
+            className={landingButtonVariants({ variant: 'primaryViolet', size: 'xl', width: 'full' })}
           >
             {isSubmitting ? (
               <>

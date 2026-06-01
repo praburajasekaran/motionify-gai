@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { landingButtonVariants } from "@/components/landing/LandingButton";
 
 const videos = [
   {
@@ -62,7 +63,7 @@ export default function PortfolioGrid() {
               <button
                 type="button"
                 onClick={goToPrevious}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                className={landingButtonVariants({ variant: "iconLight", size: "iconMd", className: "rounded-full" })}
                 aria-label="Previous videos"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -70,7 +71,7 @@ export default function PortfolioGrid() {
               <button
                 type="button"
                 onClick={goToNext}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                className={landingButtonVariants({ variant: "iconLight", size: "iconMd", className: "rounded-full" })}
                 aria-label="Next videos"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden="true" />
@@ -110,7 +111,7 @@ export default function PortfolioGrid() {
               <button
                 type="button"
                 onClick={goToPrevious}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                className={landingButtonVariants({ variant: "iconLight", size: "iconMd", className: "rounded-full" })}
                 aria-label="Previous videos"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -118,7 +119,7 @@ export default function PortfolioGrid() {
               <button
                 type="button"
                 onClick={goToNext}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                className={landingButtonVariants({ variant: "iconLight", size: "iconMd", className: "rounded-full" })}
                 aria-label="Next videos"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden="true" />
@@ -131,7 +132,7 @@ export default function PortfolioGrid() {
                   key={v.src}
                   type="button"
                   onClick={() => setActiveIndex(index)}
-                  className={`h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 ${
+                  className={`h-2.5 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 ${
                     activeIndex === index ? 'w-8 bg-violet-600' : 'w-2.5 bg-gray-300 hover:bg-gray-400'
                   }`}
                   aria-label={`Show ${v.title}`}
@@ -141,7 +142,7 @@ export default function PortfolioGrid() {
             </div>
 
             <div className="mt-8 sm:mt-10 flex justify-center">
-              <a href="/work" className="inline-flex items-center gap-2 sm:px-6 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-blue-600 rounded-full pt-3 pr-5 pb-3 pl-5 shadow-[0_8px_24px_rgba(99,102,241,0.25)]">
+              <a href="/work" className={landingButtonVariants({ variant: "primaryViolet", size: "lg", className: "rounded-full sm:px-6" })}>
                 Explore Full Portfolio
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </a>
@@ -152,5 +153,3 @@ export default function PortfolioGrid() {
     </section>
   );
 }
-
-
