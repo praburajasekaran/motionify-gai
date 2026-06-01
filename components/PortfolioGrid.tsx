@@ -1,33 +1,47 @@
-// Using standard img tags
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+const videos = [
+  {
+    title: "Live Action",
+    type: "YouTube",
+    src: "https://www.youtube.com/embed/sd2dd7tmY-Y",
+  },
+  {
+    title: "Animation",
+    type: "YouTube",
+    src: "https://www.youtube.com/embed/gxPuAgTcxp4",
+  },
+  {
+    title: "Mixed Media",
+    type: "YouTube",
+    src: "https://www.youtube.com/embed/BaDfOeN9SLA",
+  },
+  {
+    title: "Motion Graphics",
+    type: "YouTube",
+    src: "https://www.youtube.com/embed/By8VKDeZ4Sc",
+  },
+  {
+    title: "Minimal Explainer",
+    type: "YouTube",
+    src: "https://www.youtube.com/embed/VUz3VfAezBA",
+  },
+];
 
 export default function PortfolioGrid() {
-  const videos = [
-    {
-      title: "Live Action",
-      type: "YouTube",
-      src: "https://www.youtube.com/embed/sd2dd7tmY-Y",
-    },
-    {
-      title: "Animation",
-      type: "YouTube",
-      src: "https://www.youtube.com/embed/gxPuAgTcxp4",
-    },
-    {
-      title: "Mixed Media",
-      type: "YouTube",
-      src: "https://www.youtube.com/embed/BaDfOeN9SLA",
-    },
-    {
-      title: "Motion Graphics",
-      type: "YouTube",
-      src: "https://www.youtube.com/embed/By8VKDeZ4Sc",
-    },
-    {
-      title: "Minimal Explainer",
-      type: "YouTube",
-      src: "https://www.youtube.com/embed/VUz3VfAezBA",
-    },
-  ];
+  const visibleCount = 3;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const visibleVideos = Array.from({ length: visibleCount }, (_, offset) => {
+    const index = (activeIndex + offset) % videos.length;
+    return videos[index];
+  });
+  const goToPrevious = () => {
+    setActiveIndex((current) => (current - 1 + videos.length) % videos.length);
+  };
+  const goToNext = () => {
+    setActiveIndex((current) => (current + 1) % videos.length);
+  };
 
   return (
     <section className="relative overflow-hidden py-16 sm:py-20 bg-gray-50 text-gray-900">
@@ -42,17 +56,35 @@ export default function PortfolioGrid() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative">
-          <div className="flex items-end justify-between mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">See Creativity in Motion.</h2>
+          <div className="flex items-center justify-between gap-4 mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold">See Creativity in Motion.</h2>
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goToPrevious}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                aria-label="Previous videos"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={goToNext}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                aria-label="Next videos"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           <div className="relative">
             <div className="pointer-events-none absolute -inset-x-10 -top-6 h-24 rounded-full blur-2xl opacity-70" style={{ background: "radial-gradient(60% 100% at 50% 50%, rgba(99,102,241,0.18), rgba(99,102,241,0))" }} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
-              {videos.map((v) => (
-                <div key={v.src} className="group relative rounded-2xl overflow-hidden bg-gray-900/90 ring-1 ring-gray-700/50 shadow-lg">
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+              {visibleVideos.map((v) => (
+                <div key={v.src} className="group relative overflow-hidden rounded-lg bg-gray-900/90 ring-1 ring-gray-700/50 shadow-xl">
+                  <div className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <iframe
                       src={v.src + (v.src.includes("youtube") ? "?controls=1&modestbranding=1&rel=0&playsinline=1" : "?title=0&byline=0&portrait=0&dnt=1")}
@@ -63,15 +95,48 @@ export default function PortfolioGrid() {
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                       allowFullScreen
                     />
-                    
                   </div>
-                  <div className="p-3 sm:p-4 bg-gray-900/95 backdrop-blur">
-                    <p className="text-sm font-medium tracking-tight text-white">{v.title}</p>
+                  <div className="px-4 py-3 bg-gray-900/95 backdrop-blur">
+                    <p className="text-base font-medium leading-tight text-white">{v.title}</p>
                     {"type" in v && v.type ? (
-                      <p className="text-xs text-gray-300 mt-0.5">{v.type}</p>
+                      <p className="mt-1 text-sm leading-tight text-gray-300">{v.type}</p>
                     ) : null}
                   </div>
                 </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-2 sm:hidden">
+              <button
+                type="button"
+                onClick={goToPrevious}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                aria-label="Previous videos"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={goToNext}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                aria-label="Next videos"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-5 flex justify-center gap-2" aria-label="Portfolio carousel position">
+              {videos.map((v, index) => (
+                <button
+                  key={v.src}
+                  type="button"
+                  onClick={() => setActiveIndex(index)}
+                  className={`h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 ${
+                    activeIndex === index ? 'w-8 bg-violet-600' : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Show ${v.title}`}
+                  aria-current={activeIndex === index ? 'true' : undefined}
+                />
               ))}
             </div>
 
@@ -87,7 +152,5 @@ export default function PortfolioGrid() {
     </section>
   );
 }
-
-
 
 
