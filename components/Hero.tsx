@@ -1,35 +1,55 @@
 // Using standard img tags instead of next/image
+import { useEffect, useState } from "react";
+
+const carouselSlides = [
+  {
+    src: "/images/lp/Image1.jpg",
+    alt: "AI-enhanced cinema lens with digital particles",
+  },
+  {
+    src: "/images/lp/Image2.jpg",
+    alt: "Animated brand world with a flying mechanical creature",
+  },
+  {
+    src: "/images/lp/Image3.jpg",
+    alt: "Production team reviewing footage on set",
+  },
+  {
+    src: "/images/lp/Image4.jpg",
+    alt: "Film frame with a profile and rising motion paths",
+  },
+];
 
 export default function Hero() {
-  return (
-    <section className="relative text-white">
-      {/* Background: Base dark fill + cinematic gradient layers */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        {/* Solid base to match original bg-gray-950 */}
-        <div className="absolute inset-0 bg-gray-950 -z-20" />
-        <div className="absolute inset-0 opacity-[0.85]" style={{
-          background:
-            "radial-gradient(1200px 600px at 20% 20%, rgba(168,85,247,0.20), transparent 60%)," +
-            "radial-gradient(1000px 800px at 80% 30%, rgba(59,130,246,0.18), transparent 60%)," +
-            "radial-gradient(900px 700px at 40% 80%, rgba(14,165,233,0.16), transparent 60%)",
-          filter: "blur(0px)",
-        }} />
-        <div className="absolute inset-0" style={{
-          background:
-            "linear-gradient(120deg, rgba(186,123,255,0.14), rgba(59,130,246,0.12) 40%, rgba(99,102,241,0.12) 70%, rgba(14,165,233,0.10))",
-          animation: "panGradient 16s ease-in-out infinite",
-        }} />
+  const [activeSlide, setActiveSlide] = useState(0);
 
-        {/* Parallax colored orbs (static for now) */}
-        <div className="absolute -top-24 left-24 h-[28rem] w-[28rem] rounded-full blur-3xl opacity-30" style={{ background: "radial-gradient(circle at 30% 30%, rgba(168,85,247,0.35), rgba(168,85,247,0) 60%)" }} />
-        <div className="absolute -bottom-28 -right-16 h-[26rem] w-[26rem] rounded-full blur-3xl opacity-25" style={{ background: "radial-gradient(circle at 70% 70%, rgba(59,130,246,0.35), rgba(59,130,246,0) 60%)" }} />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[32rem] w-[32rem] rounded-full blur-3xl opacity-20" style={{ background: "radial-gradient(circle, rgba(14,165,233,0.28), rgba(14,165,233,0) 60%)" }} />
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setActiveSlide((currentSlide) => (currentSlide + 1) % carouselSlides.length);
+    }, 3500);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return (
+    <section className="relative isolate overflow-hidden bg-gray-950 text-white">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <img
+          src="/images/lp/Image5.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-45"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,7,18,0.94)_0%,rgba(3,7,18,0.82)_38%,rgba(3,7,18,0.48)_72%,rgba(3,7,18,0.88)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.46)_0%,rgba(3,7,18,0.12)_46%,rgba(3,7,18,0.92)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_28%,rgba(20,184,166,0.24),transparent_44%),radial-gradient(ellipse_at_18%_16%,rgba(245,158,11,0.18),transparent_38%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
-      <div className="sm:pt-20 lg:pt-28 sm:pb-16 lg:pb-20 pt-16 pb-12">
+      <div className="pt-24 pb-14 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             <div className="lg:col-span-7 text-white">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/8 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/15 backdrop-blur">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Human‑centered video for modern brands
               </div>
@@ -52,7 +72,7 @@ export default function Hero() {
               </div>
 
               <div className="mt-8 sm:mt-10 grid grid-cols-1 xs:grid-cols-3 sm:grid-cols-3 gap-4 max-w-3xl">
-                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-600/5 ring-1 ring-violet-500/20 px-4 py-3 backdrop-blur hover:ring-violet-500/40 transition-all duration-300">
+                <div className="flex items-center gap-3 rounded-lg bg-white/[0.07] px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur transition-all duration-300 hover:bg-white/[0.09] hover:shadow-[0_22px_55px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.12)]">
                   <div className="h-9 w-9 rounded-lg bg-violet-500/20 ring-1 ring-violet-400/30 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-300"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 3v18"></path><path d="M3 7.5h4"></path><path d="M3 12h18"></path><path d="M3 16.5h4"></path><path d="M17 3v18"></path><path d="M17 7.5h4"></path><path d="M17 16.5h4"></path></svg>
                   </div>
@@ -61,7 +81,7 @@ export default function Hero() {
                     <p className="text-sm font-medium tracking-tight">Across industries</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 ring-1 ring-blue-500/20 px-4 py-3 backdrop-blur hover:ring-blue-500/40 transition-all duration-300">
+                <div className="flex items-center gap-3 rounded-lg bg-white/[0.07] px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur transition-all duration-300 hover:bg-white/[0.09] hover:shadow-[0_22px_55px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.12)]">
                   <div className="h-9 w-9 rounded-lg bg-blue-500/20 ring-1 ring-blue-400/30 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-300"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" x2="9.01" y1="9" y2="9"></line><line x1="15" x2="15.01" y1="9" y2="9"></line></svg>
                   </div>
@@ -70,7 +90,7 @@ export default function Hero() {
                     <p className="text-sm font-medium tracking-tight">Client-verified</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 ring-1 ring-emerald-500/20 px-4 py-3 backdrop-blur hover:ring-emerald-500/40 transition-all duration-300">
+                <div className="flex items-center gap-3 rounded-lg bg-white/[0.07] px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur transition-all duration-300 hover:bg-white/[0.09] hover:shadow-[0_22px_55px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.12)]">
                   <div className="h-9 w-9 rounded-lg bg-emerald-500/20 ring-1 ring-emerald-400/30 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-300"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
                   </div>
@@ -83,23 +103,32 @@ export default function Hero() {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="relative mx-auto lg:ml-auto w-full max-w-md">
-                <div className="absolute -inset-6 rounded-3xl bg-gradient-to-tr from-fuchsia-500/20 via-violet-500/20 to-blue-500/20 blur-2xl" />
-                <div className="relative grid grid-cols-2 gap-3">
-                  <div className="space-y-3">
-                    <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <img src="/images/hero/hero-lens-minimal.png" alt="Cinema Lens" className="w-full h-full object-cover opacity-90" />
-                    </div>
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <img src="/images/hero/hero-waveform-minimal.png" alt="Digital Waveform" className="w-full h-full object-cover opacity-90" />
-                    </div>
-                  </div>
-                  <div className="space-y-3 pt-6">
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <img src="/images/hero/hero-light-minimal.png" alt="Volumetric Light" className="w-full h-full object-cover opacity-90" />
-                    </div>
-                    <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/5 backdrop-blur shadow-2xl">
-                      <img src="/images/hero/hero-bokeh-minimal.png" alt="Abstract Bokeh" className="w-full h-full object-cover opacity-90" />
+              <div className="relative mx-auto w-full max-w-[34rem] lg:ml-auto">
+                <div className="overflow-hidden rounded-lg border border-white/15 bg-white/[0.05] p-2 backdrop-blur-md">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-gray-950 sm:aspect-[5/6]">
+                    {carouselSlides.map((slide, index) => (
+                      <img
+                        key={slide.src}
+                        src={slide.src}
+                        alt={slide.alt}
+                        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-out ${
+                          activeSlide === index ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                    ))}
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.08)_0%,rgba(3,7,18,0)_46%,rgba(3,7,18,0.34)_100%)]" />
+                    <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-2">
+                      {carouselSlides.map((slide, index) => (
+                        <span
+                          key={`${slide.src}-dot`}
+                          className={`h-1.5 rounded-full transition-all duration-500 ${
+                            activeSlide === index
+                              ? "w-6 bg-white"
+                              : "w-1.5 bg-white/45"
+                          }`}
+                          aria-hidden="true"
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -111,4 +140,3 @@ export default function Hero() {
     </section>
   );
 }
-
