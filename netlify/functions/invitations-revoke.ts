@@ -2,6 +2,12 @@ import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type Aut
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireProjectManagerAccess,
+} from './_shared/authorization';
 
 /**
  * Revoke a project-level invitation.
@@ -62,8 +68,13 @@ export const handler = compose(
       };
     }
 
-    const currentUserRole = auth?.user?.role;
+    const currentUserRole = getAuthRole(auth?.user);
     const currentUserId = auth?.user?.userId;
+
+    await requireProjectManagerAccess(auth?.user, invitation.project_id, {
+      allowClientPrimary: true,
+      operation: 'invitations.revoke',
+    });
 
     // Permission check: clients can only revoke client invitations on their own projects
     if (currentUserRole === 'client') {
@@ -113,6 +124,9 @@ export const handler = compose(
       body: JSON.stringify({ success: true }),
     };
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Revoke invitation error:', error);
     return {
       statusCode: 500,

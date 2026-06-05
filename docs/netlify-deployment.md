@@ -140,6 +140,30 @@ Value: 7d
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
+#### Razorpay Payments
+
+```
+Variable: RAZORPAY_KEY_ID
+Value: rzp_live_...
+
+Variable: RAZORPAY_KEY_SECRET
+Value: [Razorpay key secret]
+
+Variable: RAZORPAY_WEBHOOK_SECRET
+Value: [Razorpay webhook signing secret]
+```
+
+Payment order creation and verification fail closed when the Razorpay key ID or key secret is missing. Webhook handling also fails closed when `RAZORPAY_WEBHOOK_SECRET` is missing.
+
+#### Proposal Review Compatibility
+
+```
+Variable: PROPOSAL_TOKENLESS_COMPATIBILITY
+Value: false
+```
+
+Leave `PROPOSAL_TOKENLESS_COMPATIBILITY` unset or set to `false` for production. Setting it to `true` temporarily re-enables tokenless proposal reads and should only be used during an approved rollback window.
+
 #### Cloudflare R2 (when ready)
 
 ```

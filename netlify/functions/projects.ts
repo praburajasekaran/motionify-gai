@@ -7,6 +7,15 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { validateStatusTransition } from './_shared/projectStatusTransitions';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireProjectAccess,
+  requireProposalAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 const { types } = pg;
 
@@ -55,8 +64,9 @@ export const handler = compose(
       if (isIdRequest) {
         // Fetch single project by ID
         const projectId = lastSegment;
-        const userRole = auth?.user?.role;
-        const userId = auth?.user?.userId;
+        await requireProjectAccess(auth?.user, projectId, { operation: 'projects.get' });
+
+        const userRole = getAuthRole(auth?.user);
 
         // Fetch project from main projects table
         const result = await dbQuery(
@@ -97,41 +107,6 @@ export const handler = compose(
           isPrimaryContact: row.is_primary_contact,
         }));
 
-        // Permission check
-        if (userRole !== 'super_admin' && userRole !== 'support') {
-          if (userRole === 'client' && project.client_user_id !== userId) {
-            return {
-              statusCode: 403,
-              headers,
-              body: JSON.stringify({
-                error: 'Access denied',
-                message: 'You do not have permission to view this project'
-              }),
-            };
-          }
-
-          if (userRole === 'team_member') {
-            const taskResult = await dbQuery(
-              `SELECT 1 FROM tasks
-               WHERE project_id = $1
-               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
-               LIMIT 1`,
-              [projectId, userId]
-            );
-
-            if (taskResult.rows.length === 0) {
-              return {
-                statusCode: 403,
-                headers,
-                body: JSON.stringify({
-                  error: 'Access denied',
-                  message: 'You are not assigned to tasks on this project'
-                }),
-              };
-            }
-          }
-        }
-
         return {
           statusCode: 200,
           headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
@@ -158,39 +133,26 @@ export const handler = compose(
       }
 
       const { userId, clientUserId } = event.queryStringParameters || {};
+      const requesterId = auth!.user!.userId;
+      const requesterRole = getAuthRole(auth?.user);
+      const requesterIsAdmin = isAdminLike(requesterRole);
 
       // Legacy support for clientUserId param (treat as client role check)
       // Ideally, we should move to a single 'userId' param that identifies the requester
       const effectiveUserId = userId || clientUserId;
 
-      if (!effectiveUserId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'User ID is required' }),
-        };
-      }
-
-      // Fetch user role
-      const userResult = await dbQuery(
-        'SELECT role FROM users WHERE id = $1',
-        [effectiveUserId]
-      );
-
-      if (userResult.rows.length === 0) {
+      if (effectiveUserId && !requesterIsAdmin && effectiveUserId !== requesterId) {
         return {
           statusCode: 403,
           headers,
-          body: JSON.stringify({ error: 'User not found' }),
+          body: JSON.stringify({ error: 'Cannot access another user’s projects' }),
         };
       }
 
-      const userRole = userResult.rows[0].role;
       let sql = '';
       const params: any[] = [];
 
-      if (userRole === 'support') {
-        // Support: See all projects (support users have platform-wide access)
+      if (requesterIsAdmin && !effectiveUserId) {
         sql = `
           SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
@@ -198,33 +160,28 @@ export const handler = compose(
           LEFT JOIN users u ON p.client_user_id = u.id
           ORDER BY p.created_at DESC
         `;
-      } else if (userRole === 'client' || userRole === 'client_primary' || userRole === 'client_team') {
-        // Client: Only see their own projects
+      } else if (requesterIsAdmin && effectiveUserId) {
         sql = `
           SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
-          WHERE p.client_user_id = $1
+          LEFT JOIN project_team pt ON pt.project_id = p.id AND pt.user_id = $1 AND pt.removed_at IS NULL
+          WHERE p.client_user_id = $1 OR pt.user_id = $1
           ORDER BY p.created_at DESC
         `;
         params.push(effectiveUserId);
-      } else if (userRole === 'super_admin' || userRole === 'admin') {
-        // Super Admin: See all projects
+      } else {
         sql = `
-          SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
+          SELECT DISTINCT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
                  (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
           FROM projects p
           LEFT JOIN users u ON p.client_user_id = u.id
+          LEFT JOIN project_team pt ON pt.project_id = p.id AND pt.user_id = $1 AND pt.removed_at IS NULL
+          WHERE p.client_user_id = $1 OR pt.user_id = $1
           ORDER BY p.created_at DESC
         `;
-      } else {
-        // Unknown or unauthorized role
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({ error: 'Unauthorized role' }),
-        };
+        params.push(requesterId);
       }
 
       const result = await dbQuery(sql, params);
@@ -237,6 +194,8 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
+      assertAdminLike(auth?.user, 'projects.createFromProposal');
+
       // Validate request body using Zod schema
       const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
       if (!validation.success) return validation.response;
@@ -256,12 +215,27 @@ export const handler = compose(
       }
 
       const proposal = proposalResult.rows[0];
+      await requireProposalAccess(auth?.user, proposalId, { operation: 'projects.createFromProposal' });
 
       if (proposal.status !== 'accepted') {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Proposal must be accepted before creating project' }),
+        };
+      }
+
+      const paymentResult = await dbQuery(
+        `SELECT id FROM payments
+         WHERE proposal_id = $1 AND payment_type = 'advance' AND status = 'completed'
+         LIMIT 1`,
+        [proposalId]
+      );
+      if (paymentResult.rows.length === 0) {
+        return {
+          statusCode: 402,
+          headers,
+          body: JSON.stringify({ error: 'Completed advance payment is required before creating a project' }),
         };
       }
 
@@ -384,14 +358,7 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'PATCH') {
-      const userRole = auth?.user?.role;
-      if (userRole !== 'super_admin' && userRole !== 'support') {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({ error: 'Only administrators and support users can update project settings' }),
-        };
-      }
+      assertAdminLike(auth?.user, 'projects.update');
 
       const pathParts = event.path.split('/');
       const projectId = pathParts[pathParts.length - 1];
@@ -567,6 +534,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Projects API error:', error);
     return {
       statusCode: 500,

@@ -16,6 +16,20 @@ Use this checklist to ensure a smooth deployment to production.
 
 ---
 
+## Security Remediation Rollout
+
+- [ ] `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are set in Netlify before enabling payment checkout
+- [ ] `RAZORPAY_WEBHOOK_SECRET` is set and matches the active Razorpay webhook endpoint
+- [ ] `PROPOSAL_TOKENLESS_COMPATIBILITY` is unset or not `true` unless an approved temporary rollback window is active
+- [ ] Payment smoke test creates an order, verifies with Razorpay checkout, and records the provider order/payment IDs
+- [ ] Forged or mismatched Razorpay verification fields return an error and do not mark the payment complete
+- [ ] Representative client, team, support, and admin portal users can access only their own projects, proposals, tasks, comments, deliverables, notifications, and files
+- [ ] R2 upload/download smoke tests cover a project file, deliverable file, comment attachment, and cross-object denial
+- [ ] Function logs show authorization denials with endpoint, object type, object ID, user ID, role, and correlation ID, without payment secrets or object payloads
+- [ ] Recently completed payments are reviewed for missing Razorpay order/payment IDs or inconsistent order/payment bindings
+
+---
+
 ## Pre-Deployment
 
 ### Code & Repository

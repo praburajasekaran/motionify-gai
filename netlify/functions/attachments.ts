@@ -6,6 +6,12 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import {
+    AuthorizationError,
+    createAuthorizationResponse,
+    requireCommentAccess,
+    requireCommentAttachmentAccess,
+} from './_shared/authorization';
 
 interface Attachment {
     id: string;
@@ -93,6 +99,10 @@ export const handler = compose(
                     };
                 }
 
+                await requireCommentAttachmentAccess(auth?.user, attachmentId, {
+                    operation: 'attachments.download',
+                });
+
                 // Fetch the attachment to get the r2_key
                 const attachmentResult = await dbQuery(
                     'SELECT id, r2_key, file_name FROM comment_attachments WHERE id = $1',
@@ -166,6 +176,8 @@ export const handler = compose(
                 };
             }
 
+            await requireCommentAccess(auth?.user, commentId, { operation: 'attachments.list' });
+
             const result = await dbQuery(
                 `SELECT
                     id,
@@ -210,19 +222,15 @@ export const handler = compose(
             if (!validation.success) return validation.response;
             const { commentId, fileName, fileType, fileSize, r2Key } = validation.data;
 
-            // Verify comment exists
-            const commentCheck = await dbQuery(
-                'SELECT id FROM proposal_comments WHERE id = $1',
-                [commentId]
-            );
+            await requireCommentAccess(user, commentId, { operation: 'attachments.create' });
 
-            if (commentCheck.rows.length === 0) {
+            if (!r2Key.startsWith(`comments/${commentId}/`)) {
                 return {
-                    statusCode: 404,
+                    statusCode: 400,
                     headers,
                     body: JSON.stringify({
                         success: false,
-                        error: 'Comment not found',
+                        error: 'Attachment key does not match the authorized comment',
                     }),
                 };
             }
@@ -239,7 +247,7 @@ export const handler = compose(
                     file_size as "fileSize",
                     uploaded_by as "uploadedBy",
                     created_at as "createdAt"`,
-                [commentId, fileName, fileType, fileSize, r2Key, user.id]
+                [commentId, fileName, fileType, fileSize, r2Key, user.userId]
             );
 
             const attachment: Attachment = {
@@ -267,6 +275,9 @@ export const handler = compose(
         };
 
     } catch (error) {
+        if (error instanceof AuthorizationError) {
+            return createAuthorizationResponse(error, origin);
+        }
         console.error('attachments error:', error);
         return {
             statusCode: 500,

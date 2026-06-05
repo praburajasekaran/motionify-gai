@@ -7,6 +7,15 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { absoluteProposalReviewUrl, appOriginFromEnv } from '../../shared/canonical-links';
 import { createProposalReviewToken } from './_shared/proposal-review-access';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireInquiryAccess,
+  requireProposalAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 async function logActivity(params: {
   type: string;
@@ -206,6 +215,8 @@ export const handler = compose(
   try {
     // Handle PUT request for updating a proposal
     if (event.httpMethod === 'PUT' && proposalId) {
+      assertAdminLike(auth?.user, 'proposals.update');
+
       const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
       if (!validation.success) return validation.response;
       const updates = validation.data;
@@ -355,6 +366,8 @@ export const handler = compose(
 
     // Handle PATCH request for updating proposal status
     if (event.httpMethod === 'PATCH' && proposalId) {
+      assertAdminLike(auth?.user, 'proposals.patch');
+
       const validation = validateRequest(event.body, SCHEMAS.proposal.update, origin);
       if (!validation.success) return validation.response;
       const { status, feedback } = validation.data;
@@ -462,6 +475,8 @@ export const handler = compose(
       const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lastPart);
 
       if (isId) {
+        await requireProposalAccess(auth?.user, lastPart, { operation: 'proposals.get' });
+
         const result = await dbQuery('SELECT * FROM proposals WHERE id = $1', [lastPart]);
 
         if (result.rows.length === 0) {
@@ -485,8 +500,25 @@ export const handler = compose(
       const params: any[] = [];
 
       if (inquiryId) {
+        await requireInquiryAccess(auth?.user, inquiryId, { operation: 'proposals.listByInquiry' });
         sql = 'SELECT * FROM proposals WHERE inquiry_id = $1 ORDER BY created_at DESC';
         params.push(inquiryId);
+      } else if (!isAdminLike(getAuthRole(auth?.user))) {
+        sql = `
+          SELECT DISTINCT p.*
+          FROM proposals p
+          LEFT JOIN inquiries i ON p.inquiry_id = i.id
+          LEFT JOIN projects pr ON pr.proposal_id = p.id
+          LEFT JOIN project_team pt
+            ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
+          WHERE p.client_user_id = $1
+             OR i.client_user_id = $1
+             OR LOWER(i.contact_email) = LOWER($2)
+             OR pr.client_user_id = $1
+             OR pt.user_id = $1
+          ORDER BY p.created_at DESC
+        `;
+        params.push(auth!.user!.userId, auth!.user!.email);
       }
 
       const result = await dbQuery(sql, params);
@@ -499,6 +531,8 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
+      assertAdminLike(auth?.user, 'proposals.create');
+
       const validation = validateRequest(event.body, SCHEMAS.proposal.create, origin);
       if (!validation.success) return validation.response;
       const payload = validation.data;
@@ -618,6 +652,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Proposals API error:', error);
     return {
       statusCode: 500,

@@ -8,8 +8,17 @@ import {
   portalPath,
 } from '../../shared/canonical-links';
 
-// Initialize Resend with API key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
+
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('❌ RESEND_API_KEY is not configured; email not sent');
+    return null;
+  }
+  resendClient ??= new Resend(apiKey);
+  return resendClient;
+}
 
 // From email - use Resend's default domain for development, or your verified domain
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Motionify Studio <onboarding@resend.dev>';
@@ -65,6 +74,9 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions) {
   try {
+    const resend = getResendClient();
+    if (!resend) return null;
+
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [options.to],

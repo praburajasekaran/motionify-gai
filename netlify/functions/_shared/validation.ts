@@ -55,8 +55,11 @@ export const paginationSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// User role schema
-export const userRoleSchema = z.enum(['super_admin', 'support', 'team_member', 'client']);
+// User role schema. Accept legacy "team" only at the validation boundary.
+const canonicalUserRoleSchema = z.enum(['super_admin', 'support', 'team_member', 'client']);
+export const userRoleSchema = z
+    .union([canonicalUserRoleSchema, z.literal('team')])
+    .transform((role): z.infer<typeof canonicalUserRoleSchema> => role === 'team' ? 'team_member' : role);
 
 // Common request schemas
 export const createUserSchema = z.object({
@@ -123,14 +126,46 @@ export const paymentSchema = z.object({
 });
 
 // Validation result type
-export interface ValidationResult<T> {
-    success: boolean;
-    data?: T;
-    errors?: Array<{
-        field: string;
-        message: string;
-    }>;
-}
+type ValidationError = {
+    field: string;
+    message: string;
+};
+
+type ValidationResponse = {
+    statusCode: number;
+    headers: Record<string, string>;
+    body: string;
+};
+
+export type ValidationResult<T> = {
+    success: true;
+    data: T;
+    errors?: never;
+} | {
+    success: false;
+    data?: never;
+    errors: ValidationError[];
+};
+
+export type JsonParseResult = {
+    success: true;
+    data: any;
+    error?: never;
+} | {
+    success: false;
+    data?: never;
+    error: string;
+};
+
+export type RequestValidationResult<T> = {
+    success: true;
+    data: T;
+    response?: never;
+} | {
+    success: false;
+    data?: never;
+    response: ValidationResponse;
+};
 
 /**
  * Validate data against a Zod schema
@@ -162,7 +197,7 @@ export function validate<T>(
 /**
  * Parse JSON body safely
  */
-export function parseJsonBody(body: string | null): { success: true; data: any } | { success: false; error: string } {
+export function parseJsonBody(body: string | null): JsonParseResult {
     if (!body) {
         return { success: false, error: 'Request body is required' };
     }
@@ -181,11 +216,7 @@ export function parseJsonBody(body: string | null): { success: true; data: any }
 export function createValidationErrorResponse(
     errors: Array<{ field: string; message: string }>,
     origin?: string
-): {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-} {
+): ValidationResponse {
     return {
         statusCode: 400,
         headers: getCorsHeaders(origin),
@@ -206,11 +237,7 @@ export function createValidationErrorResponse(
 export function createBadRequestResponse(
     message: string,
     origin?: string
-): {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-} {
+): ValidationResponse {
     return {
         statusCode: 400,
         headers: getCorsHeaders(origin),
@@ -232,17 +259,7 @@ export function validateRequest<T>(
     body: string | null,
     schema: z.ZodSchema<T>,
     origin?: string
-): {
-    success: true;
-    data: T;
-} | {
-    success: false;
-    response: {
-        statusCode: number;
-        headers: Record<string, string>;
-        body: string;
-    };
-} {
+): RequestValidationResult<T> {
     // Parse JSON
     const parseResult = parseJsonBody(body);
     if (!parseResult.success) {
@@ -257,7 +274,7 @@ export function validateRequest<T>(
     if (!validationResult.success) {
         return {
             success: false,
-            response: createValidationErrorResponse(validationResult.errors!, origin),
+            response: createValidationErrorResponse(validationResult.errors, origin),
         };
     }
 
@@ -274,23 +291,13 @@ export function validateQueryParams<T>(
     params: Record<string, string> | null,
     schema: z.ZodSchema<T>,
     origin?: string
-): {
-    success: true;
-    data: T;
-} | {
-    success: false;
-    response: {
-        statusCode: number;
-        headers: Record<string, string>;
-        body: string;
-    };
-} {
+): RequestValidationResult<T> {
     const validationResult = validate(schema, params || {});
 
     if (!validationResult.success) {
         return {
             success: false,
-            response: createValidationErrorResponse(validationResult.errors!, origin),
+            response: createValidationErrorResponse(validationResult.errors, origin),
         };
     }
 

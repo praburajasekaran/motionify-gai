@@ -4,6 +4,12 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { z } from 'zod';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  requireProjectAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 const createProjectFileSchema = z.object({
   projectId: z.string().uuid(),
@@ -52,6 +58,8 @@ export const handler = compose(
           body: JSON.stringify({ error: 'projectId parameter is required' }),
         };
       }
+
+      await requireProjectAccess(auth?.user, projectId, { operation: 'project-files.list' });
 
       // Verify user has access to this project
       const projectResult = await dbQuery(
@@ -111,6 +119,14 @@ export const handler = compose(
       }
 
       const data = validation.data;
+      await requireProjectAccess(auth?.user, data.projectId, { operation: 'project-files.create' });
+      if (!data.r2Key.startsWith(`projects/${data.projectId}/`)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'File key does not match the authorized project' }),
+        };
+      }
 
       const result = await dbQuery(
         `INSERT INTO project_files (project_id, file_name, file_type, file_size, r2_key, uploaded_by)
@@ -171,8 +187,10 @@ export const handler = compose(
         };
       }
 
+      await requireProjectAccess(auth?.user, fileResult.rows[0].project_id, { operation: 'project-files.delete' });
+
       const isOwner = fileResult.rows[0].uploaded_by === userId;
-      const isAdminOrPM = userRole === 'super_admin' || userRole === 'support';
+      const isAdminOrPM = isAdminLike(userRole);
       if (!isOwner && !isAdminOrPM) {
         return {
           statusCode: 403,
@@ -207,6 +225,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Project files API error:', error);
     return {
       statusCode: 500,

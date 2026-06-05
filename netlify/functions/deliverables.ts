@@ -9,6 +9,15 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { deleteMultipleFromR2 } from './_shared/r2';
 import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireDeliverableAccess,
+  requireProjectAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 // Correlated subquery to determine dominant file category by priority (video > image > document > script)
 const DOMINANT_FILE_CATEGORY_SQL = `
@@ -35,6 +44,8 @@ export const handler = compose(
       const { projectId, id } = event.queryStringParameters || {};
 
       if (id) {
+        await requireDeliverableAccess(auth?.user, id, { operation: 'deliverables.get' });
+
         const result = await dbQuery(
           `SELECT d.*, p.client_user_id,
             ${DOMINANT_FILE_CATEGORY_SQL}
@@ -53,43 +64,7 @@ export const handler = compose(
         }
 
         const deliverable = result.rows[0];
-        const { client_user_id } = deliverable;
-        const userRole = auth?.user?.role;
-        const userId = auth?.user?.userId;
-
-        if (userRole !== 'super_admin' && userRole !== 'support') {
-          if (userRole === 'client' && client_user_id !== userId) {
-            return {
-              statusCode: 403,
-              headers,
-              body: JSON.stringify({
-                error: 'Access denied',
-                message: 'You do not have permission to view this deliverable'
-              }),
-            };
-          }
-
-          if (userRole === 'team_member') {
-            const taskResult = await dbQuery(
-              `SELECT 1 FROM tasks
-               WHERE project_id = $1
-               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
-               LIMIT 1`,
-              [deliverable.project_id, userId]
-            );
-
-            if (taskResult.rows.length === 0) {
-              return {
-                statusCode: 403,
-                headers,
-                body: JSON.stringify({
-                  error: 'Access denied',
-                  message: 'You are not assigned to tasks on this project'
-                }),
-              };
-            }
-          }
-        }
+        const userRole = getAuthRole(auth?.user);
 
         if (deliverable.status === 'final_delivered' && deliverable.final_delivered_at) {
           const deliveryDate = new Date(deliverable.final_delivered_at);
@@ -122,6 +97,8 @@ export const handler = compose(
       }
 
       if (projectId) {
+        await requireProjectAccess(auth?.user, projectId, { operation: 'deliverables.listByProject' });
+
         const projectResult = await dbQuery(
           `SELECT client_user_id FROM projects WHERE id = $1`,
           [projectId]
@@ -133,44 +110,6 @@ export const handler = compose(
             headers,
             body: JSON.stringify({ error: 'Project not found' }),
           };
-        }
-
-        const { client_user_id } = projectResult.rows[0];
-        const userRole = auth?.user?.role;
-        const userId = auth?.user?.userId;
-
-        if (userRole !== 'super_admin' && userRole !== 'support') {
-          if (userRole === 'client' && client_user_id !== userId) {
-            return {
-              statusCode: 403,
-              headers,
-              body: JSON.stringify({
-                error: 'Access denied',
-                message: 'You do not have permission to view deliverables for this project'
-              }),
-            };
-          }
-
-          if (userRole === 'team_member') {
-            const taskResult = await dbQuery(
-              `SELECT 1 FROM tasks
-               WHERE project_id = $1
-               AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
-               LIMIT 1`,
-              [projectId, userId]
-            );
-
-            if (taskResult.rows.length === 0) {
-              return {
-                statusCode: 403,
-                headers,
-                body: JSON.stringify({
-                  error: 'Access denied',
-                  message: 'You are not assigned to tasks on this project'
-                }),
-              };
-            }
-          }
         }
 
         const result = await dbQuery(
@@ -205,21 +144,12 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'POST') {
-      const userRole = auth?.user?.role;
-      if (userRole !== 'super_admin' && userRole !== 'support') {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Access denied',
-            message: 'Only Motionify Studio Support and Admins can create deliverables'
-          }),
-        };
-      }
+      assertAdminLike(auth?.user, 'deliverables.create');
 
       const validation = validateRequest(event.body, SCHEMAS.deliverable.create, origin);
       if (!validation.success) return validation.response;
       const { project_id, name, description, estimated_completion_week } = validation.data;
+      await requireProjectAccess(auth?.user, project_id!, { operation: 'deliverables.create' });
 
       const projectResult = await dbQuery(
         `SELECT id FROM projects WHERE id = $1`,
@@ -280,6 +210,33 @@ export const handler = compose(
       const oldDeliverableStatus = currentDeliverable.rows[0]?.status;
       const deliverableName = currentDeliverable.rows[0]?.name;
       const deliverableProjectId = currentDeliverable.rows[0]?.project_id;
+      if (!oldDeliverableStatus) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable not found' }),
+        };
+      }
+
+      await requireDeliverableAccess(auth?.user, id, { operation: 'deliverables.update' });
+      const requesterRole = getAuthRole(auth?.user);
+      if (!isAdminLike(requesterRole)) {
+        const allowedClientApproval =
+          requesterRole === 'client' &&
+          updates.status === 'approved' &&
+          !updates.beta_file_key &&
+          !updates.beta_file_url &&
+          !updates.final_file_key &&
+          !updates.final_file_url;
+        if (!allowedClientApproval) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Access denied' }),
+          };
+        }
+        updates.approved_by = auth!.user!.userId;
+      }
 
       const allowedFields = [
         'status',
@@ -462,17 +419,7 @@ export const handler = compose(
         };
       }
 
-      const userRole = auth?.user?.role;
-      if (userRole !== 'super_admin' && userRole !== 'support') {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Access denied',
-            message: 'Only administrators and project managers can delete deliverables',
-          }),
-        };
-      }
+      assertAdminLike(auth?.user, 'deliverables.delete');
 
       const deliverableResult = await dbQuery(
         'SELECT * FROM deliverables WHERE id = $1',
@@ -535,6 +482,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Deliverables API error:', error);
     return {
       statusCode: 500,

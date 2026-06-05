@@ -16,6 +16,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest, uuidSchema } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
+import { isAdminLike } from './_shared/roles';
 
 export const handler = compose(
     withCORS(['GET', 'PATCH', 'OPTIONS']),
@@ -38,6 +39,13 @@ export const handler = compose(
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ success: false, error: 'Valid userId is required' }),
+                };
+            }
+            if (userId !== auth?.user?.userId && !isAdminLike(auth?.user?.role)) {
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Cannot access another user’s notifications' }),
                 };
             }
 
@@ -104,7 +112,15 @@ export const handler = compose(
             const schema = markAll ? SCHEMAS.notification.markAllRead : SCHEMAS.notification.markRead;
             const validation = validateRequest(event.body, schema, origin);
             if (!validation.success) return validation.response;
-            const { userId, notificationId } = validation.data;
+            const { userId, notificationId } = validation.data as { userId: string; notificationId?: string };
+
+            if (userId !== auth?.user?.userId && !isAdminLike(auth?.user?.role)) {
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Cannot update another user’s notifications' }),
+                };
+            }
 
             if (markAll) {
                 // Mark all as read

@@ -7,6 +7,18 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendPaymentReminderEmail } from './send-email';
 import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  getAuthRole,
+  logAuthorizationDenied,
+  requirePaymentAccess,
+  requireProjectAccess,
+  requireProposalAccess,
+} from './_shared/authorization';
+import { isAdminLike, isClientLike } from './_shared/roles';
+import { verifyRazorpayCheckoutSignature } from './_shared/payment-verification';
 import { absolutePortalProjectUrl, absoluteUrl, appOriginFromEnv, portalPath } from '../../shared/canonical-links';
 
 async function logActivity(params: {
@@ -31,10 +43,18 @@ async function logActivity(params: {
   }
 }
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+function getRazorpayClient() {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+  });
+}
+
+function createPaymentError(statusCode: number, message: string) {
+  const error = new Error(message);
+  (error as any).statusCode = statusCode;
+  return error;
+}
 
 export const handler = compose(
   withCORS(['GET', 'POST']),
@@ -52,11 +72,29 @@ export const handler = compose(
       const params: any[] = [];
 
       if (proposalId) {
+        await requireProposalAccess(auth?.user, proposalId, { operation: 'payments.listByProposal' });
         sql = 'SELECT * FROM payments WHERE proposal_id = $1 ORDER BY created_at DESC';
         params.push(proposalId);
       } else if (projectId) {
+        await requireProjectAccess(auth?.user, projectId, { operation: 'payments.listByProject' });
         sql = 'SELECT * FROM payments WHERE project_id = $1 ORDER BY created_at DESC';
         params.push(projectId);
+      } else if (!isAdminLike(getAuthRole(auth?.user))) {
+        sql = `
+          SELECT DISTINCT pay.*
+          FROM payments pay
+          LEFT JOIN proposals p ON pay.proposal_id = p.id
+          LEFT JOIN inquiries i ON p.inquiry_id = i.id
+          LEFT JOIN projects pr ON pr.id = pay.project_id OR pr.proposal_id = p.id
+          LEFT JOIN project_team pt
+            ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
+          WHERE p.client_user_id = $1
+             OR pr.client_user_id = $1
+             OR LOWER(i.contact_email) = LOWER($2)
+             OR pt.user_id = $1
+          ORDER BY pay.created_at DESC
+        `;
+        params.push(auth!.user!.userId, auth!.user!.email);
       }
 
       const result = await dbQuery(sql, params);
@@ -76,6 +114,29 @@ export const handler = compose(
         const validation = validateRequest(event.body, SCHEMAS.payment.createOrder, origin);
         if (!validation.success) return validation.response;
         const { proposalId, paymentType } = validation.data;
+
+        const requesterRole = getAuthRole(auth?.user);
+        if (!isAdminLike(requesterRole) && !isClientLike(requesterRole)) {
+          logAuthorizationDenied(auth?.user, 'Payment', proposalId, 'payments.createOrder');
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Access denied' }),
+          };
+        }
+
+        await requireProposalAccess(auth?.user, proposalId, {
+          operation: 'payments.createOrder',
+          allowTeam: false,
+        });
+
+        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Payment provider is not configured' }),
+          };
+        }
 
         const proposalResult = await dbQuery(
           'SELECT * FROM proposals WHERE id = $1',
@@ -113,7 +174,7 @@ export const handler = compose(
         console.log('Creating Razorpay order:', orderOptions);
 
         try {
-          const razorpayOrder = await razorpay.orders.create(orderOptions);
+          const razorpayOrder = await getRazorpayClient().orders.create(orderOptions);
 
           const result = await dbQuery(
             `INSERT INTO payments (
@@ -160,16 +221,76 @@ export const handler = compose(
 
         try {
         const { payment, activation } = await transaction(async (client) => {
+          const requesterRole = getAuthRole(auth?.user);
+          if (!isAdminLike(requesterRole) && !isClientLike(requesterRole)) {
+            logAuthorizationDenied(auth?.user, 'Payment', paymentId, 'payments.verify');
+            throw createPaymentError(403, 'Access denied');
+          }
+
+          await requirePaymentAccess(auth?.user, paymentId, {
+            runner: client,
+            operation: 'payments.verify',
+          });
+
+          const paymentResult = await client.query(
+            `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+            [paymentId]
+          );
+          const currentPayment = paymentResult.rows[0];
+          if (!currentPayment) {
+            throw createPaymentError(404, 'Payment not found');
+          }
+
+          if (currentPayment.razorpay_order_id !== razorpayOrderId) {
+            throw createPaymentError(400, 'Payment order does not match the server-created order');
+          }
+
+          if (currentPayment.status === 'completed') {
+            if (currentPayment.razorpay_payment_id !== razorpayPaymentId) {
+              throw createPaymentError(409, 'Payment has already been completed with a different provider payment');
+            }
+            if (!verifyRazorpayCheckoutSignature({
+              orderId: currentPayment.razorpay_order_id,
+              paymentId: razorpayPaymentId,
+              signature: razorpaySignature,
+            })) {
+              throw createPaymentError(400, 'Invalid Razorpay signature');
+            }
+            const activation = await acceptProposalAndCreateProject(client, currentPayment.id);
+            return { payment: currentPayment, activation };
+          }
+
+          if (!['pending', 'processing'].includes(currentPayment.status)) {
+            throw createPaymentError(409, `Cannot verify a ${currentPayment.status} payment`);
+          }
+
+          const duplicateProviderPayment = await client.query(
+            `SELECT id FROM payments
+             WHERE razorpay_payment_id = $1 AND id != $2
+             LIMIT 1`,
+            [razorpayPaymentId, paymentId]
+          );
+          if (duplicateProviderPayment.rows.length > 0) {
+            throw createPaymentError(409, 'Provider payment is already bound to another payment');
+          }
+
+          if (!verifyRazorpayCheckoutSignature({
+            orderId: currentPayment.razorpay_order_id,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature,
+          })) {
+            throw createPaymentError(400, 'Invalid Razorpay signature');
+          }
+
           const result = await client.query(
             `UPDATE payments
-             SET razorpay_order_id = $1,
-                 razorpay_payment_id = $2,
-                 razorpay_signature = $3,
+             SET razorpay_payment_id = $1,
+                 razorpay_signature = $2,
                  status = 'completed',
                  paid_at = NOW()
-             WHERE id = $4
+             WHERE id = $3
              RETURNING *`,
-            [razorpayOrderId, razorpayPaymentId, razorpaySignature, paymentId]
+            [razorpayPaymentId, razorpaySignature, paymentId]
           );
 
           if (result.rows.length === 0) {
@@ -220,11 +341,21 @@ export const handler = compose(
         };
         } catch (verifyError: any) {
           console.error('Payment verification error:', verifyError);
+          if (verifyError instanceof AuthorizationError) {
+            return createAuthorizationResponse(verifyError, origin);
+          }
           if (verifyError?.statusCode === 404) {
             return {
               statusCode: 404,
               headers,
               body: JSON.stringify({ error: 'Payment not found' }),
+            };
+          }
+          if (verifyError?.statusCode) {
+            return {
+              statusCode: verifyError.statusCode,
+              headers,
+              body: JSON.stringify({ error: verifyError.message }),
             };
           }
           return {
@@ -239,14 +370,7 @@ export const handler = compose(
       }
 
       if (action === 'manual-complete') {
-        const adminRoles = ['super_admin', 'support'];
-        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Admin access required' }),
-          };
-        }
+        assertAdminLike(auth?.user, 'payments.manualComplete');
 
         const validation = validateRequest(event.body, SCHEMAS.payment.manualComplete, origin);
         if (!validation.success) return validation.response;
@@ -328,14 +452,7 @@ export const handler = compose(
 
       if (action === 'send-reminder') {
         // Verify admin access for sending reminders
-        const adminRoles = ['super_admin', 'support'];
-        if (!auth?.user || !adminRoles.includes(auth.user.role)) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Admin access required to send payment reminders' }),
-          };
-        }
+        assertAdminLike(auth?.user, 'payments.sendReminder');
 
         // Extract paymentId from request body
         const body = JSON.parse(event.body || '{}');
@@ -459,6 +576,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Payments API error:', error);
     return {
       statusCode: 500,

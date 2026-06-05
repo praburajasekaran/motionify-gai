@@ -5,6 +5,14 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  requireInquiryAccess,
+  requireProjectAccess,
+  requireProposalAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 export const handler = compose(
   withCORS(['GET', 'POST', 'OPTIONS']),
@@ -20,7 +28,24 @@ export const handler = compose(
       const { inquiryId, proposalId, projectId, userId, offset = '0', limit = '50' } = event.queryStringParameters || {};
 
       // Check if user is admin (super_admin or support)
-      const isAdmin = auth?.user?.role === 'super_admin' || auth?.user?.role === 'support';
+      const isAdmin = isAdminLike(auth?.user?.role);
+
+      if (inquiryId) {
+        await requireInquiryAccess(auth?.user, inquiryId, { operation: 'activities.listByInquiry' });
+      }
+      if (proposalId) {
+        await requireProposalAccess(auth?.user, proposalId, { operation: 'activities.listByProposal' });
+      }
+      if (projectId) {
+        await requireProjectAccess(auth?.user, projectId, { operation: 'activities.listByProject' });
+      }
+      if (userId && !isAdmin && userId !== auth?.user?.userId) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Cannot filter activities for another user' }),
+        };
+      }
 
       let sql = `
         SELECT
@@ -116,6 +141,16 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const payload = validation.data;
 
+      if (payload.inquiryId) {
+        await requireInquiryAccess(auth?.user, payload.inquiryId, { operation: 'activities.create' });
+      }
+      if (payload.proposalId) {
+        await requireProposalAccess(auth?.user, payload.proposalId, { operation: 'activities.create' });
+      }
+      if (payload.projectId) {
+        await requireProjectAccess(auth?.user, payload.projectId, { operation: 'activities.create' });
+      }
+
       const result = await dbQuery(
         `INSERT INTO activities (
           type, user_id, user_name,
@@ -126,8 +161,8 @@ export const handler = compose(
         RETURNING *`,
         [
           payload.type,
-          payload.userId,
-          payload.userName,
+          auth!.user!.userId,
+          auth!.user!.fullName,
           payload.targetUserId || null,
           payload.targetUserName || null,
           payload.inquiryId || null,
@@ -172,6 +207,9 @@ export const handler = compose(
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Activities API error:', error);
     return {
       statusCode: 500,

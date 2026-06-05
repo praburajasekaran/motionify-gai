@@ -16,6 +16,12 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { sendEmail } from './send-email';
 import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireDeliverableAccess,
+} from './_shared/authorization';
 
 export const handler = compose(
   withCORS(['GET', 'POST']),
@@ -38,6 +44,8 @@ export const handler = compose(
         };
       }
 
+      await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'revision-requests.list' });
+
       // Verify user can access this deliverable
       const deliverableResult = await dbQuery(
         `SELECT d.id, d.project_id, p.client_user_id
@@ -56,19 +64,8 @@ export const handler = compose(
       }
 
       const { client_user_id, project_id } = deliverableResult.rows[0];
-      const userRole = auth?.user?.role;
+      const userRole = getAuthRole(auth?.user);
       const userId = auth?.user?.userId;
-
-      // Permission check: admin/PM can view all, client only their own
-      if (userRole !== 'super_admin' && userRole !== 'support') {
-        if (userRole === 'client' && client_user_id !== userId) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Access denied' }),
-          };
-        }
-      }
 
       // Fetch revision requests with attachments
       const revisionsResult = await dbQuery(
@@ -133,7 +130,7 @@ export const handler = compose(
 
       const { deliverableId, feedbackText, timestampedComments, issueCategories, attachments } = validation.data;
       const userId = auth?.user?.userId;
-      const userRole = auth?.user?.role;
+      const userRole = getAuthRole(auth?.user);
 
       // Verify deliverable exists and is awaiting_approval
       const deliverableResult = await dbQuery(
@@ -154,6 +151,15 @@ export const handler = compose(
       }
 
       const deliverable = deliverableResult.rows[0];
+      await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'revision-requests.create' });
+
+      if (userRole !== 'client') {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: 'Only the project client can request revisions' }),
+        };
+      }
 
       // Validate status
       if (deliverable.status !== 'awaiting_approval') {
@@ -342,6 +348,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Revision Requests API error:', error);
     return {
       statusCode: 500,

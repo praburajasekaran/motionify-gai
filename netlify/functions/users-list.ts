@@ -15,27 +15,16 @@ import {
     createLogger,
     getCorrelationId,
     z,
+    userRoleSchema,
     validateQueryParams,
 } from './_shared';
 import { compose, withCORS, withProjectManager, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 
-interface NetlifyEvent {
-    httpMethod: string;
-    headers: Record<string, string>;
-    queryStringParameters: Record<string, string> | null;
-}
-
-interface NetlifyResponse {
-    statusCode: number;
-    headers: Record<string, string>;
-    body: string;
-}
-
 // Query params schema
 const querySchema = z.object({
     status: z.enum(['active', 'inactive', 'all']).optional(),
-    role: z.enum(['super_admin', 'support', 'client', 'team', 'all']).optional(),
+    role: z.union([userRoleSchema, z.literal('all')]).optional(),
     search: z.string().max(100).optional(),
 });
 
@@ -43,14 +32,14 @@ export const handler = compose(
     withCORS(['GET']),
     withProjectManager(),
     withRateLimit(RATE_LIMITS.api, 'users_list')
-)(async (event: NetlifyEvent) => {
+)(async (event: MWNetlifyEvent): Promise<MWNetlifyResponse> => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-list', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
     // Validate query params
-    const paramsValidation = validateQueryParams(event.queryStringParameters, querySchema, origin);
+    const paramsValidation = validateQueryParams(event.queryStringParameters || null, querySchema, origin);
     if (!paramsValidation.success) {
         return paramsValidation.response;
     }
