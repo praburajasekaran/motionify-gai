@@ -7,8 +7,8 @@ depends_on: []
 files_modified:
   - contexts/AuthContext.tsx
   - lib/auth.ts
-  - landing-page-new/src/context/AuthContext.tsx
-  - landing-page-new/src/lib/portal/api/auth.api.ts
+  - deleted app source
+  - deleted app source
 autonomous: true
 gap_closure: true
 
@@ -25,7 +25,7 @@ must_haves:
     - path: "lib/auth.ts"
       provides: "Updated auth utilities without localStorage for session"
       exports: ["clearAuthSession", "storeAuthSession"]
-    - path: "landing-page-new/src/context/AuthContext.tsx"
+    - path: "deleted app source
       provides: "Cookie-first session management for client portal"
       contains: "getCurrentUser"
   key_links:
@@ -60,8 +60,8 @@ Output: Both admin and client portals use cookie-based authentication, calling /
 @contexts/AuthContext.tsx
 @lib/auth.ts
 @lib/api-config.ts
-@landing-page-new/src/context/AuthContext.tsx
-@landing-page-new/src/lib/portal/api/auth.api.ts
+@deleted app source
+@deleted app source
 @netlify/functions/auth-me.ts
 @netlify/functions/auth-logout.ts
 </context>
@@ -150,11 +150,11 @@ Output: Both admin and client portals use cookie-based authentication, calling /
 <task type="auto">
   <name>Task 2: Update Client Portal AuthContext to Prioritize Cookies</name>
   <files>
-    - landing-page-new/src/context/AuthContext.tsx
-    - landing-page-new/src/lib/portal/api/auth.api.ts
+    - deleted app source
+    - deleted app source
   </files>
   <action>
-    Update landing-page-new/src/context/AuthContext.tsx to prioritize cookie-based auth:
+    Update deleted app source to prioritize cookie-based auth:
 
     1. Reorder the session loading logic in loadUser():
        - FIRST: Call authApi.getCurrentUser() (which hits /auth-me with credentials: 'include')
@@ -207,14 +207,14 @@ Output: Both admin and client portals use cookie-based authentication, calling /
        - Already clears localStorage and cookie - this is good
 
     4. Verify that authApi.getCurrentUser() uses credentials: 'include':
-       - Check landing-page-new/src/lib/portal/api/auth.api.ts
+       - Check deleted app source
        - The getCurrentUser function should call /auth-me with credentials: 'include'
        - If not, update it to include credentials: 'include' in the fetch options
   </action>
   <verify>
-    1. Run `cd landing-page-new && npm run build` - should pass
+    1. Run `cd deleted app && npm run build` - should pass
     2. Verify the order of checks: API first, then localStorage
-    3. Verify: `grep -n "getCurrentUser" landing-page-new/src/context/AuthContext.tsx` shows it's called before localStorage check
+    3. Verify: `grep -n "getCurrentUser" deleted app source` shows it's called before localStorage check
   </verify>
   <done>
     - Client portal AuthContext checks /auth-me endpoint first
@@ -228,7 +228,7 @@ Output: Both admin and client portals use cookie-based authentication, calling /
   <name>Task 3: Ensure credentials: 'include' on All Fetch Calls</name>
   <files>
     - lib/api-config.ts (verify)
-    - landing-page-new/src/lib/portal/api/*.ts
+    - deleted app source
   </files>
   <action>
     Verify and ensure all API calls include credentials: 'include':
@@ -237,7 +237,7 @@ Output: Both admin and client portals use cookie-based authentication, calling /
        - Already has credentials: 'include' on line 73 - VERIFIED
        - No changes needed for admin portal API config
 
-    2. Client Portal API files - check each file in landing-page-new/src/lib/portal/api/:
+    2. Client Portal API files - check each file in deleted app source
        - auth.api.ts - verify all fetch calls have credentials: 'include'
        - proposals.ts - add credentials: 'include' if missing
        - inquiries.ts - add credentials: 'include' if missing
@@ -256,9 +256,9 @@ Output: Both admin and client portals use cookie-based authentication, calling /
     If the client portal uses a centralized fetch wrapper, update that instead.
   </action>
   <verify>
-    1. Run `grep -r "credentials.*include" landing-page-new/src/lib/portal/api/` - should show results
-    2. Run `grep -rL "credentials.*include" landing-page-new/src/lib/portal/api/*.ts` - should be empty (all files have it)
-    3. Run both builds: `npm run build && cd landing-page-new && npm run build`
+    1. Run `grep -r "credentials.*include" deleted app source` - should show results
+    2. Run `grep -rL "credentials.*include" deleted app source` - should be empty (all files have it)
+    3. Run both builds: `npm run build && cd deleted app && npm run build`
   </verify>
   <done>
     - All fetch calls in both portals include credentials: 'include'
@@ -274,7 +274,7 @@ After completing all tasks:
 
 1. Build verification:
    - `npm run build` passes for admin portal
-   - `cd landing-page-new && npm run build` passes for client portal
+   - `cd deleted app && npm run build` passes for client portal
 
 2. Code verification:
    - `grep "getStoredUser\|getAuthToken" contexts/AuthContext.tsx` returns zero results

@@ -31,5 +31,5 @@ Deliverables in `pending` or `in_progress` status are hidden from clients.
 
 **Files to modify:**
 - `netlify/functions/deliverables.ts` — remove viewableStatuses filter for clients
-- `landing-page-new/src/lib/portal/components/DeliverableCard.tsx` — add status indicators
+- `deleted app source` — add status indicators
 - `components/deliverables/DeliverableCard.tsx` — ensure consistent status display

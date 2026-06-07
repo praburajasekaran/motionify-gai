@@ -67,8 +67,8 @@ const linkTo = inquiry.status === 'proposal_sent' && inquiry.proposalId
 
 ## Context
 
-- The proposal page already exists at `/proposal/[proposalId]` in the Next.js app (`landing-page-new/src/app/proposal/[proposalId]/page.tsx`)
-- However, the Dashboard is a React Router app (root `pages/`), not Next.js. Need to verify the proposal page route exists in the React Router app as well, or if it redirects to the Next.js app.
+- The proposal page already exists at `/proposal/[proposalId]` in the deleted app (`deleted app source`)
+- However, the Dashboard is a React Router app (root `pages/`), not Next.js. Need to verify the proposal page route exists in the React Router app as well, or if it redirects to the deleted app.
 - The `proposalId` field is populated on the inquiry when the admin creates a proposal via `updateInquiryStatus(inquiry.id, 'proposal_sent', { proposalId: proposal.id })`
 - The recent commit `a0402ae` fixed Unicode-safe Base64 encoding for proposal links
 
@@ -77,4 +77,4 @@ const linkTo = inquiry.status === 'proposal_sent' && inquiry.proposalId
 - `pages/Dashboard.tsx:179-191` — CLIENT_STATUS_CONFIG
 - `pages/Dashboard.tsx:279-311` — Inquiry card rendering
 - `lib/inquiries.ts:31` — `proposalId` field on Inquiry interface
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx` — Client proposal page
+- `deleted app source` — Client proposal page

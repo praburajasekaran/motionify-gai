@@ -25,9 +25,9 @@ Add a conditional check in the dashboard card rendering: when `status === 'conve
 | Status | `proposal_sent` | `converted` |
 | Field | `proposalId` | `convertedToProjectId` |
 | Route | `/proposal/${proposalId}` | `/projects/${projectId}/1` |
-| Link type | `<a href>` (Next.js app) | `<Link to>` (React Router) |
+| Link type | `<a href>` (deleted app) | `<Link to>` (React Router) |
 
-Proposal uses `<a href>` because the proposal page is in the Next.js app. Project detail is within the React Router SPA, so we use `<Link>`.
+Proposal uses `<a href>` because the proposal page is in the deleted app. Project detail is within the React Router SPA, so we use `<Link>`.
 
 ## Acceptance Criteria
 
@@ -90,11 +90,11 @@ return (
 
 - **Missing `convertedToProjectId`**: Falls back to inquiry tracking page (defensive)
 - **Deleted project**: Let the project detail page handle 404 (consistent with existing patterns)
-- **Next.js portal**: Out of scope -- clients use the React SPA dashboard; Next.js portal inquiries page is separate and can be updated independently if needed
+- **deleted portal**: Out of scope -- clients use the React SPA dashboard; deleted portal inquiries page is separate and can be updated independently if needed
 
 ## References
 
 - Recent precedent: commit `3b12e1c` (link Proposal Ready card directly to proposal page)
 - Route definition: `App.tsx:69-74` (`/projects/:id/:tab?`)
 - Inquiry interface: `lib/inquiries.ts:18-36` (`convertedToProjectId` field)
-- Institutional learning: dual-portal architecture means changes to `pages/` don't automatically affect `landing-page-new/`
+- Institutional learning: single-runtime architecture means changes to `pages/` don't automatically affect `deleted app directory`

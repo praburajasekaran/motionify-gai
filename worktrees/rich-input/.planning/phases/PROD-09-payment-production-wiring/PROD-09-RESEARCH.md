@@ -58,7 +58,7 @@ netlify/functions/
 ├── payments.ts                       # Payment API with send-reminder endpoint
 └── scheduled-payment-reminder.ts     # Cron job for automated reminders
 
-landing-page-new/src/
+deleted app source
 ├── app/api/webhooks/razorpay/
 │   └── route.ts                      # Webhook handler (implemented)
 └── lib/email/
@@ -100,7 +100,7 @@ export async function sendPaymentReminderEmail(data: {
 **When to use:** All webhook endpoints receiving Razorpay events
 **Example:**
 ```typescript
-// Source: landing-page-new/src/app/api/webhooks/razorpay/route.ts (lines 49-54)
+// Source: deleted app source (lines 49-54)
 function verifySignature(rawBody: string, signature: string, secret: string): boolean {
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(rawBody);
@@ -118,7 +118,7 @@ const signatureVerified = verifySignature(rawBody, signature, webhookSecret);
 **When to use:** All webhook handlers
 **Example:**
 ```typescript
-// Source: landing-page-new/src/app/api/webhooks/razorpay/route.ts (lines 59-65)
+// Source: deleted app source (lines 59-65)
 async function isEventProcessed(eventId: string): Promise<boolean> {
   const result = await query(
     `SELECT id FROM payment_webhook_logs WHERE razorpay_event_id = $1`,
@@ -133,7 +133,7 @@ async function isEventProcessed(eventId: string): Promise<boolean> {
 **When to use:** All webhook handlers for compliance and debugging
 **Example:**
 ```typescript
-// Source: landing-page-new/src/app/api/webhooks/razorpay/route.ts (lines 70-109)
+// Source: deleted app source (lines 70-109)
 await logWebhook(client, {
   event,
   eventId,
@@ -252,7 +252,7 @@ Verified patterns from official sources:
 
 ### Wiring Payment Failure Email to Webhook Handler
 ```typescript
-// Source: Integration needed in landing-page-new/src/app/api/webhooks/razorpay/route.ts
+// Source: Integration needed in deleted app source
 // After handlePaymentFailed() succeeds, send notification:
 
 import { sendPaymentFailureNotificationEmail } from '@/netlify/functions/send-email';
@@ -416,7 +416,7 @@ Things that couldn't be fully resolved:
 - Codebase files:
   - `/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/netlify/functions/send-email.ts` - Email templates and Resend integration
   - `/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/netlify/functions/payments.ts` - Payment API endpoints
-  - `/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/landing-page-new/src/app/api/webhooks/razorpay/route.ts` - Webhook handler
+  - `/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/deleted app source` - Webhook handler
   - `/Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/.planning/v1-PROD-MILESTONE-AUDIT.md` - Gap analysis
 - Official Documentation:
   - [Razorpay Webhook Validation and Testing](https://razorpay.com/docs/webhooks/validate-test/)

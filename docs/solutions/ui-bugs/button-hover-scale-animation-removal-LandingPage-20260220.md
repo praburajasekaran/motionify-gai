@@ -21,7 +21,7 @@ A primary CTA button used `hover:scale-105` for hover feedback, causing a distra
 ## Environment
 
 - Module: Landing Page
-- Affected Component: `landing-page-new/src/components/ReadyToTellYourStory.tsx`
+- Affected Component: `deleted app source`
 - Date: 2026-02-20
 
 ## Symptoms

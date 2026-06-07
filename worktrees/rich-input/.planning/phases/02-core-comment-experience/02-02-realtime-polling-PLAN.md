@@ -8,7 +8,7 @@ depends_on:
 files_modified:
   - "netlify/functions/comments.ts"
   - "components/proposals/CommentThread.tsx"
-  - "landing-page-new/src/components/CommentThread.tsx"
+  - "deleted app source
 autonomous: true
 user_setup: []
 
@@ -22,7 +22,7 @@ must_haves:
     - path: "components/proposals/CommentThread.tsx"
       provides: "Polling mechanism for admin portal"
       contains: "useEffect with setInterval, polling interval state"
-    - path: "landing-page-new/src/components/CommentThread.tsx"
+    - path: "deleted app source
       provides: "Polling mechanism for client portal"
       contains: "useEffect with setInterval, polling interval state"
     - path: "netlify/functions/comments.ts"
@@ -61,7 +61,7 @@ Output: Automatic comment stream updates via polling in both portals.
 
 # Existing component pattern
 @components/proposals/CommentThread.tsx
-@landing-page-new/src/components/CommentThread.tsx
+@deleted app source
 </context>
 
 <tasks>
@@ -91,7 +91,7 @@ Output: Automatic comment stream updates via polling in both portals.
 
 <task type="auto">
   <name>Add polling to client CommentThread</name>
-  <files>landing-page-new/src/components/CommentThread.tsx</files>
+  <files>deleted app source
   <action>
     Add automatic polling to the client portal CommentThread component.
 

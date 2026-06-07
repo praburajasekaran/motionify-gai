@@ -38,14 +38,14 @@ Clients accepted deliverables as part of their proposal, but can only see them o
 
 ### Client Portal UI Updates
 
-The client portal (`landing-page-new`) currently defines `Deliverable` as `{ id: string; name: string }` with no status field. The `ProjectOverview` component renders deliverables as simple clickable name items.
+The client portal (`deleted app`) currently defines `Deliverable` as `{ id: string; name: string }` with no status field. The `ProjectOverview` component renders deliverables as simple clickable name items.
 
 **Changes needed:**
 
 | # | File | Change |
 |---|------|--------|
-| 4 | `landing-page-new/src/lib/portal/types.ts` | Add `status` field to `Deliverable` type |
-| 5 | `landing-page-new/src/lib/portal/components/ProjectOverview.tsx` | Add status badge next to deliverable name |
+| 4 | `deleted app source` | Add `status` field to `Deliverable` type |
+| 5 | `deleted app source` | Add status badge next to deliverable name |
 
 **Client-facing status labels:**
 
@@ -108,14 +108,14 @@ These exist today and are not introduced by this change:
 
 - **Low risk:** This is a visibility expansion, not a permission change. Clients still can't perform actions they couldn't before (approve, upload, etc.).
 - **No migration needed:** No database changes required.
-- **Dual-portal sync:** Must update both Vite admin SPA and Next.js client portal consistently.
+- **Single-runtime sync:** Must update both Vite admin SPA and Next.js client portal consistently.
 
 ## References
 
 - Todo: `.planning/todos/pending/2026-01-26-show-all-deliverables-to-clients.md`
 - Deliverable permissions: `utils/deliverablePermissions.ts`
 - API endpoint: `netlify/functions/deliverables.ts:207-211`
-- Client portal types: `landing-page-new/src/lib/portal/types.ts:32-35`
-- Client portal render: `landing-page-new/src/lib/portal/components/ProjectOverview.tsx:498-505`
+- Client portal types: `deleted app source`
+- Client portal render: `deleted app source`
 - Status config pattern: `components/deliverables/DeliverableCard.tsx:53-97`
 - PROD-04 research: `.planning/phases/PROD-04-deliverables-system/PROD-04-RESEARCH.md`

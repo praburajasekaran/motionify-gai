@@ -25,18 +25,18 @@
 
 **Presentation Layer (Next.js Landing):**
 - Purpose: Public-facing marketing site with embedded client portal
-- Location: `landing-page-new/src/app/`, `landing-page-new/src/components/`
+- Location: `deleted app source`, `deleted app source`
 - Contains: Next.js 16 App Router pages and server components
 - Depends on: Next.js routing, Portal library (`src/lib/portal/`), API routes
 - Used by: Public visitors and authenticated portal users via `/portal` route
-- Entry: `landing-page-new/src/app/layout.tsx` → `landing-page-new/src/app/page.tsx`
+- Entry: `deleted app source` → `deleted app source`
 
 **API Layer:**
 - Purpose: Serverless backend functions handling business logic
 - Location: `netlify/functions/`
 - Contains: Netlify Functions with PostgreSQL database access
 - Depends on: PostgreSQL, AWS S3/R2, Email services (Resend/Nodemailer)
-- Used by: Both Vite portal and Next.js app via HTTP requests
+- Used by: Both Vite portal and deleted app via HTTP requests
 - Pattern: Handler functions with CORS, request validation, error handling
 
 **Data Access Layer:**
@@ -134,12 +134,12 @@
 - Responsibilities: Route configuration, protected route wrapper, layout composition
 
 **Next.js Landing Entry:**
-- Location: `landing-page-new/src/app/layout.tsx`
+- Location: `deleted app source`
 - Triggers: User navigates to Next.js routes
 - Responsibilities: HTML structure, font loading, global styles, AuthProvider wrapper
 
 **Next.js Portal Entry:**
-- Location: `landing-page-new/src/app/portal/layout.tsx`
+- Location: `deleted app source`
 - Triggers: Routes under `/portal/*`
 - Responsibilities: Portal authentication, AppContext provider, Header component, project state management
 

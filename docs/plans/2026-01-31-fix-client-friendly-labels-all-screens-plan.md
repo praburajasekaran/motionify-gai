@@ -137,7 +137,7 @@ Change to: `{isClient ? 'Declined' : 'Rejected'} on {date}`
 
 Accept a role-aware approach: when `isClient(user)`, show `'declined the proposal'` instead.
 
-### 8. `landing-page-new/src/app/portal/inquiries/page.tsx` ~line 47 — Align "converted" label
+### 8. `deleted app source` ~line 47 — Align "converted" label
 
 Change `converted: 'Active Project'` to `converted: 'Project Started'` in `clientFriendlyStatusLabels`.
 
@@ -161,7 +161,7 @@ Change `converted: 'Active Project'` to `converted: 'Project Started'` in `clien
 - [ ] `Dashboard.tsx` shows "Proposal Received" not "Proposal Ready"
 - [ ] `ProposalDetail.tsx` shows "Declined" not "Rejected" for client users
 - [ ] `ProjectDetail.tsx` activity feed shows "declined the proposal" for client users
-- [ ] `landing-page-new` portal uses "Project Started" not "Active Project"
+- [ ] `deleted app` portal uses "Project Started" not "Active Project"
 - [ ] Admin users see no changes to their experience
 - [ ] All label mappings are consistent across every screen
 

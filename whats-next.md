@@ -11,4 +11,4 @@ Use these surfaces for future work:
 - Authenticated Portal: `/portal/*`
 - Backend APIs: `/.netlify/functions/*`
 
-Do not add work to the retired `landing-page-new` reference. If a past implementation detail is needed, recover it from version history or the retained non-runtime reference, then port the behavior into the root Vite app or Netlify Functions.
+Do not add work outside the root Vite app or Netlify Functions. If a past implementation detail is needed, recover it from git history, then port the behavior into the current runtime.

@@ -28,7 +28,7 @@ started: Discovered during UAT
 
 ## Evidence
 - timestamp: 2026-01-20T13:25:00Z
-  checked: netlify/functions/r2-presign.ts vs landing-page-new/src/lib/attachments.ts
+  checked: netlify/functions/r2-presign.ts vs deleted app source
   found: Backend endpoint is `/.netlify/functions/r2-presign`. Frontend calls `${API_BASE}/api/r2-presign`.
   implication: Path mismatch causes 404/405, interpreted as CORS error by browser.
 - timestamp: 2026-01-20T13:30:00Z

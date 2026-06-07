@@ -6,15 +6,15 @@
 
 ## Goal & Success Criteria
 - **Goal**: Make the root Vite app serve the Public Site at `/`, public proposal/payment handoff surfaces outside the Portal when authentication is not yet required, and the authenticated Portal under `/portal/*`, with Netlify Functions remaining as the backend runtime.
-- **Done when**: Local development runs with one frontend runtime plus the Netlify Functions backend runtime, production publishes one Vite frontend build, existing `/portal/*`, proposal, payment, and auth links still resolve, and `landing-page-new` no longer owns runtime API or portal behavior.
+- **Done when**: Local development runs with one frontend runtime plus the Netlify Functions backend runtime, production publishes one Vite frontend build, existing `/portal/*`, proposal, payment, and auth links still resolve, and `deleted app` no longer owns runtime API or portal behavior.
 - **Non-goals**: Redesigning the landing page, changing database schema, replacing Netlify functions, or rewriting working portal pages for style-only reasons.
 
 ## Current State
 - The root app is a Vite React SPA on port `5173`, configured with `base: '/portal/'` and `<BrowserRouter basename="/portal">`.
-- The landing app is a separate Next.js app in `landing-page-new/` on port `5174`.
+- The landing app is a separate deleted app in `deleted app directory` on port `5174`.
 - In local development, Next proxies `/portal/*` to Vite.
-- In production, `npm run build:all` builds Vite, copies `dist/*` into `landing-page-new/public/portal`, then publishes the Next app.
-- The repo already has duplicate landing components in the root app and Next app, plus known dual-portal/data-store issues documented in `.planning/todos/pending/2026-02-02-consolidate-landing-page-into-portal.md`.
+- In production, `npm run build:all` builds Vite, copies `dist/*` into `deleted app source`, then publishes the deleted app.
+- The repo already has duplicate landing components in the root app and deleted app, plus known single-runtime/data-store issues documented in `.planning/todos/pending/2026-02-02-consolidate-landing-page-into-portal.md`.
 
 ## Task Breakdown
 
@@ -26,8 +26,8 @@
 | 4 | Port remaining Next-owned runtime surfaces into Vite/Netlify functions | proposal pages, payment pages, auth verify, Next API routes | L | T1-T3 |
 | 5 | Add tokenized Proposal Review Links, canonical link builders, and compatibility redirects for old public URLs | `netlify.toml`, affected email/link builders, proposal API/function code | M | T4 |
 | 6 | Flip production publishing to the Vite build after route/API parity passes | `package.json`, `netlify.toml` | S | T4-T5 |
-| 7 | Remove `landing-page-new` from runtime scripts/builds and mark it as temporary legacy reference after production parity verification | `package.json`, `landing-page-new/README.md`, docs/tests | M | T6 |
-| 8 | Delete or archive the legacy Next reference after production has run cleanly | `landing-page-new/` | M | T7 |
+| 7 | Remove `deleted app` from runtime scripts/builds and mark it as temporary legacy reference after production parity verification | `package.json`, `deleted app source`, docs/tests | M | T6 |
+| 8 | Delete or archive the deleted app after production has run cleanly | `deleted app directory` | M | T7 |
 
 ## Slice A Scope
 
@@ -40,7 +40,7 @@ Slice A is the first implementation slice and should stay deliberately narrow:
 - Portal-only providers such as auth, notifications, and Portal session sync should live inside the `/portal` boundary so the Public Site remains unauthenticated and lightweight.
 - Local generated links stop pointing to `localhost:5174`.
 - Production publishing remains unchanged.
-- `landing-page-new` remains in place and is not deleted.
+- `deleted app` remains in place and is not deleted.
 - Proposal tokenization, payment-link hardening, and final link-security work are deferred to later slices, except where route structure must leave room for them.
 
 ## Technical Design
@@ -50,12 +50,12 @@ Slice A is the first implementation slice and should stay deliberately narrow:
 - **Auth and verification links**: Portal login and user invitation links should use `/portal/login?token=...`; inquiry verification should use a distinct Public Site route such as `/verify-inquiry?token=...`. Existing `/auth/verify` links are transitional aliases only.
 - **Production origin**: `https://motionify.studio/` is the canonical production origin. `www`, legacy portal subdomains, and old app-link environment variables should redirect or normalize to this origin.
 - **Handoff pages**: Proposal review and advance payment pages are Public Site handoff surfaces until authentication is required. Post-payment project work and Project Payments belong in the Portal through the Project Access Link flow.
-- **Proposal review security**: The first routing slice may preserve tokenless `/proposal/:proposalId` links for compatibility, but the final canonical Proposal Review Link must include an unguessable review token before `landing-page-new` is retired.
+- **Proposal review security**: The first routing slice may preserve tokenless `/proposal/:proposalId` links for compatibility, but the final canonical Proposal Review Link must include an unguessable review token before `deleted app` is retired.
 - **Build**: Production should not flip to the Vite publish path until route/API/link parity is verified. Once parity is reached, `npm run build` should be the deploy build and Netlify `publish` should be `dist`.
 
 ## Alternatives Rejected
 - **Keep Next as the shell and embed Vite under `/portal`**: Preserves the current two-server split and keeps the dual-runtime problem.
-- **Big-bang delete of `landing-page-new`**: Too risky because payment, proposal, and auth routes currently have Next-owned implementations and externally shared URLs.
+- **Big-bang delete of `deleted app`**: Too risky because payment, proposal, and auth routes currently have Next-owned implementations and externally shared URLs.
 - **Keep both apps but use one port through proxying**: Reduces local annoyance but does not remove duplicate code or data-flow divergence.
 
 ## Key Decisions
@@ -67,7 +67,7 @@ Slice A is the first implementation slice and should stay deliberately narrow:
 - `/auth/verify` is not canonical after consolidation; Portal login and inquiry verification have separate canonical routes.
 - The canonical production origin is `https://motionify.studio/`; the Portal lives under `https://motionify.studio/portal/*`.
 - Netlify functions remain the only backend surface.
-- `landing-page-new` becomes temporary non-runtime legacy reference during the migration, then is deleted or archived in a follow-up cleanup after production runs cleanly.
+- `deleted app` becomes temporary deleted legacy reference during the migration, then is deleted or archived in a follow-up cleanup after production runs cleanly.
 
 ## Risks
 
@@ -86,4 +86,4 @@ Slice A is the first implementation slice and should stay deliberately narrow:
 - Run focused smoke tests for `/`, `/proposal/:proposalId`, `/payment/:proposalId`, `/portal/login`, `/portal/projects`, `/portal/admin/inquiries`, and inquiry tracking.
 - Run payment/proposal flow tests after moving remaining Next-owned surfaces.
 - In local dev, confirm only one frontend runtime plus Netlify Functions are required: Public Site at `http://localhost:5173/`, Portal at `http://localhost:5173/portal/login`, API at `http://localhost:8888/.netlify/functions/*`.
-- Rollback plan: keep `landing-page-new` untouched until Vite reaches route/API parity, so Netlify can be pointed back to the old Next publish path if needed.
+- Rollback plan: keep `deleted app` untouched until Vite reaches route/API parity, so Netlify can be pointed back to the old Next publish path if needed.

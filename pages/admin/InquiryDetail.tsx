@@ -229,7 +229,7 @@ export function InquiryDetail() {
             {isAdmin && inquiry.status === 'new' ? (
               <button
                 onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium shadow-sm hover:bg-[var(--studio-amber-hover)] hover:shadow-md transition-all"
               >
                 <Plus className="w-4 h-4" />
                 Create Proposal
@@ -458,7 +458,7 @@ export function InquiryDetail() {
               {isAdmin && inquiry.status === 'new' && (
                 <button
                   onClick={() => navigate(`/admin/inquiries/${inquiry.id}/proposal`)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:shadow-lg transition-shadow"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-primary text-primary-foreground font-medium shadow-sm hover:bg-[var(--studio-amber-hover)] hover:shadow-md transition-all"
                 >
                   <span>Create Proposal</span>
                   <Plus className="w-4 h-4" />

@@ -7,8 +7,8 @@ depends_on: ["PROD-12-03"]
 files_modified:
   - lib/vitals.ts
   - index.tsx
-  - landing-page-new/src/lib/vitals.ts
-  - landing-page-new/src/app/layout.tsx
+  - deleted app source
+  - deleted app source
   - package.json
 autonomous: true
 
@@ -22,7 +22,7 @@ must_haves:
     - path: "lib/vitals.ts"
       provides: "Admin portal Core Web Vitals measurement and reporting"
       exports: ["initWebVitals"]
-    - path: "landing-page-new/src/lib/vitals.ts"
+    - path: "deleted app source
       provides: "Client portal Core Web Vitals measurement and reporting"
       exports: ["reportWebVitals"]
     - path: "package.json"
@@ -61,7 +61,7 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
 @.planning/STATE.md
 @.planning/phases/PROD-12-extended-testing/PROD-12-RESEARCH.md
 @index.tsx
-@landing-page-new/src/app/layout.tsx
+@deleted app source
 </context>
 
 <tasks>
@@ -71,13 +71,13 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
   <files>
     package.json
     lib/vitals.ts
-    landing-page-new/src/lib/vitals.ts
+    deleted app source
   </files>
   <action>
     1. Install web-vitals in both projects:
        ```bash
        npm install web-vitals
-       cd landing-page-new && npm install web-vitals
+       cd deleted app && npm install web-vitals
        ```
 
     2. Create `lib/vitals.ts` (admin portal - Vite SPA):
@@ -97,7 +97,7 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
          - Call `onFCP(sendToAnalytics)` - first contentful paint
          - Call `onTTFB(sendToAnalytics)` - time to first byte
 
-    3. Create `landing-page-new/src/lib/vitals.ts` (client portal - Next.js):
+    3. Create `deleted app source` (client portal - Next.js):
        - Next.js has built-in web vitals support via `reportWebVitals` export
        - Create and export `reportWebVitals(metric)` function with same Sentry reporting logic
        - Use `process.env.NODE_ENV` instead of `import.meta.env`
@@ -107,7 +107,7 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
   </action>
   <verify>
     Run `npm run build` to verify admin portal builds with web-vitals.
-    Run `cd landing-page-new && npm run build` to verify client portal builds.
+    Run `cd deleted app && npm run build` to verify client portal builds.
     Check that both vitals.ts files export their respective functions.
   </verify>
   <done>
@@ -119,7 +119,7 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
   <name>Task 2: Wire vitals initialization into app entry points</name>
   <files>
     index.tsx
-    landing-page-new/src/app/layout.tsx
+    deleted app source
   </files>
   <action>
     1. Update `index.tsx` (admin portal entry point):
@@ -127,9 +127,9 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
        - Call `initWebVitals()` after the React root is created (after `ReactDOM.createRoot(...).render(...)`)
        - This ensures vitals measurement starts after the app is mounted
 
-    2. Update `landing-page-new/src/app/layout.tsx` (client portal):
+    2. Update `deleted app source` (client portal):
        - Next.js App Router handles web vitals differently. Create a small client component `WebVitals.tsx`:
-         - Create `landing-page-new/src/components/WebVitals.tsx` (if needed)
+         - Create `deleted app source` (if needed)
          - 'use client' directive
          - Import `useReportWebVitals` from 'next/web-vitals' if available, OR
          - Use a useEffect to call the vitals init function from `lib/vitals.ts`
@@ -153,7 +153,7 @@ Output: Web Vitals measurement initialized in both portals, metrics flowing to S
 <verification>
 1. `web-vitals` appears in both package.json files
 2. `lib/vitals.ts` exports `initWebVitals`
-3. `landing-page-new/src/lib/vitals.ts` exports vitals reporting function
+3. `deleted app source` exports vitals reporting function
 4. `index.tsx` calls `initWebVitals()`
 5. Client portal layout includes vitals initialization
 6. Both portals build successfully

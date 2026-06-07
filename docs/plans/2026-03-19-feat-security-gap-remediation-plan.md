@@ -116,13 +116,13 @@ Fix all 9 gaps in **dependency-aware order** (see brainstorm: `docs/brainstorms/
 
 **Files:**
 - `pages/admin/ProposalDetail.tsx` — lines 19-27 (regex `sanitizeHtml`), line 642 (`dangerouslySetInnerHTML`)
-- `landing-page-new/src/components/proposal/ProposalReview.tsx` — lines 14-22 (regex `sanitizeHtml`), line 104 (`dangerouslySetInnerHTML`)
+- `deleted app source` — lines 14-22 (regex `sanitizeHtml`), line 104 (`dangerouslySetInnerHTML`)
 
 **New file:** `src/utils/sanitize.ts` (shared sanitizer)
 
 **Dependencies to install:**
 - `dompurify` + `@types/dompurify` (portal React app)
-- `isomorphic-dompurify` (landing page Next.js app — works in SSR)
+- `isomorphic-dompurify` (landing page deleted app — works in SSR)
 
 **Changes:**
 
@@ -164,7 +164,7 @@ Fix all 9 gaps in **dependency-aware order** (see brainstorm: `docs/brainstorms/
 
 2. **`ProposalDetail.tsx`:** Remove the regex `sanitizeHtml` function (lines 19-27), import from `src/utils/sanitize.ts`
 3. **`ProposalReview.tsx`:** Remove the regex `sanitizeHtml` function (lines 14-22), import `isomorphic-dompurify` version with same config
-4. Create equivalent `landing-page-new/src/utils/sanitize.ts` using `isomorphic-dompurify` for SSR compatibility
+4. Create equivalent `deleted app source` using `isomorphic-dompurify` for SSR compatibility
 
 **Acceptance criteria:**
 - [x] Regex `sanitizeHtml` removed from both files

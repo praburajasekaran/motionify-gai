@@ -5,7 +5,7 @@ type: execute
 wave: 1
 depends_on: []
 files_modified:
-  - landing-page-new/src/app/api/webhooks/razorpay/route.ts
+  - deleted app source
   - netlify/functions/_shared/schemas.ts
   - database/migrations/002_payment_webhook_logs.sql
 autonomous: true
@@ -18,14 +18,14 @@ must_haves:
     - "Duplicate payment events are handled without double-processing"
     - "Failed payments leave audit trail for troubleshooting"
   artifacts:
-    - path: "landing-page-new/src/app/api/webhooks/razorpay/route.ts"
+    - path: "deleted app source
       provides: "Webhook endpoint for Razorpay events"
       exports: ["POST"]
     - path: "database/migrations/002_payment_webhook_logs.sql"
       provides: "Webhook audit log table"
       contains: "CREATE TABLE payment_webhook_logs"
   key_links:
-    - from: "landing-page-new/src/app/api/webhooks/razorpay/route.ts"
+    - from: "deleted app source
       to: "payments table"
       via: "UPDATE on payment.captured event"
       pattern: "UPDATE payments.*status.*completed"
@@ -50,7 +50,7 @@ Output: Working webhook endpoint at `/api/webhooks/razorpay` that receives, vali
 @.planning/STATE.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-CONTEXT.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-RESEARCH.md
-@landing-page-new/src/app/api/payments/verify/route.ts
+@deleted app source
 @features/pending/payment-workflow/04-database-schema.sql
 </context>
 
@@ -105,7 +105,7 @@ grep -E "razorpay_event_id.*UNIQUE" database/migrations/002_payment_webhook_logs
 
 <task type="auto">
   <name>Task 2: Implement Razorpay webhook endpoint</name>
-  <files>landing-page-new/src/app/api/webhooks/razorpay/route.ts</files>
+  <files>deleted app source
   <action>
 Create the webhook endpoint to receive Razorpay events.
 
@@ -155,19 +155,19 @@ Return 200 even for duplicate events (idempotent).
   <verify>
 ```bash
 # Verify file exists
-ls -la landing-page-new/src/app/api/webhooks/razorpay/route.ts
+ls -la deleted app source
 
 # Verify POST export
-grep -E "export.*POST|export async function POST" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+grep -E "export.*POST|export async function POST" deleted app source
 
 # Verify raw body usage (request.text() before JSON.parse)
-grep -E "request\.text\(\)|await.*text\(\)" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+grep -E "request\.text\(\)|await.*text\(\)" deleted app source
 
 # Verify idempotency check via event ID header
-grep -E "x-razorpay-event-id|razorpay_event_id" landing-page-new/src/app/api/webhooks/razorpay/route.ts
+grep -E "x-razorpay-event-id|razorpay_event_id" deleted app source
 
 # Verify build passes
-cd landing-page-new && npm run build
+cd deleted app && npm run build
 ```
   </verify>
   <done>Webhook endpoint implemented with signature verification and idempotent processing</done>

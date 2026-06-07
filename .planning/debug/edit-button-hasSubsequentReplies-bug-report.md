@@ -30,7 +30,7 @@ This causes ALL comments by the current user to have the same `hasSubsequentRepl
    };
    ```
 
-2. **Client Portal** (`landing-page-new/src/components/CommentThread.tsx` lines 20-34):
+2. **Client Portal** (`deleted app source` lines 20-34):
    - Identical bug with same flawed logic
 
 3. **Scenario walkthrough** (Super admin posts 3 comments, client replies after first):
@@ -53,7 +53,7 @@ This causes ALL comments by the current user to have the same `hasSubsequentRepl
 - **What's wrong:** `c.userId !== currentUserId` should be `c.userId !== comment.userId`
 
 ### Client Portal
-- **File:** `landing-page-new/src/components/CommentThread.tsx`
+- **File:** `deleted app source`
 - **Line:** 32
 - **What's wrong:** `c.userId !== currentUserId` should be `c.userId !== comment.userId`
 

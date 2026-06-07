@@ -125,7 +125,7 @@ Comment thread displays within the existing proposal detail page, keeping conver
 
 **Acceptance Criteria:**
 - [x] Comment section visible on proposal detail page for both client and superadmin views
-- [x] Accessible via `landing-page-new/src/app/proposal/[proposalId]/page.tsx` (client)
+- [x] Accessible via `deleted app source` (client)
 - [x] Accessible via `pages/admin/ProposalDetail.tsx` (superadmin)
 - [x] Comment section positioned appropriately relative to proposal content
 - [x] Comment input form available on page without navigation
@@ -154,7 +154,7 @@ These are validated existing features that the comments feature depends on:
 
 | Feature | Location | Status |
 |---------|----------|--------|
-| Proposal viewing for clients | `landing-page-new/src/app/proposal/[proposalId]/page.tsx` | ✅ Existing |
+| Proposal viewing for clients | `deleted app source` | ✅ Existing |
 | Proposal management for superadmins | `pages/admin/ProposalDetail.tsx` | ✅ Existing |
 | Magic link authentication | Existing auth system | ✅ Existing |
 | Email notification system | Resend integration | ✅ Existing |

@@ -29,12 +29,12 @@ key-files:
     - components/proposals/CommentThread.tsx
     - components/proposals/CommentItem.tsx
     - components/proposals/CommentInput.tsx
-    - landing-page-new/src/components/CommentThread.tsx
-    - landing-page-new/src/components/CommentItem.tsx
-    - landing-page-new/src/components/CommentInput.tsx
+    - deleted app source
+    - deleted app source
+    - deleted app source
   modified:
     - pages/admin/ProposalDetail.tsx
-    - landing-page-new/src/app/proposal/[proposalId]/page.tsx
+    - deleted app source
 
 key-decisions:
   - "Denormalized user_name to avoid joins on reads"
@@ -89,11 +89,11 @@ Each task was committed atomically:
 - `components/proposals/CommentThread.tsx` - Admin SPA comment container
 - `components/proposals/CommentItem.tsx` - Admin SPA comment display
 - `components/proposals/CommentInput.tsx` - Admin SPA comment input
-- `landing-page-new/src/components/CommentThread.tsx` - Client portal comment container
-- `landing-page-new/src/components/CommentItem.tsx` - Client portal comment display
-- `landing-page-new/src/components/CommentInput.tsx` - Client portal comment input
+- `deleted app source` - Client portal comment container
+- `deleted app source` - Client portal comment display
+- `deleted app source` - Client portal comment input
 - `pages/admin/ProposalDetail.tsx` - Added CommentThread import and integration
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx` - Added CommentThread and auth integration
+- `deleted app source` - Added CommentThread and auth integration
 
 ## Decisions Made
 

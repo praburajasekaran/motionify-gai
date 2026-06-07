@@ -8,7 +8,7 @@ Use this checklist to ensure a smooth deployment to production.
 - [ ] Production publish directory is `dist`
 - [ ] Netlify Functions directory is `netlify/functions`
 - [ ] Netlify Next plugin is not configured for production
-- [ ] Legacy Next reference is not used by default install, build, or publish
+- [ ] Removed legacy landing app is not used by default install, build, or publish
 - [ ] `npm run verify:production-flip` passes
 - [ ] `npm run verify:runtime-retirement` passes
 - [ ] `npm run build` passes

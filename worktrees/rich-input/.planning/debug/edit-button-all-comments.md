@@ -33,7 +33,7 @@ severity: major
   implication: No logic to check if comment has replies after it
 
 - timestamp: 2026-01-21T00:06:00Z
-  checked: landing-page-new/src/components/CommentItem.tsx line 154
+  checked: deleted app source line 154
   found: Identical logic - `{isOwner && !isEditing && (` - only checks ownership
   implication: Client portal has same missing logic
 

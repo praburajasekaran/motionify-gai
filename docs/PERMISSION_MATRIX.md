@@ -323,7 +323,7 @@ canEditTask(user: User, task?: Task): boolean
 - **Client**: Can only see tasks marked `visibility: 'client'`
 
 **Implemented In:**
-- `landing-page-new/src/lib/portal/components/ProjectOverview.tsx` (line 99)
+- `deleted app source` (line 99)
 
 ---
 

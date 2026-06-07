@@ -73,7 +73,7 @@ next_action: Fix auth-me.ts to include CORS headers in response
   implication: Request is correct, but response headers might be missing
 
 - timestamp: 2026-01-25T17:22:45Z
-  checked: landing-page-new/src/lib/portal/api/auth.api.ts (client portal)
+  checked: deleted app source (client portal)
   found: Uses apiCall() which wraps fetch with credentials: 'include'
   found: All API calls use proper credentials
   implication: Client portal should work fine, issue is admin portal

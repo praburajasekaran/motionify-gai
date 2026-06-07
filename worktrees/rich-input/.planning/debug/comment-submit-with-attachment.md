@@ -27,12 +27,12 @@ started: UAT Test 2
 ## Evidence
 
 - timestamp: 2026-01-21T00:05:00Z
-  checked: landing-page-new/src/components/CommentInput.tsx
+  checked: deleted app source
   found: Line 166 - handleSubmit calls onSubmit(content.trim()) without passing pendingAttachments
   implication: Attachment data never reaches CommentThread
 
 - timestamp: 2026-01-21T00:06:00Z
-  checked: landing-page-new/src/components/CommentThread.tsx
+  checked: deleted app source
   found: Lines 186-204 - handleSubmit expects attachments via pendingAttachmentsRef.current (set by onAttachmentsChange callback), but CommentInput never passes attachment IDs to the onSubmit callback
   implication: CommentThread stores attachments in ref via onAttachmentsChange, but CommentInput's onSubmit signature includes optional attachmentIds parameter that's never used
 

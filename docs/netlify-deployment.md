@@ -10,7 +10,7 @@ Motionify Studio deploys as one Vite frontend runtime plus Netlify Functions.
 - **Publish directory**: `dist`
 - **Functions directory**: `netlify/functions`
 
-The legacy `landing-page-new/` Next implementation is retained only as non-runtime historical reference. Its scripts intentionally fail, it is not installed by the default lifecycle, it is not the production publish directory, and the Netlify Next plugin is not part of the production deploy path.
+The former separate frontend has been removed. Production does not install, build, publish, or deploy any Next runtime.
 
 Before publishing a deploy, run:
 

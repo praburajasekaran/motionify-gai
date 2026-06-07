@@ -31,14 +31,14 @@ re_verification: false
 
 | Artifact                                       | Expected                                      | Status      | Details                                                                                                                                                       |
 | ---------------------------------------------- | --------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `landing-page-new/src/components/CommentThread.tsx` | Cookie-authenticated comment editing         | ✓ VERIFIED | 381 lines. credentials: 'include' on lines 52, 72, 267. Used in client portal proposal pages. All fetch calls properly wired. No stub patterns detected. |
+| `deleted app source` | Cookie-authenticated comment editing         | ✓ VERIFIED | 381 lines. credentials: 'include' on lines 52, 72, 267. Used in client portal proposal pages. All fetch calls properly wired. No stub patterns detected. |
 | `contexts/NotificationContext.tsx`             | Cookie-authenticated notification API calls  | ✓ VERIFIED | 192 lines. credentials: 'include' on lines 88, 119, 139. Used by NotificationBell and NotificationDropdown. All API calls properly wired with optimistic updates and error handling. |
 
 ### Key Link Verification
 
 | From                               | To                             | Via                              | Status | Details                                                                                                                                                                                             |
 | ---------------------------------- | ------------------------------ | -------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `landing-page-new/src/components/CommentThread.tsx` | `/comments PUT endpoint`       | `fetch with credentials: 'include'` | ✓ WIRED | Pattern verified: line 262-268 shows PUT request with `credentials: 'include'` on line 267. Response used to update state on line 272. Function connected to CommentItem via onEdit prop (line 359). |
+| `deleted app source` | `/comments PUT endpoint`       | `fetch with credentials: 'include'` | ✓ WIRED | Pattern verified: line 262-268 shows PUT request with `credentials: 'include'` on line 267. Response used to update state on line 272. Function connected to CommentItem via onEdit prop (line 359). |
 | `contexts/NotificationContext.tsx` | `/notifications GET endpoint`   | `fetch with credentials: 'include'` | ✓ WIRED | Pattern verified: line 87-88 shows GET request with `credentials: 'include'`. Called on mount via useEffect (line 104). Response sets notifications state (line 93).                      |
 | `contexts/NotificationContext.tsx` | `/notifications PATCH endpoint` | `fetch with credentials: 'include'` | ✓ WIRED | Pattern verified: lines 116-121 (markAsRead) and 136-141 (markAllAsRead) show PATCH requests with `credentials: 'include' on lines 119 and 139. Used by NotificationDropdown (lines 39, 48). |
 

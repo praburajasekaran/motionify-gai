@@ -59,9 +59,9 @@ Some frontend files call `createActivity()` via the HTTP API. Once backend handl
 | File | What it logs |
 |------|-------------|
 | `pages/admin/ProposalBuilder.tsx:252` | `PROPOSAL_SENT` |
-| `landing-page-new/src/components/proposal/ProposalActions.tsx:65,119,176` | `PROPOSAL_ACCEPTED`, `PROPOSAL_CHANGES_REQUESTED`, `PROPOSAL_REJECTED` |
-| `landing-page-new/src/app/portal/inquiries/page.tsx:152-165` | Same proposal actions |
-| `landing-page-new/src/lib/portal/AppContext.tsx:285,380,427,524,745` | `TASK_STATUS_CHANGED`, `TEAM_MEMBER_REMOVED`, `TASK_CREATED`, `TASK_UPDATED`, `FILE_RENAMED` |
+| `deleted app source,119,176` | `PROPOSAL_ACCEPTED`, `PROPOSAL_CHANGES_REQUESTED`, `PROPOSAL_REJECTED` |
+| `deleted app source` | Same proposal actions |
+| `deleted app source,380,427,524,745` | `TASK_STATUS_CHANGED`, `TEAM_MEMBER_REMOVED`, `TASK_CREATED`, `TASK_UPDATED`, `FILE_RENAMED` |
 
 ## Proposed Solution
 
@@ -96,16 +96,16 @@ For `inquiries.ts` POST (unauthenticated public form): use `contact_name` from t
 ### Frontend (remove duplicate logging, add new types)
 
 9. `pages/admin/ProposalBuilder.tsx` — Remove `logProposalSent()` call
-10. `landing-page-new/src/components/proposal/ProposalActions.tsx` — Remove `logProposalAccepted/Rejected/ChangesRequested()` calls
-11. `landing-page-new/src/app/portal/inquiries/page.tsx` — Remove `logProposalAccepted/Rejected/ChangesRequested()` calls
-12. `landing-page-new/src/lib/portal/AppContext.tsx` — Remove `createActivity()` calls (5 call sites)
+10. `deleted app source` — Remove `logProposalAccepted/Rejected/ChangesRequested()` calls
+11. `deleted app source` — Remove `logProposalAccepted/Rejected/ChangesRequested()` calls
+12. `deleted app source` — Remove `createActivity()` calls (5 call sites)
 13. `services/activityApi.ts` — Add new types: `TASK_DELETED`, `FILE_DELETED`, `DELIVERABLE_CREATED`, `DELIVERABLE_DELETED`, `DELIVERABLE_STATUS_CHANGED`
-14. `landing-page-new/src/lib/portal/types.ts` — Add same new types to `ActivityType` enum
+14. `deleted app source` — Add same new types to `ActivityType` enum
 15. `pages/ProjectDetail.tsx` — Add `formatActivityAction` cases for new types
 
 ### Role/Visibility — Display filtering
 
-16. `landing-page-new/src/lib/portal/components/ProjectOverview.tsx` — Add `getActivityDetails` cases for new types
+16. `deleted app source` — Add `getActivityDetails` cases for new types
 
 ## Step-by-Step Implementation Plan
 
@@ -285,11 +285,11 @@ Note: The current handler uses `requireAuthFromCookie` which returns `{ userId }
 
 **10a. `pages/admin/ProposalBuilder.tsx`**: Remove `logProposalSent()` import and call (~line 8, 252)
 
-**10b. `landing-page-new/src/components/proposal/ProposalActions.tsx`**: Remove `logProposalAccepted/Rejected/ChangesRequested` imports and calls (~line 10, 65, 119, 176)
+**10b. `deleted app source`**: Remove `logProposalAccepted/Rejected/ChangesRequested` imports and calls (~line 10, 65, 119, 176)
 
-**10c. `landing-page-new/src/app/portal/inquiries/page.tsx`**: Remove `logProposalAccepted/Rejected/ChangesRequested` imports and calls (~line 13, 152-165)
+**10c. `deleted app source`**: Remove `logProposalAccepted/Rejected/ChangesRequested` imports and calls (~line 13, 152-165)
 
-**10d. `landing-page-new/src/lib/portal/AppContext.tsx`**: Remove 5 `createActivity()` call sites (lines 285, 380, 427, 524, 745) and the import on line 34
+**10d. `deleted app source`**: Remove 5 `createActivity()` call sites (lines 285, 380, 427, 524, 745) and the import on line 34
 
 ### Step 11: Add new activity types to frontend type definitions
 
@@ -304,7 +304,7 @@ Note: The current handler uses `requireAuthFromCookie` which returns `{ userId }
 | 'INQUIRY_STATUS_CHANGED'
 ```
 
-**11b. `landing-page-new/src/lib/portal/types.ts`**: Add to `ActivityType` enum:
+**11b. `deleted app source`**: Add to `ActivityType` enum:
 ```typescript
 TASK_DELETED = 'TASK_DELETED',
 FILE_DELETED = 'FILE_DELETED',
@@ -328,7 +328,7 @@ case 'INQUIRY_CREATED':             return 'submitted an inquiry';
 case 'INQUIRY_STATUS_CHANGED':      return `changed inquiry status to ${details.newStatus || 'updated'}`;
 ```
 
-**12b. `landing-page-new/src/lib/portal/components/ProjectOverview.tsx`** — Add cases to `getActivityDetails` (~line 59) for new types with appropriate icons and messages.
+**12b. `deleted app source`** — Add cases to `getActivityDetails` (~line 59) for new types with appropriate icons and messages.
 
 ## Role-Based Visibility Considerations
 

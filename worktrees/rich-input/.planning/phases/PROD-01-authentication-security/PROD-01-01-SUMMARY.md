@@ -26,10 +26,10 @@ key-files:
   modified:
     - lib/auth.ts
     - contexts/AuthContext.tsx
-    - landing-page-new/DEVELOPMENT.md
+    - deleted app source
     - docs/AUTHENTICATION_SETUP.md
   deleted:
-    - landing-page-new/src/lib/auth/mock-data.ts
+    - deleted app source
 
 key-decisions:
   - "Removed mock authentication completely rather than environment-gating it"
@@ -78,11 +78,11 @@ Each task was committed atomically:
    - Verified client portal builds successfully
 
 3. **Task 4: Remove unused mock data** - `b450eea` (chore)
-   - Deleted landing-page-new/src/lib/auth/mock-data.ts
+   - Deleted deleted app source
    - Confirmed zero codebase references to mock auth
 
 4. **Task 5: Update development docs** - `466c3dc` (docs)
-   - Added authentication workflow to landing-page-new/DEVELOPMENT.md
+   - Added authentication workflow to deleted app source
    - Updated docs/AUTHENTICATION_SETUP.md with removal notice
 
 ## Files Created/Modified
@@ -90,11 +90,11 @@ Each task was committed atomically:
 ### Modified
 - `lib/auth.ts` - Removed 59 lines of mock auth code (MOCK_USERS, setMockUser)
 - `contexts/AuthContext.tsx` - Cleaned mock auth imports and re-exports
-- `landing-page-new/DEVELOPMENT.md` - Added "Development Authentication" section
+- `deleted app source` - Added "Development Authentication" section
 - `docs/AUTHENTICATION_SETUP.md` - Added mock auth removal notice
 
 ### Deleted
-- `landing-page-new/src/lib/auth/mock-data.ts` - Unused mock user data (40 lines)
+- `deleted app source` - Unused mock user data (40 lines)
 
 ## Decisions Made
 

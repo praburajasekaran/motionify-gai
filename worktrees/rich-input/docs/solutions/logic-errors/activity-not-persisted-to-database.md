@@ -44,7 +44,7 @@ Import `createActivity` from `activities.api.ts` in `AppContext.tsx` and add fir
 
 | File | Change |
 |------|--------|
-| `landing-page-new/src/lib/portal/AppContext.tsx` | Added import + 5 `createActivity()` calls |
+| `deleted app source` | Added import + 5 `createActivity()` calls |
 
 ### Pattern: fire-and-forget alongside in-memory activity
 
@@ -112,14 +112,14 @@ The same pattern resurfaced in the `pages/` app (Vite/React Router side). The pr
 
 ### Additional fix: `AppContext.tsx` also missing fetch
 
-The `landing-page-new` portal's `AppContext.tsx` had `createActivity` calls (from the first fix above) but never **fetched** activities on project load. `transformProject()` in `projects.api.ts` always initialized `activities: []`. Added `fetchActivities()` alongside `fetchTasksForProject()` via `Promise.all`.
+The `deleted app` portal's `AppContext.tsx` had `createActivity` calls (from the first fix above) but never **fetched** activities on project load. `transformProject()` in `projects.api.ts` always initialized `activities: []`. Added `fetchActivities()` alongside `fetchTasksForProject()` via `Promise.all`.
 
 ### Files modified
 
 | File | Change |
 |------|--------|
 | `pages/ProjectDetail.tsx` | Added `createActivity()` calls to 3 handlers + `activityRefreshKey` state for live UI updates |
-| `landing-page-new/src/lib/portal/AppContext.tsx` | Added `fetchActivities()` on project load alongside task fetch |
+| `deleted app source` | Added `fetchActivities()` on project load alongside task fetch |
 
 ### Call sites updated in ProjectDetail.tsx (3 total)
 
@@ -150,7 +150,7 @@ createActivity({ ... })
 
 ### Lesson
 
-**Two codebases, same bug**: The app has two frontends (`landing-page-new/` portal and `pages/` admin). Both need activity persistence wired up independently. When fixing activity logging in one, check the other.
+**Two codebases, same bug**: The app has two frontends (`deleted app directory` portal and `pages/` admin). Both need activity persistence wired up independently. When fixing activity logging in one, check the other.
 
 ## Verification
 
@@ -163,9 +163,9 @@ createActivity({ ... })
 ## Related
 
 - Branch: `feat/task-deletion-and-client-creation-permissions`, `feat/add-revisions-included-to-proposal`
-- Portal: `landing-page-new/src/lib/portal/AppContext.tsx`
+- Portal: `deleted app source`
 - Pages app: `pages/ProjectDetail.tsx`
-- Dead code: `landing-page-new/src/lib/portal/AppRoot.tsx` (not imported anywhere)
-- API clients: `landing-page-new/src/lib/portal/api/activities.api.ts`, `services/activityApi.ts`
+- Dead code: `deleted app source` (not imported anywhere)
+- API clients: `deleted app source`, `services/activityApi.ts`
 - Backend: `netlify/functions/activities.ts`
 - Admin dashboard: `pages/Dashboard.tsx` (fetches `GET /activities?limit=10`)

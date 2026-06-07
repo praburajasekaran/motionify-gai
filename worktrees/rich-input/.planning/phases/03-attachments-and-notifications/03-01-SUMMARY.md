@@ -31,11 +31,11 @@ key_files:
     - "database/add-comment-attachments-table.sql"
     - "netlify/functions/attachments.ts"
     - "lib/attachments.ts"
-    - "landing-page-new/src/lib/attachments.ts"
+    - "deleted app source
     - "components/proposals/CommentInput.tsx"
     - "components/proposals/CommentItem.tsx"
-    - "landing-page-new/src/components/CommentInput.tsx"
-    - "landing-page-new/src/components/CommentItem.tsx"
+    - "deleted app source
+    - "deleted app source
 
 decisions: []
 
@@ -68,7 +68,7 @@ All required artifacts were verified as complete:
    - Authentication required via `requireAuth`
    - File type and size validation (10MB max)
 
-3. **Client Library** (`lib/attachments.ts` and `landing-page-new/src/lib/attachments.ts`)
+3. **Client Library** (`lib/attachments.ts` and `deleted app source`)
    - `getAttachments(commentId)` - Fetch comment attachments
    - `createAttachment(...)` - Create attachment record
    - `getPresignedUploadUrl(...)` - Get R2 upload URL
@@ -81,8 +81,8 @@ All required artifacts were verified as complete:
    - `components/proposals/CommentItem.tsx` - Attachment display and download
 
 5. **Client Portal Components**
-   - `landing-page-new/src/components/CommentInput.tsx` - File upload with progress
-   - `landing-page-new/src/components/CommentItem.tsx` - Attachment display and download
+   - `deleted app source` - File upload with progress
+   - `deleted app source` - Attachment display and download
 
 ## Features
 

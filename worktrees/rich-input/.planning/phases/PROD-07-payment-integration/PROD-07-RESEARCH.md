@@ -45,7 +45,7 @@ The codebase has all required dependencies for payment integration. No new libra
 
 ### Existing Payment Structure
 ```
-landing-page-new/src/
+deleted app source
 ├── lib/
 │   ├── razorpay-client.ts      # Client-side Razorpay checkout
 │   ├── payment.types.ts        # TypeScript interfaces
@@ -73,7 +73,7 @@ landing-page-new/src/
 **When to use:** Primary checkout flow
 **Example:**
 ```typescript
-// Source: Existing /landing-page-new/src/lib/razorpay-client.ts
+// Source: Existing /deleted app source
 const razorpay = new window.Razorpay({
   key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
   amount: order.amount,
@@ -92,7 +92,7 @@ razorpay.open();
 **When to use:** All payment verification
 **Example:**
 ```typescript
-// Source: Existing /landing-page-new/src/app/api/payments/verify/route.ts
+// Source: Existing /deleted app source
 const hmac = crypto.createHmac('sha256', keySecret);
 hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
 const generated_signature = hmac.digest('hex');
@@ -308,8 +308,8 @@ Things that couldn't be fully resolved:
 ## Sources
 
 ### Primary (HIGH confidence)
-- Existing codebase implementation at `/landing-page-new/src/app/api/payments/`
-- Existing codebase implementation at `/landing-page-new/src/lib/razorpay-client.ts`
+- Existing codebase implementation at `/deleted app source`
+- Existing codebase implementation at `/deleted app source`
 - Razorpay webhook documentation: https://razorpay.com/docs/webhooks/validate-test/
 - Razorpay payment events: https://razorpay.com/docs/webhooks/payments/
 - Database schema: `/features/pending/payment-workflow/04-database-schema.sql`

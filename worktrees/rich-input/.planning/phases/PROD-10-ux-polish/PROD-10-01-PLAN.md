@@ -7,8 +7,8 @@ depends_on: []
 files_modified:
   - lib/status-config.ts
   - pages/admin/ProposalDetail.tsx
-  - landing-page-new/src/components/proposal/ProposalReview.tsx
-  - landing-page-new/src/lib/status-config.ts
+  - deleted app source
+  - deleted app source
 autonomous: true
 
 must_haves:
@@ -21,7 +21,7 @@ must_haves:
     - path: "lib/status-config.ts"
       provides: "Centralized STATUS_CONFIG with clientLabel, adminLabel, icon, colorClass"
       exports: ["STATUS_CONFIG", "getStatusLabel", "getStatusConfig"]
-    - path: "landing-page-new/src/lib/status-config.ts"
+    - path: "deleted app source
       provides: "Client portal copy of status config"
       exports: ["STATUS_CONFIG", "getStatusLabel"]
   key_links:
@@ -29,8 +29,8 @@ must_haves:
       to: "lib/status-config.ts"
       via: "import STATUS_CONFIG"
       pattern: "import.*STATUS_CONFIG.*from"
-    - from: "landing-page-new/src/components/proposal/ProposalReview.tsx"
-      to: "landing-page-new/src/lib/status-config.ts"
+    - from: "deleted app source
+      to: "deleted app source
       via: "import STATUS_CONFIG"
       pattern: "import.*STATUS_CONFIG.*from"
 ---
@@ -40,7 +40,7 @@ Create centralized status configuration with professional client-facing labels a
 
 Purpose: Replace hardcoded status labels scattered across admin and client portals with a unified config that provides role-aware labels, consistent colors, and Lucide icons.
 
-Output: `lib/status-config.ts` (admin) and `landing-page-new/src/lib/status-config.ts` (client) containing STATUS_CONFIG object, updated components using the new config.
+Output: `lib/status-config.ts` (admin) and `deleted app source` (client) containing STATUS_CONFIG object, updated components using the new config.
 </objective>
 
 <execution_context>
@@ -55,7 +55,7 @@ Output: `lib/status-config.ts` (admin) and `landing-page-new/src/lib/status-conf
 @.planning/phases/PROD-10-ux-polish/PROD-10-CONTEXT.md
 @.planning/phases/PROD-10-ux-polish/PROD-10-RESEARCH.md
 @pages/admin/ProposalDetail.tsx
-@landing-page-new/src/components/proposal/ProposalReview.tsx
+@deleted app source
 </context>
 
 <tasks>
@@ -156,9 +156,9 @@ Admin portal status badges display same as before (no regression).
 
 <task type="auto">
   <name>Task 2: Update client portal with professional status labels</name>
-  <files>landing-page-new/src/lib/status-config.ts, landing-page-new/src/components/proposal/ProposalReview.tsx</files>
+  <files>deleted app source, deleted app source
   <action>
-Create `landing-page-new/src/lib/status-config.ts` (client portal version):
+Create `deleted app source` (client portal version):
 
 ```typescript
 import { Clock, CheckCircle2, XCircle, MessageSquare, type LucideIcon } from 'lucide-react';
@@ -204,7 +204,7 @@ export function getStatusConfig(status: ProposalStatus): StatusConfig {
 }
 ```
 
-Update `landing-page-new/src/components/proposal/ProposalReview.tsx`:
+Update `deleted app source`:
 1. Remove inline STATUS_COLORS and STATUS_LABELS objects (lines ~13-25)
 2. Add import: `import { STATUS_CONFIG, getStatusConfig } from '@/lib/status-config';`
 3. Update the status badge (line ~52-54) to use new config:
@@ -223,12 +223,12 @@ const StatusIcon = statusConfig.icon;
 This gives clients professional labels ("Awaiting Your Review" instead of "Awaiting Response") with traffic light colors (amber for pending, green for positive, red for negative).
   </action>
   <verify>
-Run `cd landing-page-new && npm run typecheck` - no TypeScript errors.
+Run `cd deleted app && npm run typecheck` - no TypeScript errors.
 Visit http://localhost:3000/proposal/[id] as a client user.
 Verify status badge shows "Awaiting Your Review" (amber) for sent proposals, with Clock icon.
   </verify>
   <done>
-landing-page-new/src/lib/status-config.ts exists with client-facing labels.
+deleted app source exists with client-facing labels.
 ProposalReview.tsx imports from lib/status-config.ts.
 Client sees "Awaiting Your Review" with amber badge and Clock icon for sent proposals.
 Client sees "Declined" with red badge and XCircle icon for rejected proposals.

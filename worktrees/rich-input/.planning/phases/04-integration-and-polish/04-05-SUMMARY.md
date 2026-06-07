@@ -42,8 +42,8 @@ Edit button appears only on own comments without subsequent replies from other u
 |------|--------|--------|
 | `components/proposals/CommentThread.tsx` | Added `computeHasSubsequentReplies` function, passes `hasSubsequentReplies` to CommentItem | 4294f06 |
 | `components/proposals/CommentItem.tsx` | Added `hasSubsequentReplies` prop, updated edit button conditional | 4294f06 |
-| `landing-page-new/src/components/CommentThread.tsx` | Added `computeHasSubsequentReplies` function, passes `hasSubsequentReplies` to CommentItem | f709e53 |
-| `landing-page-new/src/components/CommentItem.tsx` | Added `hasSubsequentReplies` prop, updated edit button conditional | f709e53 |
+| `deleted app source` | Added `computeHasSubsequentReplies` function, passes `hasSubsequentReplies` to CommentItem | f709e53 |
+| `deleted app source` | Added `hasSubsequentReplies` prop, updated edit button conditional | f709e53 |
 
 ---
 

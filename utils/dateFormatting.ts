@@ -1,6 +1,6 @@
 /**
  * Contextual date formatting utilities for the admin app.
- * Mirrors formatTimestamp from landing-page-new/src/lib/portal/utils/dateUtils.ts
+ * Shared contextual timestamp formatter for the root Vite runtime.
  *
  * Timezone support: call setUserTimezone() once at login to apply the user's
  * preferred timezone to all formatting functions automatically.

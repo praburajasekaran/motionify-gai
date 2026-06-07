@@ -53,7 +53,7 @@ Output: New admin page at /admin/payments with filterable payment list and summa
 @.planning/PRODUCTION_ROADMAP.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-CONTEXT.md
 @components/payments/PaymentHistory.tsx
-@landing-page-new/src/app/api/payments/history/route.ts
+@deleted app source
 @pages/admin/Dashboard.tsx
 </context>
 

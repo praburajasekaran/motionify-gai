@@ -48,7 +48,7 @@ Implement comment editing functionality: PUT API endpoint and edit UI in both po
 |------|--------|
 | `netlify/functions/comments.ts` | Added PUT handler with auth and ownership check |
 | `components/proposals/CommentItem.tsx` | Added edit mode state, textarea, save/cancel |
-| `landing-page-new/src/components/CommentItem.tsx` | Added edit mode state, textarea, save/cancel |
+| `deleted app source` | Added edit mode state, textarea, save/cancel |
 
 ## Verification Results
 

@@ -2,7 +2,7 @@
 title: "Centralize inquiry status labels to prevent inconsistent client terminology"
 date: "2026-01-31"
 category: ui-bugs
-tags: [status-labels, centralization, client-portal, inquiry-dashboard, dual-portal, single-source-of-truth]
+tags: [status-labels, centralization, client-portal, inquiry-dashboard, single-runtime, single-source-of-truth]
 module: inquiry-system
 severity: medium
 symptoms:
@@ -38,7 +38,7 @@ Searching the codebase revealed 7 files with inline status label maps or hardcod
 - `pages/Dashboard.tsx` — inline config with "Proposal Ready"
 - `pages/admin/ProposalDetail.tsx` — hardcoded "Rejected on {date}"
 - `pages/ProjectDetail.tsx` — activity feed "rejected the proposal"
-- `landing-page-new/.../inquiries/page.tsx` — "Active Project"
+- `deleted app source` — "Active Project"
 
 ## Root Cause
 
@@ -102,14 +102,14 @@ import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 5. `pages/Dashboard.tsx` — One-word label fix
 6. `pages/admin/ProposalDetail.tsx` — Role-conditional "Declined"/"Rejected"
 7. `pages/ProjectDetail.tsx` — Role-aware activity feed text
-8. `landing-page-new/src/app/portal/inquiries/page.tsx` — Label alignment
+8. `deleted app source` — Label alignment
 
 ## Prevention
 
 - **Single source of truth**: All status labels live in `lib/status-config.ts`. Never create inline label maps in components. When adding a new status to the `InquiryStatus` type, TypeScript will force you to add it to `INQUIRY_STATUS_CONFIG`.
-- **Audit all surfaces when fixing labels**: Status text appears in dashboards, detail pages, filter dropdowns, badges, timelines, activity feeds, and the separate Next.js portal. Search broadly before declaring a fix complete.
-- **Check both portals**: This codebase has two frontends — `pages/` (React SPA) and `landing-page-new/` (Next.js). When fixing client-facing text, check both.
-- **Grep for stragglers**: `grep -r "oldLabel" --include="*.tsx" pages/ landing-page-new/src/ | grep -v status-config` should return zero matches after a label change.
+- **Audit all surfaces when fixing labels**: Status text appears in dashboards, detail pages, filter dropdowns, badges, timelines, activity feeds, and the separate deleted portal. Search broadly before declaring a fix complete.
+- **Check both portals**: This codebase has two frontends — `pages/` (React SPA) and `deleted app directory` (Next.js). When fixing client-facing text, check both.
+- **Grep for stragglers**: `grep -r "oldLabel" --include="*.tsx" pages/ deleted app source | grep -v status-config` should return zero matches after a label change.
 
 ## Checklist for Future Label Changes
 

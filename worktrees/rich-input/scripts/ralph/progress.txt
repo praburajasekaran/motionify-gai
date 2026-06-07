@@ -45,7 +45,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 - **Files changed:**
   - `contexts/AuthContext.tsx` - Updated `loadUser()` to validate expiry, updated `setMockUser()` to include expiry, updated `logout()` to use new key
 - **Learnings for future iterations:**
-  - The codebase already has 400+ pre-existing TypeScript errors (mostly in `landing-page-new/`), so typecheck success means "no new errors"
+  - The codebase already has 400+ pre-existing TypeScript errors (mostly in `deleted app directory`), so typecheck success means "no new errors"
   - Session persistence was mostly working via localStorage - just needed expiry logic
 
 ---
@@ -69,7 +69,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 - **Learnings for future iterations:**
   - Good pattern to require both archiving AND admin permission for destructive actions
   - Toast notifications work well for mocking email/audit log in frontend-only implementations
-  - Pre-existing TypeScript errors in `landing-page-new/` don't affect portal code - typecheck exits 0 even with those errors
+  - Pre-existing TypeScript errors in `deleted app directory` don't affect portal code - typecheck exits 0 even with those errors
 
 ---
 
@@ -89,10 +89,10 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-10 - TC-TM-002: Client Cannot Create Tasks
 - **What was implemented:** Permission check to prevent clients from creating tasks - both UI restriction (hiding Add Task button and quick-add form) and API enforcement (403 response for client roles).
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/components/TaskList.tsx` - Wrapped quick-add form with `isInternalUser` conditional (Add Task button was already hidden)
+  - `deleted app source` - Wrapped quick-add form with `isInternalUser` conditional (Add Task button was already hidden)
   - `netlify/functions/tasks.ts` - Added role check in POST /tasks handler, returns 403 with "Only Motionify Studio team can create tasks" for client roles
 - **Learnings for future iterations:**
-  - Portal components are in `landing-page-new/src/lib/portal/` not root `components/`
+  - Portal components are in `deleted app source` not root `components/`
   - The `isInternalUser` pattern (checking for MOTIONIFY_MEMBER or PROJECT_MANAGER roles) is already established in TaskList.tsx
   - Client roles to check for: 'Primary Contact', 'Team Member', 'client', 'client_primary', 'client_team'
 
@@ -101,7 +101,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-10 - TC-TM-009: Task Visibility - Internal Only
 - **What was implemented:** Enforced internal task visibility restrictions - clients cannot see tasks with `visibleToClient: false`. Added visual "Internal" badge for team members. API enforcement returns 404 (not 403) for clients accessing internal tasks directly to prevent enumeration.
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/components/TaskItem.tsx` - Replaced "Not visible to client" text with styled amber "Internal" badge with lock icon (positioned top-right)
+  - `deleted app source` - Replaced "Not visible to client" text with styled amber "Internal" badge with lock icon (positioned top-right)
   - `netlify/functions/tasks.ts` - Added client role check in GET /tasks/:id (returns 404 for internal tasks), added filtering in GET /tasks list endpoint
 - **Learnings for future iterations:**
   - TaskList.tsx ALREADY had `visibleToClient` filtering implemented (lines 80-82) - just needed badge and API enforcement
@@ -113,10 +113,10 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-10 - TC-FM-006: Rename File
 - **What was implemented:** Enhanced file rename functionality with extension preservation, duplicate name validation, activity logging, and inline error feedback.
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/types.ts` - Added FILE_RENAMED to ActivityType enum
-  - `landing-page-new/src/lib/portal/utils/activityLogger.ts` - Added createFileRenamedActivity() function
-  - `landing-page-new/src/lib/portal/AppContext.tsx` - Enhanced renameFile() with extension preservation, duplicate validation, activity logging, and result object return
-  - `landing-page-new/src/lib/portal/components/FileItem.tsx` - Added error state, improved handleRename to display errors inline with red border
+  - `deleted app source` - Added FILE_RENAMED to ActivityType enum
+  - `deleted app source` - Added createFileRenamedActivity() function
+  - `deleted app source` - Enhanced renameFile() with extension preservation, duplicate validation, activity logging, and result object return
+  - `deleted app source` - Added error state, improved handleRename to display errors inline with red border
 - **Learnings for future iterations:**
   - FileItem.tsx already had inline edit UI with isEditing state - just needed validation and activity logging
   - Return result objects from context functions to enable UI error feedback (e.g. { success: boolean, error?: string })
@@ -128,9 +128,9 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-10 - TC-TC-002 & TC-TC-003: Comment Edit Within 1 Hour
 - **What was implemented:** Discovered feature was already fully implemented. 1-hour edit window enforced in `editComment()` function, 'Edited' badge displays on edited comments, disabled edit button with tooltip for old comments.
 - **Files already complete:**
-  - `landing-page-new/src/lib/portal/AppContext.tsx` - `editComment()` at lines 435-461 validates 1-hour window and sets `editedAt`
-  - `landing-page-new/src/lib/portal/components/TaskItem.tsx` - Lines 246-281 calculate `canEdit`, render "(Edited)" badge, show disabled edit with tooltip
-  - `landing-page-new/src/lib/portal/types.ts` - `editedAt?: number` property on Comment type
+  - `deleted app source` - `editComment()` at lines 435-461 validates 1-hour window and sets `editedAt`
+  - `deleted app source` - Lines 246-281 calculate `canEdit`, render "(Edited)" badge, show disabled edit with tooltip
+  - `deleted app source` - `editedAt?: number` property on Comment type
 - **Learnings for future iterations:**
   - Read implementation code before assuming features are missing - prd.json `relatedFiles` may be outdated (listed `components/comments/CommentItem.tsx` which doesn't exist)
   - Comment editing is done inline in TaskItem.tsx, not in a separate CommentItem component
@@ -159,7 +159,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-11 - TC-TC-004: @Mention Notification
 - **What was implemented:** Connected frontend `addComment()` in `AppContext.tsx` to backend API via `addTaskComment()`. This enables backend @mention parsing and email notifications via `sendMentionNotification()`. Feature was 90% complete - just needed the frontend-backend connection.
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/AppContext.tsx` - Made `addComment` async, added try/catch API call to `addTaskComment()` after local state update
+  - `deleted app source` - Made `addComment` async, added try/catch API call to `addTaskComment()` after local state update
 - **Learnings for future iterations:**
   - Feature can appear complete in frontend (autocomplete, rendering) but miss the backend API connection
   - `addTaskComment` API was already fully implemented with @mention detection and email sending
@@ -171,10 +171,10 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-11 - TC-TC-006: Client PM Removes Team Member
 - **What was implemented:** Client Primary Contact can remove other client team members from a project. Added TEAM_MEMBER_REMOVED activity type, createTeamMemberRemovedActivity() logger function, removeClientTeamMember() context function, and UI with confirmation dialog.
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/types.ts` - Added TEAM_MEMBER_REMOVED to ActivityType enum
-  - `landing-page-new/src/lib/portal/utils/activityLogger.ts` - Added createTeamMemberRemovedActivity() function
-  - `landing-page-new/src/lib/portal/AppContext.tsx` - Added removeClientTeamMember() function to context
-  - `landing-page-new/src/lib/portal/components/TeamManagement.tsx` - Added UserMinus button + confirmation dialog
+  - `deleted app source` - Added TEAM_MEMBER_REMOVED to ActivityType enum
+  - `deleted app source` - Added createTeamMemberRemovedActivity() function
+  - `deleted app source` - Added removeClientTeamMember() function to context
+  - `deleted app source` - Added UserMinus button + confirmation dialog
 - **Learnings for future iterations:**
   - Follow existing activity logging patterns (TEAM_MEMBER_INVITED → TEAM_MEMBER_REMOVED)
   - Always prevent self-removal in team management UIs (check user.id !== currentUser.id)
@@ -187,8 +187,8 @@ Add discovered patterns here as you work through tasks. These help future iterat
 ## 2026-01-11 - TC-TC-007: Client PM Cannot Remove Self
 - **What was implemented:** Prevented Client Primary Contact from removing themselves. Updated TeamManagement.tsx to disable the remove button for the current user and added tooltips. Added backend validation in AppContext to block self-removal.
 - **Files changed:**
-  - `landing-page-new/src/lib/portal/components/TeamManagement.tsx` - Disabled remove button logic for currentUser
-  - `landing-page-new/src/lib/portal/AppContext.tsx` - Added guard clause in removeClientTeamMember
+  - `deleted app source` - Disabled remove button logic for currentUser
+  - `deleted app source` - Added guard clause in removeClientTeamMember
 - **Learnings for future iterations:**
   - Better to show disabled buttons with tooltips than to hide controls completely (improves UX/discoverability of why action is blocked)
   - Always enforce UI restrictions with context/backend validation guarantees
@@ -207,7 +207,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 - **Learnings for future iterations:**
   - Mock data often drifts from actual type definitions if not checked regularly
   - `PermissionTest.tsx` is a good place to catch type drifts as it exercises many interfaces
-  - `landing-page-new/` errors are excluded and tracked separately
+  - `deleted app directory` errors are excluded and tracked separately
 
 ---
 
@@ -286,7 +286,7 @@ Add discovered patterns here as you work through tasks. These help future iterat
 - **Files modified:**
   - `App.tsx` - Added route `/admin/users`
 - **Learnings for future iterations:**
-  - Existing frontend components in `landing-page-new/` use path aliases that don't resolve from root project - better to create standalone components in `pages/` or `components/`
+  - Existing frontend components in `deleted app directory` use path aliases that don't resolve from root project - better to create standalone components in `pages/` or `components/`
   - User invitation uses same magic link pattern as auth-request-magic-link.ts - can reuse token generation logic
   - Soft delete (is_active = false) preserves historical data while revoking access
 

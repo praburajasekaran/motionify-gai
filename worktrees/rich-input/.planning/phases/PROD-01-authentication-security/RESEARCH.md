@@ -354,7 +354,7 @@ Before marking Phase 1 complete:
    - Update to read user from cookie-based JWT
    - Remove localStorage fallback
 
-3. `landing-page-new/src/context/AuthContext.tsx`
+3. `deleted app source`
    - Same changes as admin portal AuthContext
 
 4. `netlify/functions/_shared/jwt.ts` (new file)

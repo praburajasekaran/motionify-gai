@@ -412,7 +412,7 @@ return {
 
 **Files to modify:**
 - `lib/api-config.ts`
-- `landing-page-new/src/lib/api-config.ts`
+- `deleted app source`
 
 **Changes in both files:**
 
@@ -436,7 +436,7 @@ const response = await fetch(url, {
 
 ### Task 6: Update AuthContext to Read from JWT Cookie
 
-**File:** `contexts/AuthContext.tsx` and `landing-page-new/src/context/AuthContext.tsx`
+**File:** `contexts/AuthContext.tsx` and `deleted app source`
 
 **Changes:**
 

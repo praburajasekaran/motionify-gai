@@ -21,8 +21,8 @@ key-files:
   created:
     - components/ui/ErrorState.tsx
     - components/ui/EmptyState.tsx
-    - landing-page-new/src/components/ui/ErrorState.tsx
-    - landing-page-new/src/components/ui/EmptyState.tsx
+    - deleted app source
+    - deleted app source
   modified: []
 decisions:
   - id: error-classification
@@ -76,7 +76,7 @@ None - plan executed exactly as written.
 ## Verification
 
 - Admin portal builds successfully (`npm run build`)
-- Client portal builds successfully (`cd landing-page-new && npm run build`)
+- Client portal builds successfully (`cd deleted app && npm run build`)
 - All 4 files export their named components
 - ErrorState: contextual icons, retry button, dev details
 - EmptyState: customizable icon/title/description/action

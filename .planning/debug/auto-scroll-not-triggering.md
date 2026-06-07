@@ -49,7 +49,7 @@ context: Previous fix attempt in 04-04 added isNearBottom() helper, scrollToBott
   implication: Implementation is complete
 
 - timestamp: 2026-01-23T17:03:00Z
-  checked: landing-page-new/src/components/CommentThread.tsx
+  checked: deleted app source
   found: isNearBottom() at lines 93-99, scrollToBottom() at 101-108, auto-scroll logic at 171, 206-208
   implication: Both portals have identical logic structure
 
@@ -94,7 +94,7 @@ artifacts:
     lines: 44-50 (isNearBottom), 117 (check timing), 152-153 (auto-scroll execution)
     issue: setTimeout delay of 50ms may be too long or too short; smooth scroll may conflict with browser adjustment
 
-  - path: /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/landing-page-new/src/components/CommentThread.tsx
+  - path: /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/deleted app source
     lines: 93-99 (isNearBottom), 171 (check timing), 207-208 (auto-scroll execution)
     issue: setTimeout delay of 50ms may be too long or too short; smooth scroll may conflict with browser adjustment
 

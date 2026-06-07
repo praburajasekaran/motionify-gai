@@ -103,7 +103,7 @@ Systematic testing and hardening roadmap to take the Motionify Studio platform f
 
 ### Files to Modify
 - `contexts/AuthContext.tsx`
-- `landing-page-new/src/context/AuthContext.tsx`
+- `deleted app source`
 - `netlify/functions/auth-*.ts`
 - All `netlify/functions/*.ts` (add middleware)
 - Database connection config in all functions
@@ -165,7 +165,7 @@ Systematic testing and hardening roadmap to take the Motionify Studio platform f
 
 ### Files to Test
 - `pages/admin/ProposalDetail.tsx`
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx`
+- `deleted app source`
 - `netlify/functions/proposals.ts`
 - `database/schema.sql` (proposals table)
 
@@ -308,7 +308,7 @@ Systematic testing and hardening roadmap to take the Motionify Studio platform f
 - `components/tasks/TaskEditModal.tsx` - Fixed status enum values
 - `pages/ProjectDetail.tsx` - Color-coded status, client permission check
 - `netlify/functions/tasks.ts` - JWT-based role check (security fix)
-- `landing-page-new/src/lib/portal/components/TaskList.tsx` - Hide task creation for clients
+- `deleted app source` - Hide task creation for clients
 
 ---
 
@@ -427,12 +427,12 @@ Systematic testing and hardening roadmap to take the Motionify Studio platform f
 5. ✅ Payment history accurate for all proposals
 
 ### Files Modified
-- `landing-page-new/src/app/api/webhooks/razorpay/route.ts`
-- `landing-page-new/src/app/api/payments/admin/route.ts`
+- `deleted app source`
+- `deleted app source`
 - `pages/admin/Payments.tsx`
-- `landing-page-new/src/lib/portal/pages/PaymentsPage.tsx`
-- `landing-page-new/src/app/payment/success/page.tsx`
-- `landing-page-new/src/app/payment/failure/page.tsx`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
 - `services/paymentApi.ts`
 
 ---
@@ -515,9 +515,9 @@ All protected endpoints now receive httpOnly cookies for authentication:
 
 ### Files Modified
 - `lib/status-config.ts` — Admin portal status config
-- `landing-page-new/src/lib/status-config.ts` — Client portal status config
-- `landing-page-new/src/components/proposal/StatusTimeline.tsx` — Timeline component
-- `landing-page-new/src/components/proposal/ProposalReview.tsx` — Timeline integration
+- `deleted app source` — Client portal status config
+- `deleted app source` — Timeline component
+- `deleted app source` — Timeline integration
 - `pages/admin/ProposalDetail.tsx` — Edit restrictions + force edit
 - `components/ui/ConfirmDialog.tsx` — Confirmation dialog
 - `netlify/functions/send-email.ts` — Status change email template
@@ -562,7 +562,7 @@ All protected endpoints now receive httpOnly cookies for authentication:
 ### Files to Test
 - `netlify/functions/send-email.ts`
 - `contexts/NotificationContext.tsx`
-- `landing-page-new/src/contexts/NotificationContext.tsx`
+- `deleted app source`
 - Email templates throughout codebase
 
 ---
@@ -632,8 +632,8 @@ All protected endpoints now receive httpOnly cookies for authentication:
 4. Deliverable view → files accessible → approval workflow functional
 
 ### Files to Test
-- `landing-page-new/src/app/page.tsx`
-- `landing-page-new/src/app/portal/`
+- `deleted app source`
+- `deleted app source`
 - All portal components
 
 ---

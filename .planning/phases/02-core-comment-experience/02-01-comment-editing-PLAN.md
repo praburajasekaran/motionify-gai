@@ -8,8 +8,8 @@ files_modified:
   - "netlify/functions/comments.ts"
   - "components/proposals/CommentThread.tsx"
   - "components/proposals/CommentItem.tsx"
-  - "landing-page-new/src/components/CommentThread.tsx"
-  - "landing-page-new/src/components/CommentItem.tsx"
+  - "deleted app source
+  - "deleted app source
 autonomous: true
 user_setup: []
 
@@ -26,7 +26,7 @@ must_haves:
     - path: "components/proposals/CommentItem.tsx"
       provides: "Edit mode UI for admin portal"
       contains: "EditButton, edit mode state, save/cancel"
-    - path: "landing-page-new/src/components/CommentItem.tsx"
+    - path: "deleted app source
       provides: "Edit mode UI for client portal"
       contains: "EditButton, edit mode state, save/cancel"
   key_links:
@@ -111,7 +111,7 @@ Output: Working edit feature with PUT endpoint and inline edit UI.
 
 <task type="auto">
   <name>Add edit UI to client CommentItem</name>
-  <files>landing-page-new/src/components/CommentItem.tsx</files>
+  <files>deleted app source
   <action>
     Add inline editing capability to the client portal CommentItem component.
 
@@ -124,7 +124,7 @@ Output: Working edit feature with PUT endpoint and inline edit UI.
 
     Ensure Lucide icons are imported (import { Pencil, X, Check } from 'lucide-react')
   </action>
-  <verify>npm run build passes for landing-page-new, edit functionality works same as admin</verify>
+  <verify>npm run build passes for deleted app, edit functionality works same as admin</verify>
   <done>Client portal users can edit their own comments with same UI/UX as admin</done>
 </task>
 

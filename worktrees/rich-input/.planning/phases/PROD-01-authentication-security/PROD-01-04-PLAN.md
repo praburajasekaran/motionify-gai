@@ -145,7 +145,7 @@ grep -r "rejectUnauthorized" --include="*.ts" --include="*.js" --exclude-dir=nod
 **Files to check:**
 - `database/migrate.ts`
 - `scripts/*` (any scripts that connect to database)
-- `landing-page-new/src/lib/db.ts` (if exists)
+- `deleted app source` (if exists)
 
 **Action:**
 For each file found, apply the same SSL enforcement logic:

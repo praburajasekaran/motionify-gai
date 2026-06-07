@@ -46,7 +46,7 @@ Output: Verified webhook integration with test transaction evidence in database 
 @.planning/phases/PROD-09-payment-production-wiring/PROD-09-01-SUMMARY.md
 
 # Relevant source files
-@landing-page-new/src/app/api/webhooks/razorpay/route.ts
+@deleted app source
 @netlify/functions/send-email.ts
 </context>
 
@@ -58,9 +58,9 @@ Output: Verified webhook integration with test transaction evidence in database 
   <action>
 Check that required environment variables are set for webhook testing:
 
-1. **Check .env.local in landing-page-new:**
+1. **Check .env.local in deleted app:**
 ```bash
-grep -E "RAZORPAY_WEBHOOK_SECRET|RESEND_API_KEY|ADMIN_NOTIFICATION_EMAIL" landing-page-new/.env.local
+grep -E "RAZORPAY_WEBHOOK_SECRET|RESEND_API_KEY|ADMIN_NOTIFICATION_EMAIL" deleted app source
 ```
 
 2. **Document required variables:**
@@ -75,8 +75,8 @@ grep -E "RAZORPAY_WEBHOOK_SECRET|RESEND_API_KEY|ADMIN_NOTIFICATION_EMAIL" landin
 The webhook handler checks for RAZORPAY_WEBHOOK_SECRET and returns 500 if not configured.
   </action>
   <verify>
-Run `grep -c "RAZORPAY_WEBHOOK_SECRET" landing-page-new/.env.local` - should return 1 if set.
-Run `grep -c "ADMIN_NOTIFICATION_EMAIL" landing-page-new/.env.local` - should return 1 if set.
+Run `grep -c "RAZORPAY_WEBHOOK_SECRET" deleted app source` - should return 1 if set.
+Run `grep -c "ADMIN_NOTIFICATION_EMAIL" deleted app source` - should return 1 if set.
 List any missing variables that need to be set.
   </verify>
   <done>
@@ -87,7 +87,7 @@ Environment variable checklist completed. Missing variables documented for user 
 <task type="checkpoint:human-verify" gate="blocking">
   <what-built>Environment variable check for webhook testing</what-built>
   <how-to-verify>
-**Confirm these environment variables are set in `landing-page-new/.env.local`:**
+**Confirm these environment variables are set in `deleted app source`:**
 
 1. `RAZORPAY_WEBHOOK_SECRET` - Get from Razorpay Dashboard > Settings > Webhooks > Create/Edit Webhook > Secret
 2. `ADMIN_NOTIFICATION_EMAIL` - Your email to receive failure notifications
@@ -98,7 +98,7 @@ Environment variable checklist completed. Missing variables documented for user 
 **To set missing variables:**
 ```bash
 # Edit the file
-nano landing-page-new/.env.local
+nano deleted app source
 
 # Add missing lines like:
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
@@ -121,7 +121,7 @@ ADMIN_NOTIFICATION_EMAIL=your@email.com
 
 1. **Start the Next.js development server:**
 ```bash
-cd landing-page-new && npm run dev
+cd deleted app && npm run dev
 ```
 
 2. **In a new terminal, start ngrok tunnel:**
@@ -141,7 +141,7 @@ ngrok http 3000
    - Click **Create Webhook**
 
 5. **Add webhook secret to environment:**
-   - Edit `landing-page-new/.env.local`
+   - Edit `deleted app source`
    - Add: `RAZORPAY_WEBHOOK_SECRET=<paste-secret-here>`
    - Restart Next.js dev server
   </instructions>

@@ -10,7 +10,7 @@ gaps:
     artifacts:
       - path: "components/proposals/CommentThread.tsx"
         issue: "CommentItem rendered without onEdit prop (line 153-158)"
-      - path: "landing-page-new/src/components/CommentThread.tsx"
+      - path: "deleted app source
         issue: "CommentItem rendered without onEdit prop (line 205-209)"
     missing:
       - "handleEdit function in CommentThread"
@@ -22,7 +22,7 @@ gaps:
     artifacts:
       - path: "components/proposals/CommentThread.tsx"
         issue: "pollForNewComments appends comments without scroll preservation"
-      - path: "landing-page-new/src/components/CommentThread.tsx"
+      - path: "deleted app source
         issue: "Same - no scroll restoration"
     missing:
       - "useRef for tracking scroll position before update"
@@ -83,8 +83,8 @@ Phase 2 implements two major features: comment editing and real-time polling. Wh
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `landing-page-new/src/components/CommentItem.tsx` | Edit UI | ✅ VERIFIED | 129 lines: Identical implementation to admin portal |
-| `landing-page-new/src/components/CommentThread.tsx` | Polling + URL fix | ✅ VERIFIED | 227 lines: Polling with `NEXT_PUBLIC_API_URL` env var (no hardcoded localhost) |
+| `deleted app source` | Edit UI | ✅ VERIFIED | 129 lines: Identical implementation to admin portal |
+| `deleted app source` | Polling + URL fix | ✅ VERIFIED | 227 lines: Polling with `NEXT_PUBLIC_API_URL` env var (no hardcoded localhost) |
 
 ---
 
@@ -110,7 +110,7 @@ Phase 2 implements two major features: comment editing and real-time polling. Wh
 ))}
 ```
 
-**Client Portal (`landing-page-new/src/components/CommentThread.tsx` lines 203-210):**
+**Client Portal (`deleted app source` lines 203-210):**
 ```tsx
 {comments.map(comment => (
     <CommentItem

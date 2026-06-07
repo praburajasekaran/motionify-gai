@@ -38,12 +38,12 @@ Add a `revisions_included` field to the **proposals** table and thread it throug
 | `database/schema.sql` | Add `revisions_included INTEGER NOT NULL DEFAULT 2` to proposals table (line ~90) |
 | New migration file | `database/migrations/011_add_revisions_included_to_proposals.sql` |
 | `shared/contracts/proposal.contract.ts` | Add `revisionsIncluded` to `ProposalSchema` and `CreateProposalDtoSchema` |
-| `landing-page-new/src/lib/proposals.ts` | Add `revisionsIncluded` to `Proposal` interface |
+| `deleted app source` | Add `revisionsIncluded` to `Proposal` interface |
 | `netlify/functions/proposals.ts` | Add `revisionsIncluded`/`revisions_included` to `CreateProposalPayload`, field mapping, and INSERT/UPDATE queries |
 | `pages/admin/ProposalBuilder.tsx` | Add state + UI for revisions included input |
 | `pages/admin/ProposalDetail.tsx` | Add view + edit mode for revisions included |
-| `landing-page-new/src/components/proposal/ProposalReview.tsx` | Display revisions included to client |
-| `landing-page-new/src/app/api/projects/create-from-payment/route.ts` | Read `revisions_included` from proposal instead of hardcoded `2` |
+| `deleted app source` | Display revisions included to client |
+| `deleted app source` | Read `revisions_included` from proposal instead of hardcoded `2` |
 
 ### Implementation Details
 
@@ -109,7 +109,7 @@ revisionsIncluded: z.number().int().min(0).max(20),
 - **Edit mode**: Same input as ProposalBuilder
 - Include in `handleSaveChanges` payload
 
-#### 6. Client UI - ProposalReview (`landing-page-new/src/components/proposal/ProposalReview.tsx`)
+#### 6. Client UI - ProposalReview (`deleted app source`)
 
 Display between Deliverables and Pricing sections:
 
@@ -159,10 +159,10 @@ This requires the proposal fetch query in `create-from-payment` to include the `
 
 - Proposal creation UI: `pages/admin/ProposalBuilder.tsx`
 - Proposal detail/edit UI: `pages/admin/ProposalDetail.tsx`
-- Client proposal view: `landing-page-new/src/components/proposal/ProposalReview.tsx`
+- Client proposal view: `deleted app source`
 - API: `netlify/functions/proposals.ts`
 - Contracts: `shared/contracts/proposal.contract.ts`
-- Project creation: `landing-page-new/src/app/api/projects/create-from-payment/route.ts:86`
+- Project creation: `deleted app source`
 - DB schema: `database/schema.sql:67-98`
 - Existing revision tracking: `database/schema.sql:116-117` (projects table)
 - Pending feature spec: `features/pending/inquiry-to-project/04-database-schema.sql:161`

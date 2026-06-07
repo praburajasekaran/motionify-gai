@@ -108,7 +108,7 @@ DROP TABLE IF EXISTS proposal_comments CASCADE;
 - `CommentItem.tsx` ✅ Renders comments with edit badge
 - `CommentInput.tsx` ✅ Handles input and file uploads
 
-**Client Portal (`landing-page-new/src/components/`):**
+**Client Portal (`deleted app source`):**
 - `CommentThread.tsx` ⚠️ Inline API calls (not using shared lib)
 - `CommentItem.tsx` ✅ Same component as admin
 - `CommentInput.tsx` ✅ Same component as admin
@@ -395,7 +395,7 @@ import { getComments, createComment, updateComment } from '@/lib/comments';
 ```
 
 ### Client Portal (Next.js)
-**Location:** `landing-page-new/src/components/`
+**Location:** `deleted app source`
 
 | Component | File | Pattern |
 |-----------|------|---------|
@@ -505,7 +505,7 @@ async function getComments(proposalId: string, since?: string): Promise<Comment[
 ## Missing Connections
 
 ### ⚠️ Client Portal Not Using Shared Lib
-**Issue:** `landing-page-new/src/components/CommentThread.tsx` has inline API calls instead of using shared `lib/comments.ts`
+**Issue:** `deleted app source` has inline API calls instead of using shared `lib/comments.ts`
 
 **Impact:**
 - Code duplication
@@ -514,7 +514,7 @@ async function getComments(proposalId: string, since?: string): Promise<Comment[
 
 **Fix Required:**
 ```typescript
-// landing-page-new/src/components/CommentThread.tsx
+// deleted app source
 // CHANGE FROM:
 async function getComments(proposalId: string, since?: string): Promise<Comment[]> {
     let url = `${API_BASE}/comments?proposalId=${proposalId}`;
@@ -542,9 +542,9 @@ psql $DATABASE_URL -f database/add-comment-attachments-table.sql
 ```
 
 ### Priority 2: Refactor Client Portal
-Create `landing-page-new/src/lib/comments.ts` to share API logic:
+Create `deleted app source` to share API logic:
 ```typescript
-// landing-page-new/src/lib/comments.ts
+// deleted app source
 import { api } from './api-config';
 
 export async function getComments(proposalId: string, since?: string) {

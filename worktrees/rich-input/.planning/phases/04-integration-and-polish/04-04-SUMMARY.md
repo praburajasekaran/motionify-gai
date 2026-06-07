@@ -36,7 +36,7 @@ Added two helper functions to both CommentThread components:
 | File | Portal | Changes |
 |------|--------|---------|
 | `components/proposals/CommentThread.tsx` | Admin (Vite SPA) | +73/-25 lines |
-| `landing-page-new/src/components/CommentThread.tsx` | Client (Next.js) | +73/-25 lines |
+| `deleted app source` | Client (Next.js) | +73/-25 lines |
 
 ### Verification
 

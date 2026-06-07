@@ -97,7 +97,7 @@ resolved: 5
   root_cause: "CommentInput.handleSubmit only passes content to onSubmit callback, ignoring pendingAttachments state"
   resolution: "Already fixed by user"
   artifacts:
-    - path: "landing-page-new/src/components/CommentInput.tsx"
+    - path: "deleted app source
       issue: "Line 166 calls onSubmit without attachmentIds parameter declared in interface"
     - path: "components/proposals/CommentInput.tsx"
       issue: "Line 166 calls onSubmit without attachmentIds parameter declared in interface"
@@ -162,7 +162,7 @@ resolved: 5
   artifacts:
     - path: "components/proposals/CommentThread.tsx"
       issue: "pollForNewComments has scroll logic but not calling scrollToBottom() when new comments detected"
-    - path: "landing-page-new/src/components/CommentThread.tsx"
+    - path: "deleted app source
       issue: "pollForNewComments has scroll logic but not calling scrollToBottom() when new comments detected"
   missing:
     - "Verify isNearBottom() detection working correctly"
@@ -194,9 +194,9 @@ resolved: 5
   test: 8
   root_cause: "04-05 plan added logic but not working in client portal - edit buttons on all comments AND comments appearing duplicated (new issue discovered)"
   artifacts:
-    - path: "landing-page-new/src/components/CommentItem.tsx"
+    - path: "deleted app source
       issue: "Edit button conditional not working - shows on all own comments"
-    - path: "landing-page-new/src/components/CommentThread.tsx"
+    - path: "deleted app source
       issue: "computeHasSubsequentReplies logic not working, AND comments rendering multiple times (duplication bug)"
   missing:
     - "Debug why comments appear duplicated in client portal"
@@ -213,11 +213,11 @@ resolved: 5
   artifacts:
     - path: "components/proposals/CommentItem.tsx"
       issue: "Edit button showing even when hasSubsequentReplies should be true"
-    - path: "landing-page-new/src/components/CommentItem.tsx"
+    - path: "deleted app source
       issue: "Edit button showing even when hasSubsequentReplies should be true"
     - path: "components/proposals/CommentThread.tsx"
       issue: "computeHasSubsequentReplies logic may have bug in detecting other user's replies"
-    - path: "landing-page-new/src/components/CommentThread.tsx"
+    - path: "deleted app source
       issue: "computeHasSubsequentReplies logic may have bug in detecting other user's replies"
   missing:
     - "Review computeHasSubsequentReplies implementation - verify it checks author_id/author_type correctly"
@@ -232,7 +232,7 @@ resolved: 5
   test: 8
   root_cause: "Client portal CommentThread likely rendering comments multiple times - possible React key issue, polling adding duplicates, or component re-mounting"
   artifacts:
-    - path: "landing-page-new/src/components/CommentThread.tsx"
+    - path: "deleted app source
       issue: "Comments array may have duplicates, or rendering logic causing multiple renders of same comment"
   missing:
     - "Check if comments array has duplicate entries (same comment_id multiple times)"
@@ -255,7 +255,7 @@ resolved: 5
 - Root cause: Race condition - rapid clicks executed before button disabled (React state async)
 - Fix: Added `isSubmittingRef` synchronous guard
 - Commit: 0edee7b
-- File: landing-page-new/src/components/CommentInput.tsx
+- File: deleted app source
 
 **Agent 3: Auto-Scroll**
 - Root cause: `setTimeout` not synchronized with React render cycle

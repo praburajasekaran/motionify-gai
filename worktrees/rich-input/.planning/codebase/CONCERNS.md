@@ -6,21 +6,21 @@
 
 **Mock Authentication System:**
 - Issue: Entire authentication system uses mock data and localStorage sessions
-- Files: `contexts/AuthContext.tsx`, `landing-page-new/src/context/AuthContext.tsx`
+- Files: `contexts/AuthContext.tsx`, `deleted app source`
 - Impact: No real session management, security vulnerabilities, cannot deploy to production
 - Fix approach: Implement real JWT-based authentication with magic link tokens, replace `setMockUser()` with proper session handling, migrate from localStorage to secure httpOnly cookies
 - Priority: Critical - blocks production deployment
 
 **Dual Codebase Structure:**
-- Issue: Two parallel applications (root React app and `landing-page-new/` Next.js app) with overlapping functionality
-- Files: Root level vs `landing-page-new/src/`
+- Issue: Two parallel applications (root React app and `deleted app directory` deleted app) with overlapping functionality
+- Files: Root level vs `deleted app source`
 - Impact: Code duplication, inconsistent state management, difficulty maintaining feature parity
-- Fix approach: Consolidate into single Next.js application or clearly separate concerns (landing vs portal), establish shared component library
+- Fix approach: Consolidate into single deleted application or clearly separate concerns (landing vs portal), establish shared component library
 - Priority: High - increases maintenance burden
 
 **localStorage as Primary Data Store:**
 - Issue: Critical application data stored in browser localStorage instead of database
-- Files: `contexts/AuthContext.tsx`, `landing-page-new/src/lib/portal/AppContext.tsx`
+- Files: `contexts/AuthContext.tsx`, `deleted app source`
 - Impact: Data loss on browser clear, no multi-device sync, scalability issues
 - Fix approach: Migrate all data persistence to PostgreSQL backend, use localStorage only for caching
 - Priority: Critical - 57 instances across 18 files
@@ -104,10 +104,10 @@
 **Large Component Files:**
 - Problem: Extremely complex components with high cyclomatic complexity
 - Files:
-  - `landing-page-new/src/app/api/payments/__tests__/payments.test.ts` (982 lines)
+  - `deleted app source` (982 lines)
   - `netlify/functions/tasks.ts` (862 lines)
   - `pages/ProjectDetail.tsx` (1,164 lines)
-  - `landing-page-new/src/lib/portal/AppContext.tsx` (745 lines)
+  - `deleted app source` (745 lines)
 - Cause: Lack of component decomposition, mixing concerns
 - Improvement path: Split into smaller focused components, extract business logic into services
 - Priority: Medium - affects maintainability and testing
@@ -143,7 +143,7 @@
 - Priority: Medium - critical error handling path
 
 **Task State Machine:**
-- Files: `landing-page-new/src/lib/portal/utils/taskStateTransitions.ts`
+- Files: `deleted app source`
 - Why fragile: Complex state transition logic, no validation enforcement at API level
 - Safe modification: Add state transition tests, enforce transitions in backend
 - Test coverage: UI tests only via e2e/admin-functional.spec.ts
@@ -220,7 +220,7 @@
 
 **Payment Flow:**
 - What's not tested: Razorpay integration has mock tests only
-- Files: `landing-page-new/src/app/api/payments/__tests__/payments.test.ts` (982 lines of mocks)
+- Files: `deleted app source` (982 lines of mocks)
 - Risk: Real payment failures in production
 - Priority: Critical - financial transactions at risk
 

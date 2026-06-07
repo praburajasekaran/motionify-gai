@@ -34,7 +34,7 @@
 | Export | Source | Used By | Status |
 |--------|--------|---------|--------|
 | `CommentThread` | `components/proposals/CommentThread.tsx` | `pages/admin/ProposalDetail.tsx` (line 10) | ✅ CONNECTED |
-| `CommentThread` | `landing-page-new/src/components/CommentThread.tsx` | `landing-page-new/src/app/proposal/[proposalId]/page.tsx` (line 13) | ✅ CONNECTED |
+| `CommentThread` | `deleted app source` | `deleted app source` (line 13) | ✅ CONNECTED |
 | `CommentItem` | `components/proposals/CommentItem.tsx` | `components/proposals/CommentThread.tsx` (line 2) | ✅ CONNECTED |
 | `CommentInput` | `components/proposals/CommentInput.tsx` | `components/proposals/CommentThread.tsx` (line 3) | ✅ CONNECTED |
 | `getComments()` | `lib/comments.ts` | `components/proposals/CommentThread.tsx` (line 4) | ✅ CONNECTED |
@@ -104,10 +104,10 @@
 
 | Route | Method | Created In | Consumed By | Status |
 |-------|--------|-----------|-------------|--------|
-| `/comments?proposalId={id}` | GET | Phase 1 (`netlify/functions/comments.ts` line 66) | `lib/comments.ts:21`, `landing-page-new/src/components/CommentThread.tsx:28` | ✅ CONSUMED |
-| `/comments?proposalId={id}&since={ts}` | GET | Phase 2 (`netlify/functions/comments.ts` line 95-110) | `lib/comments.ts:23`, `landing-page-new/src/components/CommentThread.tsx:32` | ✅ CONSUMED |
-| `/comments` | POST | Phase 1 (`netlify/functions/comments.ts` line 137) | `lib/comments.ts:36`, `landing-page-new/src/components/CommentThread.tsx:44` | ✅ CONSUMED |
-| `/comments` | PUT | Phase 2 (`netlify/functions/comments.ts` line 301) | `lib/comments.ts:50`, `landing-page-new/src/components/CommentThread.tsx:198` | ✅ CONSUMED |
+| `/comments?proposalId={id}` | GET | Phase 1 (`netlify/functions/comments.ts` line 66) | `lib/comments.ts:21`, `deleted app source` | ✅ CONSUMED |
+| `/comments?proposalId={id}&since={ts}` | GET | Phase 2 (`netlify/functions/comments.ts` line 95-110) | `lib/comments.ts:23`, `deleted app source` | ✅ CONSUMED |
+| `/comments` | POST | Phase 1 (`netlify/functions/comments.ts` line 137) | `lib/comments.ts:36`, `deleted app source` | ✅ CONSUMED |
+| `/comments` | PUT | Phase 2 (`netlify/functions/comments.ts` line 301) | `lib/comments.ts:50`, `deleted app source` | ✅ CONSUMED |
 | `/attachments?commentId={id}` | GET | Phase 3 (`netlify/functions/attachments.ts` line 108) | `lib/attachments.ts:36`, `components/proposals/CommentItem.tsx:65` | ✅ CONSUMED |
 | `/attachments?attachmentId={id}` | GET | Phase 3 (`netlify/functions/attachments.ts` line 113) | `lib/attachments.ts:101`, `components/proposals/CommentItem.tsx:77` | ✅ CONSUMED |
 | `/attachments` | POST | Phase 3 (`netlify/functions/attachments.ts` line 234) | `lib/attachments.ts:47`, `components/proposals/CommentThread.tsx:127` | ✅ CONSUMED |

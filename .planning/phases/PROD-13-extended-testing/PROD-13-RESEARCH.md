@@ -437,13 +437,13 @@ testT06_02_ClientCannotEditTask()
 - `.planning/phases/PROD-05-task-management/test-runner.js` (extend this)
 - `.planning/phases/PROD-05-task-management/PROD-05-UAT-RESULTS.md` (test definitions)
 - `netlify/functions/tasks.ts` (backend validation logic)
-- `landing-page-new/src/lib/portal/types.ts` (frontend types)
+- `deleted app source` (frontend types)
 
 **Supporting:**
 - `database/schema.sql` (task table structure)
 - `database/migrations/007_add_task_stage_enum_values.sql` (enum values)
-- `landing-page-new/src/lib/portal/components/TaskList.tsx` (UI logic)
-- `landing-page-new/src/lib/portal/utils/taskStateTransitions.ts` (frontend state machine)
+- `deleted app source` (UI logic)
+- `deleted app source` (frontend state machine)
 
 ---
 

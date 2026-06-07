@@ -199,7 +199,7 @@ Template for `.planning/codebase/INTEGRATIONS.md` - captures external service de
 ## CI/CD & Deployment
 
 **Hosting:**
-- Vercel - Next.js app hosting
+- Vercel - deleted app hosting
   - Deployment: Automatic on main branch push
   - Environment vars: Configured in Vercel dashboard (synced to .env.example)
 

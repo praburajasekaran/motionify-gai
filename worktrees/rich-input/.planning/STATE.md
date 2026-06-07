@@ -224,8 +224,8 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 - Email notification on new comments (sender excluded)
 - In-app notification creation in notifications table
 - NotificationContext integration for comment notifications
-- Client portal NotificationContext at `landing-page-new/src/contexts/NotificationContext.tsx`
-- Client portal NotificationProvider in `landing-page-new/src/app/layout.tsx`
+- Client portal NotificationContext at `deleted app source`
+- Client portal NotificationProvider in `deleted app source`
 - Client portal CommentThread notification trigger
 - Client portal NotificationBell using NotificationContext
 - **Robust Error Handling:** CORS headers on all responses, safe DB connections
@@ -238,7 +238,7 @@ Overall: 80% complete | Phase 4 nearing completion | Next: /gsd:audit-milestone 
 
 **Existing Infrastructure:**
 - Vite SPA admin portal: `pages/admin/ProposalDetail.tsx`
-- Next.js client portal: `landing-page-new/src/app/proposal/[proposalId]/page.tsx`
+- Next.js client portal: `deleted app source`
 - PostgreSQL database with connection pooling
 - Netlify Functions for API layer
 - R2 presign for file uploads
@@ -387,7 +387,7 @@ VERIFICATION.md: All must-haves verified
 
 **Phase PROD-10 - Plan 01: Status Labels Complete:**
 - Created centralized STATUS_CONFIG in lib/status-config.ts (admin portal)
-- Created landing-page-new/src/lib/status-config.ts (client portal)
+- Created deleted app source (client portal)
 - Professional client labels: "Awaiting Your Review" (not "Sent"), "Declined" (not "Rejected")
 - Added Lucide icons to all status badges (Clock, CheckCircle2, XCircle, MessageSquare)
 - Applied traffic light colors to client portal (amber/green/red/orange)
@@ -607,7 +607,7 @@ VERIFICATION.md: All must-haves verified
 ---
 
 **Phase PROD-07 - Plan 03: Admin Payments API Complete:**
-- Created /api/payments/admin GET endpoint in Next.js app
+- Created /api/payments/admin GET endpoint in deleted app
 - Authentication via proxy to /auth-me Netlify function
 - Admin role check (super_admin or project_manager required)
 - Filter support: status, dateFrom, dateTo, clientName, projectSearch
@@ -828,14 +828,14 @@ VERIFICATION.md: All must-haves verified
 - Security enhancement: JWT tokens in httpOnly cookies prevent XSS token theft
 - Created PROD-01-02-SUMMARY.md
 - Duration: 7 minutes
-- **Note:** Additional Next.js portal files need credentials: 'include' added (proposals.ts, inquiries.ts, etc.)
+- **Note:** Additional deleted portal files need credentials: 'include' added (proposals.ts, inquiries.ts, etc.)
 
 **PROD-01-01 - Remove Mock Authentication Executed:**
 - Executed `/gsd:execute-phase` on PROD-01-01-PLAN.md (Authentication Security)
 - Removed MOCK_USERS and setMockUser from lib/auth.ts (59 lines)
 - Cleaned mock auth imports from contexts/AuthContext.tsx
 - Verified client portal AuthContext already clean
-- Deleted unused landing-page-new/src/lib/auth/mock-data.ts
+- Deleted unused deleted app source
 - Updated development documentation for magic link workflow
 - Codebase search confirms zero mock auth references
 - Production bundles verified clean of mock auth code

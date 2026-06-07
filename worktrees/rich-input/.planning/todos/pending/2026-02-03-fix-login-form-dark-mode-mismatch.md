@@ -3,7 +3,7 @@ created: 2026-02-03T16:44
 title: Fix login form dark mode mismatch
 area: ui
 files:
-  - landing-page-new/src/app/login (likely location)
+  - deleted app source (likely location)
 ---
 
 ## Problem

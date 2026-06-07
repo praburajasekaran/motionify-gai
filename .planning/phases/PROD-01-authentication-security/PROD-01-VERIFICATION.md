@@ -73,7 +73,7 @@ None detected -- all previously passing truths still pass.
 | `netlify/functions/_shared/schemas.ts` | Validation schemas | VERIFIED | 27+ schemas including notification/activity schemas added by PROD-01-11 |
 | `netlify/functions/_shared/db.ts` | SSL-enforced database client | VERIFIED | Production enforces ssl: true (line 22-26) |
 | `contexts/AuthContext.tsx` | Cookie-based sessions | VERIFIED | Calls /auth-me with credentials: 'include'; no localStorage reads |
-| `landing-page-new/src/context/AuthContext.tsx` | Cookie-based sessions | VERIFIED | Calls /auth-me API; no localStorage session fallback |
+| `deleted app source` | Cookie-based sessions | VERIFIED | Calls /auth-me API; no localStorage session fallback |
 | Core business endpoints | Auth middleware | VERIFIED | proposals, projects, payments, deliverables, tasks all use withAuth() |
 | Supporting endpoints | Auth middleware | VERIFIED | comments, attachments, activities, notifications, inquiry-detail now use withAuth() |
 | All endpoints | Rate limiting | VERIFIED | 28 of 33 endpoints rate-limited (85%) |
@@ -87,9 +87,9 @@ None detected -- all previously passing truths still pass.
 |------|----|----|--------|---------|
 | Magic link verification | JWT cookie | Set-Cookie header | WIRED | auth-verify-magic-link.ts sets httpOnly cookie |
 | Admin AuthContext | /auth-me endpoint | credentials: 'include' | WIRED | contexts/AuthContext.tsx line 46-48 |
-| Client AuthContext | /auth-me endpoint | credentials: 'include' | WIRED | landing-page-new/src/context/AuthContext.tsx line 34-35 |
+| Client AuthContext | /auth-me endpoint | credentials: 'include' | WIRED | deleted app source line 34-35 |
 | Admin AuthContext logout | /auth-logout endpoint | POST with credentials | WIRED | contexts/AuthContext.tsx line 102 |
-| Client AuthContext logout | /auth-logout endpoint | POST with credentials | WIRED | landing-page-new API call |
+| Client AuthContext logout | /auth-logout endpoint | POST with credentials | WIRED | deleted app API call |
 | Core business endpoints | withAuth middleware | compose pattern | WIRED | All protected endpoints use composable middleware |
 | Supporting endpoints | withAuth middleware | compose pattern | WIRED | comments, attachments, activities, notifications, inquiry-detail now protected |
 | All endpoints | Rate limiting | withRateLimit() | WIRED | 28 endpoints rate-limited |
@@ -308,7 +308,7 @@ None found. Previous anti-patterns have been resolved:
 
 ### 1. Mock Auth Removal
 ```bash
-$ grep -r "setMockUser\|MOCK_USERS" contexts/ landing-page-new/src/context/ netlify/
+$ grep -r "setMockUser\|MOCK_USERS" contexts/ deleted app source netlify/
 # Returns: 0 results
 ```
 

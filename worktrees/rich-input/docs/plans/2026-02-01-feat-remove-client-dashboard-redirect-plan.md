@@ -72,7 +72,7 @@ In the `commandItems` array and `globalShortcuts` array, conditionally exclude t
 | 4 | **Catch-all route** | The `"*"` catch-all redirects to `"/"`, which will trigger the redirect logic for clients. This is correct behaviour. |
 | 5 | **Logo click** | The sidebar logo links to `"/"`. For clients, this will trigger the redirect to Projects or Inquiries. Acceptable — no change needed. |
 | 6 | **Breadcrumb text** | The header breadcrumb shows "Dashboard" when `location.pathname === '/'`. Since clients will be redirected away from `/`, they'll never see this. No change needed. |
-| 7 | **Dual-portal pattern** | Per institutional learnings, there's a Next.js portal in `landing-page-new/`. This change only affects the React SPA (`pages/`). The Next.js portal has its own routing and is not affected. |
+| 7 | **Single-runtime pattern** | Per institutional learnings, there's a deleted portal in `deleted app directory`. This change only affects the React SPA (`pages/`). The deleted portal has its own routing and is not affected. |
 
 ## What Will NOT Be Changed
 
@@ -82,6 +82,6 @@ In the `commandItems` array and `globalShortcuts` array, conditionally exclude t
 - **`netlify/functions/activities.ts`** — admin-only endpoint, untouched
 - **`pages/ProjectList.tsx`** — no changes
 - **`pages/admin/InquiryDashboard.tsx`** — no changes
-- **`landing-page-new/` (Next.js portal)** — no changes
+- **`deleted app directory` (deleted portal)** — no changes
 - **No new dependencies or libraries**
 - **No config, env, build, or infrastructure files**

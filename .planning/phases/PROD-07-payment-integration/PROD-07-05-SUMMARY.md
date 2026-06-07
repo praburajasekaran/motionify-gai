@@ -25,9 +25,9 @@ tech-stack:
 
 key-files:
   modified:
-    - landing-page-new/src/app/api/payments/verify/route.ts
-    - landing-page-new/src/app/payment/failure/page.tsx
-    - landing-page-new/src/app/payment/success/page.tsx
+    - deleted app source
+    - deleted app source
+    - deleted app source
     - netlify/functions/send-email.ts
 
 key-decisions:
@@ -73,9 +73,9 @@ Each task was committed atomically:
 3. **Task 3: Update success page to redirect to deliverables** - `c4a222f` (feat)
 
 ## Files Created/Modified
-- `landing-page-new/src/app/api/payments/verify/route.ts` - Added logPaymentAttempt() and notifyAdminPaymentFailure() functions
-- `landing-page-new/src/app/payment/failure/page.tsx` - Enhanced with retry button, error code display, order reference
-- `landing-page-new/src/app/payment/success/page.tsx` - Added 5-second countdown auto-redirect to project page
+- `deleted app source` - Added logPaymentAttempt() and notifyAdminPaymentFailure() functions
+- `deleted app source` - Enhanced with retry button, error code display, order reference
+- `deleted app source` - Added 5-second countdown auto-redirect to project page
 - `netlify/functions/send-email.ts` - Added sendPaymentFailureNotificationEmail template
 
 ## Decisions Made

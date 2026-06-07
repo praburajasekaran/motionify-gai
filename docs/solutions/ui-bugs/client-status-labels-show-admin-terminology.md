@@ -2,7 +2,7 @@
 title: Client Inquiry Dashboard Shows Admin Status Labels Instead of Client-Friendly Labels
 date: 2026-01-30
 category: ui-bugs
-tags: [status-labels, client-portal, inquiry-dashboard, dual-portal]
+tags: [status-labels, client-portal, inquiry-dashboard, single-runtime]
 module: inquiry-system
 symptoms: Inquiry card badge shows "Proposal Sent" instead of "Proposal Received" for client users
 severity: low
@@ -19,13 +19,13 @@ Confusingly, the **stat cards** at the top of the same page correctly showed "Pr
 
 ## Investigation
 
-The fix had **already been applied** to the new Next.js portal (`landing-page-new/src/app/portal/inquiries/page.tsx`) which has a `clientFriendlyStatusLabels` map with `proposal_sent: 'Proposal Received'` and conditional rendering via `useClientLabels={!isAdmin}`.
+The fix had **already been applied** to the new deleted portal (`deleted app source`) which has a `clientFriendlyStatusLabels` map with `proposal_sent: 'Proposal Received'` and conditional rendering via `useClientLabels={!isAdmin}`.
 
 However, clients were still seeing the old React SPA page (`pages/admin/InquiryDashboard.tsx`), which had a single `STATUS_LABELS` map with no client/admin distinction.
 
 ## Root Cause
 
-**The client-friendly label fix was applied to the wrong page.** The new Next.js portal had the fix, but clients were actually using the old React SPA `InquiryDashboard` page. This is a recurring pattern in this codebase — see [dual-portal awareness](#related-documentation).
+**The client-friendly label fix was applied to the wrong page.** The new deleted portal had the fix, but clients were actually using the old React SPA `InquiryDashboard` page. This is a recurring pattern in this codebase — see [single-runtime awareness](#related-documentation).
 
 The old page had:
 - `STATUS_LABELS` — single map used for all users, always showing admin terms
@@ -67,7 +67,7 @@ Updated filter dropdown to show client-friendly options when `isClient(user)`.
 
 Changed `proposal_sent: 'Proposal Sent'` to `proposal_sent: 'Proposal Received'`. This page is client-only so no conditional needed.
 
-### 3. `landing-page-new/src/components/proposal/StatusTimeline.tsx`
+### 3. `deleted app source`
 
 Changed `PROPOSAL_SENT` activity label from `'Proposal Sent'` to `'Proposal Received'`. This timeline is only visible to clients viewing a proposal.
 
@@ -77,13 +77,13 @@ Changed `PROPOSAL_SENT` activity label from `'Proposal Sent'` to `'Proposal Rece
 
 This codebase has two frontends that clients can reach:
 1. **Old React SPA** — `pages/` directory (React Router)
-2. **New Next.js portal** — `landing-page-new/` directory
+2. **New deleted portal** — `deleted app directory` directory
 
 When fixing client-facing labels, **check both portals**. Search broadly:
 
 ```bash
 # Find all status label maps across both portals
-grep -r "proposal_sent.*Proposal" pages/ landing-page-new/src/
+grep -r "proposal_sent.*Proposal" pages/ deleted app source
 ```
 
 ### Pattern: Client vs Admin Terminology

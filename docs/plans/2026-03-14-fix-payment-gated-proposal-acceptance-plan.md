@@ -254,7 +254,7 @@ if (!['super_admin', 'support'].includes(role)) {
 
 ### Phase 3: Frontend UI Change
 
-**File: `landing-page-new/src/components/proposal/ProposalActions.tsx`**
+**File: `deleted app source`**
 
 Change the `handleAccept` function:
 
@@ -333,7 +333,7 @@ Change button label from `"Accept Proposal"` (or whatever current label is) to `
 | `netlify/functions/razorpay-webhook.ts` | Call helper inside `handlePaymentCaptured` for `advance` payments |
 | `netlify/functions/proposal-detail.ts` | Add 402 guard in PATCH handler when `status === 'accepted'` |
 | `netlify/functions/proposals.ts` | Add 402 guard in PATCH and PUT handlers when `status === 'accepted'` |
-| `landing-page-new/src/components/proposal/ProposalActions.tsx` | Remove acceptance API calls from `handleAccept`; rename button to "Accept & Pay" |
+| `deleted app source` | Remove acceptance API calls from `handleAccept`; rename button to "Accept & Pay" |
 
 ---
 
@@ -352,7 +352,7 @@ Change button label from `"Accept Proposal"` (or whatever current label is) to `
 
 ### Internal
 - Brainstorm: `docs/brainstorms/2026-03-14-payment-gated-proposal-acceptance-brainstorm.md`
-- ProposalActions component: `landing-page-new/src/components/proposal/ProposalActions.tsx:30–70`
+- ProposalActions component: `deleted app source`
 - Proposal PATCH handler (public): `netlify/functions/proposal-detail.ts:138–204`
 - Proposal PATCH/PUT handler (auth): `netlify/functions/proposals.ts:224–429`
 - Payments verify + manual-complete: `netlify/functions/payments.ts:307–631`

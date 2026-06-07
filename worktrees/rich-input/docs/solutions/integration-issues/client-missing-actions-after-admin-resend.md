@@ -21,7 +21,7 @@ symptoms:
 files_modified:
   - lib/proposals.ts
   - netlify/functions/proposal-detail.ts
-  - landing-page-new/src/lib/proposals.ts
+  - deleted app source
   - pages/admin/ProposalDetail.tsx
 severity: critical
 ---
@@ -36,10 +36,10 @@ Five bugs combined to cause this:
 
 ### 1. Dual data store not synced on resend
 
-The admin SPA writes to **PostgreSQL** via Netlify functions. The client Next.js app reads from **JSON file storage** via Next.js API routes. When the admin clicks "Resend to Client", PostgreSQL is updated but JSON storage is not.
+The admin SPA writes to **PostgreSQL** via Netlify functions. The client deleted app reads from **JSON file storage** via Next.js API routes. When the admin clicks "Resend to Client", PostgreSQL is updated but JSON storage is not.
 
 - Admin resend: `pages/admin/ProposalDetail.tsx` -> `lib/proposals.ts:updateProposal()` -> `PUT /.netlify/functions/proposal-detail/{id}` (PostgreSQL)
-- Client read: `landing-page-new/src/lib/proposals.ts:fetchProposalById()` -> `GET /api/proposals/{id}` (JSON file)
+- Client read: `deleted app source)` -> `GET /api/proposals/{id}` (JSON file)
 
 ### 2. Version field missing from snake_case mapping
 
@@ -61,7 +61,7 @@ The `proposal-detail` Netlify function used `withAuth()` globally, returning 401
 
 ### Fix 1: Client reads from PostgreSQL first
 
-Updated `landing-page-new/src/lib/proposals.ts:fetchProposalById()` to try the Netlify function backend (PostgreSQL) first, falling back to JSON storage:
+Updated `deleted app source)` to try the Netlify function backend (PostgreSQL) first, falling back to JSON storage:
 
 ```typescript
 export async function fetchProposalById(id: string): Promise<Proposal | null> {
@@ -142,7 +142,7 @@ export const handler = compose(
 
 2. **When adding new fields to a data model**, check all three layers: TypeScript type, snake_case mapping function, and backend `allowedFields` whitelist.
 
-3. **Dual data store is an anti-pattern** — the long-term fix is consolidating `landing-page-new` to only serve landing page and quiz, moving all API/portal functionality to the main portal (5173). See `.planning/todos/pending/2026-02-02-consolidate-landing-page-into-portal.md`.
+3. **Dual data store is an anti-pattern** — the long-term fix is consolidating `deleted app` to only serve landing page and quiz, moving all API/portal functionality to the main portal (5173). See `.planning/todos/pending/2026-02-02-consolidate-landing-page-into-portal.md`.
 
 4. **Auth middleware pattern**: When an endpoint needs mixed auth (some methods public, others authenticated), use conditional auth inside the handler instead of `withAuth()` in the compose chain. Follow the pattern in `netlify/functions/inquiries.ts`.
 

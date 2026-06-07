@@ -38,9 +38,9 @@ re_verification:
 | -------- | -------- | ------ | ------- |
 | `netlify/functions/attachments.ts` | Backend API | ✓ VERIFIED | Substantive (handles R2/S3). |
 | `lib/attachments.ts` | Admin Utils | ✓ VERIFIED | Substantive (exports types, API calls). |
-| `landing-page-new/src/lib/attachments.ts` | Client Utils | ✓ VERIFIED | Substantive (exports types, API calls). |
-| `landing-page-new/src/components/CommentThread.tsx` | Client UI | ✓ VERIFIED | Substantive (polls comments, triggers notifications). |
-| `landing-page-new/src/contexts/NotificationContext.tsx` | Client Context | ✓ VERIFIED | Substantive (fetches/polls notifications). |
+| `deleted app source` | Client Utils | ✓ VERIFIED | Substantive (exports types, API calls). |
+| `deleted app source` | Client UI | ✓ VERIFIED | Substantive (polls comments, triggers notifications). |
+| `deleted app source` | Client Context | ✓ VERIFIED | Substantive (fetches/polls notifications). |
 | `netlify/functions/comments.ts` | Backend Logic | ✓ VERIFIED | Substantive (sends emails). |
 
 ### Key Link Verification

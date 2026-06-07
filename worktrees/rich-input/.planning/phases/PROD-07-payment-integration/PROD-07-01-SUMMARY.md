@@ -25,7 +25,7 @@ tech-stack:
 key-files:
   created:
     - database/migrations/009_payment_webhook_logs.sql
-    - landing-page-new/src/app/api/webhooks/razorpay/route.ts
+    - deleted app source
   modified:
     - netlify/functions/_shared/schemas.ts
 
@@ -71,7 +71,7 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 - `database/migrations/009_payment_webhook_logs.sql` - Webhook audit log table with idempotency
-- `landing-page-new/src/app/api/webhooks/razorpay/route.ts` - Webhook endpoint handler
+- `deleted app source` - Webhook endpoint handler
 - `netlify/functions/_shared/schemas.ts` - Added razorpayWebhookSchema
 
 ## Decisions Made

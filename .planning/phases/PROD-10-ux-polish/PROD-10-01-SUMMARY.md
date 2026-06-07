@@ -26,10 +26,10 @@ tech-stack:
 key-files:
   created:
     - lib/status-config.ts
-    - landing-page-new/src/lib/status-config.ts
+    - deleted app source
   modified:
     - pages/admin/ProposalDetail.tsx
-    - landing-page-new/src/components/proposal/ProposalReview.tsx
+    - deleted app source
 
 key-decisions:
   - "Keep admin portal's existing purple-themed colors for consistency with existing design"
@@ -77,9 +77,9 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 - `lib/status-config.ts` - Centralized status config for admin portal with adminLabel/clientLabel, icons, colors
-- `landing-page-new/src/lib/status-config.ts` - Client portal version with professional labels and traffic light colors
+- `deleted app source` - Client portal version with professional labels and traffic light colors
 - `pages/admin/ProposalDetail.tsx` - Updated to import from centralized config, uses adminLabel
-- `landing-page-new/src/components/proposal/ProposalReview.tsx` - Updated to use centralized config with icons and traffic light colors
+- `deleted app source` - Updated to use centralized config with icons and traffic light colors
 
 ## Decisions Made
 

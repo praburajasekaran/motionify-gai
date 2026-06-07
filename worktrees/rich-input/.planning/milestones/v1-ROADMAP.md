@@ -21,14 +21,14 @@ Implementation of Fiverr/Upwork-style comment threads enabling real-time proposa
 - **COMM-08:** Persistent Comments
 
 **Dependencies:**
-- Existing: Proposal detail pages (`landing-page-new/.../proposal/[proposalId]/page.tsx`, `pages/admin/ProposalDetail.tsx`)
+- Existing: Proposal detail pages (`deleted app source`, `pages/admin/ProposalDetail.tsx`)
 - Existing: PostgreSQL database with connection pooling
 - Existing: Netlify Functions infrastructure
 
 **Success Criteria:**
 
 1. **Users see comment section on proposal detail page**
-   Client users viewing `landing-page-new/src/app/proposal/[proposalId]/page.tsx` see a comment thread section. Superadmins viewing `pages/admin/ProposalDetail.tsx` also see the comment section. Both views show an empty state when no comments exist.
+   Client users viewing `deleted app source` see a comment thread section. Superadmins viewing `pages/admin/ProposalDetail.tsx` also see the comment section. Both views show an empty state when no comments exist.
 
 2. **Comments persist in database across sessions**
    When a comment is posted, it is stored in the `proposal_comments` table. Closing and reopening the browser (or starting a new session) displays previously posted comments in chronological order.

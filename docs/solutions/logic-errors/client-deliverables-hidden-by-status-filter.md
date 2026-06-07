@@ -7,7 +7,7 @@ tags:
   - permissions
   - client-portal
   - status-filter
-  - dual-portal
+  - single-runtime
 module: deliverables
 symptoms:
   - "Clients cannot see deliverables in pending or in_progress status"
@@ -113,8 +113,8 @@ When making previously hidden items visible, ensure the UI communicates *why* th
 |------|--------|
 | `netlify/functions/deliverables.ts` | Removed `viewableStatuses` filter |
 | `utils/deliverablePermissions.ts` | Simplified `canViewDeliverable()`, removed denial message |
-| `landing-page-new/src/lib/portal/components/ProjectOverview.tsx` | Added status badges with icons |
-| `landing-page-new/src/lib/portal/types.ts` | Added `status` field to client Deliverable type |
+| `deleted app source` | Added status badges with icons |
+| `deleted app source` | Added `status` field to client Deliverable type |
 | `pages/DeliverableReview.tsx` | Completed `statusColors` map for all 8 statuses |
 | `pages/ProjectDetail.tsx` | Expanded inline Badge variant logic |
 | `components/deliverables/DeliverableFilesList.tsx` | Status-aware empty state |

@@ -9,8 +9,8 @@ files_modified:
   - pages/admin/Projects.tsx
   - pages/admin/Payments.tsx
   - pages/admin/UserManagement.tsx
-  - landing-page-new/src/app/portal/projects/page.tsx
-  - landing-page-new/src/app/portal/proposals/page.tsx
+  - deleted app source
+  - deleted app source
 autonomous: true
 
 must_haves:
@@ -116,13 +116,13 @@ Output: All major list pages updated with consistent loading, error, and empty s
 <task type="auto">
   <name>Task 2: Apply ErrorState and EmptyState to client portal pages</name>
   <files>
-    landing-page-new/src/app/portal/projects/page.tsx
-    landing-page-new/src/app/portal/proposals/page.tsx
+    deleted app source
+    deleted app source
   </files>
   <action>
     Apply the same pattern to the 2 main client portal list pages:
 
-    1. **Client portal projects page** (`landing-page-new/src/app/portal/projects/page.tsx`):
+    1. **Client portal projects page** (`deleted app source`):
        - Import `ErrorState` from client portal's UI components
        - Import `EmptyState` from client portal's UI components
        - Replace error display with `<ErrorState error={error} onRetry={fetchProjects} />`
@@ -133,12 +133,12 @@ Output: All major list pages updated with consistent loading, error, and empty s
        - Same pattern: ErrorState for errors, EmptyState for no data
        - EmptyState: `icon={FileText}`, "No proposals yet", "You'll see proposals here when they're sent to you."
 
-    Note: Client portal uses Next.js so components are in `landing-page-new/src/components/ui/`. Adjust import paths accordingly. The client portal may use "use client" directive for these interactive pages.
+    Note: Client portal uses Next.js so components are in `deleted app source`. Adjust import paths accordingly. The client portal may use "use client" directive for these interactive pages.
 
     Keep changes minimal - only the rendering of error/empty/loading states.
   </action>
   <verify>
-    Run `cd landing-page-new && npm run build` to verify client portal builds.
+    Run `cd deleted app && npm run build` to verify client portal builds.
     Grep for `ErrorState` in modified client files.
     Grep for `EmptyState` in modified client files.
   </verify>
@@ -151,7 +151,7 @@ Output: All major list pages updated with consistent loading, error, and empty s
 
 <verification>
 1. `npm run build` passes for admin portal
-2. `cd landing-page-new && npm run build` passes for client portal
+2. `cd deleted app && npm run build` passes for client portal
 3. All 6 pages import and use ErrorState and EmptyState
 4. Error states have retry functionality wired
 5. Empty states have contextual icons and messages
