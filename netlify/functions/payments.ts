@@ -56,6 +56,177 @@ function createPaymentError(statusCode: number, message: string) {
   return error;
 }
 
+function getPaymentsPathSegments(path: string): string[] {
+  const parts = path.split('/').filter(Boolean);
+  const paymentsIndex = parts.lastIndexOf('payments');
+  return paymentsIndex >= 0 ? parts.slice(paymentsIndex + 1) : [];
+}
+
+function serializeDate(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+}
+
+function mapAdminPayment(row: any) {
+  return {
+    id: row.id,
+    amount: Number(row.amount ?? 0),
+    currency: row.currency,
+    paymentType: row.payment_type,
+    status: row.status,
+    razorpayOrderId: row.razorpay_order_id,
+    razorpayPaymentId: row.razorpay_payment_id,
+    paidAt: serializeDate(row.paid_at),
+    createdAt: serializeDate(row.created_at),
+    projectId: row.project_id,
+    projectNumber: row.project_number,
+    projectStatus: row.project_status,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    clientEmail: row.client_email,
+  };
+}
+
+function buildAdminPaymentFilters(queryStringParameters: Record<string, string> | undefined) {
+  const { status, dateFrom, dateTo, clientName, projectSearch } = queryStringParameters || {};
+  const clauses: string[] = [];
+  const params: any[] = [];
+
+  const addParam = (value: any) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  if (status && status !== 'all') {
+    clauses.push(`pay.status = ${addParam(status)}`);
+  }
+
+  if (dateFrom) {
+    clauses.push(`pay.created_at >= ${addParam(dateFrom)}::date`);
+  }
+
+  if (dateTo) {
+    clauses.push(`pay.created_at < (${addParam(dateTo)}::date + INTERVAL '1 day')`);
+  }
+
+  if (clientName) {
+    const placeholder = addParam(`%${clientName}%`);
+    clauses.push(`(
+      u.full_name ILIKE ${placeholder}
+      OR u.email ILIKE ${placeholder}
+      OR i.contact_name ILIKE ${placeholder}
+      OR i.contact_email ILIKE ${placeholder}
+    )`);
+  }
+
+  if (projectSearch) {
+    const placeholder = addParam(`%${projectSearch}%`);
+    clauses.push(`(
+      proj.project_number ILIKE ${placeholder}
+      OR i.inquiry_number ILIKE ${placeholder}
+    )`);
+  }
+
+  return {
+    params,
+    whereClause: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
+  };
+}
+
+async function handleAdminProjects(headers: Record<string, string>) {
+  const result = await dbQuery(
+    `SELECT
+       p.id,
+       p.project_number,
+       COALESCE(u.full_name, i.contact_name, 'Unknown client') AS client_name
+     FROM projects p
+     LEFT JOIN users u ON p.client_user_id = u.id
+     LEFT JOIN inquiries i ON p.inquiry_id = i.id
+     WHERE p.status NOT IN ('archived', 'cancelled')
+     ORDER BY p.created_at DESC`
+  );
+
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify(result.rows.map((row: any) => ({
+      id: row.id,
+      projectNumber: row.project_number,
+      clientName: row.client_name,
+    }))),
+  };
+}
+
+async function handleAdminPayments(
+  event: NetlifyEvent,
+  headers: Record<string, string>
+) {
+  const { whereClause, params } = buildAdminPaymentFilters(event.queryStringParameters);
+
+  const result = await dbQuery(
+    `SELECT
+       pay.id,
+       pay.amount,
+       pay.currency,
+       pay.payment_type,
+       pay.status,
+       pay.razorpay_order_id,
+       pay.razorpay_payment_id,
+       pay.paid_at,
+       pay.created_at,
+       COALESCE(pay.project_id, proj.id) AS project_id,
+       proj.project_number,
+       proj.status AS project_status,
+       u.id AS client_id,
+       COALESCE(u.full_name, i.contact_name) AS client_name,
+       COALESCE(u.email, i.contact_email) AS client_email
+     FROM payments pay
+     LEFT JOIN proposals prop ON pay.proposal_id = prop.id
+     LEFT JOIN inquiries i ON prop.inquiry_id = i.id
+     LEFT JOIN projects proj ON proj.id = pay.project_id OR (
+       pay.project_id IS NULL
+       AND pay.proposal_id IS NOT NULL
+       AND proj.proposal_id = pay.proposal_id
+     )
+     LEFT JOIN users u ON proj.client_user_id = u.id
+     ${whereClause}
+     ORDER BY pay.created_at DESC`,
+    params
+  );
+
+  const payments = result.rows.map(mapAdminPayment);
+  const summary = payments.reduce(
+    (acc, payment) => {
+      acc.totalAmount += payment.amount;
+      acc.totalCount += 1;
+      if (payment.status === 'completed') acc.completedAmount += payment.amount;
+      if (payment.status === 'pending') acc.pendingAmount += payment.amount;
+      if (payment.status === 'failed') acc.failedCount += 1;
+      return acc;
+    },
+    {
+      totalAmount: 0,
+      pendingAmount: 0,
+      completedAmount: 0,
+      failedCount: 0,
+      totalCount: 0,
+      currency: payments[0]?.currency || 'INR',
+    }
+  );
+
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({
+      success: true,
+      payments,
+      summary,
+      count: payments.length,
+    }),
+  };
+}
+
 export const handler = compose(
   withCORS(['GET', 'POST']),
   withAuth(),
@@ -66,6 +237,19 @@ export const handler = compose(
 
   try {
     if (event.httpMethod === 'GET') {
+      const pathSegments = getPaymentsPathSegments(event.path);
+      const isAdminRequest = pathSegments[0] === 'admin';
+
+      if (isAdminRequest) {
+        assertAdminLike(auth?.user, 'payments.admin');
+
+        if (pathSegments[1] === 'projects') {
+          return handleAdminProjects(headers);
+        }
+
+        return handleAdminPayments(event, headers);
+      }
+
       const { proposalId, projectId } = event.queryStringParameters || {};
 
       let sql = 'SELECT * FROM payments ORDER BY created_at DESC';
