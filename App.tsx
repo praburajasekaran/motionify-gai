@@ -121,6 +121,11 @@ function App() {
                         <Route path="/projects/:id/deliverables/:deliverableId" element={<ProtectedRoute><DeliverableReview /></ProtectedRoute>} />
                         <Route path="/projects/:id/:tab?" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
 
+                        {/* Client-friendly inquiry routes */}
+                        <Route path="/inquiries" element={<ProtectedRoute><InquiryDashboard /></ProtectedRoute>} />
+                        <Route path="/inquiries/:id" element={<ProtectedRoute><InquiryDetail /></ProtectedRoute>} />
+                        <Route path="/proposals/:proposalId" element={<ProtectedRoute><ProposalDetail /></ProtectedRoute>} />
+
                         {/* Admin Routes */}
                         <Route path="/admin/inquiries" element={<ProtectedRoute><InquiryDashboard /></ProtectedRoute>} />
                         <Route path="/admin/inquiries/:inquiryId/proposal" element={<ProtectedRoute><ProposalBuilder /></ProtectedRoute>} />

@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2, GripVertical, IndianRupee, DollarSign, Send, S
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 interface DeliverableInput {
   id: string;
@@ -244,14 +245,10 @@ ${proposalLink}
           Back to Inquiry
         </button>
 
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Create Proposal</h1>
-            <p className="text-muted-foreground">
-              For inquiry <code className="text-violet-600 font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Create Proposal"
+          description={`For inquiry ${inquiry.inquiryNumber} - ${inquiry.contactName}`}
+        />
       </div>
 
       <div className="space-y-6">

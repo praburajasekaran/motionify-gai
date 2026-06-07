@@ -35,6 +35,7 @@ import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ProjectSectionHeader } from '@/components/portal/ProjectSectionHeader';
 
 const DeliverableReviewContent: React.FC = () => {
   const { id: projectId, deliverableId } = useParams<{
@@ -371,6 +372,8 @@ const DeliverableReviewContent: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ProjectSectionHeader />
+
       {/* Success Message Toast */}
       {showSuccessMessage && (
         <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-top-4 duration-300">

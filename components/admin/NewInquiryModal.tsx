@@ -3,6 +3,7 @@ import { X, FileText, AlertCircle } from 'lucide-react';
 import { createInquiry, isValidEmail, isValidPhone, type ContactInfo } from '../../lib/inquiries';
 import { QuizSelections } from '../quiz/useQuiz';
 import { User as UserType } from '../../types';
+import { Button } from '../ui/design-system';
 
 interface NewInquiryModalProps {
   isOpen: boolean;
@@ -215,7 +216,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                   disabled={isSubmitting}
                   className={`w-full px-4 py-2.5 rounded-lg border bg-card text-foreground focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.videoType
                     ? 'border-red-300 focus:ring-red-500/50'
-                    : 'border-border focus:ring-violet-500/50'
+                    : 'border-border focus:ring-[var(--todoist-red)]/50'
                     }`}
                 >
                   <option value="">Select video type...</option>
@@ -239,7 +240,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                   disabled={isSubmitting}
                   className={`w-full px-4 py-2.5 rounded-lg border bg-card text-foreground focus:outline-none focus:ring-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${errors.niche
                     ? 'border-red-300 focus:ring-red-500/50'
-                    : 'border-border focus:ring-violet-500/50'
+                    : 'border-border focus:ring-[var(--todoist-red)]/50'
                     }`}
                 >
                   <option value="">Select industry...</option>
@@ -267,7 +268,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
                     rows={5}
                     className={`w-full pl-10 pr-4 py-2.5 rounded-lg border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition resize-none disabled:opacity-50 disabled:cursor-not-allowed ${errors.projectNotes
                       ? 'border-red-300 focus:ring-red-500/50'
-                      : 'border-border focus:ring-violet-500/50'
+                      : 'border-border focus:ring-[var(--todoist-red)]/50'
                       }`}
                   />
                 </div>
@@ -292,10 +293,10 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
             >
               Cancel
             </button>
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="px-6 py-2 shadow-sm"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
@@ -305,7 +306,7 @@ export function NewInquiryModal({ isOpen, onClose, onSuccess, user }: NewInquiry
               ) : (
                 'Create Inquiry'
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

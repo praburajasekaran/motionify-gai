@@ -27,6 +27,7 @@ import {
     cn
 } from '../components/ui/design-system';
 import { ErrorState } from '../components/ui/ErrorState';
+import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
 import { CardGridSkeleton } from '../components/ui/SkeletonLoaders';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
@@ -128,20 +129,16 @@ export const ProjectList = () => {
         <div className="space-y-6 pb-20">
             {/* Header */}
             <div className="flex flex-col gap-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div>
-                        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h2>
-                        <p className="text-sm text-muted-foreground mt-1">{filteredProjects.length} production{filteredProjects.length !== 1 ? 's' : ''}</p>
-                    </div>
-                    {!isClient(user) && (
+                <ProjectSectionHeader
+                    actions={!isClient(user) && (
                         <PrefetchLink to="/projects/new">
-                            <Button className="gap-2 h-9 px-4" aria-label="Start New Production">
+                            <Button className="gap-2 h-9 px-4" aria-label="Start New Project">
                                 <Plus className="h-4 w-4" />
                                 New Project
                             </Button>
                         </PrefetchLink>
                     )}
-                </div>
+                />
 
                 {/* Toolbar */}
                 <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
@@ -204,18 +201,18 @@ export const ProjectList = () => {
             ) : projectsQuery.isSuccess && allProjects.length === 0 ? (
                 <EmptyState
                     title="Your canvas is blank"
-                    description="Ready to create something amazing? Start your first production."
+                    description="Ready to create something amazing? Start your first project."
                     icon={FolderOpen}
                     action={
                         <PrefetchLink to="/projects/new">
-                            <Button variant="outline" className="mt-4">Start a Production</Button>
+                            <Button variant="outline" className="mt-4">Start a Project</Button>
                         </PrefetchLink>
                     }
                 />
             ) : filteredProjects.length === 0 ? (
                 <EmptyState
                     title="We couldn't find a match"
-                    description="Try different keywords or clear your filters to see all productions."
+                    description="Try different keywords or clear your filters to see all projects."
                     icon={FilterX}
                     action={
                         <Button variant="link" onClick={() => { setFilter(''); setStatusFilter('all'); }}>
@@ -343,7 +340,7 @@ const ProjectGridCard: React.FC<{ project: Project, getStatusVariant: any, navig
         className="group block bg-card rounded-lg border border-border hover:border-foreground/15 transition-colors"
     >
         <div className="flex">
-            {/* Status stripe — the colored tab on a production folder */}
+            {/* Status stripe */}
             <div className={cn("w-1 shrink-0 rounded-l-lg", getStatusColor(project.status))} title={`Status: ${project.status}`} />
 
             <div className="flex-1 p-4 min-w-0">

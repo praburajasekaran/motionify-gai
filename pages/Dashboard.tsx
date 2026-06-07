@@ -19,6 +19,7 @@ import {
 import { useAuthContext } from '../contexts/AuthContext';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
+import { PageHeader } from '../components/ui/PageHeader';
 import { StatGridSkeleton, ActivityFeedSkeleton } from '../components/ui/SkeletonLoaders';
 import { useDashboardMetrics } from '../shared/hooks/useDashboardMetrics';
 import { useDashboardActivities, type Activity } from '../shared/hooks/useDashboardActivities';
@@ -149,14 +150,15 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header — tight, purposeful */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">Dashboard</h2>
-        <p className="text-[14px] text-muted-foreground mt-0.5">
-          {user?.name ? `Welcome back, ${user.name}` : 'Production overview'}
-          {user?.role && <span className="text-muted-foreground/60"> · {user.role === 'superadmin' ? 'Super Admin' : user.role}</span>}
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={
+          <>
+            {user?.name ? `Welcome back, ${user.name}` : 'Production overview'}
+            {user?.role && <span className="text-muted-foreground/60"> · {user.role === 'superadmin' ? 'Super Admin' : user.role}</span>}
+          </>
+        }
+      />
 
       {/* Metric Cards — clean grid, no icons, data-forward */}
       {metricsQuery.error ? (

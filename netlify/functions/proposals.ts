@@ -149,7 +149,7 @@ async function notifyStatusChange(
       const adminsResult = await dbQuery(
         `SELECT id, email, full_name
          FROM users
-         WHERE role IN ('super_admin', 'support')`
+         WHERE role IN ('super_admin', 'support') AND is_active = true`
       );
 
       for (const admin of adminsResult.rows) {

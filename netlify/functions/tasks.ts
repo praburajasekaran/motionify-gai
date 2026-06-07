@@ -675,7 +675,7 @@ export const handler = compose(
             const requestedBy = clientUserRes.rows[0]?.full_name || 'Client';
 
             // Limit emails to admins/PMs
-            const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
+            const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`);
 
             const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
@@ -797,7 +797,7 @@ export const handler = compose(
           const supportUsersResult = await dbQuery(
             `SELECT u.id FROM users u
              JOIN project_team pt ON u.id = pt.user_id
-             WHERE pt.project_id = $1 AND u.role = 'support' AND pt.removed_at IS NULL`,
+             WHERE pt.project_id = $1 AND u.role = 'support' AND u.is_active = true AND pt.removed_at IS NULL`,
             [projectId]
           );
 

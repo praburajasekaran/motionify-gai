@@ -170,7 +170,7 @@ export const handler = compose(
                 if (user.role === 'client') {
                     // Client posted comment - notify superadmin(s)
                     const adminResult = await dbQuery(
-                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') ORDER BY created_at ASC LIMIT 1`
+                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') AND is_active = true ORDER BY created_at ASC LIMIT 1`
                     );
                     if (adminResult.rows.length > 0) {
                         recipientEmail = adminResult.rows[0].email;

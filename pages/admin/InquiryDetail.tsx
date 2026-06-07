@@ -8,6 +8,7 @@ import { Permissions } from '../../lib/permissions';
 import { encodeBase64 } from '../../utils/encoding';
 import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { absoluteProposalReviewUrl } from '../../lib/canonical-links';
+import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -163,7 +164,7 @@ export function InquiryDetail() {
           <h2 className="text-xl font-semibold text-foreground mb-2">Inquiry Not Found</h2>
           <p className="text-muted-foreground mb-6">The inquiry you're looking for doesn't exist.</p>
           <button
-            onClick={() => navigate('/admin/inquiries')}
+            onClick={() => navigate(isClient ? '/inquiries' : '/admin/inquiries')}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -185,15 +186,17 @@ export function InquiryDetail() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-6 pb-20">
+      <InquirySectionHeader />
+
       {/* Header */}
-      <div className="mb-6">
+      <div>
         <button
-          onClick={() => navigate(isClient ? '/' : '/admin/inquiries')}
+          onClick={() => navigate(isClient ? '/inquiries' : '/admin/inquiries')}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          {isClient ? 'Back to Dashboard' : 'Back to Inquiries'}
+          Back to Inquiries
         </button>
 
         <div className="flex items-start justify-between">
@@ -233,7 +236,7 @@ export function InquiryDetail() {
               </button>
             ) : inquiry.proposalId ? (
               <button
-                onClick={() => navigate(`/admin/proposals/${inquiry.proposalId}`)}
+                onClick={() => navigate(isClient ? `/proposals/${inquiry.proposalId}` : `/admin/proposals/${inquiry.proposalId}`)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
               >
                 <Eye className="w-4 h-4" />
