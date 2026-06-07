@@ -23,7 +23,7 @@ Other client-facing pages already use client-friendly labels but are inconsisten
 |------|-------------------|
 | `pages/Dashboard.tsx` | "Project Started" |
 | `pages/InquiryTracking.tsx` | "Project Created" |
-| `landing-page-new/.../inquiries/page.tsx` | "Active Project" |
+| `deleted app source` | "Active Project" |
 | `pages/admin/InquiryDashboard.tsx` | "Converted" (bug) |
 
 ## Proposed Solution
@@ -48,7 +48,7 @@ Per the documented convention in `docs/solutions/ui-bugs/client-status-labels-sh
 | Rejected | Declined |
 | Archived | Archived |
 
-> **Note:** Using "Project Started" (from `Dashboard.tsx`) rather than "Active Project" (from Next.js portal) since the old React SPA `Dashboard.tsx` is the primary client dashboard and consistency within the same app matters most. A follow-up task could unify the Next.js portal label to match.
+> **Note:** Using "Project Started" (from `Dashboard.tsx`) rather than "Active Project" (from deleted portal) since the old React SPA `Dashboard.tsx` is the primary client dashboard and consistency within the same app matters most. A follow-up task could unify the deleted portal label to match.
 
 ## Acceptance Criteria
 
@@ -118,6 +118,6 @@ const CLIENT_STATUS_LABELS: Record<InquiryStatus, string> = {
 - Documented solution: `docs/solutions/ui-bugs/client-status-labels-show-admin-terminology.md`
 - Existing client labels in Dashboard: `pages/Dashboard.tsx:179-191`
 - Existing client labels in InquiryTracking: `pages/InquiryTracking.tsx:25-32`
-- Next.js portal client labels: `landing-page-new/src/app/portal/inquiries/page.tsx:37-53`
+- deleted portal client labels: `deleted app source`
 - Badge rendering: `pages/admin/InquiryDashboard.tsx:338-340`
 - Filter dropdown: `pages/admin/InquiryDashboard.tsx:285-293`

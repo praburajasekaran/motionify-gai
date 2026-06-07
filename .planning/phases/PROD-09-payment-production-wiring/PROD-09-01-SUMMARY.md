@@ -26,7 +26,7 @@ key-files:
   created: []
   modified:
     - netlify/functions/send-email.ts
-    - landing-page-new/src/app/api/webhooks/razorpay/route.ts
+    - deleted app source
 
 key-decisions:
   - "Cross-service HTTP calls to Netlify Functions rather than importing email module"
@@ -75,7 +75,7 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 - `netlify/functions/send-email.ts` - Added sendPaymentSuccessEmail() and POST handler
-- `landing-page-new/src/app/api/webhooks/razorpay/route.ts` - Added email wrapper and wiring
+- `deleted app source` - Added email wrapper and wiring
 
 ## Decisions Made
 

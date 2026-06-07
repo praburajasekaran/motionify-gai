@@ -35,7 +35,7 @@ Three separate issues were discovered incrementally, each masking the next.
 
 ### 1. Wrong API client file updated
 
-The admin app (`pages/admin/`) imports from `lib/proposals.ts` at the project root, **not** from `landing-page-new/src/lib/proposals.ts`. The field was added to the latter but not the former. The root-level file was missing:
+The admin app (`pages/admin/`) imports from `lib/proposals.ts` at the project root, **not** from `deleted app source`. The field was added to the latter but not the former. The root-level file was missing:
 
 - `revisionsIncluded` in the `Proposal` interface
 - `revisionsIncluded` in the `createProposal` parameter type
@@ -61,10 +61,10 @@ The migration file `013_add_revisions_included_to_proposals.sql` was created but
 | File | Purpose |
 |------|---------|
 | `lib/proposals.ts` (root) | Admin app's API client -- talks to Netlify functions |
-| `landing-page-new/src/lib/proposals.ts` | Client app's API client -- talks to Next.js API routes |
+| `deleted app source` | Client app's API client -- talks to Next.js API routes |
 | `netlify/functions/proposals.ts` | Netlify function for proposal CRUD (used by admin for create) |
 | `netlify/functions/proposal-detail.ts` | Netlify function for single proposal operations (used by admin for read/update) |
-| `landing-page-new/src/app/api/proposals/route.ts` | Next.js API route (used by client app) |
+| `deleted app source` | Next.js API route (used by client app) |
 
 ## Prevention
 
@@ -73,7 +73,7 @@ The migration file `013_add_revisions_included_to_proposals.sql` was created but
 This codebase has **two parallel API clients** for proposals:
 
 - `lib/proposals.ts` (root) -- used by the admin app
-- `landing-page-new/src/lib/proposals.ts` -- used by the client app
+- `deleted app source` -- used by the client app
 
 When adding or modifying a field on the `Proposal` type, **both files must be updated**. Always verify which import path a consuming component actually uses before assuming you have edited the correct file.
 

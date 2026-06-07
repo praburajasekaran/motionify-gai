@@ -59,7 +59,7 @@ This research synthesizes findings for implementing a real-time comment thread s
 ### From ARCHITECTURE.md (System Design)
 
 **Component Architecture:**
-- Shared components (`CommentThread.tsx`, `CommentItem.tsx`, `CommentInput.tsx`) working in both Vite SPA and Next.js portal
+- Shared components (`CommentThread.tsx`, `CommentItem.tsx`, `CommentInput.tsx`) working in both Vite SPA and deleted portal
 - Netlify Functions: `/comments.ts` (full CRUD + authorization) + integration with existing `notifications.ts`
 - Database: `comments` table with `parent_id` adjacency list, `depth` denormalization, soft delete (`is_deleted`), and attachment metadata in JSONB
 

@@ -91,7 +91,7 @@ Replace `onClick={logout}` on the user footer div with a `DropdownMenu` (Radix U
 - **Lucide icons** — Use `Settings` and `LogOut` from `lucide-react` (already imported in `Layout.tsx`). Convention: always use Lucide icons in React components.
 - **`MagicLinkRequestBody` already typed** — `lib/auth.ts` line 21–24 already includes `rememberMe?: boolean` in the request body type. No type change required.
 - **`auth-verify-magic-link.ts` session duration** — Line 295 independently hard-codes `7 * 24 * 60 * 60`; must be updated to match `jwt.ts`.
-- **`landing-page-new` label** — `landing-page-new/src/lib/portal/components/LoginScreen.tsx` line 199 already says "30 days"; no change needed there once the backend is fixed.
+- **`deleted app` label** — `deleted app source` line 199 already says "30 days"; no change needed there once the backend is fixed.
 
 ## Acceptance Criteria
 
@@ -156,7 +156,7 @@ Replace `onClick={logout}` on the user footer div with a `DropdownMenu` (Radix U
 - Auth context logout: [contexts/AuthContext.tsx:101-118](contexts/AuthContext.tsx#L101-L118)
 - Avatar component: [components/ui/design-system.tsx:349-362](components/ui/design-system.tsx#L349-L362)
 - Magic link request type: [lib/auth.ts:21-24](lib/auth.ts#L21-L24)
-- Landing login checkbox (reference UI): [landing-page-new/src/lib/portal/components/LoginScreen.tsx:190-202](landing-page-new/src/lib/portal/components/LoginScreen.tsx#L190-L202)
+- Landing login checkbox (reference UI): [deleted app source legacy landing app path/src/lib/portal/components/LoginScreen.tsx#L190-L202)
 
 ### MVP Pseudocode
 

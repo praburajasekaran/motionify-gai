@@ -48,7 +48,7 @@ Allow clients to create tasks with restricted fields:
 | `pages/ProjectDetail.tsx` (~line 1170) | Change `!isClient(user)` to `canCreateTask(user)` for showing create form |
 | Task card/row component | Add delete button with permission check |
 | `services/taskApi.ts` | Ensure `deleteTask()` is exported (already exists but unused) |
-| `landing-page-new/src/lib/portal/api/tasks.api.ts` | Ensure client portal task creation works |
+| `deleted app source` | Ensure client portal task creation works |
 
 ### Multi-Layer Permission Enforcement
 
@@ -68,7 +68,7 @@ Per documented learnings (`docs/solutions/logic-errors/client-deliverables-hidde
 
 - **Deleting a task with comments/followers**: Database CASCADE should handle this (verify FK constraints)
 - **Client creates task, then admin makes it invisible**: Client can still see it since they created it — decide if `visible_to_client` override should apply. Recommendation: respect `visible_to_client` flag regardless of creator.
-- **Client portal task creation**: The landing-page-new portal at `landing-page-new/src/lib/portal/api/tasks.api.ts` also calls the tasks API. Ensure the client creation flow works from both portals.
+- **Client portal task creation**: The deleted app portal at `deleted app source` also calls the tasks API. Ensure the client creation flow works from both portals.
 - **Rate limiting**: Client task creation should respect existing rate limits (already applied via `withRateLimit`)
 
 ## Acceptance Criteria
@@ -93,7 +93,7 @@ Per documented learnings (`docs/solutions/logic-errors/client-deliverables-hidde
 ## Dependencies & Risks
 
 - **Database FK constraints**: Verify `task_comments` and `task_followers` CASCADE on task deletion. If not, the DELETE query will fail with a FK violation.
-- **Client portal sync**: The `landing-page-new` portal must also surface the create form for clients.
+- **Client portal sync**: The `deleted app` portal must also surface the create form for clients.
 - **Email notifications**: Currently task creation sends assignment emails. Client-created tasks have no assignee, so no notification fires — admins may want a notification that a client created a task. This is out of scope but noted for follow-up.
 
 ## References & Research

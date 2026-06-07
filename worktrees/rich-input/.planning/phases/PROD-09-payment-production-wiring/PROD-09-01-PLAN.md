@@ -5,7 +5,7 @@ type: execute
 wave: 1
 depends_on: []
 files_modified:
-  - landing-page-new/src/app/api/webhooks/razorpay/route.ts
+  - deleted app source
   - netlify/functions/send-email.ts
 autonomous: true
 
@@ -15,14 +15,14 @@ must_haves:
     - "Client receives email confirmation when payment succeeds via webhook"
     - "Email failures do not block webhook processing"
   artifacts:
-    - path: "landing-page-new/src/app/api/webhooks/razorpay/route.ts"
+    - path: "deleted app source
       provides: "Webhook handler with integrated email notifications"
       contains: "sendPaymentEmails"
     - path: "netlify/functions/send-email.ts"
       provides: "Payment success email template and POST handler"
       exports: ["sendPaymentSuccessEmail", "handler"]
   key_links:
-    - from: "landing-page-new/src/app/api/webhooks/razorpay/route.ts"
+    - from: "deleted app source
       to: "/.netlify/functions/send-email"
       via: "HTTP fetch to Netlify Function endpoint"
       pattern: "fetch.*\\.netlify/functions/send-email"
@@ -48,7 +48,7 @@ Output: Webhook handler sends appropriate emails on payment.captured and payment
 @.planning/phases/PROD-09-payment-production-wiring/PROD-09-RESEARCH.md
 
 # Relevant source files
-@landing-page-new/src/app/api/webhooks/razorpay/route.ts
+@deleted app source
 @netlify/functions/send-email.ts
 </context>
 
@@ -129,7 +129,7 @@ export async function sendPaymentSuccessEmail(data: {
 Follow the existing email template pattern used by other functions in the file.
   </action>
   <verify>
-Run `npm run build` in landing-page-new to verify no TypeScript errors.
+Run `npm run build` in deleted app to verify no TypeScript errors.
 Grep for "sendPaymentSuccessEmail" to confirm function exists.
   </verify>
   <done>
@@ -220,7 +220,7 @@ send-email.ts has a POST handler that can be called from the webhook to send pay
 
 <task type="auto">
   <name>Task 3: Add email wrapper utility to webhook handler</name>
-  <files>landing-page-new/src/app/api/webhooks/razorpay/route.ts</files>
+  <files>deleted app source
   <action>
 Add the email wrapper utility at the top of the webhook handler file (after existing imports):
 
@@ -283,7 +283,7 @@ const sendPaymentEmails = async () => {
 This wrapper provides a clean interface for the webhook to call emails without importing Netlify-specific code.
   </action>
   <verify>
-Run `grep -n "sendPaymentEmails" landing-page-new/src/app/api/webhooks/razorpay/route.ts` to confirm utility exists.
+Run `grep -n "sendPaymentEmails" deleted app source` to confirm utility exists.
   </verify>
   <done>
 sendPaymentEmails wrapper utility added to webhook handler, ready for use in payment event handlers.
@@ -292,7 +292,7 @@ sendPaymentEmails wrapper utility added to webhook handler, ready for use in pay
 
 <task type="auto">
   <name>Task 4: Wire success email into handlePaymentCaptured</name>
-  <files>landing-page-new/src/app/api/webhooks/razorpay/route.ts</files>
+  <files>deleted app source
   <action>
 Update handlePaymentCaptured to fetch client info and send success email.
 
@@ -341,8 +341,8 @@ try {
 **Important:** Email sending must be non-blocking (use .catch() not await) to ensure webhook responds within Razorpay's 5-second timeout.
   </action>
   <verify>
-Run `grep -n "sendSuccessEmail" landing-page-new/src/app/api/webhooks/razorpay/route.ts` to confirm wiring exists.
-Run `npm run build` in landing-page-new to verify no TypeScript errors.
+Run `grep -n "sendSuccessEmail" deleted app source` to confirm wiring exists.
+Run `npm run build` in deleted app to verify no TypeScript errors.
   </verify>
   <done>
 handlePaymentCaptured sends client success email on payment.captured. Email is non-blocking to maintain webhook response time.
@@ -351,7 +351,7 @@ handlePaymentCaptured sends client success email on payment.captured. Email is n
 
 <task type="auto">
   <name>Task 5: Wire failure email into handlePaymentFailed</name>
-  <files>landing-page-new/src/app/api/webhooks/razorpay/route.ts</files>
+  <files>deleted app source
   <action>
 Update handlePaymentFailed to send admin notification on failure.
 
@@ -376,8 +376,8 @@ try {
 **Important:** All email sending must be non-blocking (use .catch() not await) to ensure webhook responds within Razorpay's 5-second timeout.
   </action>
   <verify>
-Run `grep -n "sendFailureEmail" landing-page-new/src/app/api/webhooks/razorpay/route.ts` to confirm wiring exists.
-Run `npm run build` in landing-page-new to verify no TypeScript errors.
+Run `grep -n "sendFailureEmail" deleted app source` to confirm wiring exists.
+Run `npm run build` in deleted app to verify no TypeScript errors.
   </verify>
   <done>
 handlePaymentFailed sends admin notification on payment.failed. Email is non-blocking to maintain webhook response time.
@@ -387,12 +387,12 @@ handlePaymentFailed sends admin notification on payment.failed. Email is non-blo
 </tasks>
 
 <verification>
-1. TypeScript builds pass: `npm run build` in both landing-page-new and root directories
+1. TypeScript builds pass: `npm run build` in both deleted app and root directories
 2. Grep confirms email function exists: `grep -r "sendPaymentSuccessEmail" netlify/functions/`
-3. Grep confirms webhook has email wrapper: `grep -r "sendPaymentEmails" landing-page-new/src/app/api/webhooks/`
+3. Grep confirms webhook has email wrapper: `grep -r "sendPaymentEmails" deleted app source`
 4. Handler export exists: `grep -r "export const handler" netlify/functions/send-email.ts`
-5. Success email wired: `grep -r "sendSuccessEmail" landing-page-new/src/app/api/webhooks/`
-6. Failure email wired: `grep -r "sendFailureEmail" landing-page-new/src/app/api/webhooks/`
+5. Success email wired: `grep -r "sendSuccessEmail" deleted app source`
+6. Failure email wired: `grep -r "sendFailureEmail" deleted app source`
 </verification>
 
 <success_criteria>

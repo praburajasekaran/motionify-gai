@@ -1,6 +1,5 @@
 {
   "exclude": [
-    "landing-page-new/**/*",
     "node_modules"
   ],
   "compilerOptions": {

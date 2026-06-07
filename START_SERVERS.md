@@ -32,4 +32,4 @@ npm run dev
 npm run dev:functions
 ```
 
-The legacy `landing-page-new` Next app is retired and kept only as non-runtime reference. Do not start or deploy it.
+There is no separate landing-page server to start or deploy.

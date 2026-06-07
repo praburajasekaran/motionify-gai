@@ -49,7 +49,7 @@ Implement real-time comment updates via polling and fix hardcoded API URL.
 | `netlify/functions/comments.ts` | Added `since` query parameter to GET endpoint |
 | `lib/comments.ts` | Updated `getComments()` to accept optional `since` parameter |
 | `components/proposals/CommentThread.tsx` | Added 10-second polling with visibility detection |
-| `landing-page-new/src/components/CommentThread.tsx` | Added polling + fixed hardcoded localhost URL |
+| `deleted app source` | Added polling + fixed hardcoded localhost URL |
 
 ## Verification Results
 

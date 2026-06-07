@@ -13,13 +13,13 @@ tech-stack:
 key-files:
   created:
     - lib/vitals.ts
-    - landing-page-new/src/lib/vitals.ts
-    - landing-page-new/src/components/WebVitals.tsx
+    - deleted app source
+    - deleted app source
   modified:
     - package.json
-    - landing-page-new/package.json
+    - deleted app source
     - index.tsx
-    - landing-page-new/src/app/layout.tsx
+    - deleted app source
 decisions:
   - id: vitals-sentry-dynamic
     summary: "Dynamic import for @sentry/react to avoid hard dependency"
@@ -39,9 +39,9 @@ metrics:
 ## What Was Done
 
 ### Task 1: Install web-vitals and create vitals reporting modules
-- Installed `web-vitals` package in both admin portal (root) and client portal (landing-page-new)
+- Installed `web-vitals` package in both admin portal (root) and client portal (deleted app)
 - Created `lib/vitals.ts` for admin Vite SPA with `initWebVitals()` export
-- Created `landing-page-new/src/lib/vitals.ts` for Next.js with `reportWebVitals()` and `initWebVitals()` exports
+- Created `deleted app source` for Next.js with `reportWebVitals()` and `initWebVitals()` exports
 - Both modules measure all 5 metrics: LCP, INP, CLS, FCP, TTFB
 - Development mode: color-coded console.log with rating (good/needs-improvement/poor) and delta values
 - Production mode: dynamic import of `@sentry/react` with `captureMessage` including metric tags and performance context
@@ -50,7 +50,7 @@ metrics:
 
 ### Task 2: Wire vitals initialization into app entry points
 - Updated `index.tsx` to import and call `initWebVitals()` after React root mount
-- Created `landing-page-new/src/components/WebVitals.tsx` as a client component wrapping `initWebVitals()` in `useEffect`
+- Created `deleted app source` as a client component wrapping `initWebVitals()` in `useEffect`
 - Added `<WebVitals />` to Next.js root layout before auth providers
 - Fixed Rollup build failure by using variable indirection for `@sentry/react` dynamic import (prevents static analysis)
 - Both portals build successfully with web-vitals properly code-split
@@ -64,7 +64,7 @@ metrics:
 - **Found during:** Task 1 verification and Task 2 verification
 - **Issue:** Both Vite (Rollup) and Next.js TypeScript compiler failed when encountering `import('@sentry/react')` because the package is not installed in either frontend project (only `@sentry/node` exists for Netlify functions)
 - **Fix:** Used variable indirection (`const sentryModule = '@sentry/react'; import(sentryModule)`) to prevent static analysis of the module specifier, combined with type casting to `Promise<Record<string, unknown>>` and runtime `typeof` check for `captureMessage`
-- **Files modified:** `lib/vitals.ts`, `landing-page-new/src/lib/vitals.ts`
+- **Files modified:** `lib/vitals.ts`, `deleted app source`
 
 ## Performance Targets
 
@@ -80,7 +80,7 @@ metrics:
 
 - [x] `web-vitals` in both package.json files
 - [x] `lib/vitals.ts` exports `initWebVitals`
-- [x] `landing-page-new/src/lib/vitals.ts` exports `reportWebVitals` and `initWebVitals`
+- [x] `deleted app source` exports `reportWebVitals` and `initWebVitals`
 - [x] `index.tsx` calls `initWebVitals()`
 - [x] Client portal layout includes `<WebVitals />` component
 - [x] Both portals build successfully

@@ -62,12 +62,12 @@ This is the [MDN-recommended pattern](https://developer.mozilla.org/en-US/docs/G
 
 ### Decoding side (client portal)
 
-3. **`landing-page-new/src/app/proposal/[proposalId]/page.tsx:32`** — Replace `JSON.parse(atob(encodedData))` with `JSON.parse(decodeBase64(encodedData))`
+3. **`deleted app source`** — Replace `JSON.parse(atob(encodedData))` with `JSON.parse(decodeBase64(encodedData))`
 
 ### Shared utility (new)
 
 4. **`utils/encoding.ts`** — Create `encodeBase64` and `decodeBase64` functions
-5. **`landing-page-new/src/lib/encoding.ts`** — Duplicate utility for the Next.js app (separate build)
+5. **`deleted app source`** — Duplicate utility for the deleted app (separate build)
 
 ## MVP
 

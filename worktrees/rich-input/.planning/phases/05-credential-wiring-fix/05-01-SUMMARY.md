@@ -23,7 +23,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - landing-page-new/src/components/CommentThread.tsx
+    - deleted app source
     - contexts/NotificationContext.tsx
 
 key-decisions:
@@ -69,7 +69,7 @@ _Note: Both tasks committed together in single commit due to git staging behavio
 
 ## Files Created/Modified
 
-- `landing-page-new/src/components/CommentThread.tsx` - Added credentials: 'include' to handleEdit PUT fetch call
+- `deleted app source` - Added credentials: 'include' to handleEdit PUT fetch call
 - `contexts/NotificationContext.tsx` - Added credentials: 'include' to 3 fetch calls (fetchNotifications, markAsRead, markAllAsRead)
 
 ## Decisions Made

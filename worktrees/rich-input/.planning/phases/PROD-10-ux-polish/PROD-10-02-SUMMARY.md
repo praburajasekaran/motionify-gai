@@ -21,9 +21,9 @@ tech-stack:
 
 key-files:
   created:
-    - landing-page-new/src/components/proposal/StatusTimeline.tsx
+    - deleted app source
   modified:
-    - landing-page-new/src/components/proposal/ProposalReview.tsx
+    - deleted app source
 
 key-decisions:
   - "Filter activities to only client-visible types (PROPOSAL_SENT, ACCEPTED, REJECTED, CHANGES_REQUESTED)"
@@ -67,8 +67,8 @@ Each task was committed atomically:
 2. **Task 2: Integrate StatusTimeline into ProposalReview** - `e7a70af` (feat)
 
 ## Files Created/Modified
-- `landing-page-new/src/components/proposal/StatusTimeline.tsx` - Timeline component fetching activities and rendering chronological status history with professional formatting
-- `landing-page-new/src/components/proposal/ProposalReview.tsx` - Updated to import and render StatusTimeline between pricing and response sections
+- `deleted app source` - Timeline component fetching activities and rendering chronological status history with professional formatting
+- `deleted app source` - Updated to import and render StatusTimeline between pricing and response sections
 
 ## Decisions Made
 

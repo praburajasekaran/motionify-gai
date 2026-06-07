@@ -96,7 +96,7 @@ A complete implementation reference demonstrates this pattern using Cloudflare W
 |------------|---------|---------|-----|
 | **Netlify Functions** | Latest (Node.js 20+) | Serverless API endpoints | Existing infrastructure, automatic scaling |
 | **express** | ^4.18.0 | Request handling | Lightweight framework for function code |
-| **cors** | ^2.8.5 | Cross-origin handling | Essential for Vite SPA + Next.js portal |
+| **cors** | ^2.8.5 | Cross-origin handling | Essential for Vite SPA + deleted portal |
 | **zod** | ^3.22.0 | Request validation | Type-safe validation for comments API |
 
 ### Frontend Integration

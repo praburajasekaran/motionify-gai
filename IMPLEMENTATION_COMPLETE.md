@@ -9,7 +9,7 @@ Current production architecture:
 - Public Proposal Review and Advance Payment handoff routes live outside the Portal.
 - Authenticated Portal routes live under `/portal/*`.
 - Netlify Functions are the only backend runtime.
-- `landing-page-new` is retained only as non-runtime historical reference and cannot be started or deployed through normal scripts.
+- The former separate frontend has been removed; recover old implementation details from git history if needed.
 
 Use these checks before deploy:
 

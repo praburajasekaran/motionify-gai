@@ -128,9 +128,9 @@ PENDING → IN_PROGRESS → AWAITING_APPROVAL → COMPLETED
 | File | Purpose |
 |------|---------|
 | `netlify/functions/tasks.ts` | API endpoint |
-| `landing-page-new/src/lib/portal/components/TaskList.tsx` | Client task list |
-| `landing-page-new/src/lib/portal/components/TaskItem.tsx` | Task display |
-| `landing-page-new/src/lib/portal/utils/taskStateTransitions.ts` | State validation |
+| `deleted app source` | Client task list |
+| `deleted app source` | Task display |
+| `deleted app source` | State validation |
 | `services/geminiService.ts` | AI generation |
 | `components/tasks/TaskEditModal.tsx` | Admin edit UI |
 

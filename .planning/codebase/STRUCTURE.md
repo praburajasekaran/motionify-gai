@@ -12,7 +12,7 @@ motionify-gai-1/
 ├── database/                   # SQL schemas and migrations
 ├── docs/                       # Project documentation
 ├── e2e/                        # Playwright E2E tests
-├── landing-page-new/           # Next.js application (separate)
+├── deleted app directory           # deleted application (separate)
 ├── lib/                        # Client-side utilities
 ├── netlify/functions/          # Serverless API functions
 ├── pages/                      # Vite portal pages/routes
@@ -35,7 +35,7 @@ motionify-gai-1/
 - Types: `types.ts` - TypeScript type definitions
 
 **Frontend (Next.js Landing):**
-- Location: `landing-page-new/`
+- Location: `deleted app directory`
 - Entry: `src/app/layout.tsx`
 - Pages: `src/app/` - App Router pages
 - Components: `src/components/` - Reusable UI components
@@ -74,7 +74,7 @@ motionify-gai-1/
 - Contexts: PascalCase + Context suffix - `AuthContext.tsx`
 
 **Directories:**
-- lowercase with hyphens - `landing-page-new/`
+- lowercase with hyphens - `deleted app directory`
 - camelCase for code - `deliverables/`, `components/`
 
 ## Where to Add New Code
@@ -86,9 +86,9 @@ motionify-gai-1/
 4. Create API function in `netlify/functions/`
 
 **New UI Feature (Landing Page):**
-1. Add page to `landing-page-new/src/app/[route]/page.tsx`
-2. Create components in `landing-page-new/src/components/[feature]/`
-3. Add API route to `landing-page-new/src/app/api/[endpoint]/route.ts`
+1. Add page to `deleted app source`
+2. Create components in `deleted app source`
+3. Add API route to `deleted app source`
 
 **New API Endpoint:**
 1. Create `netlify/functions/[endpoint].ts`

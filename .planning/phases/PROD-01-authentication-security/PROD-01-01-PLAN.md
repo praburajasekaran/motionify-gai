@@ -62,7 +62,7 @@ From RESEARCH.md:
 
 ### Task 3: Remove Mock Auth from Client Portal AuthContext
 
-**File:** `landing-page-new/src/context/AuthContext.tsx`
+**File:** `deleted app source`
 
 **Changes:**
 1. Check if file imports setMockUser or MOCK_USERS
@@ -130,7 +130,7 @@ cd /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1
 npm run build
 
 # Client portal (Next.js)
-cd landing-page-new
+cd deleted app
 npm run build
 ```
 
@@ -151,7 +151,7 @@ grep -r "MOCK_USERS" --include="*.tsx" --include="*.ts" --exclude-dir=node_modul
 grep -r "setMockUser\|MOCK_USERS" dist/
 
 # Check client portal production bundle
-grep -r "setMockUser\|MOCK_USERS" landing-page-new/.next/
+grep -r "setMockUser\|MOCK_USERS" deleted app source
 ```
 
 **Expected:** Zero matches in production bundles
@@ -162,7 +162,7 @@ grep -r "setMockUser\|MOCK_USERS" landing-page-new/.next/
 
 - [ ] `lib/auth.ts` has no MOCK_USERS or setMockUser exports
 - [ ] `contexts/AuthContext.tsx` does not import setMockUser or MOCK_USERS
-- [ ] `landing-page-new/src/context/AuthContext.tsx` does not import mock auth
+- [ ] `deleted app source` does not import mock auth
 - [ ] Codebase search for "setMockUser" returns zero results (excluding docs)
 - [ ] Codebase search for "MOCK_USERS" returns zero results (excluding docs)
 - [ ] Admin portal builds successfully

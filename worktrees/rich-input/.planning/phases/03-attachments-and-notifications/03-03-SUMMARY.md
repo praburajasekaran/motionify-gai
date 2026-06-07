@@ -21,7 +21,7 @@ Closed verification gaps for COMM-05: In-App Notifications in the client portal.
 ## What Was Built
 
 ### Task 1: NotificationContext for Client Portal
-**File:** `landing-page-new/src/contexts/NotificationContext.tsx`
+**File:** `deleted app source`
 
 - Created new contexts directory in client portal
 - Adapted admin NotificationContext for Next.js:
@@ -36,14 +36,14 @@ Closed verification gaps for COMM-05: In-App Notifications in the client portal.
   - Local notification creation via `addNotification`
 
 ### Task 2: NotificationProvider Integration in Layout
-**File:** `landing-page-new/src/app/layout.tsx`
+**File:** `deleted app source`
 
 - Added `NotificationProvider` import
 - Wrapped children with NotificationProvider INSIDE AuthProvider
 - Enables notification context for entire client portal app
 
 ### Task 3: CommentThread Notification Integration
-**File:** `landing-page-new/src/components/CommentThread.tsx`
+**File:** `deleted app source`
 
 - Added `useNotifications` hook import
 - In `pollForNewComments`: triggers in-app notification for new comments from other users
@@ -54,7 +54,7 @@ Closed verification gaps for COMM-05: In-App Notifications in the client portal.
   - ActionUrl: `/proposal/{proposalId}`
 
 ### Task 4: NotificationBell Context Migration
-**File:** `landing-page-new/src/lib/portal/components/NotificationBell.tsx`
+**File:** `deleted app source`
 
 - Replaced `AppContext` (mock data) with `NotificationContext` (real data)
 - Uses `useNotifications` hook for notifications, unreadCount, markAsRead, markAllAsRead
@@ -65,14 +65,14 @@ Closed verification gaps for COMM-05: In-App Notifications in the client portal.
 
 | Artifact | Status | Path |
 |----------|--------|------|
-| NotificationContext for client portal | Created | `landing-page-new/src/contexts/NotificationContext.tsx` |
-| NotificationProvider in layout | Added | `landing-page-new/src/app/layout.tsx` |
-| CommentThread notification trigger | Added | `landing-page-new/src/components/CommentThread.tsx` |
-| NotificationBell context migration | Updated | `landing-page-new/src/lib/portal/components/NotificationBell.tsx` |
+| NotificationContext for client portal | Created | `deleted app source` |
+| NotificationProvider in layout | Added | `deleted app source` |
+| CommentThread notification trigger | Added | `deleted app source` |
+| NotificationBell context migration | Updated | `deleted app source` |
 
 ## Verification
 
-- [x] NotificationContext.tsx exists at `landing-page-new/src/contexts/NotificationContext.tsx`
+- [x] NotificationContext.tsx exists at `deleted app source`
 - [x] NotificationContext exports: NotificationProvider, useNotifications, NotificationType, AppNotification
 - [x] layout.tsx wraps app with NotificationProvider (inside AuthProvider)
 - [x] CommentThread.tsx imports useNotifications and calls addNotification for new comments

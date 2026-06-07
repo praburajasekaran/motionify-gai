@@ -19,20 +19,20 @@
 
 **Package Manager:**
 - npm with `--legacy-peer-deps` flag
-- Lockfiles: Present in both root and `landing-page-new/` directory
-- Monorepo structure: Root project (Vite Portal) + `landing-page-new/` (Next.js)
+- Lockfiles: Present in both root and `deleted app directory` directory
+- Monorepo structure: Root project (Vite Portal) + `deleted app directory` (Next.js)
 
 ## Frameworks
 
 **Core:**
 - React 19.2.0 - UI library for both applications
-- Next.js 16.0.1 - Landing page and client-facing application (`landing-page-new/`)
+- Next.js 16.0.1 - Landing page and client-facing application (`deleted app directory`)
 - Vite 6.2.0 - Portal admin application build tool
 - Netlify Functions 5.1.2 - Serverless backend API endpoints
 
 **Testing:**
 - Playwright 1.57.0 - E2E testing framework for UI flows
-- Jest 30.2.0 - Unit testing (configured in `landing-page-new/`)
+- Jest 30.2.0 - Unit testing (configured in `deleted app directory`)
 - @testing-library/react 16.3.1 - React component testing utilities
 
 **Build/Dev:**
@@ -98,13 +98,13 @@
 
 **Build:**
 - `vite.config.ts` - Portal app configuration with React plugin and path aliases
-- `landing-page-new/next.config.ts` - Next.js configuration with custom rewrites
+- `deleted app source` - Next.js configuration with custom rewrites
 - `netlify.toml` - Deployment and build configuration
 - `tsconfig.json` - TypeScript compiler options (ES2022 target, ESNext modules)
 - `tailwind.config.js` - Tailwind CSS theme customization
 - `postcss.config.js` - PostCSS with Tailwind and Autoprefixer
 - `playwright.config.ts` - E2E test configuration
-- `landing-page-new/jest.config.js` - Unit test configuration with SWC transformer
+- `deleted app source` - Unit test configuration with SWC transformer
 
 ## Platform Requirements
 

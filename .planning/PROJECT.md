@@ -66,7 +66,7 @@ Clients and superadmins can communicate naturally during proposal negotiation wi
 **Existing codebase:**
 - Dual-app architecture: Vite SPA (admin portal) + Next.js (landing + client portal)
 - Proposals managed via `netlify/functions/proposals.ts`
-- Client views proposals at `landing-page-new/src/app/proposal/[proposalId]/page.tsx`
+- Client views proposals at `deleted app source`
 - Superadmin manages proposals at `pages/admin/ProposalDetail.tsx`
 - File uploads use R2 presigned URLs via `netlify/functions/r2-presign.ts`
 - Notifications via `contexts/NotificationContext.tsx` + email via Resend
@@ -98,8 +98,8 @@ Like Upwork/Fiverr order messaging — both parties can post whenever they want,
 - Email notification on new comments (sender excluded)
 - In-app notification creation in notifications table
 - NotificationContext integration for comment notifications
-- Client portal NotificationContext at `landing-page-new/src/contexts/NotificationContext.tsx`
-- Client portal NotificationProvider in `landing-page-new/src/app/layout.tsx`
+- Client portal NotificationContext at `deleted app source`
+- Client portal NotificationProvider in `deleted app source`
 - **Gap closures completed:**
   - Attachment flow (duplicates, submission, multiple files)
   - Polling stale closure (new comments invisible until refresh)

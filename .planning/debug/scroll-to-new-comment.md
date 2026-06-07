@@ -28,7 +28,7 @@ context: Phase 04-integration-and-polish, CommentThread scroll behavior
 ## Evidence
 
 - timestamp: 2026-01-21T10:05:00Z
-  checked: Both CommentThread.tsx files (proposals and landing-page-new)
+  checked: Both CommentThread.tsx files (proposals and deleted app)
   found: No scrollIntoView or auto-scroll logic exists anywhere
   implication: Auto-scroll feature was never implemented
 
@@ -54,7 +54,7 @@ root_cause: CommentThread components lack auto-scroll logic to show newly posted
 artifacts:
   - path: /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/components/proposals/CommentThread.tsx
     issue: pollForNewComments (lines 78-127) preserves scroll position when new comments arrive, preventing auto-scroll to show new content
-  - path: /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/landing-page-new/src/components/CommentThread.tsx
+  - path: /Users/praburajasekaran/Documents/local-htdocs/motionify-gai-1/deleted app source
     issue: pollForNewComments (lines 132-184) preserves scroll position when new comments arrive, preventing auto-scroll to show new content
 
 missing:

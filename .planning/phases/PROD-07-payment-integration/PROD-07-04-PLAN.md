@@ -5,9 +5,9 @@ type: execute
 wave: 2
 depends_on: ["PROD-07-01"]
 files_modified:
-  - landing-page-new/src/lib/portal/pages/PaymentsPage.tsx
-  - landing-page-new/src/app/portal/payments/page.tsx
-  - landing-page-new/src/components/payment/PaymentButton.tsx
+  - deleted app source
+  - deleted app source
+  - deleted app source
 autonomous: true
 user_setup: []
 
@@ -19,18 +19,18 @@ must_haves:
     - "Client can initiate payment from payments section"
     - "Milestone payments (advance/final) display correctly with type labels"
   artifacts:
-    - path: "landing-page-new/src/lib/portal/pages/PaymentsPage.tsx"
+    - path: "deleted app source
       provides: "Client portal payments page"
       min_lines: 100
-    - path: "landing-page-new/src/app/portal/payments/page.tsx"
+    - path: "deleted app source
       provides: "Portal payments route"
       exports: ["default"]
   key_links:
-    - from: "landing-page-new/src/lib/portal/pages/PaymentsPage.tsx"
+    - from: "deleted app source
       to: "/api/payments/history"
       via: "fetch with userId"
       pattern: "payments/history"
-    - from: "landing-page-new/src/lib/portal/pages/PaymentsPage.tsx"
+    - from: "deleted app source
       to: "PaymentButton"
       via: "component import"
       pattern: "PaymentButton"
@@ -53,16 +53,16 @@ Output: Client portal payments page showing payment history and allowing payment
 @.planning/PROJECT.md
 @.planning/PRODUCTION_ROADMAP.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-CONTEXT.md
-@landing-page-new/src/app/payments/history/page.tsx
-@landing-page-new/src/components/payment/PaymentButton.tsx
-@landing-page-new/src/lib/portal/pages/ProjectsPage.tsx
+@deleted app source
+@deleted app source
+@deleted app source
 </context>
 
 <tasks>
 
 <task type="auto">
   <name>Task 1: Create client portal payments page component</name>
-  <files>landing-page-new/src/lib/portal/pages/PaymentsPage.tsx</files>
+  <files>deleted app source
   <action>
 Create the client portal payments page using existing portal styling patterns.
 
@@ -117,7 +117,7 @@ export default function PaymentsPage() {
 Follow styling from existing portal pages (ProjectsPage.tsx pattern).
   </action>
   <verify>
-1. File exists at landing-page-new/src/lib/portal/pages/PaymentsPage.tsx
+1. File exists at deleted app source
 2. Fetches payments for authenticated user
 3. Shows PaymentButton for pending payments
 4. Shows download receipt for completed payments
@@ -128,7 +128,7 @@ Follow styling from existing portal pages (ProjectsPage.tsx pattern).
 
 <task type="auto">
   <name>Task 2: Create portal payments route</name>
-  <files>landing-page-new/src/app/portal/payments/page.tsx</files>
+  <files>deleted app source
   <action>
 Create the Next.js page route for the portal payments section.
 
@@ -148,7 +148,7 @@ export default function PortalPaymentsPage() {
 Ensure the page is protected (requires authentication) - follow pattern from other portal pages.
   </action>
   <verify>
-1. File exists at landing-page-new/src/app/portal/payments/page.tsx
+1. File exists at deleted app source
 2. Route accessible at /portal/payments
 3. Shows payments page content
   </verify>
@@ -157,7 +157,7 @@ Ensure the page is protected (requires authentication) - follow pattern from oth
 
 <task type="auto">
   <name>Task 3: Update PaymentButton for portal context</name>
-  <files>landing-page-new/src/components/payment/PaymentButton.tsx</files>
+  <files>deleted app source
   <action>
 Update PaymentButton to work correctly in the portal payments section context.
 
@@ -186,7 +186,7 @@ Keep backward compatible - existing usage on proposal page should continue worki
   <verify>
 1. PaymentButton works from both proposal page and payments page
 2. onPaymentSuccess callback is called on successful payment
-3. npm run build passes in landing-page-new
+3. npm run build passes in deleted app
   </verify>
   <done>PaymentButton updated to support portal payments context</done>
 </task>

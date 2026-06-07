@@ -25,9 +25,9 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - landing-page-new/src/contexts/NotificationContext.tsx
-    - landing-page-new/src/lib/attachments.ts
-    - landing-page-new/src/components/CommentThread.tsx
+    - deleted app source
+    - deleted app source
+    - deleted app source
 
 key-decisions:
   - "Admin and client portals already using cookie-based auth from PROD-01-02"
@@ -71,9 +71,9 @@ completed: 2026-01-25
 **Plan metadata:** (none - no separate documentation commit needed)
 
 ## Files Created/Modified
-- `landing-page-new/src/contexts/NotificationContext.tsx` - Added credentials to 3 fetch calls (lines 89, 150, 169)
-- `landing-page-new/src/lib/attachments.ts` - Added credentials to 4 fetch calls (lines 23, 42, 65, 81)
-- `landing-page-new/src/components/CommentThread.tsx` - Added credentials to 2 fetch calls (lines 51, 64)
+- `deleted app source` - Added credentials to 3 fetch calls (lines 89, 150, 169)
+- `deleted app source` - Added credentials to 4 fetch calls (lines 23, 42, 65, 81)
+- `deleted app source` - Added credentials to 2 fetch calls (lines 51, 64)
 
 ## Decisions Made
 

@@ -7,8 +7,8 @@ depends_on: []
 files_modified:
   - components/ui/ErrorState.tsx
   - components/ui/EmptyState.tsx
-  - landing-page-new/src/components/ui/ErrorState.tsx
-  - landing-page-new/src/components/ui/EmptyState.tsx
+  - deleted app source
+  - deleted app source
 autonomous: true
 
 must_haves:
@@ -25,10 +25,10 @@ must_haves:
     - path: "components/ui/EmptyState.tsx"
       provides: "Admin portal empty state component with customizable content"
       exports: ["EmptyState"]
-    - path: "landing-page-new/src/components/ui/ErrorState.tsx"
+    - path: "deleted app source
       provides: "Client portal error state component"
       exports: ["ErrorState"]
-    - path: "landing-page-new/src/components/ui/EmptyState.tsx"
+    - path: "deleted app source
       provides: "Client portal empty state component"
       exports: ["EmptyState"]
   key_links:
@@ -69,7 +69,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
   <name>Task 1: Create ErrorState component for both portals</name>
   <files>
     components/ui/ErrorState.tsx
-    landing-page-new/src/components/ui/ErrorState.tsx
+    deleted app source
   </files>
   <action>
     1. Create `components/ui/ErrorState.tsx` (admin portal):
@@ -90,7 +90,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
        - In development only (import.meta.env.DEV), show expandable technical details with error.stack in a `<details>` element
        - Style with Tailwind: centered flex-col, p-8, text-center, max-w-md for message text
 
-    2. Create `landing-page-new/src/components/ui/ErrorState.tsx` (client portal):
+    2. Create `deleted app source` (client portal):
        - Same interface and logic as admin version
        - Adjust button color to match client portal theme: bg-blue-600 hover:bg-blue-700
        - Use `process.env.NODE_ENV === 'development'` instead of `import.meta.env.DEV` (Next.js)
@@ -100,7 +100,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
   </action>
   <verify>
     Run `npm run build` from project root to verify admin portal builds.
-    Run `cd landing-page-new && npm run build` to verify client portal builds.
+    Run `cd deleted app && npm run build` to verify client portal builds.
     Verify both files export `ErrorState` component.
   </verify>
   <done>
@@ -112,7 +112,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
   <name>Task 2: Create EmptyState component for both portals</name>
   <files>
     components/ui/EmptyState.tsx
-    landing-page-new/src/components/ui/EmptyState.tsx
+    deleted app source
   </files>
   <action>
     1. Create `components/ui/EmptyState.tsx` (admin portal):
@@ -130,7 +130,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
          - Action button (if provided): mt-4, bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm font-medium
        - Wrap in `flex flex-col items-center justify-center py-12 text-center`
 
-    2. Create `landing-page-new/src/components/ui/EmptyState.tsx` (client portal):
+    2. Create `deleted app source` (client portal):
        - Same interface and logic
        - Action button color: bg-blue-600 hover:bg-blue-700 (client theme)
        - Same layout and styling otherwise
@@ -139,7 +139,7 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
   </action>
   <verify>
     Run `npm run build` from project root to verify admin portal builds.
-    Run `cd landing-page-new && npm run build` to verify client portal builds.
+    Run `cd deleted app && npm run build` to verify client portal builds.
     Verify both files export `EmptyState` component.
   </verify>
   <done>
@@ -152,9 +152,9 @@ Output: 4 component files (ErrorState + EmptyState for each portal) ready for in
 <verification>
 1. `components/ui/ErrorState.tsx` exists and exports ErrorState
 2. `components/ui/EmptyState.tsx` exists and exports EmptyState
-3. `landing-page-new/src/components/ui/ErrorState.tsx` exists and exports ErrorState
-4. `landing-page-new/src/components/ui/EmptyState.tsx` exists and exports EmptyState
-5. Both portals build successfully: `npm run build` and `cd landing-page-new && npm run build`
+3. `deleted app source` exists and exports ErrorState
+4. `deleted app source` exists and exports EmptyState
+5. Both portals build successfully: `npm run build` and `cd deleted app && npm run build`
 6. ErrorState has retry button support and contextual error messages
 7. EmptyState has customizable icon, title, description, and action
 </verification>

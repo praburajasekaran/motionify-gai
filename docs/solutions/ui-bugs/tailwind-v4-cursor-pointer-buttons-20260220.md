@@ -16,7 +16,7 @@ tags: [tailwind-v4, cursor-pointer, preflight, buttons, next-js, react]
 
 ## Problem
 
-In a Next.js app using Tailwind CSS v4, all `<button>` elements show the default arrow cursor on hover instead of the hand/pointer cursor, making interactive elements feel unclickable. `<a>` tags are unaffected.
+In a deleted app using Tailwind CSS v4, all `<button>` elements show the default arrow cursor on hover instead of the hand/pointer cursor, making interactive elements feel unclickable. `<a>` tags are unaffected.
 
 ## Environment
 
@@ -48,7 +48,7 @@ button, [role="button"], a {
 
 Expand the selector and add `!important` to ensure the rule wins over Tailwind's preflight:
 
-**File:** `landing-page-new/src/app/globals.css`
+**File:** `deleted app source`
 
 ```css
 /* Before (broken for <button> elements): */

@@ -13,7 +13,7 @@ severity: medium
 tags: [code-duplication, date-formatting, DRY, utility-functions]
 related_files:
   - utils/dateFormatting.ts
-  - landing-page-new/src/lib/portal/utils/dateUtils.ts
+  - deleted app source
 ---
 
 # Contextual Timestamps - Consolidating Duplicated Time Formatting
@@ -43,13 +43,13 @@ Multiple components across the codebase had their own implementations of relativ
 | `components/notifications/NotificationItem.tsx` | `formatTimeAgo` | 8 |
 | `components/proposals/CommentItem.tsx` | `formatDistanceToNow` | 14 |
 | `components/deliverables/ApprovalTimeline.tsx` | `formatTimestamp` | 11 |
-| `landing-page-new/.../CommentItem.tsx` | `formatDistanceToNow` | 14 |
+| `deleted app source` | `formatDistanceToNow` | 14 |
 
 ### Root Cause
 
 A shared `formatTimestamp` utility already existed in two places:
 - `utils/dateFormatting.ts` (for admin app)
-- `landing-page-new/src/lib/portal/utils/dateUtils.ts` (for portal app)
+- `deleted app source` (for portal app)
 
 But individual components weren't using them - they had been written before the utility existed or developers weren't aware of it.
 
@@ -104,10 +104,10 @@ import { formatTimestamp } from '../../utils/dateFormatting';
 | `components/notifications/NotificationItem.tsx` | Removed `formatTimeAgo`, imported `formatTimestamp` |
 | `components/proposals/CommentItem.tsx` | Removed `formatDistanceToNow`, imported `formatTimestamp` |
 | `components/deliverables/ApprovalTimeline.tsx` | Removed local `formatTimestamp`, imported from utils |
-| `landing-page-new/.../CommentItem.tsx` | Removed `formatDistanceToNow`, imported from dateUtils |
-| `landing-page-new/.../UserManagement.tsx` | Added import, updated "Joined" column |
-| `landing-page-new/.../UserProfile.tsx` | Added import, updated "Member Since" |
-| `landing-page-new/.../profile/page.tsx` | Added import, updated "Member since" badge |
+| `deleted app source` | Removed `formatDistanceToNow`, imported from dateUtils |
+| `deleted app source` | Added import, updated "Joined" column |
+| `deleted app source` | Added import, updated "Member Since" |
+| `deleted app source` | Added import, updated "Member since" badge |
 
 **Result**: 10 files changed, 24 insertions, 113 deletions (~90 lines of duplication removed)
 

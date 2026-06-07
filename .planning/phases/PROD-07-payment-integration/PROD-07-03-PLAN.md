@@ -5,7 +5,7 @@ type: execute
 wave: 1
 depends_on: []
 files_modified:
-  - landing-page-new/src/app/api/payments/admin/route.ts
+  - deleted app source
   - netlify/functions/payments.ts
 autonomous: true
 user_setup: []
@@ -17,11 +17,11 @@ must_haves:
     - "Summary metrics calculated correctly"
     - "Only authenticated admins can access admin payments API"
   artifacts:
-    - path: "landing-page-new/src/app/api/payments/admin/route.ts"
+    - path: "deleted app source
       provides: "Admin payments API with filters"
       exports: ["GET"]
   key_links:
-    - from: "landing-page-new/src/app/api/payments/admin/route.ts"
+    - from: "deleted app source
       to: "payments table"
       via: "SQL query with joins"
       pattern: "SELECT.*FROM payments.*JOIN"
@@ -44,7 +44,7 @@ Output: New API route `/api/payments/admin` that returns filtered payments with 
 @.planning/PROJECT.md
 @.planning/PRODUCTION_ROADMAP.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-CONTEXT.md
-@landing-page-new/src/app/api/payments/history/route.ts
+@deleted app source
 @netlify/functions/payments.ts
 </context>
 
@@ -52,7 +52,7 @@ Output: New API route `/api/payments/admin` that returns filtered payments with 
 
 <task type="auto">
   <name>Task 1: Create admin payments API endpoint</name>
-  <files>landing-page-new/src/app/api/payments/admin/route.ts</files>
+  <files>deleted app source
   <action>
 Create the admin payments endpoint with filtering support.
 
@@ -106,11 +106,11 @@ Response format:
 Use existing auth patterns - check for authenticated user with admin role.
   </action>
   <verify>
-1. File exists at landing-page-new/src/app/api/payments/admin/route.ts
+1. File exists at deleted app source
 2. Exports GET handler
 3. Returns payments with client information
 4. Returns summary object
-5. npm run build passes in landing-page-new
+5. npm run build passes in deleted app
   </verify>
   <done>Admin payments API endpoint created with filters and summary</done>
 </task>

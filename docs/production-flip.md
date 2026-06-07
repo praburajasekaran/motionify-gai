@@ -34,7 +34,7 @@ Direct-refresh coverage should include one Public Site route, one public handoff
 - Publish directory: `dist`
 - Functions directory: `netlify/functions`
 - Next deploy plugin: not configured
-- Legacy Next reference: `landing-page-new/` is retained only as non-runtime historical reference. Its package scripts intentionally fail and it is not part of install, build, test, or publish workflows.
+- Former separate frontend: removed from the repository and not part of install, build, test, or publish workflows.
 
 ## Runtime Routes
 
@@ -46,4 +46,4 @@ Direct-refresh coverage should include one Public Site route, one public handoff
 
 The fastest rollback is to publish the previous known-good Netlify deploy from the Netlify Deploys tab.
 
-Git rollback for runtime cleanup is isolated to this slice's cleanup files. If a retained legacy reference file is needed for investigation, recover it from version history rather than re-enabling `landing-page-new` as a runtime.
+Git rollback for runtime cleanup is isolated to this slice's cleanup files. If old frontend code is needed for investigation, recover it from version history rather than reintroducing another runtime.

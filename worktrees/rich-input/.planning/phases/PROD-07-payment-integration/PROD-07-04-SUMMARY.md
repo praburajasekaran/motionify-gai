@@ -25,10 +25,10 @@ tech-stack:
 
 key-files:
   created:
-    - landing-page-new/src/lib/portal/pages/PaymentsPage.tsx
-    - landing-page-new/src/app/portal/payments/page.tsx
+    - deleted app source
+    - deleted app source
   modified:
-    - landing-page-new/src/components/payment/PaymentButton.tsx
+    - deleted app source
 
 key-decisions:
   - "Group payments by project for better organization"
@@ -74,9 +74,9 @@ Each task was committed atomically:
 3. **Task 3: Update PaymentButton for portal context** - `8bb2855` (feat)
 
 ## Files Created/Modified
-- `landing-page-new/src/lib/portal/pages/PaymentsPage.tsx` - Client portal payments page with payment history, summary cards, and payment actions (368 lines)
-- `landing-page-new/src/app/portal/payments/page.tsx` - Next.js route for /portal/payments
-- `landing-page-new/src/components/payment/PaymentButton.tsx` - Added onPaymentSuccess callback and compact variant for portal context
+- `deleted app source` - Client portal payments page with payment history, summary cards, and payment actions (368 lines)
+- `deleted app source` - Next.js route for /portal/payments
+- `deleted app source` - Added onPaymentSuccess callback and compact variant for portal context
 
 ## Decisions Made
 - **Group by project:** Payments are grouped by project for clients with multiple projects, providing clear organization

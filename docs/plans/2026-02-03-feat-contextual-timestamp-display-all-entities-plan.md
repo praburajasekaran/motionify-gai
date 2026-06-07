@@ -20,7 +20,7 @@ Add a single `formatTimestamp()` utility function that outputs contextual time (
 
 None — we extend the existing utility:
 
-1. `landing-page-new/src/lib/portal/utils/dateUtils.ts` — add `formatTimestamp()` function
+1. `deleted app source` — add `formatTimestamp()` function
 
 ### Admin App Components (8 files)
 
@@ -35,9 +35,9 @@ None — we extend the existing utility:
 
 ### Portal App Components (3 files)
 
-10. `landing-page-new/src/lib/portal/components/TaskItem.tsx` — add updated_at display, enhance created_at
-11. `landing-page-new/src/lib/portal/components/FileItem.tsx` — add contextual uploaded_at
-12. `landing-page-new/src/lib/portal/components/TeamManagement.tsx` — add invitation timestamps
+10. `deleted app source` — add updated_at display, enhance created_at
+11. `deleted app source` — add contextual uploaded_at
+12. `deleted app source` — add invitation timestamps
 
 ### Type Definitions (2 files — read-only verification, modify only if needed)
 
@@ -50,7 +50,7 @@ None — we extend the existing utility:
 
 ### Step 1: Add `formatTimestamp()` to dateUtils.ts
 
-Add a single new exported function to `landing-page-new/src/lib/portal/utils/dateUtils.ts`:
+Add a single new exported function to `deleted app source`:
 
 ```typescript
 /**
@@ -122,7 +122,7 @@ Updated {formatTimestamp(task.updatedAt)}
 
 **`FileList.tsx` (admin)** — Line 167 currently uses `new Date(file.uploadedAt).toLocaleDateString()`. Replace with:
 ```typescript
-import { formatTimestamp } from '@/landing-page-new/src/lib/portal/utils/dateUtils';
+import { formatTimestamp } from '@/deleted app source
 // ...
 <span>{formatTimestamp(file.uploadedAt)}</span>
 ```
@@ -153,7 +153,7 @@ For all timestamps, wrap in a `<span title={formatDateTime(date)}>` so hovering 
 
 1. **API already returns timestamps** — Verified: all endpoints return created_at/updated_at in their responses.
 2. **No new API calls needed** — The data is already fetched; we just display it.
-3. **`dateUtils.ts` is importable from admin app** — The admin app (`components/`) can import from `landing-page-new/src/lib/portal/utils/dateUtils.ts`. If not, we copy `formatTimestamp` to a shared utils location.
+3. **`dateUtils.ts` is importable from admin app** — The admin app (`components/`) can import from `deleted app source`. If not, we copy `formatTimestamp` to a shared utils location.
 4. **All timestamps are ISO 8601 strings** — The PostgreSQL database returns ISO format through the API.
 
 ### Edge Cases
@@ -179,7 +179,7 @@ For all timestamps, wrap in a `<span title={formatDateTime(date)}>` so hovering 
 
 ## Import Path Consideration
 
-The admin app (`components/`) and portal app (`landing-page-new/`) have different import styles. If the admin app cannot import from `landing-page-new/src/lib/portal/utils/dateUtils.ts`, we should:
+The admin app (`components/`) and portal app (`deleted app directory`) have different import styles. If the admin app cannot import from `deleted app source`, we should:
 
 1. Check if a shared utils path exists (e.g., `utils/` at project root)
 2. If not, duplicate the `formatTimestamp` function in a small utility the admin components can import (e.g., `utils/formatTimestamp.ts`)

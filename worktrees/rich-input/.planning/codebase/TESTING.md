@@ -12,10 +12,10 @@
 - Parallel execution: Enabled
 
 **Unit Testing:**
-- Jest 30.2.0 (Next.js app only)
-- Config: `landing-page-new/jest.config.js`
+- Jest 30.2.0 (deleted app only)
+- Config: `deleted app source`
 - Transformer: SWC (`@swc/jest`)
-- Location: `landing-page-new/src/**/__tests__/`
+- Location: `deleted app source`
 
 **Component Testing:**
 - @testing-library/react 16.3.1
@@ -39,7 +39,7 @@ e2e/
 - Page objects: Not used (direct Playwright API)
 
 **Unit Tests:**
-- Only in Next.js app: `landing-page-new/src/app/api/payments/__tests__/`
+- Only in deleted app: `deleted app source`
 - Mock-heavy approach (982 lines of mocks in payments.test.ts)
 
 ## Running Tests
@@ -55,7 +55,7 @@ npm run test:e2e:payment
 
 **Unit Tests:**
 ```bash
-# In landing-page-new directory
+# In deleted app directory
 npm test
 ```
 

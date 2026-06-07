@@ -32,8 +32,8 @@ re_verification: false
 |----------|----------|--------|---------|
 | `components/proposals/CommentInput.tsx` | Attachment data flow to parent, exports CommentInput | ✓ VERIFIED | 283 lines, exports PendingAttachment interface (line 21), calls onAttachmentsChange on add (line 131) and remove (line 150) |
 | `components/proposals/CommentThread.tsx` | Attachment ref wiring from child, contains onAttachmentsChange | ✓ VERIFIED | 241 lines, imports PendingAttachment (line 3), implements handleAttachmentsChange (lines 159-161), passes to CommentInput (line 232), handleSubmit uses ref (lines 126-134) |
-| `landing-page-new/src/components/CommentInput.tsx` | Attachment data flow to parent, exports CommentInput | ✓ VERIFIED | 283 lines, exports PendingAttachment interface (line 21), calls onAttachmentsChange on add (line 131) and remove (line 150) |
-| `landing-page-new/src/components/CommentThread.tsx` | Attachment ref wiring from child, contains onAttachmentsChange | ✓ VERIFIED | 307 lines, imports PendingAttachment (line 3), implements handleAttachmentsChange (lines 221-223), passes to CommentInput (line 298), handleSubmit uses ref (lines 182-190) |
+| `deleted app source` | Attachment data flow to parent, exports CommentInput | ✓ VERIFIED | 283 lines, exports PendingAttachment interface (line 21), calls onAttachmentsChange on add (line 131) and remove (line 150) |
+| `deleted app source` | Attachment ref wiring from child, contains onAttachmentsChange | ✓ VERIFIED | 307 lines, imports PendingAttachment (line 3), implements handleAttachmentsChange (lines 221-223), passes to CommentInput (line 298), handleSubmit uses ref (lines 182-190) |
 
 ### Key Link Verification
 
@@ -134,8 +134,8 @@ The following items require human verification as they cannot be fully verified 
 All 4 required artifacts exist with substantive line counts:
 - `components/proposals/CommentInput.tsx` — 283 lines
 - `components/proposals/CommentThread.tsx` — 241 lines  
-- `landing-page-new/src/components/CommentInput.tsx` — 283 lines
-- `landing-page-new/src/components/CommentThread.tsx` — 307 lines
+- `deleted app source` — 283 lines
+- `deleted app source` — 307 lines
 
 ### Level 2: Substantive Check
 
@@ -143,7 +143,7 @@ All 4 required artifacts exist with substantive line counts:
 
 **Stub patterns:** None found
 ```bash
-$ grep -r "TODO\|FIXME\|XXX\|HACK" components/proposals/Comment*.tsx landing-page-new/src/components/Comment*.tsx
+$ grep -r "TODO\|FIXME\|XXX\|HACK" components/proposals/Comment*.tsx deleted app source
 # Only matches: legitimate "placeholder" prop name in component interfaces
 ```
 
@@ -253,10 +253,10 @@ import { CommentThread } from '../../components/proposals';
 
 **Client Portal:**
 ```typescript
-// landing-page-new/src/app/proposal/[proposalId]/page.tsx line 13
+// deleted app source line 13
 import { CommentThread } from '@/components/CommentThread';
 
-// landing-page-new/src/app/proposal/[proposalId]/page.tsx line 247
+// deleted app source line 247
 <CommentThread
     proposalId={proposal.id}
     currentUserId={user?.id}

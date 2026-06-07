@@ -5,9 +5,9 @@ type: execute
 wave: 2
 depends_on: ["PROD-07-01"]
 files_modified:
-  - landing-page-new/src/app/api/payments/verify/route.ts
-  - landing-page-new/src/app/payment/success/page.tsx
-  - landing-page-new/src/app/payment/failure/page.tsx
+  - deleted app source
+  - deleted app source
+  - deleted app source
 autonomous: true
 user_setup: []
 
@@ -18,14 +18,14 @@ must_haves:
     - "Payment attempt history is logged"
     - "Success page redirects to project/deliverables"
   artifacts:
-    - path: "landing-page-new/src/app/payment/failure/page.tsx"
+    - path: "deleted app source
       provides: "Payment failure page with retry"
       min_lines: 50
-    - path: "landing-page-new/src/app/payment/success/page.tsx"
+    - path: "deleted app source
       provides: "Success page with redirect to deliverables"
       min_lines: 50
   key_links:
-    - from: "landing-page-new/src/app/payment/success/page.tsx"
+    - from: "deleted app source
       to: "/portal/projects"
       via: "redirect after success"
       pattern: "redirect|router.push"
@@ -48,16 +48,16 @@ Output: Enhanced failure page with retry, admin notifications on failure, and su
 @.planning/PROJECT.md
 @.planning/PRODUCTION_ROADMAP.md
 @.planning/phases/PROD-07-payment-integration/PROD-07-CONTEXT.md
-@landing-page-new/src/app/payment/success/page.tsx
-@landing-page-new/src/app/payment/failure/page.tsx
-@landing-page-new/src/app/api/payments/verify/route.ts
+@deleted app source
+@deleted app source
+@deleted app source
 </context>
 
 <tasks>
 
 <task type="auto">
   <name>Task 1: Enhance payment verify to log attempts and notify on failure</name>
-  <files>landing-page-new/src/app/api/payments/verify/route.ts</files>
+  <files>deleted app source
   <action>
 Update the verify endpoint to:
 1. Log all payment attempts (success and failure) to a payment_attempts table or JSON log
@@ -108,7 +108,7 @@ For admin notification, use existing send-email and notifications infrastructure
 
 <task type="auto">
   <name>Task 2: Enhance failure page with retry button</name>
-  <files>landing-page-new/src/app/payment/failure/page.tsx</files>
+  <files>deleted app source
   <action>
 Update the payment failure page to show:
 1. Clear error message
@@ -191,7 +191,7 @@ Use Suspense wrapper for useSearchParams (Next.js requirement).
 
 <task type="auto">
   <name>Task 3: Update success page to redirect to deliverables</name>
-  <files>landing-page-new/src/app/payment/success/page.tsx</files>
+  <files>deleted app source
   <action>
 Update the success page to:
 1. Show success confirmation briefly

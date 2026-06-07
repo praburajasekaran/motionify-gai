@@ -29,7 +29,7 @@ key-files:
     - netlify/functions/_shared/auth.ts
     - netlify/functions/auth-verify-magic-link.ts
     - lib/api-config.ts
-    - landing-page-new/src/lib/portal/api/auth.api.ts
+    - deleted app source
 
 key-decisions:
   - "Use jsonwebtoken library instead of custom crypto implementation for industry-standard JWT handling"
@@ -66,7 +66,7 @@ completed: 2026-01-24
 - Created cookie-based authentication middleware with role-based access control
 - Added /auth-me and /auth-logout endpoints for session management
 - Updated magic link verification to set JWT tokens in httpOnly cookies
-- Added credentials: 'include' to admin portal and critical Next.js portal API requests
+- Added credentials: 'include' to admin portal and critical deleted portal API requests
 
 ## Task Commits
 
@@ -90,7 +90,7 @@ Each task was committed atomically:
 - `netlify/functions/_shared/auth.ts` - Added cookie-based auth middleware (requireAuthFromCookie, requireSuperAdmin, requireProjectManager)
 - `netlify/functions/auth-verify-magic-link.ts` - Set httpOnly cookie on successful magic link verification
 - `lib/api-config.ts` - Added credentials: 'include' to all fetch calls
-- `landing-page-new/src/lib/portal/api/auth.api.ts` - Added credentials: 'include' to requestMagicLink
+- `deleted app source` - Added credentials: 'include' to requestMagicLink
 
 ## Decisions Made
 
@@ -102,10 +102,10 @@ Each task was committed atomically:
 - Rationale: Existing code may still use Authorization header pattern
 - Implementation: Created new cookie-based functions alongside existing auth functions
 
-**3. Partial Next.js portal fetch update**
+**3. Partial deleted portal fetch update**
 - Rationale: 60+ fetch calls across many files would extend execution time significantly
 - Decision: Updated critical auth endpoints, documented remaining files need update
-- Impact: Admin portal fully protected, Next.js portal partially protected
+- Impact: Admin portal fully protected, deleted portal partially protected
 
 ## Deviations from Plan
 
@@ -121,12 +121,12 @@ Each task was committed atomically:
 
 **2. [Rule 2 - Missing Critical] Incomplete frontend fetch updates**
 - **Found during:** Task 5 (Update Frontend to Use Cookies)
-- **Issue:** 60+ fetch calls across Next.js portal files need credentials: 'include'
-- **Fix:** Updated admin portal api-config.ts centrally, updated critical auth.api.ts in Next.js portal
-- **Files modified:** lib/api-config.ts, landing-page-new/src/lib/portal/api/auth.api.ts
+- **Issue:** 60+ fetch calls across deleted portal files need credentials: 'include'
+- **Fix:** Updated admin portal api-config.ts centrally, updated critical auth.api.ts in deleted portal
+- **Files modified:** lib/api-config.ts, deleted app source
 - **Verification:** Admin portal fetch calls include credentials
 - **Committed in:** `6d6eef6` (Task 5)
-- **Remaining work:** Additional Next.js portal files (proposals.ts, inquiries.ts, attachments.ts, CommentThread.tsx, etc.) need credentials: 'include' added
+- **Remaining work:** Additional deleted portal files (proposals.ts, inquiries.ts, attachments.ts, CommentThread.tsx, etc.) need credentials: 'include' added
 
 ---
 
@@ -171,7 +171,7 @@ Add to:
 - Auth status and logout endpoints functional
 
 **Remaining work (non-blocking):**
-- Add credentials: 'include' to remaining Next.js portal fetch calls (proposals.ts, inquiries.ts, attachments.ts, etc.)
+- Add credentials: 'include' to remaining deleted portal fetch calls (proposals.ts, inquiries.ts, attachments.ts, etc.)
 - Update AuthContext to use /auth-me endpoint instead of localStorage
 - Test end-to-end login flow with httpOnly cookies
 

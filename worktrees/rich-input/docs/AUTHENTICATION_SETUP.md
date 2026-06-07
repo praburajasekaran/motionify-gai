@@ -234,7 +234,7 @@ motionify-portal-1/
 │       ├── auth-verify-magic-link.js
 │       ├── auth-me.js
 │       └── auth-logout.js
-├── landing-page/                 # Next.js application
+├── landing-page/                 # deleted application
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── login/           # Login page

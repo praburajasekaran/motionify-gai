@@ -35,11 +35,11 @@
 
 ### Task 2: Client Portal Pages
 
-**landing-page-new/src/lib/portal/pages/PaymentsPage.tsx:**
+**deleted app source
 - Replaced inline error display (AlertCircle + text + Try Again button) with `<ErrorState error={error} onRetry={fetchPayments} />`
 - Replaced inline empty state (Receipt icon + custom text) with `<EmptyState icon={CreditCard} title="No payments yet" />`
 
-**landing-page-new/src/app/portal/inquiries/page.tsx:**
+**deleted app source
 - Added `loadError` state variable and error tracking (previously had only console.error)
 - Added `<ErrorState error={loadError} onRetry={loadInquiries} />` for fetch failures
 - Replaced plain text empty state with `<EmptyState icon={FileText} title="No inquiries yet" />`
@@ -58,7 +58,7 @@
 
 **2. [Deviation] Client portal has no projects or proposals list pages**
 - **Found during:** Task 2 audit
-- **Issue:** Plan expected `landing-page-new/src/app/portal/projects/page.tsx` and `proposals/page.tsx` to exist. Neither exists as list pages. The client portal uses:
+- **Issue:** Plan expected `deleted app source` and `proposals/page.tsx` to exist. Neither exists as list pages. The client portal uses:
   - Dashboard page with ProjectManagerDashboard component
   - Individual project pages at `/portal/projects/[projectId]`
   - Inquiries page at `/portal/inquiries/page.tsx` (serves as proposals for clients)
@@ -96,8 +96,8 @@
 | pages/admin/UserManagement.tsx | Admin | ErrorState + EmptyState + improved loading |
 | pages/admin/InquiryDashboard.tsx | Admin | ErrorState + EmptyState + fixed retry |
 | pages/ProjectList.tsx | Admin | ErrorState + error tracking |
-| landing-page-new/src/lib/portal/pages/PaymentsPage.tsx | Client | ErrorState + EmptyState |
-| landing-page-new/src/app/portal/inquiries/page.tsx | Client | ErrorState + EmptyState + error tracking |
+| deleted app source | Client | ErrorState + EmptyState |
+| deleted app source | Client | ErrorState + EmptyState + error tracking |
 
 ## Duration
 

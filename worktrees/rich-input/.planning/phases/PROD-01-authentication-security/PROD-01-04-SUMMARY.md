@@ -28,7 +28,7 @@ key-files:
   modified:
     - netlify/functions/_shared/db.ts
     - database/migrate.ts
-    - landing-page-new/src/lib/db.ts
+    - deleted app source
     - scripts/debug-db.ts
     - .env.example
 
@@ -83,7 +83,7 @@ Tasks 4-6 were verification tasks (database provider check, deployment checklist
 
 - `netlify/functions/_shared/db.ts` - Removed DISABLE_SSL_VALIDATION, enforced production SSL
 - `database/migrate.ts` - Applied same SSL enforcement pattern
-- `landing-page-new/src/lib/db.ts` - Applied same SSL enforcement pattern
+- `deleted app source` - Applied same SSL enforcement pattern
 - `scripts/debug-db.ts` - Applied same SSL enforcement pattern
 - `.env.example` - Removed DISABLE_SSL_VALIDATION docs, added DATABASE_SSL guidance
 

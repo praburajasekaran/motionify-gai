@@ -45,8 +45,8 @@ This is a surgical fix: add one line (`credentials: 'include'`) to 4 fetch call 
 
 **Reference implementations:**
 - `lib/api-config.ts` line 73: Centralized API client wrapper
-- `landing-page-new/src/lib/portal/utils/api-transformers.ts` lines 136, 164, 193, 219: All HTTP method helpers
-- `landing-page-new/src/lib/portal/api/auth.api.ts` lines 30, 106, 184, 220: All auth endpoints
+- `deleted app source` lines 136, 164, 193, 219: All HTTP method helpers
+- `deleted app source` lines 30, 106, 184, 220: All auth endpoints
 - `shared/utils/api.client.ts` line 41: Generic API request wrapper
 
 ### Pattern 1: Direct Fetch with Credentials
@@ -56,7 +56,7 @@ This is a surgical fix: add one line (`credentials: 'include'`) to 4 fetch call 
 **Example:**
 
 ```typescript
-// Source: landing-page-new/src/components/CommentThread.tsx line 51
+// Source: deleted app source line 51
 const response = await fetch(url, {
     credentials: 'include',
 });
@@ -69,7 +69,7 @@ const response = await fetch(url, {
 **Example:**
 
 ```typescript
-// Source: landing-page-new/src/lib/portal/utils/api-transformers.ts line 159
+// Source: deleted app source line 159
 return apiCall<T>(
     () => fetch(url, {
         method: 'POST',
@@ -90,7 +90,7 @@ return apiCall<T>(
 **Example:**
 
 ```typescript
-// Source: landing-page-new/src/lib/portal/utils/api-transformers.ts
+// Source: deleted app source
 import { apiGet, apiPost, apiPatch } from '@/lib/portal/utils/api-transformers';
 
 // Credentials automatically included
@@ -176,7 +176,7 @@ Verified patterns from official sources:
 ### Example 1: GET with Credentials
 
 ```typescript
-// Source: landing-page-new/src/components/CommentThread.tsx lines 51-53
+// Source: deleted app source lines 51-53
 const response = await fetch(url, {
     credentials: 'include',
 });
@@ -187,7 +187,7 @@ const response = await fetch(url, {
 ### Example 2: POST with Credentials
 
 ```typescript
-// Source: landing-page-new/src/components/CommentThread.tsx lines 66-74
+// Source: deleted app source lines 66-74
 const response = await fetch(`${API_BASE}/comments`, {
     method: 'POST',
     headers: {
@@ -203,7 +203,7 @@ const response = await fetch(`${API_BASE}/comments`, {
 ### Example 3: PUT with Credentials (The Fix)
 
 ```typescript
-// FIX for landing-page-new/src/components/CommentThread.tsx lines 262-268
+// FIX for deleted app source lines 262-268
 const handleEdit = async (id: string, newContent: string) => {
     const response = await fetch(`${API_BASE}/comments`, {
         method: 'PUT',
@@ -298,7 +298,7 @@ const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`, {
 
 **Codebase (Verified Implementations):**
 - `lib/api-config.ts` line 73 - Centralized API client with credentials
-- `landing-page-new/src/lib/portal/utils/api-transformers.ts` - All HTTP helpers include credentials
+- `deleted app source` - All HTTP helpers include credentials
 - `netlify/functions/_shared/cors.ts` - CORS configuration with Access-Control-Allow-Credentials
 - `netlify/functions/_shared/jwt.ts` - JWT cookie generation and verification
 - `.planning/phases/PROD-01-authentication-security/RESEARCH.md` - Cookie-based auth migration strategy
@@ -313,7 +313,7 @@ const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`, {
 ### Tertiary (Project-Specific)
 
 - `.planning/v1-MILESTONE-AUDIT.md` - Gap identification from audit
-- `landing-page-new/src/components/CommentThread.tsx` lines 261-273 - Client portal edit handler (missing credentials)
+- `deleted app source` lines 261-273 - Client portal edit handler (missing credentials)
 - `contexts/NotificationContext.tsx` lines 87, 114, 133 - Admin portal notification calls (missing credentials)
 
 ## Metadata

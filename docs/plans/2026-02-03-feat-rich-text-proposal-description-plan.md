@@ -25,8 +25,8 @@ Replace the plain `<textarea>` for "Project Description" in the proposal form wi
 
 | # | File | Change |
 |---|------|--------|
-| 5 | `landing-page-new/package.json` | Add `@tiptap/react`, `@tiptap/starter-kit` (for read-only rendering) |
-| 6 | `landing-page-new/src/components/proposal/ProposalReview.tsx` | Render HTML description instead of plain text |
+| 5 | `deleted app source` | Add `@tiptap/react`, `@tiptap/starter-kit` (for read-only rendering) |
+| 6 | `deleted app source` | Render HTML description instead of plain text |
 
 ### Backend
 
@@ -47,7 +47,7 @@ Install in admin portal root:
 @tiptap/extension-placeholder
 ```
 
-Install in `landing-page-new/`:
+Install in `deleted app directory`:
 ```
 @tiptap/react
 @tiptap/starter-kit
@@ -153,6 +153,6 @@ In `netlify/functions/_shared/schemas.ts`:
 - `pages/admin/ProposalBuilder.tsx:297-303` — current textarea to replace
 - `pages/admin/ProposalDetail.tsx:607-613` — edit mode textarea
 - `pages/admin/ProposalDetail.tsx:616` — view mode plain text render
-- `landing-page-new/src/components/proposal/ProposalReview.tsx:88-92` — client-facing render
+- `deleted app source` — client-facing render
 - `netlify/functions/_shared/schemas.ts:41,51` — Zod validation schemas
 - `database/schema.sql:74` — `description TEXT NOT NULL` column

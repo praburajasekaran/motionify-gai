@@ -325,7 +325,7 @@ export function StatusBadge({ status, size = 'md', showIcon = true, userRole }: 
 
 ### Toast + Notification Combo (Based on NotificationContext + Sonner)
 ```typescript
-// Source: contexts/NotificationContext.tsx + landing-page-new sonner usage
+// Source: contexts/NotificationContext.tsx + deleted app sonner usage
 import { toast } from 'sonner';
 import { useNotifications } from '@/contexts/NotificationContext';
 
@@ -349,7 +349,7 @@ function useStatusChangeNotification() {
 
 ### Activity-Based Timeline (Based on activities.api.ts)
 ```typescript
-// Source: landing-page-new/src/lib/portal/api/activities.api.ts
+// Source: deleted app source
 import { fetchActivities, type Activity } from '@/lib/portal/api/activities.api';
 
 interface TimelineProps {
@@ -470,9 +470,9 @@ Things that couldn't be fully resolved:
 ### Primary (HIGH confidence)
 - Existing codebase analysis: pages/admin/ProposalDetail.tsx (STATUS_CONFIG pattern)
 - Existing codebase analysis: contexts/NotificationContext.tsx (notification patterns)
-- Existing codebase analysis: landing-page-new/src/contexts/NotificationContext.tsx (client portal notifications)
+- Existing codebase analysis: deleted app source (client portal notifications)
 - Existing codebase analysis: netlify/functions/send-email.ts (email template patterns)
-- Existing codebase analysis: landing-page-new/src/lib/portal/api/activities.api.ts (activity logging)
+- Existing codebase analysis: deleted app source (activity logging)
 - Existing codebase analysis: components/ui/design-system.tsx (ToastProvider, useToast)
 
 ### Secondary (MEDIUM confidence)

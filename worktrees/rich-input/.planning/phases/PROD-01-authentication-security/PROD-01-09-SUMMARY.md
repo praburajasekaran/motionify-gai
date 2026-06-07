@@ -25,7 +25,7 @@ key-files:
   created: []
   modified:
     - lib/auth.ts
-    - landing-page-new/src/context/AuthContext.tsx
+    - deleted app source
 
 key-decisions:
   - "Remove localStorage session caching to make cookies single source of truth"
@@ -75,7 +75,7 @@ This work was split across two commits:
 
 ## Files Created/Modified
 - `lib/auth.ts` - Added credentials: 'include' to verifyMagicLink, removed token from response handling
-- `landing-page-new/src/context/AuthContext.tsx` - Removed localStorage fallback, relies solely on /auth-me API
+- `deleted app source` - Removed localStorage fallback, relies solely on /auth-me API
 
 ## Decisions Made
 

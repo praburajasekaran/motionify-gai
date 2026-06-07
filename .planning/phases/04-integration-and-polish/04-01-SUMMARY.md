@@ -28,8 +28,8 @@ key-files:
   modified:
     - components/proposals/CommentInput.tsx
     - components/proposals/CommentThread.tsx
-    - landing-page-new/src/components/CommentInput.tsx
-    - landing-page-new/src/components/CommentThread.tsx
+    - deleted app source
+    - deleted app source
 
 key-decisions:
   - "Use callback prop pattern instead of lifting state to preserve existing pendingAttachmentsRef architecture"
@@ -83,8 +83,8 @@ Each task was committed atomically:
 ## Files Created/Modified
 - `components/proposals/CommentInput.tsx` - Exported PendingAttachment type, added onAttachmentsChange prop, called callback on state changes
 - `components/proposals/CommentThread.tsx` - Imported PendingAttachment type, implemented handleAttachmentsChange, wired to CommentInput
-- `landing-page-new/src/components/CommentInput.tsx` - Exported PendingAttachment type, added onAttachmentsChange prop, called callback on state changes
-- `landing-page-new/src/components/CommentThread.tsx` - Imported PendingAttachment type, implemented handleAttachmentsChange, wired to CommentInput
+- `deleted app source` - Exported PendingAttachment type, added onAttachmentsChange prop, called callback on state changes
+- `deleted app source` - Imported PendingAttachment type, implemented handleAttachmentsChange, wired to CommentInput
 
 ## Decisions Made
 

@@ -11,7 +11,7 @@ Get up and running in 5 minutes!
 npm install
 
 # Install landing page dependencies (happens automatically)
-cd landing-page-new && npm install && cd ..
+cd deleted app && npm install && cd ..
 ```
 
 This will install:

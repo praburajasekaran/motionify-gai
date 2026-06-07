@@ -24,7 +24,7 @@ motionify-gai-1/
 npm install
 
 # Install landing page dependencies (happens automatically via postinstall)
-# Or manually: cd landing-page-new && npm install
+# Or manually: cd deleted app && npm install
 ```
 
 ### Step 2: Setup Environment Variables
@@ -104,7 +104,7 @@ git push -u origin main
 
    ```
    Build command: npm run build:all
-   Publish directory: landing-page-new/.next
+   Publish directory: deleted app source
    Functions directory: netlify/functions
    ```
 

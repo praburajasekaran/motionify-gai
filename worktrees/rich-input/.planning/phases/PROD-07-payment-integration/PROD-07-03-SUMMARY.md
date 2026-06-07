@@ -25,7 +25,7 @@ tech-stack:
 
 key-files:
   created:
-    - landing-page-new/src/app/api/payments/admin/route.ts
+    - deleted app source
   modified:
     - netlify/functions/payments.ts
 
@@ -72,7 +72,7 @@ Each task was committed atomically:
 2. **Task 2: Add manual reminder endpoint** - `9a71905` (feat)
 
 ## Files Created/Modified
-- `landing-page-new/src/app/api/payments/admin/route.ts` - Admin payments API with filters and summary
+- `deleted app source` - Admin payments API with filters and summary
 - `netlify/functions/payments.ts` - Added send-reminder action for manual payment reminders
 
 ## Decisions Made

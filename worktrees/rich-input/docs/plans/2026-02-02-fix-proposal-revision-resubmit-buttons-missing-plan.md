@@ -15,7 +15,7 @@ After a client requests a revision on a proposal and the super admin updates and
 The proposal revision workflow is broken due to a **dual data store synchronization issue** combined with **field-mapping bugs**:
 
 1. The admin SPA (`pages/admin/`) writes to **PostgreSQL** via Netlify functions
-2. The client Next.js app (`landing-page-new/`) reads from **JSON file storage** via Next.js API routes
+2. The client deleted app (`deleted app directory`) reads from **JSON file storage** via Next.js API routes
 3. When the admin clicks "Resend to Client", it updates PostgreSQL but the JSON storage (which the client reads from) is never updated
 4. Additionally, even in the PostgreSQL path, the `version` field is silently dropped due to missing field mappings
 
@@ -28,8 +28,8 @@ The proposal revision workflow is broken due to a **dual data store synchronizat
 - `lib/proposals.ts:206` → sends PUT to `/.netlify/functions/proposal-detail/{id}` (PostgreSQL)
 
 **Client read flow:**
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx:97` → `fetchProposalById(proposalId)`
-- `landing-page-new/src/lib/proposals.ts:86` → fetches from `/api/proposals/{id}` (JSON file storage)
+- `deleted app source` → `fetchProposalById(proposalId)`
+- `deleted app source` → fetches from `/api/proposals/{id}` (JSON file storage)
 
 The client never sees the updated status because it reads from a different data store.
 
@@ -73,7 +73,7 @@ After the admin resends, also update the JSON file storage that the client reads
 
 ### Approach B: Make client read from PostgreSQL (Proper fix, recommended)
 
-Update `landing-page-new/src/lib/proposals.ts` `fetchProposalById` to read from the Netlify function API (PostgreSQL) instead of the JSON file storage. This eliminates the dual-store problem entirely.
+Update `deleted app source` `fetchProposalById` to read from the Netlify function API (PostgreSQL) instead of the JSON file storage. This eliminates the dual-store problem entirely.
 
 **Recommendation: Approach B** — it fixes the root cause and prevents future sync issues.
 
@@ -107,12 +107,12 @@ const allowedFields = [
 
 ### Phase 2: Fix the data store mismatch (Bug 1)
 
-**File: `landing-page-new/src/lib/proposals.ts`** — Update `fetchProposalById` to read from the Netlify function backend (PostgreSQL) as a fallback when the JSON store doesn't have the latest data, OR switch entirely to PostgreSQL reads.
+**File: `deleted app source`** — Update `fetchProposalById` to read from the Netlify function backend (PostgreSQL) as a fallback when the JSON store doesn't have the latest data, OR switch entirely to PostgreSQL reads.
 
 Option: Update the `fetchProposalById` to call the Netlify function API:
 
 ```typescript
-// landing-page-new/src/lib/proposals.ts
+// deleted app source
 export async function fetchProposalById(id: string): Promise<Proposal | null> {
   // Try Netlify function backend (source of truth)
   const response = await fetch(`${NETLIFY_API_URL}/proposal-detail/${id}`);
@@ -171,12 +171,12 @@ const updatedProposal = await updateProposal(proposal.id, {
 | `lib/proposals.ts:206-218` | Add `version` to snake_case mapping in `updateProposal` |
 | `netlify/functions/proposal-detail.ts:68-72` | Add `version` to `allowedFields` array |
 | `pages/admin/ProposalDetail.tsx:440-477` | Update `handleResend` to sync to JSON storage + update inquiry status |
-| `landing-page-new/src/lib/proposals.ts` | Update `fetchProposalById` to read from PostgreSQL backend |
+| `deleted app source` | Update `fetchProposalById` to read from PostgreSQL backend |
 
 ## Dependencies & Risks
 
 - **Risk: Dual data store divergence** — The root architectural issue is having two separate data stores. This fix patches the immediate problem but the long-term solution is to consolidate to a single source of truth (PostgreSQL).
-- **Risk: Cross-origin calls** — The admin SPA and Next.js app may be on different origins. Ensure CORS headers allow the sync calls.
+- **Risk: Cross-origin calls** — The admin SPA and deleted app may be on different origins. Ensure CORS headers allow the sync calls.
 - **Gotcha from institutional learnings** — Per `docs/solutions/integration-issues/api-field-name-mismatch-task-data-loss.md`: use `!== undefined` checks (not truthy checks) when mapping fields, to allow clearing fields to `null`.
 
 ## References
@@ -184,9 +184,9 @@ const updatedProposal = await updateProposal(proposal.id, {
 - Admin proposal detail: `pages/admin/ProposalDetail.tsx:440-477`
 - Admin updateProposal lib: `lib/proposals.ts:206-218`
 - Netlify proposal API: `netlify/functions/proposal-detail.ts:68-72`
-- Client proposal page: `landing-page-new/src/app/proposal/[proposalId]/page.tsx`
-- Client ProposalActions: `landing-page-new/src/components/proposal/ProposalActions.tsx:27`
-- Client proposals lib: `landing-page-new/src/lib/proposals.ts:86`
-- Next.js proposal API route: `landing-page-new/src/app/api/proposals/[id]/route.ts`
+- Client proposal page: `deleted app source`
+- Client ProposalActions: `deleted app source`
+- Client proposals lib: `deleted app source`
+- Next.js proposal API route: `deleted app source`
 - Institutional learning (field mapping): `docs/solutions/integration-issues/api-field-name-mismatch-task-data-loss.md`
 - Institutional learning (state transitions): `docs/solutions/logic-errors/missing-deliverable-send-for-review-workflow.md`

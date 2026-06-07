@@ -98,7 +98,7 @@ if (event.httpMethod === 'GET') {
 
 **Files:**
 - `pages/admin/ProposalDetail.tsx:619`
-- `landing-page-new/src/components/proposal/ProposalReview.tsx:90`
+- `deleted app source`
 
 **Description:**
 Proposal descriptions (entered via Tiptap rich text editor) are rendered directly as raw HTML without sanitization:
@@ -309,13 +309,13 @@ body: JSON.stringify({
 ### H8. CORS Wildcard (`*`) on Landing Page API Routes
 
 **Files:**
-- `landing-page-new/src/app/api/inquiry-request-verification/route.ts`
-- `landing-page-new/src/app/api/payments/send-proforma-email/route.ts`
-- `landing-page-new/src/app/api/inquiries/[id]/route.ts`
-- `landing-page-new/src/app/api/inquiries/route.ts`
-- `landing-page-new/src/app/api/proposals/route.ts`
-- `landing-page-new/src/app/api/proposals/[id]/route.ts`
-- `landing-page-new/src/app/api/payments/proforma/[proposalId]/route.ts`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
 
 **Description:**
 All Next.js API routes in the landing page use `Access-Control-Allow-Origin: '*'`:
@@ -335,8 +335,8 @@ This allows any website to make cross-origin requests to these endpoints, includ
 ### H9. Authentication Tokens Stored in localStorage
 
 **Files:**
-- `landing-page-new/src/components/CommentThread.tsx:65`
-- `landing-page-new/src/lib/attachments.ts:43, 84`
+- `deleted app source`
+- `deleted app source, 84`
 
 **Description:**
 JWT tokens are retrieved from `localStorage` for authenticated API calls:

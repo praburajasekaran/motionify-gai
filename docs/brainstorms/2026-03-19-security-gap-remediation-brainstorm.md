@@ -21,7 +21,7 @@ The Feb 2026 audit found ~18 issues. Many have been fixed, but 9 remain open —
    - Fix: Add `withAuth()` middleware, scope GET to authenticated user's own requests, require auth for POST
 
 2. **C4 — XSS via regex-based HTML sanitizer**
-   - Files: `pages/admin/ProposalDetail.tsx`, `landing-page-new/src/components/proposal/ProposalReview.tsx`
+   - Files: `pages/admin/ProposalDetail.tsx`, `deleted app source`
    - Issue: Hand-rolled regex sanitizer is bypassable (encoding tricks, nested tags, SVG payloads)
    - Fix: Replace with DOMPurify library
 

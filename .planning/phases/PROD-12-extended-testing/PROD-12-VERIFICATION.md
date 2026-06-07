@@ -38,11 +38,11 @@ score: 5/5 must-haves verified
 | `e2e/mobile/mobile-proposal.spec.ts` | Mobile device tests | VERIFIED | 205 lines, 3 devices |
 | `components/ui/ErrorState.tsx` | Admin error component | VERIFIED | 124 lines, contextual icons, sanitization, retry |
 | `components/ui/EmptyState.tsx` | Admin empty state component | VERIFIED | 41 lines, customizable icon/title/action |
-| `landing-page-new/src/components/ui/ErrorState.tsx` | Client error component | VERIFIED | 126 lines |
-| `landing-page-new/src/components/ui/EmptyState.tsx` | Client empty state component | VERIFIED | 43 lines |
+| `deleted app source` | Client error component | VERIFIED | 126 lines |
+| `deleted app source` | Client empty state component | VERIFIED | 43 lines |
 | `lib/vitals.ts` | Admin vitals module | VERIFIED | 71 lines, 5 metrics, Sentry + beacon fallback |
-| `landing-page-new/src/lib/vitals.ts` | Client vitals module | VERIFIED | 75 lines |
-| `landing-page-new/src/components/WebVitals.tsx` | Next.js client component | VERIFIED | 12 lines, useEffect wrapper |
+| `deleted app source` | Client vitals module | VERIFIED | 75 lines |
+| `deleted app source` | Next.js client component | VERIFIED | 12 lines, useEffect wrapper |
 
 ### Key Link Verification
 
@@ -52,10 +52,10 @@ score: 5/5 must-haves verified
 | `pages/admin/UserManagement.tsx` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Full-page error + filtered empty |
 | `pages/admin/InquiryDashboard.tsx` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Replaced window.location.reload with proper retry |
 | `pages/ProjectList.tsx` | `ErrorState` | import + JSX usage | WIRED | Added error tracking that previously only had console.error |
-| `landing-page-new/.../PaymentsPage.tsx` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Replaced inline error/empty with components |
-| `landing-page-new/.../inquiries/page.tsx` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Added loadError state + components |
+| `deleted app source` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Replaced inline error/empty with components |
+| `deleted app source` | `ErrorState` / `EmptyState` | import + JSX usage | WIRED | Added loadError state + components |
 | `index.tsx` | `lib/vitals.ts` | import + call | WIRED | `initWebVitals()` called after root mount |
-| `landing-page-new/.../layout.tsx` | `WebVitals.tsx` | import + JSX | WIRED | `<WebVitals />` rendered in root layout |
+| `deleted app source` | `WebVitals.tsx` | import + JSX | WIRED | `<WebVitals />` rendered in root layout |
 | `playwright.config.ts` | mobile tests | testMatch + projects | WIRED | 3 mobile projects with `testMatch: '**/mobile/**'` |
 | `package.json` | Artillery configs | npm scripts | WIRED | `test:load:api` and `test:load:frontend` scripts |
 

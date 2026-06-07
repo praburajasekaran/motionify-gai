@@ -36,8 +36,8 @@ Cherry-pick commit `d943cd5` from `feat/show-all-deliverables-to-clients` onto t
 |------|--------|
 | `netlify/functions/deliverables.ts` | Remove `viewableStatuses` filter — return all deliverables to clients |
 | `utils/deliverablePermissions.ts` | Simplify `canViewDeliverable()` to return `true` for clients; remove status-specific denial message |
-| `landing-page-new/src/lib/portal/components/ProjectOverview.tsx` | Add color-coded status badges with human-readable labels |
-| `landing-page-new/src/lib/portal/types.ts` | Add `status` field to client Deliverable type |
+| `deleted app source` | Add color-coded status badges with human-readable labels |
+| `deleted app source` | Add `status` field to client Deliverable type |
 | `pages/DeliverableReview.tsx` | Complete `statusColors` map for all 8 statuses |
 | `pages/ProjectDetail.tsx` | Expand inline Badge variant logic for all statuses |
 | `components/deliverables/DeliverableFilesList.tsx` | Status-aware empty state ("Work hasn't started yet" vs generic "No files") |
@@ -61,7 +61,7 @@ Cherry-pick commit `d943cd5` from `feat/show-all-deliverables-to-clients` onto t
 - [x] Each deliverable shows a color-coded status badge with a client-friendly label
 - [x] Empty state for pending deliverables shows "Work hasn't started yet" instead of "No files"
 - [x] Admin/super_admin view is unchanged
-- [x] Both portals (React SPA in `pages/` and Next.js in `landing-page-new/`) display correctly
+- [x] Both portals (React SPA in `pages/` and Next.js in `deleted app directory`) display correctly
 
 ## Implementation Steps
 

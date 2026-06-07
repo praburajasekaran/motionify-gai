@@ -5,8 +5,8 @@ type: execute
 wave: 1
 depends_on: []
 files_modified:
-  - landing-page-new/src/components/proposal/StatusTimeline.tsx
-  - landing-page-new/src/components/proposal/ProposalReview.tsx
+  - deleted app source
+  - deleted app source
   - netlify/functions/activities.ts
 autonomous: true
 
@@ -17,19 +17,19 @@ must_haves:
     - "Clients only see client-relevant activities (not internal notes)"
     - "Timeline is view-only with no interactive elements"
   artifacts:
-    - path: "landing-page-new/src/components/proposal/StatusTimeline.tsx"
+    - path: "deleted app source
       provides: "Timeline component showing proposal status history"
       exports: ["StatusTimeline"]
-    - path: "landing-page-new/src/components/proposal/ProposalReview.tsx"
+    - path: "deleted app source
       provides: "Updated proposal review with timeline integration"
       contains: "StatusTimeline"
   key_links:
-    - from: "landing-page-new/src/components/proposal/StatusTimeline.tsx"
-      to: "landing-page-new/src/lib/portal/api/activities.api.ts"
+    - from: "deleted app source
+      to: "deleted app source
       via: "fetchActivities"
       pattern: "import.*fetchActivities.*from"
-    - from: "landing-page-new/src/components/proposal/ProposalReview.tsx"
-      to: "landing-page-new/src/components/proposal/StatusTimeline.tsx"
+    - from: "deleted app source
+      to: "deleted app source
       via: "import StatusTimeline"
       pattern: "import.*StatusTimeline.*from"
 ---
@@ -53,17 +53,17 @@ Output: `StatusTimeline.tsx` component integrated into ProposalReview, displayin
 @.planning/STATE.md
 @.planning/phases/PROD-10-ux-polish/PROD-10-CONTEXT.md
 @.planning/phases/PROD-10-ux-polish/PROD-10-RESEARCH.md
-@landing-page-new/src/lib/portal/api/activities.api.ts
-@landing-page-new/src/components/proposal/ProposalReview.tsx
+@deleted app source
+@deleted app source
 </context>
 
 <tasks>
 
 <task type="auto">
   <name>Task 1: Create StatusTimeline component</name>
-  <files>landing-page-new/src/components/proposal/StatusTimeline.tsx</files>
+  <files>deleted app source
   <action>
-Create `landing-page-new/src/components/proposal/StatusTimeline.tsx`:
+Create `deleted app source`:
 
 ```tsx
 'use client';
@@ -230,8 +230,8 @@ This component:
 - Is view-only with no interactive elements
   </action>
   <verify>
-Run `cd landing-page-new && npm run typecheck` - no TypeScript errors.
-Component file exists at landing-page-new/src/components/proposal/StatusTimeline.tsx.
+Run `cd deleted app && npm run typecheck` - no TypeScript errors.
+Component file exists at deleted app source
   </verify>
   <done>
 StatusTimeline.tsx exists with proper activity filtering.
@@ -242,9 +242,9 @@ Timeline displays activity type, user name, and formatted timestamp.
 
 <task type="auto">
   <name>Task 2: Integrate StatusTimeline into ProposalReview</name>
-  <files>landing-page-new/src/components/proposal/ProposalReview.tsx</files>
+  <files>deleted app source
   <action>
-Update `landing-page-new/src/components/proposal/ProposalReview.tsx`:
+Update `deleted app source`:
 
 1. Add import at top:
 ```tsx
@@ -270,7 +270,7 @@ The timeline placement follows the recommended layout from RESEARCH.md:
 Timeline is read-only and provides audit trail transparency to clients.
   </action>
   <verify>
-Run `cd landing-page-new && npm run typecheck` - no TypeScript errors.
+Run `cd deleted app && npm run typecheck` - no TypeScript errors.
 Visit http://localhost:3000/proposal/[id] as a client user.
 Verify Status History section appears below Pricing Breakdown.
 Verify timeline shows proposal status changes with names and timestamps.

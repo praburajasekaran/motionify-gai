@@ -8,7 +8,7 @@
 - Razorpay - Payment gateway for INR and USD transactions
   - SDK/Client: `razorpay` v2.9.6
   - Auth: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
-  - Implementation: `netlify/functions/payments.ts`, `landing-page-new/src/lib/razorpay-client.ts`
+  - Implementation: `netlify/functions/payments.ts`, `deleted app source`
   - Features: Order creation, payment verification, receipt generation
 
 **AI Services:**
@@ -23,14 +23,14 @@
 - Resend - Primary email service for transactional emails
   - SDK/Client: `resend` v6.7.0
   - Auth: `RESEND_API_KEY`
-  - Implementation: `netlify/functions/send-email.ts`, `landing-page-new/src/lib/email/emailService.ts`
+  - Implementation: `netlify/functions/send-email.ts`, `deleted app source`
   - From address: `RESEND_FROM_EMAIL` (default: `Motionify Studio <onboarding@resend.dev>`)
   - Use cases: Magic link authentication, mention notifications, payment receipts, invoice delivery
 
 - Nodemailer - Alternative email service (fallback/development)
   - SDK/Client: `nodemailer` v7.0.12
   - Auth: `MAILTRAP_HOST`, `MAILTRAP_PORT`, `MAILTRAP_USER`, `MAILTRAP_PASS`
-  - Implementation: `landing-page-new/src/lib/email.ts`
+  - Implementation: `deleted app source`
   - Default: Mailtrap.io for development testing
 
 ## Data Storage
@@ -39,7 +39,7 @@
 - PostgreSQL - Primary relational database
   - Connection: `DATABASE_URL` (with SSL in production)
   - Client: `pg` v8.16.3
-  - Implementation: Throughout `netlify/functions/*.ts`, `landing-page-new/src/lib/db.ts`
+  - Implementation: Throughout `netlify/functions/*.ts`, `deleted app source`
   - Schema: `database/schema.sql`
   - Tables: users, sessions, inquiries, proposals, projects, payments, deliverables, tasks, notifications, invitations
 
@@ -81,7 +81,7 @@
 **Hosting:**
 - Netlify - Primary hosting platform
   - Build command: `npm run build:all`
-  - Publish directory: `landing-page-new/.next`
+  - Publish directory: `deleted app source`
   - Functions directory: `netlify/functions`
   - Node version: 20
   - Deployment: Git-based continuous deployment

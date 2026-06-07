@@ -135,7 +135,7 @@ must_haves:
 **Dependencies:** Task 3 (components exist)  
 
 **Tasks:**
-1. Read `landing-page-new/src/app/proposal/[proposalId]/page.tsx` structure
+1. Read `deleted app source` structure
 2. Create shared comment components in shared location (or adapt for Next.js)
 3. Add comment section to client proposal page:
    - Conditional: only show if user is authenticated client
@@ -217,7 +217,7 @@ Task 1: Database Migration ──┬──► Task 2: API CRUD
 
 **Modified Files:**
 - `pages/admin/ProposalDetail.tsx` - Add comment section
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx` - Add comment section
+- `deleted app source` - Add comment section
 
 ---
 

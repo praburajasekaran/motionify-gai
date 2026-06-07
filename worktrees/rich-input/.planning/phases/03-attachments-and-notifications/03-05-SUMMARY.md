@@ -18,8 +18,8 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - landing-page-new/src/lib/attachments.ts
-    - landing-page-new/src/lib/portal/components/UploadFileModal.tsx
+    - deleted app source
+    - deleted app source
 key-decisions:
   - "Enforced 10MB limit on frontend to match backend configuration"
   - "Restricted file input types to prevent invalid uploads early"
@@ -52,8 +52,8 @@ completed: 2026-01-20
 2. **Task 2: Fix Validation Limits** - `6eb7cab` (fix)
 
 ## Files Created/Modified
-- `landing-page-new/src/lib/attachments.ts` - Corrected API path
-- `landing-page-new/src/lib/portal/components/UploadFileModal.tsx` - Updated limits and validation
+- `deleted app source` - Corrected API path
+- `deleted app source` - Updated limits and validation
 
 ## Decisions Made
 - Enforced 10MB limit on frontend to match backend configuration and prevent large uploads before they start

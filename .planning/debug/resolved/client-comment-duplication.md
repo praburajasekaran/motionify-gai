@@ -168,4 +168,4 @@ verification: Code review confirms fix is correct:
   - Subsequent clicks (before first completes): Line 160 returns early due to isSubmittingRef.current === true
   - Result: Only one POST /comments API call, only one comment in database and UI
 
-files_changed: ['landing-page-new/src/components/CommentInput.tsx']
+files_changed: ['deleted app source

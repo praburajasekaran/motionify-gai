@@ -39,7 +39,7 @@ This architecture document outlines a **real-time comment system** designed for 
 │  │   VITE ADMIN SPA    │          │         NEXT.JS CLIENT PORTAL       │  │
 │  │   /admin/proposals  │          │      /proposal/[proposalId]         │  │
 │  │                     │          │                                     │  │
-│  │  ProposalDetail.tsx │          │   landing-page-new/src/app/...      │  │
+│  │  ProposalDetail.tsx │          │   deleted app source      │  │
 │  │         │           │          │         │                           │  │
 │  │         ▼           │          │         ▼                           │  │
 │  │  CommentThread.tsx  │          │   CommentThread.tsx                 │  │
@@ -771,7 +771,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 
 ### Next.js Client Portal Integration
 
-**File:** `landing-page-new/src/app/proposal/[proposalId]/page.tsx`
+**File:** `deleted app source`
 
 Add comment section for client view:
 
@@ -796,7 +796,7 @@ Create shared components that work in both apps:
 
 **Path Strategy:**
 - For Vite SPA: `/components/comments/CommentThread.tsx`
-- For Next.js: Either copy to `landing-page-new/src/components/comments/` or configure Next.js to resolve from parent
+- For Next.js: Either copy to `deleted app source` or configure Next.js to resolve from parent
 
 ---
 
@@ -1030,7 +1030,7 @@ netlify deploy --dir=dist
 ### Step 4: Deploy Frontend (Next.js)
 ```bash
 # Deploy client portal
-cd landing-page-new && npm run build
+cd deleted app && npm run build
 netlify deploy --dir=.next
 ```
 

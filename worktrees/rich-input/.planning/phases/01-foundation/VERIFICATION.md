@@ -110,7 +110,7 @@ All must-haves verified. Phase 1 implementation is complete.
 
 ### ✅ 5. CommentThread component renders in client portal
 
-**Location:** `landing-page-new/src/app/proposal/[proposalId]/page.tsx:2246-2253`
+**Location:** `deleted app source`
 
 **Implementation Verified:**
 - Import statement (line 13): `import { CommentThread } from '@/components/CommentThread';` ✅
@@ -159,7 +159,7 @@ Page Refresh → CommentThread.loadComments → getComments (lib/comments.ts)
 | API Client | `lib/comments.ts` | ✅ Complete |
 | API Handler | `netlify/functions/comments.ts` | ✅ Complete |
 | DB Migration | `database/add-proposal-comments-table.sql` | ✅ Complete |
-| Client Version | `landing-page-new/src/components/CommentThread.tsx` | ✅ Complete |
+| Client Version | `deleted app source` | ✅ Complete |
 
 ---
 
@@ -173,13 +173,13 @@ Page Refresh → CommentThread.loadComments → getComments (lib/comments.ts)
 - `components/proposals/CommentItem.tsx`
 - `components/proposals/CommentInput.tsx`
 - `components/proposals/index.ts`
-- `landing-page-new/src/components/CommentThread.tsx`
-- `landing-page-new/src/components/CommentItem.tsx`
-- `landing-page-new/src/components/CommentInput.tsx`
+- `deleted app source`
+- `deleted app source`
+- `deleted app source`
 
 ### Modified Files
 - `pages/admin/ProposalDetail.tsx` - Added CommentThread import and rendering
-- `landing-page-new/src/app/proposal/[proposalId]/page.tsx` - Added CommentThread import and rendering
+- `deleted app source` - Added CommentThread import and rendering
 
 ---
 

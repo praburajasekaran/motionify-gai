@@ -31,7 +31,7 @@ started: After implementing hasSubsequentReplies logic in 04-05 fix
   implication: This checks if ANY subsequent comment is from a different user than CURRENT USER, not different from COMMENT AUTHOR
 
 - timestamp: 2026-01-23T00:06:00Z
-  checked: landing-page-new/src/components/CommentThread.tsx lines 20-34
+  checked: deleted app source lines 20-34
   found: Identical bug - compares c.userId !== currentUserId
   implication: Both portals have same flawed logic
 
@@ -54,4 +54,4 @@ fix: Changed comparison from `c.userId !== currentUserId` to `c.userId !== comme
 verification: Fix applied. Ready for UAT testing. Expected behavior: Edit button should only appear on comments that have no subsequent replies from OTHER users (self-replies are allowed).
 files_changed:
   - components/proposals/CommentThread.tsx (line 22)
-  - landing-page-new/src/components/CommentThread.tsx (line 32)
+  - deleted app source (line 32)

@@ -39,7 +39,7 @@ From UAT diagnosis:
 | File | Change |
 |------|--------|
 | `components/proposals/CommentInput.tsx` | Added `setUploadingFiles(prev => prev.filter(f => f.id !== uploadingFile.id))` after setPendingAttachments |
-| `landing-page-new/src/components/CommentInput.tsx` | Same fix applied for client portal |
+| `deleted app source` | Same fix applied for client portal |
 
 ## Key Files
 
@@ -47,7 +47,7 @@ From UAT diagnosis:
 
 **Modified:**
 - `components/proposals/CommentInput.tsx` - Admin portal CommentInput component
-- `landing-page-new/src/components/CommentInput.tsx` - Client portal CommentInput component
+- `deleted app source` - Client portal CommentInput component
 
 ## Implementation Details
 

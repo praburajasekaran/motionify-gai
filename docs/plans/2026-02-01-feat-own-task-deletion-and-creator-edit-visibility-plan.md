@@ -29,8 +29,8 @@ Allow task creators to delete their own tasks (in addition to super admins who c
 | 1 | `utils/deliverablePermissions.ts` | Update `canDeleteTask()` to accept a `task` param and allow creators to delete their own tasks |
 | 2 | `netlify/functions/tasks.ts` | Update DELETE handler to allow task creators to delete their own tasks |
 | 3 | `pages/ProjectDetail.tsx` | Pass `task` to `canDeleteTask()` call |
-| 4 | `landing-page-new/src/lib/portal/components/TaskItem.tsx` | Show Edit button (and Delete button) for task creators, not just internal users |
-| 5 | `landing-page-new/src/lib/portal/components/TaskList.tsx` | Add delete handler and pass `onDelete` prop to TaskItem (if not already present) |
+| 4 | `deleted app source` | Show Edit button (and Delete button) for task creators, not just internal users |
+| 5 | `deleted app source` | Add delete handler and pass `onDelete` prop to TaskItem (if not already present) |
 
 ---
 
@@ -161,7 +161,7 @@ onDelete?: (taskId: string) => void;
 
 Add a `handleDeleteTask` function that:
 1. Shows a confirmation dialog/prompt.
-2. Calls `deleteTaskAPI(taskId)` (already exists in `landing-page-new/src/lib/portal/api/tasks.api.ts`).
+2. Calls `deleteTaskAPI(taskId)` (already exists in `deleted app source`).
 3. Removes the task from local state.
 4. Pass `onDelete={handleDeleteTask}` to `<TaskItem>`.
 
@@ -205,5 +205,5 @@ Add a `handleDeleteTask` function that:
 - `netlify/functions/tasks.ts:807-852` — current DELETE handler
 - `netlify/functions/tasks.ts:561-581` — PATCH creator check (reference pattern for DELETE)
 - `pages/ProjectDetail.tsx:1174-1196` — main app edit/delete buttons
-- `landing-page-new/src/lib/portal/components/TaskItem.tsx:213-232` — portal `renderActions()`
-- `landing-page-new/src/lib/portal/api/tasks.api.ts:118-130` — existing `deleteTaskAPI()`
+- `deleted app source` — portal `renderActions()`
+- `deleted app source` — existing `deleteTaskAPI()`
