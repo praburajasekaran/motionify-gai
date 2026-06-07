@@ -2,6 +2,11 @@ import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withProjectManager, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import {
+    AuthorizationError,
+    createAuthorizationResponse,
+    requireProjectManagerAccess,
+} from './_shared/authorization';
 
 export const handler = compose(
     withCORS(['POST', 'DELETE']),
@@ -38,6 +43,10 @@ export const handler = compose(
     }
 
     try {
+        await requireProjectManagerAccess(auth?.user, projectId, {
+            operation: 'project-members-remove.remove',
+        });
+
         // 1. Check if the user is the assigned Project Manager (via Inquiry)
         const projectResult = await dbQuery(
             `SELECT p.id, i.assigned_to_admin_id, i.id as inquiry_id
@@ -105,6 +114,9 @@ export const handler = compose(
         };
 
     } catch (error) {
+        if (error instanceof AuthorizationError) {
+            return createAuthorizationResponse(error, origin);
+        }
         console.error('Remove member error:', error);
         return {
             statusCode: 500,

@@ -133,42 +133,52 @@ async function handlePaymentCaptured(
     return { success: false, error: 'No payment entity in payload' };
   }
 
-  const { id: razorpayPaymentId, order_id: razorpayOrderId, method } = payment;
+  const { id: razorpayPaymentId, order_id: razorpayOrderId } = payment;
 
-  // Update payment status to completed
-  const result = await client.query(
-    `UPDATE payments
-     SET status = 'completed',
-         razorpay_payment_id = $1,
-         payment_method = $2,
-         completed_at = CURRENT_TIMESTAMP,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE razorpay_order_id = $3
-       AND status != 'completed'
-     RETURNING id`,
-    [razorpayPaymentId, method?.toUpperCase() || null, razorpayOrderId]
+  const paymentRowResult = await client.query(
+    `SELECT id, amount, currency, status, razorpay_payment_id
+     FROM payments
+     WHERE razorpay_order_id = $1
+     FOR UPDATE`,
+    [razorpayOrderId]
   );
 
-  // Get the payment ID - either from the update result or from existing query
-  let paymentId: string;
+  if (paymentRowResult.rows.length === 0) {
+    return { success: false, error: `Payment not found for order ${razorpayOrderId}` };
+  }
 
-  if (result.rows.length === 0) {
-    // Either payment not found or already completed - check which
-    const existingPayment = await client.query(
-      `SELECT id, status FROM payments WHERE razorpay_order_id = $1`,
-      [razorpayOrderId]
+  const storedPayment = paymentRowResult.rows[0];
+  if (Number(storedPayment.amount) !== Number(payment.amount) || storedPayment.currency !== payment.currency) {
+    return { success: false, error: `Payment payload does not match stored order ${razorpayOrderId}` };
+  }
+
+  if (storedPayment.status === 'completed') {
+    if (storedPayment.razorpay_payment_id && storedPayment.razorpay_payment_id !== razorpayPaymentId) {
+      return { success: false, error: `Order ${razorpayOrderId} was completed by a different provider payment` };
+    }
+    console.log('[Webhook] Payment already completed, sending email anyway:', storedPayment.id);
+  } else {
+    const duplicateProviderPayment = await client.query(
+      `SELECT id FROM payments
+       WHERE razorpay_payment_id = $1 AND id != $2
+       LIMIT 1`,
+      [razorpayPaymentId, storedPayment.id]
     );
-
-    if (existingPayment.rows.length === 0) {
-      return { success: false, error: `Payment not found for order ${razorpayOrderId}` };
+    if (duplicateProviderPayment.rows.length > 0) {
+      return { success: false, error: `Provider payment ${razorpayPaymentId} is already bound to another payment` };
     }
 
-    // Payment already completed by frontend verification - still send email
-    paymentId = existingPayment.rows[0].id;
-    console.log('[Webhook] Payment already completed, sending email anyway:', paymentId);
-  } else {
-    paymentId = result.rows[0].id;
+    await client.query(
+      `UPDATE payments
+       SET status = 'completed',
+           razorpay_payment_id = $1,
+           paid_at = COALESCE(paid_at, NOW())
+       WHERE id = $2`,
+      [razorpayPaymentId, storedPayment.id]
+    );
   }
+
+  const paymentId = storedPayment.id;
 
   // Accept proposal and create project (idempotent — safe if verify already ran)
   try {

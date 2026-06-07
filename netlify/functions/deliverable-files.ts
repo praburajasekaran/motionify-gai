@@ -4,6 +4,12 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { z } from 'zod';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  requireDeliverableAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 // Validation schema for creating a deliverable file
 const createFileSchema = z.object({
@@ -40,6 +46,8 @@ export const handler = compose(
         };
       }
 
+      await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'deliverable-files.list' });
+
       // First validate user can access this deliverable
       const deliverableResult = await dbQuery(
         `SELECT d.id, d.project_id, p.client_user_id
@@ -58,35 +66,6 @@ export const handler = compose(
       }
 
       const { project_id, client_user_id } = deliverableResult.rows[0];
-
-      // Permission check
-      if (userRole !== 'super_admin' && userRole !== 'support') {
-        if (userRole === 'client' && client_user_id !== userId) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Access denied' }),
-          };
-        }
-
-        if (userRole === 'team_member') {
-          const taskResult = await dbQuery(
-            `SELECT 1 FROM tasks
-             WHERE project_id = $1
-             AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
-             LIMIT 1`,
-            [project_id, userId]
-          );
-
-          if (taskResult.rows.length === 0) {
-            return {
-              statusCode: 403,
-              headers,
-              body: JSON.stringify({ error: 'Access denied' }),
-            };
-          }
-        }
-      }
 
       // Fetch files for this deliverable
       const filesResult = await dbQuery(
@@ -107,7 +86,7 @@ export const handler = compose(
 
     if (event.httpMethod === 'POST') {
       // Only admins and PMs can add files
-      if (userRole !== 'super_admin' && userRole !== 'support') {
+      if (!isAdminLike(userRole)) {
         return {
           statusCode: 403,
           headers,
@@ -142,7 +121,7 @@ export const handler = compose(
 
       // Verify deliverable exists
       const deliverableResult = await dbQuery(
-        `SELECT id FROM deliverables WHERE id = $1`,
+        `SELECT id, project_id FROM deliverables WHERE id = $1`,
         [data.deliverable_id]
       );
 
@@ -151,6 +130,14 @@ export const handler = compose(
           statusCode: 404,
           headers,
           body: JSON.stringify({ error: 'Deliverable not found' }),
+        };
+      }
+      await requireDeliverableAccess(auth?.user, data.deliverable_id, { operation: 'deliverable-files.create' });
+      if (!data.file_key.startsWith(`projects/${deliverableResult.rows[0].project_id}/`)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'File key does not match the authorized deliverable project' }),
         };
       }
 
@@ -193,7 +180,7 @@ export const handler = compose(
 
     if (event.httpMethod === 'DELETE') {
       // Only admins and PMs can delete files
-      if (userRole !== 'super_admin' && userRole !== 'support') {
+      if (!isAdminLike(userRole)) {
         return {
           statusCode: 403,
           headers,
@@ -212,18 +199,26 @@ export const handler = compose(
         };
       }
 
-      const result = await dbQuery(
-        `DELETE FROM deliverable_files WHERE id = $1 RETURNING id`,
+      const fileResult = await dbQuery(
+        `SELECT id, deliverable_id FROM deliverable_files WHERE id = $1`,
         [fileId]
       );
 
-      if (result.rows.length === 0) {
+      if (fileResult.rows.length === 0) {
         return {
           statusCode: 404,
           headers,
           body: JSON.stringify({ error: 'File not found' }),
         };
       }
+      await requireDeliverableAccess(auth?.user, fileResult.rows[0].deliverable_id, {
+        operation: 'deliverable-files.delete',
+      });
+
+      const result = await dbQuery(
+        `DELETE FROM deliverable_files WHERE id = $1 RETURNING id`,
+        [fileId]
+      );
 
       return {
         statusCode: 200,
@@ -239,6 +234,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Deliverable files API error:', error);
     return {
       statusCode: 500,

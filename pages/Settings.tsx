@@ -6,6 +6,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
 import { Mail, Bell, MessageSquare, Briefcase, Zap, Globe } from 'lucide-react';
 import { setUserTimezone } from '@/utils/dateFormatting';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface UserPreferences {
     email_task_assignment: boolean;
@@ -148,11 +149,11 @@ export function Settings() {
     }
 
     return (
-        <div className="space-y-6 max-w-3xl mx-auto">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
-                <p className="text-muted-foreground">Manage your account preferences and notifications.</p>
-            </div>
+        <div className="space-y-6 max-w-3xl">
+            <PageHeader
+                title="Settings"
+                description="Manage your account preferences and notifications."
+            />
 
             <Card>
                 <CardHeader>

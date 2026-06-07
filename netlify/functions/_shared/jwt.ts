@@ -9,6 +9,7 @@
 
 import * as jwt from 'jsonwebtoken';
 import { createLogger } from './logger';
+import { normalizeRole, type CanonicalUserRole } from './roles';
 
 const logger = createLogger('jwt');
 
@@ -28,7 +29,7 @@ const TOKEN_EXPIRY_REMEMBER = '30d';     // 30 days
 export interface JWTPayload {
     userId: string;
     email: string;
-    role: 'super_admin' | 'support' | 'client' | 'team';
+    role: CanonicalUserRole | 'team';
     fullName: string;
 }
 
@@ -51,7 +52,7 @@ export function generateJWT(user: {
     const payload: JWTPayload = {
         userId: user.id,
         email: user.email.toLowerCase(),
-        role: user.role as any,
+        role: normalizeRole(user.role) as CanonicalUserRole,
         fullName: user.full_name || user.fullName || user.email.split('@')[0],
     };
 

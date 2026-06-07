@@ -8,6 +8,14 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
 import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireProjectAccess,
+  requireTaskAccess,
+} from './_shared/authorization';
+import { isAdminLike } from './_shared/roles';
 
 // Validate task status transitions
 const isValidUUID = (id: string): boolean => {
@@ -73,6 +81,7 @@ export const handler = compose(
       // GET /tasks/{taskId} - Fetch single task with comments
       if (lastPart !== 'tasks' && !event.queryStringParameters?.projectId) {
         const taskId = lastPart;
+        await requireTaskAccess(auth?.user, taskId, { operation: 'tasks.get' });
 
         const taskResult = await dbQuery(
           `SELECT * FROM tasks WHERE id = $1`,
@@ -137,6 +146,8 @@ export const handler = compose(
         };
       }
 
+      await requireProjectAccess(auth?.user, projectId, { operation: 'tasks.list' });
+
       // Fetch all tasks for a project
       const tasksResult = await dbQuery(
         `SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC`,
@@ -194,12 +205,13 @@ export const handler = compose(
       if (pathParts.includes('comments')) {
         const taskId = pathParts[pathParts.length - 2];
         const commentData = JSON.parse(event.body || '{}');
+        await requireTaskAccess(auth?.user, taskId, { operation: 'tasks.comment' });
 
-        if (!commentData.user_id || !commentData.user_name || !commentData.content) {
+        if (!commentData.content) {
           return {
             statusCode: 400,
             headers,
-            body: JSON.stringify({ error: 'user_id, user_name, and content are required' }),
+            body: JSON.stringify({ error: 'content is required' }),
           };
         }
 
@@ -207,7 +219,7 @@ export const handler = compose(
           `INSERT INTO task_comments (task_id, user_id, user_name, content)
            VALUES ($1, $2, $3, $4)
            RETURNING *`,
-          [taskId, commentData.user_id, commentData.user_name, commentData.content]
+          [taskId, auth!.user!.userId, auth!.user!.fullName, commentData.content]
         );
 
 
@@ -222,8 +234,8 @@ export const handler = compose(
           if (taskForComment.rows.length > 0) {
             await logActivity({
               type: 'COMMENT_ADDED',
-              userId: commentData.user_id,
-              userName: commentData.user_name,
+              userId: auth!.user!.userId,
+              userName: auth!.user!.fullName,
               projectId: taskForComment.rows[0].project_id,
               details: {
                 taskId,
@@ -267,7 +279,7 @@ export const handler = compose(
             // Send emails if user has mentions enabled
             await Promise.all(usersResult.rows.map(async (user: any) => {
               // Don't notify the person who wrote the comment
-              if (user.id === commentData.user_id) return;
+              if (user.id === auth?.user?.userId) return;
 
               // Check user preferences
               const prefResult = await dbQuery(
@@ -280,7 +292,7 @@ export const handler = compose(
               if (emailEnabled) {
                 await sendMentionNotification({
                   to: user.email,
-                  mentionedByName: commentData.user_name,
+                  mentionedByName: auth!.user!.fullName,
                   taskTitle: taskTitle,
                   commentContent: content,
                   taskUrl: taskUrl
@@ -306,15 +318,8 @@ export const handler = compose(
       // POST /tasks/{taskId}/follow - Follow a task
       if (pathParts.includes('follow')) {
         const taskId = pathParts[pathParts.length - 2];
-        const followData = JSON.parse(event.body || '{}');
-
-        if (!followData.userId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'userId is required' }),
-          };
-        }
+        const followerUserId = auth!.user!.userId;
+        await requireTaskAccess(auth?.user, taskId, { operation: 'tasks.follow' });
 
         // Validate taskId is a valid UUID
         if (!isValidUUID(taskId)) {
@@ -322,15 +327,6 @@ export const handler = compose(
             statusCode: 400,
             headers,
             body: JSON.stringify({ error: 'Invalid taskId format: Must be a UUID' }),
-          };
-        }
-
-        // Validate userId is a valid UUID
-        if (!isValidUUID(followData.userId)) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'Invalid userId format: Must be a UUID' }),
           };
         }
 
@@ -353,7 +349,7 @@ export const handler = compose(
           `INSERT INTO task_followers (task_id, user_id)
            VALUES ($1, $2)
            ON CONFLICT (task_id, user_id) DO NOTHING`,
-          [taskId, followData.userId]
+          [taskId, followerUserId]
         );
 
         // Return the task with updated followers list
@@ -380,15 +376,8 @@ export const handler = compose(
       // POST /tasks/{taskId}/unfollow - Unfollow a task
       if (pathParts.includes('unfollow')) {
         const taskId = pathParts[pathParts.length - 2];
-        const unfollowData = JSON.parse(event.body || '{}');
-
-        if (!unfollowData.userId) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'userId is required' }),
-          };
-        }
+        const followerUserId = auth!.user!.userId;
+        await requireTaskAccess(auth?.user, taskId, { operation: 'tasks.unfollow' });
 
         // Validate taskId is a valid UUID
         if (!isValidUUID(taskId)) {
@@ -396,15 +385,6 @@ export const handler = compose(
             statusCode: 400,
             headers,
             body: JSON.stringify({ error: 'Invalid taskId format: Must be a UUID' }),
-          };
-        }
-
-        // Validate userId is a valid UUID
-        if (!isValidUUID(unfollowData.userId)) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'Invalid userId format: Must be a UUID' }),
           };
         }
 
@@ -425,7 +405,7 @@ export const handler = compose(
         // Remove follow
         await dbQuery(
           `DELETE FROM task_followers WHERE task_id = $1 AND user_id = $2`,
-          [taskId, unfollowData.userId]
+          [taskId, followerUserId]
         );
 
         // Return the task with updated followers list
@@ -453,6 +433,7 @@ export const handler = compose(
       const validation = validateRequest(event.body, SCHEMAS.task.create, origin);
       if (!validation.success) return validation.response;
       const taskData = validation.data;
+      await requireProjectAccess(auth?.user, taskData.projectId, { operation: 'tasks.create' });
 
       // Permission check: Clients can create tasks but with restricted fields
       const userRole = auth?.user?.role;
@@ -471,13 +452,22 @@ export const handler = compose(
       const rawBody = JSON.parse(event.body || '{}');
 
       // Use the authenticated user as the task creator, fall back to request body or first DB user
-      let createdBy = auth?.user?.userId || rawBody.created_by;
-      if (createdBy && !isValidUUID(createdBy)) {
-        createdBy = null;
-      }
-      if (!createdBy) {
-        const userResult = await dbQuery('SELECT id FROM users LIMIT 1');
-        createdBy = userResult.rows[0]?.id;
+      const createdBy = auth!.user!.userId;
+
+      if (!isClientUser && taskData.assignedTo) {
+        const assigneeMembership = await dbQuery(
+          `SELECT 1 FROM project_team
+           WHERE project_id = $1 AND user_id = $2 AND removed_at IS NULL
+           LIMIT 1`,
+          [taskData.projectId, taskData.assignedTo]
+        );
+        if (assigneeMembership.rows.length === 0 && taskData.assignedTo !== createdBy) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Assignee must be a member of this project' }),
+          };
+        }
       }
 
       // Clients: force visible_to_client = true; others: use provided value or default false
@@ -577,17 +567,18 @@ export const handler = compose(
         };
       }
 
+      const authorizedTask = await requireTaskAccess<any>(auth?.user, taskId, {
+        allowHiddenClientTask: true,
+        operation: 'tasks.update',
+      });
+
       // Permission check: Clients can only edit tasks they created
-      const userRole = auth?.user?.role;
+      const userRole = getAuthRole(auth?.user);
       const clientRoles = ['client', 'client_primary', 'client_team'];
       const isClientRole = userRole && clientRoles.includes(userRole);
 
       if (isClientRole) {
-        const taskCreatorCheck = await dbQuery(
-          'SELECT created_by FROM tasks WHERE id = $1',
-          [taskId]
-        );
-        if (!taskCreatorCheck.rows.length || taskCreatorCheck.rows[0].created_by !== auth?.user?.userId) {
+        if (authorizedTask.created_by !== auth?.user?.userId) {
           return {
             statusCode: 403,
             headers,
@@ -684,7 +675,7 @@ export const handler = compose(
             const requestedBy = clientUserRes.rows[0]?.full_name || 'Client';
 
             // Limit emails to admins/PMs
-            const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support')`);
+            const teamRes = await dbQuery(`SELECT email FROM users WHERE role IN ('super_admin', 'support') AND is_active = true`);
 
             const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
@@ -794,7 +785,7 @@ export const handler = compose(
 
       // Notify support users when a team member completes or submits a task for approval
       if (
-        auth?.user?.role === 'team_member' &&
+          getAuthRole(auth?.user) === 'team_member' &&
         updates.status &&
         ['completed', 'awaiting_approval'].includes(updates.status) &&
         previousStatus !== updates.status
@@ -806,7 +797,7 @@ export const handler = compose(
           const supportUsersResult = await dbQuery(
             `SELECT u.id FROM users u
              JOIN project_team pt ON u.id = pt.user_id
-             WHERE pt.project_id = $1 AND u.role = 'support' AND pt.removed_at IS NULL`,
+             WHERE pt.project_id = $1 AND u.role = 'support' AND u.is_active = true AND pt.removed_at IS NULL`,
             [projectId]
           );
 
@@ -884,23 +875,13 @@ export const handler = compose(
         };
       }
 
-      // Permission check: Admin/support can delete any task; creators can delete their own
-      const deleteUserRole = auth?.user?.role;
-      const deleteAllowedRoles = ['super_admin', 'support'];
+      const authorizedTask = await requireTaskAccess<any>(auth?.user, taskId, {
+        allowHiddenClientTask: true,
+        operation: 'tasks.delete',
+      });
 
-      if (!deleteUserRole || !deleteAllowedRoles.includes(deleteUserRole)) {
-        const taskOwnerCheck = await dbQuery(
-          'SELECT created_by FROM tasks WHERE id = $1',
-          [taskId]
-        );
-        if (!taskOwnerCheck.rows.length) {
-          return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: 'Task not found' }),
-          };
-        }
-        if (taskOwnerCheck.rows[0].created_by !== auth?.user?.userId) {
+      if (!isAdminLike(auth?.user?.role)) {
+        if (authorizedTask.created_by !== auth?.user?.userId) {
           return {
             statusCode: 403,
             headers,
@@ -957,6 +938,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Tasks API error:', error);
     return {
       statusCode: 500,

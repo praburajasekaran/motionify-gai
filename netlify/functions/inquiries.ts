@@ -6,6 +6,12 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  requireInquiryAccess,
+} from './_shared/authorization';
 
 interface QuizSelections {
   niche?: string | null;
@@ -105,29 +111,12 @@ export const handler = compose(
 
         const inquiry = result.rows[0];
 
-        // Ownership check for individual lookup: admins can access any, clients only their own
-        if (!isAdmin && inquiry.client_user_id && inquiry.client_user_id !== userId) {
-          return {
-            statusCode: 403,
-            headers,
-            body: JSON.stringify({ error: 'Cannot access this inquiry' }),
-          };
-        }
+        await requireInquiryAccess(auth!.user, potentialId, { operation: 'inquiries.get' });
 
         return {
           statusCode: 200,
           headers,
           body: JSON.stringify(inquiry),
-        };
-      }
-
-      // Listing inquiries - apply role-based access control
-      // Listing all inquiries (no clientUserId filter) requires admin role
-      if (!clientUserId && !isAdmin) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({ error: 'Admin access required to list all inquiries' }),
         };
       }
 
@@ -152,6 +141,22 @@ export const handler = compose(
           ORDER BY i.created_at DESC
         `;
         params.push(clientUserId);
+      } else if (!isAdmin) {
+        sql = `
+          SELECT DISTINCT i.*
+          FROM inquiries i
+          LEFT JOIN proposals p ON p.inquiry_id = i.id OR p.id = i.proposal_id
+          LEFT JOIN projects pr ON pr.inquiry_id = i.id OR pr.proposal_id = p.id
+          LEFT JOIN project_team pt
+            ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
+          WHERE i.client_user_id = $1
+             OR p.client_user_id = $1
+             OR pr.client_user_id = $1
+             OR LOWER(i.contact_email) = LOWER($2)
+             OR pt.user_id = $1
+          ORDER BY i.created_at DESC
+        `;
+        params.push(userId, auth!.user!.email);
       }
 
       const result = await dbQuery(sql, params);
@@ -170,6 +175,16 @@ export const handler = compose(
       const isAdminPayload = 'contactName' in body;
 
       if (isAdminPayload) {
+        const checkedAdminAuth = await requireAuthFromCookie(event);
+        if (!checkedAdminAuth.authorized) {
+          return {
+            statusCode: checkedAdminAuth.statusCode || 401,
+            headers,
+            body: JSON.stringify({ error: checkedAdminAuth.error || 'Authentication required' }),
+          };
+        }
+        assertAdminLike(checkedAdminAuth.user, 'inquiries.createAdmin');
+
         // Admin-created inquiry (from NewInquiryModal)
         const validation = validateRequest(event.body, SCHEMAS.inquiry.createAdmin, origin);
         if (!validation.success) return validation.response;
@@ -196,16 +211,10 @@ export const handler = compose(
           ]
         );
 
-        // Log activity - try to get admin auth context
-        let adminAuth: CookieAuthResult | null = null;
-        try {
-          adminAuth = await requireAuthFromCookie(event);
-        } catch { /* public form, no auth */ }
-
         await logActivity({
           type: 'INQUIRY_CREATED',
-          userId: adminAuth?.user?.userId || '',
-          userName: adminAuth?.user?.fullName || payload.contactName,
+          userId: checkedAdminAuth.user?.userId || '',
+          userName: checkedAdminAuth.user?.fullName || payload.contactName,
           inquiryId: result.rows[0].id,
           details: { inquiryNumber, source: 'admin' },
         });
@@ -279,6 +288,8 @@ export const handler = compose(
           body: JSON.stringify({ error: 'Inquiry ID is required' }),
         };
       }
+
+      assertAdminLike(auth?.user, 'inquiries.update');
 
       const updates = JSON.parse(event.body || '{}');
 
@@ -368,6 +379,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Inquiries API error:', error);
     return {
       statusCode: 500,

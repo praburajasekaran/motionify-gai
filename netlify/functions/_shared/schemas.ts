@@ -397,8 +397,8 @@ export const createRevisionRequestSchema = z.object({
 
 export const createActivitySchema = z.object({
     type: z.string().min(1).max(100),
-    userId: uuidSchema,
-    userName: nameSchema,
+    userId: uuidSchema.optional(),
+    userName: nameSchema.optional(),
     targetUserId: uuidSchema.optional(),
     targetUserName: nameSchema.optional(),
     inquiryId: uuidSchema.optional(),

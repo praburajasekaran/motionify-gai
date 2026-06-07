@@ -2,6 +2,12 @@ import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  requireInquiryAccess,
+} from './_shared/authorization';
 
 export const handler = compose(
   withCORS(['GET', 'PUT', 'OPTIONS']),
@@ -24,6 +30,8 @@ export const handler = compose(
 
   try {
     if (event.httpMethod === 'GET') {
+      await requireInquiryAccess(auth?.user, id, { operation: 'inquiry-detail.get' });
+
       // Support lookup by UUID or by inquiry_number (e.g., INQ-2026-001)
       const isInquiryNumber = id.startsWith('INQ-');
       const lookupColumn = isInquiryNumber ? 'inquiry_number' : 'id';
@@ -49,6 +57,8 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'PUT') {
+      assertAdminLike(auth?.user, 'inquiry-detail.update');
+
       const updates = JSON.parse(event.body || '{}');
 
       const allowedFields = [
@@ -111,6 +121,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Inquiry detail API error:', error);
     return {
       statusCode: 500,

@@ -5,6 +5,12 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
 import { sendProjectInvitationEmail } from './send-email';
 import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireProjectManagerAccess,
+} from './_shared/authorization';
 
 /**
  * Create a project-level invitation.
@@ -67,7 +73,19 @@ export const handler = compose(
   }
 
   const currentUserId = auth?.user?.userId;
-  const currentUserRole = auth?.user?.role;
+  const currentUserRole = getAuthRole(auth?.user);
+
+  try {
+    await requireProjectManagerAccess(auth?.user, projectId, {
+      allowClientPrimary: true,
+      operation: 'project-invitations.create',
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
+    throw error;
+  }
 
   // Permission check
   if (currentUserRole === 'team_member') {

@@ -43,6 +43,7 @@ import {
     Spinner,
 } from '../../components/ui/design-system';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -318,19 +319,12 @@ export function Payments() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6 pb-20">
             {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
-                            <CreditCard className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-foreground">Payments</h1>
-                            <p className="text-muted-foreground">Track and manage all payment transactions</p>
-                        </div>
-                    </div>
+            <PageHeader
+                title="Payments"
+                description="Track and manage all payment transactions"
+                actions={
                     <Button
                         variant="outline"
                         size="sm"
@@ -341,12 +335,12 @@ export function Payments() {
                         <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
                         Refresh
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             {/* Summary Cards */}
             {summary && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         label="Total Revenue"
                         value={formatCurrency(summary.completedAmount, summary.currency)}

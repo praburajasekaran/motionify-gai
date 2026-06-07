@@ -9,11 +9,12 @@
 import { getCorsHeaders } from './cors';
 import { verifyJWT as verifyJWTFromLib, extractTokenFromCookie } from './jwt';
 import { createLogger } from './logger';
+import { normalizeRole, type CanonicalUserRole } from './roles';
 
 const logger = createLogger('auth-middleware');
 
 // User roles
-export type UserRole = 'super_admin' | 'support' | 'client' | 'team';
+export type UserRole = CanonicalUserRole;
 
 // JWT payload structure
 export interface JwtPayload {
@@ -52,7 +53,7 @@ export interface CookieAuthResult {
     user?: {
         userId: string;
         email: string;
-        role: string;
+        role: UserRole;
         fullName: string;
     };
     error?: string;
@@ -89,12 +90,21 @@ export async function requireAuthFromCookie(event: NetlifyEvent): Promise<Cookie
         };
     }
 
+    const normalizedRole = normalizeRole(result.payload!.role);
+    if (normalizedRole === 'unknown') {
+        return {
+            authorized: false,
+            error: 'Invalid authentication role',
+            statusCode: 401,
+        };
+    }
+
     return {
         authorized: true,
         user: {
             userId: result.payload!.userId,
             email: result.payload!.email,
-            role: result.payload!.role,
+            role: normalizedRole,
             fullName: result.payload!.fullName,
         },
     };
@@ -136,8 +146,8 @@ export async function requireSupport(event: NetlifyEvent): Promise<CookieAuthRes
         return auth;
     }
 
-    const allowedRoles = ['super_admin', 'support'];
-    if (!allowedRoles.includes(auth.user!.role)) {
+    const allowedRoles: UserRole[] = ['super_admin', 'support'];
+    if (!allowedRoles.includes(normalizeRole(auth.user!.role) as UserRole)) {
         logger.warn('Forbidden: Support required', {
             userId: auth.user!.userId,
             role: auth.user!.role,

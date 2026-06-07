@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Activity, Users, Loader2 } from 'lucide-react';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 
@@ -202,14 +203,12 @@ export function ActivityLogs() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 pb-20">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-semibold text-foreground">Activity Logs</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Platform activity stream with navigation to projects and proposals
-        </p>
-      </div>
+      <PageHeader
+        title="Activity Logs"
+        description="Platform activity stream with navigation to projects and proposals"
+      />
 
       {/* Toggle Bar */}
       <div className="flex items-center gap-2 bg-card rounded-lg p-1 border w-fit">

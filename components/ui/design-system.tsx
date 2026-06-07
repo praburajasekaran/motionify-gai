@@ -722,18 +722,67 @@ interface CommandPaletteProps {
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChange, items }) => {
   const [search, setSearch] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 100);
       setSearch('');
+      setSelectedIndex(0);
     }
   }, [open]);
 
-  if (!open) return null;
-
   const filteredItems = items.filter(item => item.label.toLowerCase().includes(search.toLowerCase()));
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [search]);
+
+  useEffect(() => {
+    if (selectedIndex > filteredItems.length - 1) {
+      setSelectedIndex(Math.max(0, filteredItems.length - 1));
+    }
+  }, [filteredItems.length, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpenChange(false);
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedIndex(index => Math.min(index + 1, filteredItems.length - 1));
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedIndex(index => Math.max(index - 1, 0));
+        return;
+      }
+
+      if (event.key === 'Enter' && filteredItems[selectedIndex]) {
+        event.preventDefault();
+        event.stopPropagation();
+        filteredItems[selectedIndex].action();
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [filteredItems, onOpenChange, open, selectedIndex]);
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] p-4">
@@ -757,11 +806,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
           {filteredItems.map((item, i) => (
             <div
               key={i}
+              aria-selected={selectedIndex === i}
               onClick={() => {
                 item.action();
                 onOpenChange(false);
               }}
-              className="relative flex cursor-default select-none items-center rounded-lg px-2 py-2 text-sm outline-none hover:bg-muted hover:text-foreground cursor-pointer transition-colors"
+              onMouseEnter={() => setSelectedIndex(i)}
+              className={cn(
+                "relative flex select-none items-center rounded-lg px-2 py-2 text-sm outline-none cursor-pointer transition-colors",
+                selectedIndex === i ? "bg-muted text-foreground" : "hover:bg-muted hover:text-foreground"
+              )}
             >
               {item.icon && <item.icon className="mr-3 h-4 w-4 text-muted-foreground" />}
               <span>{item.label}</span>

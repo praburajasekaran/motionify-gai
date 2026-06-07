@@ -21,6 +21,8 @@ import {
     cn
 } from '../components/ui/design-system';
 import { useAuthContext } from '../contexts/AuthContext';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
 
 // API base URL for Netlify functions
 const API_BASE = '/.netlify/functions';
@@ -174,12 +176,13 @@ export const StartProductionRequest = () => {
                         </div>
                     </div>
 
-                    <h1 className="text-3xl font-bold text-foreground mb-3">
-                        Request Submitted! 🎉
-                    </h1>
-                    <p className="text-lg text-muted-foreground mb-6">
-                        Your project request has been sent to the Motionify Studio team.
-                    </p>
+                    <div className="mb-6">
+                        <PageHeader
+                            title="Request Submitted!"
+                            description="Your project request has been sent to the Motionify Studio team."
+                            className="items-center sm:items-center justify-center text-center"
+                        />
+                    </div>
 
                     {/* Request Number Badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary rounded-full mb-8">
@@ -237,7 +240,10 @@ export const StartProductionRequest = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4">
+        <div className="space-y-8 pb-20">
+            <ProjectSectionHeader />
+
+        <div className="max-w-2xl mx-auto">
             {/* Header */}
             <div className="mb-8 animate-in fade-in slide-in-from-left-4 duration-300">
                 <Button
@@ -252,14 +258,10 @@ export const StartProductionRequest = () => {
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center shadow-lg shadow-primary/25">
                         <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                            Start a Production
-                        </h1>
-                        <p className="text-muted-foreground mt-1">
-                            Tell us about your project and we'll create a proposal for you.
-                        </p>
-                    </div>
+                    <PageHeader
+                        title="Start a Project"
+                        description="Tell us about your project and we'll create a proposal for you."
+                    />
                 </div>
             </div>
 
@@ -416,6 +418,7 @@ export const StartProductionRequest = () => {
             <div className="mt-8 text-center text-sm text-muted-foreground">
                 <p>Need help? Contact us at <a href="mailto:hello@motionify.studio" className="text-primary hover:underline">hello@motionify.studio</a></p>
             </div>
+        </div>
         </div>
     );
 };

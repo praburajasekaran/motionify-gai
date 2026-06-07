@@ -3,6 +3,12 @@ import { compose, withCORS, withRateLimit, type NetlifyEvent } from './_shared/m
 import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import {
+  AuthorizationError,
+  assertAdminLike,
+  createAuthorizationResponse,
+  requireProposalAccess,
+} from './_shared/authorization';
 
 export const handler = compose(
   withCORS(['GET', 'PUT', 'PATCH']),
@@ -10,6 +16,7 @@ export const handler = compose(
 )(async (event: NetlifyEvent) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
+  let auth: CookieAuthResult | null = null;
 
   const pathParts = event.path.split('/');
   const id = pathParts[pathParts.length - 1];
@@ -24,7 +31,7 @@ export const handler = compose(
 
   // Proposal detail is now Portal-authenticated. Public review uses public-proposal with a review token.
   if (event.httpMethod === 'GET' || event.httpMethod === 'PUT' || event.httpMethod === 'PATCH') {
-    const auth = await requireAuthFromCookie(event);
+    auth = await requireAuthFromCookie(event);
     if (!auth.authorized) {
       return {
         statusCode: auth.statusCode || 401,
@@ -38,6 +45,8 @@ export const handler = compose(
 
   try {
     if (event.httpMethod === 'GET') {
+      await requireProposalAccess(auth?.user, id, { operation: 'proposal-detail.get' });
+
       const result = await dbQuery(
         `SELECT * FROM proposals WHERE id = $1`,
         [id]
@@ -59,6 +68,8 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'PUT') {
+      assertAdminLike(auth?.user, 'proposal-detail.update');
+
       const updates = JSON.parse(event.body || '{}');
 
       const allowedFields = [
@@ -117,6 +128,8 @@ export const handler = compose(
     }
 
     if (event.httpMethod === 'PATCH') {
+      assertAdminLike(auth?.user, 'proposal-detail.patch');
+
       const { status, feedback } = JSON.parse(event.body || '{}');
 
       if (!status) {
@@ -212,6 +225,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('Proposal detail API error:', error);
     return {
       statusCode: 500,

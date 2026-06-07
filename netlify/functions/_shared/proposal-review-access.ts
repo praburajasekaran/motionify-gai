@@ -51,7 +51,7 @@ async function ensureProposalReviewTokenTable() {
 }
 
 export function isTokenlessProposalCompatibilityEnabled(): boolean {
-  return process.env.PROPOSAL_TOKENLESS_COMPATIBILITY !== 'false';
+  return process.env.PROPOSAL_TOKENLESS_COMPATIBILITY === 'true';
 }
 
 export async function createProposalReviewToken(proposalId: string, expiresInDays = DEFAULT_EXPIRY_DAYS) {

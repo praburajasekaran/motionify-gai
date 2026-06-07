@@ -1,13 +1,14 @@
 import { query as dbQuery } from './_shared/db';
-import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { AuthorizationError, createAuthorizationResponse, requireProjectAccess } from './_shared/authorization';
 
 export const handler = compose(
   withCORS(['GET', 'OPTIONS']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'invitations_list')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -26,6 +27,8 @@ export const handler = compose(
   const { status } = event.queryStringParameters || {};
 
   try {
+    await requireProjectAccess(auth?.user, projectId, { operation: 'invitations.list' });
+
     // Build query with optional status filter
     let sql = `
       SELECT pi.*, u.full_name as invited_by_name
@@ -66,6 +69,9 @@ export const handler = compose(
       }),
     };
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return createAuthorizationResponse(error, origin);
+    }
     console.error('List invitations error:', error);
     return {
       statusCode: 500,

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PrefetchLink } from '../shared/components/PrefetchLink';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronRight, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { TAB_INDEX_MAP } from '../constants';
@@ -99,7 +99,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' }] : []),
     { label: 'Go to Projects', icon: FolderKanban, action: () => navigate('/projects'), group: 'Navigation' },
     { label: 'Go to Settings', icon: Settings, action: () => navigate('/settings'), group: 'Navigation' },
-    { label: 'Create New Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
+    { label: 'Start a Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
     { label: 'Toggle Sidebar', icon: Menu, action: () => setSidebarOpen(!sidebarOpen), group: 'View' },
     { label: 'Logout', icon: LogOut, action: () => logout(), group: 'Account' },
   ];
@@ -140,7 +140,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     {
       key: 'n',
       modifiers: ['cmd'],
-      description: 'Create new production',
+      description: 'Start a project',
       action: () => navigate('/projects/new'),
       category: 'actions',
     },
@@ -197,6 +197,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // Get current tab from URL
   const currentTabIndex = location.pathname.split('/')[3];
   const activeTab = currentTabIndex ? parseInt(currentTabIndex) : 1;
+  const userIsClient = isClient(user);
+  const canSeeSystemSection = isSuperAdmin(user);
+  const inquiriesPath = userIsClient ? '/inquiries' : '/admin/inquiries';
 
   return (
     <ToastProvider>
@@ -262,33 +265,35 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <SidebarItem
                   icon={Mail}
                   label="Inquiries"
-                  path="/admin/inquiries"
-                  active={location.pathname.startsWith('/admin/inquiries')}
+                  path={inquiriesPath}
+                  active={location.pathname.startsWith('/inquiries') || location.pathname.startsWith('/admin/inquiries')}
                 />
-                <SidebarItem
-                  icon={CreditCard}
-                  label="Payments"
-                  path="/admin/payments"
-                  active={location.pathname === '/admin/payments'}
-                />
+                {!userIsClient && (
+                  <SidebarItem
+                    icon={CreditCard}
+                    label="Payments"
+                    path="/admin/payments"
+                    active={location.pathname === '/admin/payments'}
+                  />
+                )}
               </div>
             </div>
 
+            {canSeeSystemSection && (
             <div>
               <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 System
               </div>
               <div className="space-y-0.5">
-                {isSuperAdmin(user) && (
-                  <SidebarItem
-                    icon={UserIcon}
-                    label="Team"
-                    path="/admin/users"
-                    active={location.pathname === '/admin/users'}
-                  />
-                )}
+                <SidebarItem
+                  icon={UserIcon}
+                  label="Team"
+                  path="/admin/users"
+                  active={location.pathname === '/admin/users'}
+                />
               </div>
             </div>
+            )}
           </div>
 
           {/* User footer */}
@@ -341,8 +346,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         >
           {/* Top bar — minimal, functional */}
           <header className="h-14 border-b border-border z-[60] shrink-0 sticky top-0 bg-background">
-            <div className="h-full flex items-center justify-between px-6">
-              <div className="flex items-center">
+            <div className="h-full max-w-6xl mx-auto px-6 flex items-center justify-between">
+              <div className="flex items-center flex-1 min-w-0">
                 <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(prev => !prev)} id="mobile-menu-btn">
                   <Menu className="h-4 w-4" />
                 </Button>
@@ -358,30 +363,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   />
                 </PrefetchLink>
 
-                <nav className="hidden md:flex items-center text-[14px] text-muted-foreground">
-                  <span className="hover:text-foreground cursor-pointer transition-colors">Workspace</span>
-                  <ChevronRight className="h-3.5 w-3.5 mx-1.5 text-muted-foreground/50" />
-                  <span className="font-medium text-foreground">
-                    {location.pathname === '/' ? 'Dashboard' :
-                      location.pathname.startsWith('/projects') ? 'Projects' : 'Page'}
-                  </span>
-                </nav>
-              </div>
-
-              <div className="flex items-center gap-1">
-                {/* Search trigger */}
                 <button
                   onClick={() => setCommandOpen(true)}
-                  className="hidden md:flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-background text-[14px] text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                  className="hidden md:flex items-center gap-2 h-9 w-full max-w-xl px-3 rounded-lg border border-border bg-card text-[14px] text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors text-left"
                 >
-                  <Search className="h-3.5 w-3.5" />
-                  <span>Search</span>
-                  <div className="flex items-center gap-0.5 ml-4">
+                  <Search className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate">Search projects, inquiries, tasks, files...</span>
+                  <div className="flex items-center gap-0.5">
                     <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">⌘</kbd>
                     <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">K</kbd>
                   </div>
                 </button>
+              </div>
 
+              <div className="flex items-center gap-1">
                 <NotificationBell />
 
                 {mounted && (

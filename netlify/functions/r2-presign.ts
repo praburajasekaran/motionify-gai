@@ -5,6 +5,14 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { getCorsHeaders } from "./_shared/cors";
 import { query as dbQuery } from './_shared/db';
+import {
+    AuthorizationError,
+    createAuthorizationResponse,
+    requireCommentAccess,
+    requireDeliverableAccess,
+    requireProjectAccess,
+    requireProposalAccess,
+} from './_shared/authorization';
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -79,7 +87,7 @@ export const handler = compose(
                 };
             }
 
-            // Security: Validate key ownership before generating presigned URL
+            // Security: Resolve key ownership before generating presigned URL
             const keyOwnershipResult = await dbQuery(`
                 SELECT d.id, d.project_id, d.status, p.client_user_id
                 FROM deliverables d
@@ -96,11 +104,10 @@ export const handler = compose(
                     WHERE ca.r2_key = $1
                 `, [key]);
 
-                // Admin/PM can access everything
-                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'support') {
-                    // Allow
-                } else if (attachmentResult.rows.length > 0) {
-                    // Allow - user is authenticated and attachment exists
+                if (attachmentResult.rows.length > 0) {
+                    await requireProposalAccess(auth?.user, attachmentResult.rows[0].proposal_id, {
+                        operation: 'r2.downloadCommentAttachment',
+                    });
                 } else {
                     // Key not found in deliverables OR attachments
                     if (key.startsWith(`uploads/${auth?.user?.userId}/`)) {
@@ -120,52 +127,10 @@ export const handler = compose(
                     }
                 }
             } else {
-                const { project_id, client_user_id, status } = keyOwnershipResult.rows[0];
-
-                // Admin/PM can access all
-                if (auth?.user?.role === 'super_admin' || auth?.user?.role === 'support') {
-                    // Allow
-                }
-                // Client can only access their own project's files when status allows viewing
-                else if (auth?.user?.role === 'client') {
-                    const isOwnProject = client_user_id === auth.user.userId;
-                    const viewableStatuses = ['beta_ready', 'awaiting_approval', 'approved', 'payment_pending', 'final_delivered'];
-
-                    if (!isOwnProject || !viewableStatuses.includes(status)) {
-                        return {
-                            statusCode: 403,
-                            headers,
-                            body: JSON.stringify({
-                                error: {
-                                    code: 'ACCESS_DENIED',
-                                    message: 'You do not have permission to access this file',
-                                },
-                            }),
-                        };
-                    }
-                }
-                // Team members can access project files if they're on the project team
-                else if (auth?.user?.role === 'team_member') {
-                    const teamMemberResult = await dbQuery(`
-                        SELECT 1 FROM tasks
-                        WHERE project_id = $1
-                        AND (assignee_id = $2 OR $2 = ANY(assignee_ids))
-                        LIMIT 1
-                    `, [project_id, auth.user.userId]);
-
-                    if (teamMemberResult.rows.length === 0) {
-                        return {
-                            statusCode: 403,
-                            headers,
-                            body: JSON.stringify({
-                                error: {
-                                    code: 'ACCESS_DENIED',
-                                    message: 'You are not assigned to tasks on this project',
-                                },
-                            }),
-                        };
-                    }
-                }
+                const deliverable = keyOwnershipResult.rows[0];
+                await requireDeliverableAccess(auth?.user, deliverable.id, {
+                    operation: 'r2.downloadDeliverable',
+                });
             }
 
             const command = new GetObjectCommand({
@@ -201,7 +166,7 @@ export const handler = compose(
                 return validation.response;
             }
 
-            const { fileName, fileType, fileSize, commentId, projectId, folder, revisionRequestId } = validation.data;
+            const { fileName, fileType, fileSize, commentId, projectId, folder, revisionRequestId } = validation.data as any;
 
             // Generate secure key
             const timestamp = Date.now();
@@ -209,10 +174,26 @@ export const handler = compose(
 
             let key: string;
             if (commentId) {
+                await requireCommentAccess(auth?.user, commentId, { operation: 'r2.uploadCommentAttachment' });
                 key = `comments/${commentId}/${timestamp}-${sanitizedFileName}`;
             } else if (revisionRequestId) {
+                const revisionResult = await dbQuery(
+                    `SELECT deliverable_id FROM revision_requests WHERE id = $1`,
+                    [revisionRequestId]
+                );
+                if (revisionResult.rows.length === 0) {
+                    return {
+                        statusCode: 404,
+                        headers,
+                        body: JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Revision request not found' } }),
+                    };
+                }
+                await requireDeliverableAccess(auth?.user, revisionResult.rows[0].deliverable_id, {
+                    operation: 'r2.uploadRevisionAttachment',
+                });
                 key = `revisions/${revisionRequestId}/${timestamp}-${sanitizedFileName}`;
             } else if (projectId && folder) {
+                await requireProjectAccess(auth?.user, projectId, { operation: 'r2.uploadProjectFile' });
                 key = `projects/${projectId}/${folder}/${timestamp}-${sanitizedFileName}`;
             } else {
                 key = `uploads/${auth!.user!.userId}/${timestamp}-${sanitizedFileName}`;
@@ -252,6 +233,9 @@ export const handler = compose(
         };
 
     } catch (error: any) {
+        if (error instanceof AuthorizationError) {
+            return createAuthorizationResponse(error, origin);
+        }
         console.error("R2 Error:", error);
         return {
             statusCode: 500,

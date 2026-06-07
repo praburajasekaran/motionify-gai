@@ -6,6 +6,8 @@ import { displayStatusToDb } from '../utils/projectStatusMapping';
 import { useProject } from '../shared/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { DetailPageHeaderSkeleton } from '../components/ui/SkeletonLoaders';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
 
 /** Extract YYYY-MM-DD from a date value, avoiding timezone shift issues.
  *  PostgreSQL DATE columns come through as ISO strings like "2026-02-09T00:00:00.000Z".
@@ -263,6 +265,8 @@ export const ProjectSettings = () => {
 
     return (
         <div className="max-w-[1400px] mx-auto pb-20 space-y-8 animate-in fade-in duration-500">
+            <ProjectSectionHeader />
+
             {/* Delete Project Dialog */}
             <Dialog open={showDeleteProjectDialog} onOpenChange={(open) => { setShowDeleteProjectDialog(open); if (!open) setDeleteConfirmInput(''); }}>
                 <DialogHeader>
@@ -334,11 +338,7 @@ export const ProjectSettings = () => {
                             <ChevronLeft className="h-3 w-3 mr-1" /> Back to Project
                         </Button>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
-                        <div className="h-6 w-px bg-border mx-2 hidden sm:block"></div>
-                        <span className="text-lg text-muted-foreground font-medium hidden sm:block">{project.title}</span>
-                    </div>
+                    <PageHeader title="Settings" description={project.title} />
                 </div>
 
                 {/* Actions Area */}

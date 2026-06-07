@@ -6,8 +6,10 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
 import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { NewInquiryModal } from '../../components/admin/NewInquiryModal';
+import { Button } from '../../components/ui/design-system';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -65,6 +67,7 @@ function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
 export function InquiryDashboard() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthContext();
+  const inquiryBasePath = isClient(user) ? '/inquiries' : '/admin/inquiries';
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -174,90 +177,11 @@ export function InquiryDashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-foreground">Inquiries</h1>
-          {isClient(user) && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white font-medium hover:brightness-110 transition shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              New Inquiry
-            </button>
-          )}
-        </div>
-        <p className="text-muted-foreground">
-          {isClient(user) 
-            ? 'View your inquiries and track proposals' 
-            : 'Manage customer inquiries and create proposals'}
-        </p>
-      </div>
-  
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {isClient(user) ? (
-            <>
-              <StatCard 
-                label="Total Inquiries"
-                value={stats.total}
-                icon={TrendingUp}
-                color="blue"
-              />
-              <StatCard 
-                label="Pending Response"
-                value={stats.pendingResponse}
-                icon={Clock}
-                color="amber"
-              />
-              <StatCard 
-                label="Proposal Received"
-                value={stats.proposalReceived}
-                icon={FileText}
-                color="purple"
-              />
-              <StatCard 
-                label="Accepted"
-                value={stats.accepted}
-                icon={CheckCircle}
-                color="green"
-              />
-            </>
-          ) : (
-            <>
-              <StatCard 
-                label="Total Inquiries"
-                value={stats.total}
-                icon={TrendingUp}
-                color="blue"
-              />
-              <StatCard 
-                label="New"
-                value={stats.new}
-                icon={Mail}
-                color="emerald"
-              />
-              <StatCard 
-                label="Proposal Sent"
-                value={stats.proposalSent}
-                icon={User}
-                color="purple"
-              />
-              <StatCard 
-                label="Converted"
-                value={stats.converted}
-                icon={Calendar}
-                color="green"
-              />
-            </>
-          )}
-        </div>
-      )}
+    <div className="space-y-6 pb-20">
+      <InquirySectionHeader onNewInquiry={() => setIsModalOpen(true)} />
   
       {/* Filters */}
-      <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm mb-6">
+      <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -268,7 +192,7 @@ export function InquiryDashboard() {
                 placeholder="Search by inquiry #, name, email, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)]/50 focus:border-transparent"
               />
             </div>
           </div>
@@ -280,7 +204,7 @@ export function InquiryDashboard() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | 'all')}
-                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)]/50 focus:border-transparent appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
                 {Object.entries(INQUIRY_STATUS_CONFIG)
@@ -298,7 +222,7 @@ export function InquiryDashboard() {
       {/* Loading State */}
       {loading ? (
         <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
-          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
           <p className="text-foreground">Loading inquiries...</p>
         </div>
       ) : error ? (
@@ -324,7 +248,7 @@ export function InquiryDashboard() {
                 {filteredInquiries.map((inquiry) => (
                   <div
                     key={inquiry.id}
-                    onClick={() => navigate(`/admin/inquiries/${inquiry.id}`)}
+                    onClick={() => navigate(`${inquiryBasePath}/${inquiry.id}`)}
                     className="block p-4 hover:bg-muted transition-colors group cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -358,7 +282,7 @@ export function InquiryDashboard() {
                         {/* Video Type */}
                         <div className="flex items-center gap-2 text-sm">
                           <span className="text-muted-foreground">Recommended:</span>
-                          <span className="text-violet-600">{inquiry.recommendedVideoType}</span>
+                          <span className="text-primary">{inquiry.recommendedVideoType}</span>
                         </div>
                       </div>
                     
@@ -376,7 +300,7 @@ export function InquiryDashboard() {
                             e.stopPropagation();
                             navigate(`/admin/inquiries/${inquiry.id}/proposal`);
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/90"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Create Proposal
@@ -392,7 +316,7 @@ export function InquiryDashboard() {
           
           {/* Results Count */}
           {filteredInquiries.length > 0 && (
-            <div className="mt-4 text-center text-sm text-muted-foreground">
+            <div className="text-center text-sm text-muted-foreground">
               Showing {filteredInquiries.length} of {inquiries.length} inquiries
             </div>
           )}

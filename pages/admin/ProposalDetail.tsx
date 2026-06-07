@@ -11,6 +11,7 @@ import { getStatusConfig } from '../../lib/status-config';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PromptDialog } from '../../components/ui/PromptDialog';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { sanitizeHtml } from '../../lib/sanitize';
 
 interface DeliverableInput {
@@ -515,7 +516,7 @@ export function ProposalDetail() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate(isClient ? (inquiry ? `/admin/inquiries/${inquiry.id}` : '/') : (inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries'))}
+          onClick={() => navigate(isClient ? (inquiry ? `/inquiries/${inquiry.id}` : '/inquiries') : (inquiry ? `/admin/inquiries/${inquiry.id}` : '/admin/inquiries'))}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -524,22 +525,28 @@ export function ProposalDetail() {
 
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-foreground">Proposal</h1>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
-                <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
-                {statusInfo.adminLabel}
-              </span>
-            </div>
-            {inquiry && (
-              <p className="text-muted-foreground">
-                For inquiry <code className="text-violet-600 font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Created {formatDate(proposal.createdAt)}
-              {proposal.updatedAt !== proposal.createdAt && ` • Updated ${formatDate(proposal.updatedAt)}`}
-            </p>
+            <PageHeader
+              title="Proposal"
+              description={
+                <>
+                  {inquiry && (
+                    <span>
+                      For inquiry <code className="text-primary font-mono">{inquiry.inquiryNumber}</code> - {inquiry.contactName}
+                    </span>
+                  )}
+                  <span className="block">
+                    Created {formatDate(proposal.createdAt)}
+                    {proposal.updatedAt !== proposal.createdAt && ` • Updated ${formatDate(proposal.updatedAt)}`}
+                  </span>
+                </>
+              }
+              actions={
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ring-1 ${adminColors.color}`}>
+                  <StatusIcon className={`w-4 h-4 ${adminColors.iconColor}`} />
+                  {statusInfo.adminLabel}
+                </span>
+              }
+            />
           </div>
 
           {isAdmin && !isEditMode && (

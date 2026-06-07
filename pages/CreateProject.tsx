@@ -28,6 +28,8 @@ import {
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS } from '../constants';
 import { api } from '../lib/api-config';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
 
 interface ClientUser {
     id: string;
@@ -415,13 +417,17 @@ export const CreateProject = () => {
     );
 
     return (
-        <div className="max-w-3xl mx-auto py-8">
+        <div className="space-y-8 pb-20">
+            <ProjectSectionHeader />
+
             <div className="mb-8">
                 <Button variant="ghost" className="pl-0 gap-2 mb-4 hover:bg-transparent hover:text-primary" onClick={() => navigate('/projects')}>
                     <ChevronLeft className="h-4 w-4" /> Back to Projects
                 </Button>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Create New Project</h1>
-                <p className="text-muted-foreground mt-2">Configure project details, deliverables, and team assignments.</p>
+                <PageHeader
+                    title="Create New Project"
+                    description="Configure project details, deliverables, and team assignments."
+                />
             </div>
 
             {/* Stepper */}

@@ -134,14 +134,11 @@ export async function createInquiry(data: {
   }
 
   const inquiry = {
-    contactName: data.contactInfo.contactName.trim(),
-    contactEmail: data.contactInfo.contactEmail.trim().toLowerCase(),
-    companyName: data.contactInfo.companyName?.trim(),
-    contactPhone: data.contactInfo.contactPhone?.trim(),
-    projectNotes: data.contactInfo.projectNotes?.trim(),
-    quizAnswers: data.quizAnswers,
-    recommendedVideoType: data.recommendedVideoType,
-    clientUserId: data.clientUserId,
+    name: data.contactInfo.contactName.trim(),
+    email: data.contactInfo.contactEmail.trim().toLowerCase(),
+    company: data.contactInfo.companyName?.trim(),
+    message: data.contactInfo.projectNotes?.trim() || data.recommendedVideoType,
+    projectType: data.recommendedVideoType,
   };
 
   const response = await fetch(`${API_BASE_URL}/inquiries`, {

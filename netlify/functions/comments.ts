@@ -7,6 +7,12 @@ import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
 import { absoluteProposalReviewUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import {
+    AuthorizationError,
+    createAuthorizationResponse,
+    requireCommentAccess,
+    requireProposalAccess,
+} from './_shared/authorization';
 
 interface Comment {
     id: string;
@@ -50,6 +56,8 @@ export const handler = compose(
                     }),
                 };
             }
+
+            await requireProposalAccess(auth?.user, proposalId, { operation: 'comments.list' });
 
             // Build query with optional since filter for efficient polling
             let sql = `SELECT
@@ -118,6 +126,8 @@ export const handler = compose(
             if (!validation.success) return validation.response;
             const { proposalId, content } = validation.data;
 
+            await requireProposalAccess(user, proposalId, { operation: 'comments.create' });
+
             const trimmedContent = content.trim();
 
             // Determine author_type based on user role
@@ -135,7 +145,7 @@ export const handler = compose(
                     false as "isEdited",
                     created_at as "createdAt",
                     updated_at as "updatedAt"`,
-                [proposalId, user.id, authorType, user.fullName, trimmedContent]
+                [proposalId, user.userId, authorType, user.fullName, trimmedContent]
             );
 
             const comment: Comment = {
@@ -160,7 +170,7 @@ export const handler = compose(
                 if (user.role === 'client') {
                     // Client posted comment - notify superadmin(s)
                     const adminResult = await dbQuery(
-                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') ORDER BY created_at ASC LIMIT 1`
+                        `SELECT email, id FROM users WHERE role IN ('super_admin', 'support') AND is_active = true ORDER BY created_at ASC LIMIT 1`
                     );
                     if (adminResult.rows.length > 0) {
                         recipientEmail = adminResult.rows[0].email;
@@ -201,7 +211,7 @@ export const handler = compose(
                 // ========================================================================
                 // Create in-app notification record
                 // ========================================================================
-                if (recipientUserId && recipientUserId !== user.id) {
+                if (recipientUserId && recipientUserId !== user.userId) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
                         const proposalUrl = absoluteProposalReviewUrl(proposalId, undefined, appOriginFromEnv(process.env));
@@ -216,7 +226,7 @@ export const handler = compose(
                                 'New Comment',
                                 `"${user.fullName}" commented: "${commentPreview}"`,
                                 proposalUrl,
-                                user.id,
+                                user.userId,
                                 user.fullName,
                             ]
                         );
@@ -249,25 +259,11 @@ export const handler = compose(
             if (!validation.success) return validation.response;
             const { id, content } = validation.data;
 
+            const authorizedComment = await requireCommentAccess<any>(user, id, { operation: 'comments.update' });
+
             const trimmedContent = content.trim();
 
-            const commentCheck = await dbQuery(
-                'SELECT author_id, content FROM proposal_comments WHERE id = $1',
-                [id]
-            );
-
-            if (commentCheck.rows.length === 0) {
-                return {
-                    statusCode: 404,
-                    headers,
-                    body: JSON.stringify({
-                        success: false,
-                        error: 'Comment not found',
-                    }),
-                };
-            }
-
-            if (commentCheck.rows[0].author_id !== user.id) {
+            if (authorizedComment.author_id !== user.userId) {
                 return {
                     statusCode: 403,
                     headers,
@@ -321,6 +317,9 @@ export const handler = compose(
         };
 
     } catch (error) {
+        if (error instanceof AuthorizationError) {
+            return createAuthorizationResponse(error, origin);
+        }
         console.error('comments error:', error);
         return {
             statusCode: 500,

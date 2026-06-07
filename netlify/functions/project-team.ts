@@ -3,6 +3,13 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query, transaction } from './_shared/db';
 import { maskSupportName } from './_shared/displayName';
+import {
+  AuthorizationError,
+  createAuthorizationResponse,
+  getAuthRole,
+  requireProjectAccess,
+  requireProjectManagerAccess,
+} from './_shared/authorization';
 
 /**
  * Project Team API
@@ -36,6 +43,8 @@ export const handler = compose(
   // ── GET: List team members and pending invitations ──
   if (event.httpMethod === 'GET') {
     try {
+      await requireProjectAccess(auth?.user, projectId, { operation: 'project-team.list' });
+
       // Fetch active team members
       const membersResult = await query(
         `SELECT pt.id, pt.user_id, pt.role, pt.is_primary_contact, pt.added_at,
@@ -86,6 +95,9 @@ export const handler = compose(
         body: JSON.stringify({ members, pendingInvitations }),
       };
     } catch (error) {
+      if (error instanceof AuthorizationError) {
+        return createAuthorizationResponse(error, origin);
+      }
       console.error('Project team GET error:', error);
       return {
         statusCode: 500,
@@ -106,7 +118,7 @@ export const handler = compose(
     }
 
     const currentUserId = auth?.user?.userId;
-    const currentUserRole = auth?.user?.role;
+    const currentUserRole = getAuthRole(auth?.user);
 
     // Cannot remove self
     if (targetUserId === currentUserId) {
@@ -120,6 +132,11 @@ export const handler = compose(
     }
 
     try {
+      await requireProjectManagerAccess(auth?.user, projectId, {
+        allowClientPrimary: true,
+        operation: 'project-team.remove',
+      });
+
       // Check target membership exists and is active
       const memberResult = await query(
         `SELECT pt.id, pt.role, pt.is_primary_contact, u.full_name
@@ -233,6 +250,9 @@ export const handler = compose(
         body: JSON.stringify({ success: true }),
       };
     } catch (error) {
+      if (error instanceof AuthorizationError) {
+        return createAuthorizationResponse(error, origin);
+      }
       console.error('Project team DELETE error:', error);
       return {
         statusCode: 500,

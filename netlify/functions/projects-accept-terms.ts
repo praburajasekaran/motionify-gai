@@ -3,6 +3,11 @@ import { compose, withCORS, withAuth, withRateLimit, withValidation, type AuthRe
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
+import {
+    AuthorizationError,
+    createAuthorizationResponse,
+    requireProjectAccess,
+} from './_shared/authorization';
 
 export const handler = compose(
     withCORS(['POST']),
@@ -18,18 +23,8 @@ export const handler = compose(
         const data = (event as any).validatedData;
         const { projectId, accepted } = data;
 
-        // Note: The schema expects { projectId, accepted } but the endpoint also uses userId
-        // Extract userId from the body manually for now
-        const rawBody = JSON.parse(event.body || '{}');
-        const userId = rawBody.userId;
-
-        if (!userId) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ error: 'userId is required' }),
-            };
-        }
+        const userId = auth!.user!.userId;
+        await requireProjectAccess(auth?.user, projectId, { operation: 'projects.acceptTerms' });
 
         // Verify project exists
         const projectResult = await dbQuery(
@@ -120,6 +115,9 @@ export const handler = compose(
         };
 
     } catch (error) {
+        if (error instanceof AuthorizationError) {
+            return createAuthorizationResponse(error, origin);
+        }
         console.error('Accept terms API error:', error);
         return {
             statusCode: 500,

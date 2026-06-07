@@ -35,6 +35,7 @@ import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
+import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
 
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
@@ -304,7 +305,6 @@ export const ProjectDetail = () => {
         enabled: !!id,
         staleTime: 30_000,
     });
-
     const { data: deliverables = [], isLoading: deliverablesLoading } = useQuery({
         queryKey: ['deliverables', id],
         queryFn: async () => {
@@ -762,6 +762,7 @@ export const ProjectDetail = () => {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-16">
+            <ProjectSectionHeader />
 
             {/* Terms Acceptance Banner - Shows if not accepted */}
             {!termsAccepted && <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />}
