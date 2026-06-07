@@ -634,6 +634,52 @@ export const handler = compose(
         };
       }
 
+      if (action === 'link-project') {
+        assertAdminLike(auth?.user, 'payments.linkProject');
+
+        const body = JSON.parse(event.body || '{}');
+        const { paymentId, projectId } = body;
+
+        if (!paymentId || !projectId) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'paymentId and projectId are required' }),
+          };
+        }
+
+        const projectResult = await dbQuery('SELECT id FROM projects WHERE id = $1', [projectId]);
+        if (projectResult.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Project not found' }),
+          };
+        }
+
+        const result = await dbQuery(
+          `UPDATE payments
+           SET project_id = $1
+           WHERE id = $2
+           RETURNING id`,
+          [projectId, paymentId]
+        );
+
+        if (result.rows.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Payment not found' }),
+          };
+        }
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true }),
+        };
+      }
+
       if (action === 'send-reminder') {
         // Verify admin access for sending reminders
         assertAdminLike(auth?.user, 'payments.sendReminder');

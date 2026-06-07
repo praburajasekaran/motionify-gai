@@ -43,6 +43,78 @@ export interface AdminPaymentsResponse {
     count: number;
 }
 
+interface RawAdminPayment {
+    id: string;
+    amount: number;
+    currency: string;
+    payment_type?: AdminPayment['paymentType'];
+    paymentType?: AdminPayment['paymentType'];
+    status: AdminPayment['status'];
+    razorpay_order_id?: string | null;
+    razorpayOrderId?: string | null;
+    razorpay_payment_id?: string | null;
+    razorpayPaymentId?: string | null;
+    paid_at?: string | null;
+    paidAt?: string | null;
+    created_at?: string;
+    createdAt?: string;
+    project_id?: string | null;
+    projectId?: string | null;
+    project_number?: string | null;
+    projectNumber?: string | null;
+    project_status?: string | null;
+    projectStatus?: string | null;
+    client_id?: string | null;
+    clientId?: string | null;
+    client_name?: string | null;
+    clientName?: string | null;
+    client_email?: string | null;
+    clientEmail?: string | null;
+}
+
+interface LinkableProject {
+    id: string;
+    projectNumber: string;
+    clientName: string;
+}
+
+interface RawLinkableProject {
+    id: string;
+    project_number?: string | null;
+    projectNumber?: string | null;
+    client_name?: string | null;
+    clientName?: string | null;
+    name?: string | null;
+}
+
+function normalizeAdminPayment(payment: RawAdminPayment): AdminPayment {
+    return {
+        id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        paymentType: payment.paymentType ?? payment.payment_type ?? 'advance',
+        status: payment.status,
+        razorpayOrderId: payment.razorpayOrderId ?? payment.razorpay_order_id ?? null,
+        razorpayPaymentId: payment.razorpayPaymentId ?? payment.razorpay_payment_id ?? null,
+        paidAt: payment.paidAt ?? payment.paid_at ?? null,
+        createdAt: payment.createdAt ?? payment.created_at ?? '',
+        projectId: payment.projectId ?? payment.project_id ?? null,
+        projectNumber: payment.projectNumber ?? payment.project_number ?? null,
+        projectStatus: payment.projectStatus ?? payment.project_status ?? null,
+        clientId: payment.clientId ?? payment.client_id ?? null,
+        clientName: payment.clientName ?? payment.client_name ?? null,
+        clientEmail: payment.clientEmail ?? payment.client_email ?? null,
+    };
+}
+
+function normalizeLinkableProject(project: RawLinkableProject): LinkableProject {
+    return {
+        id: project.id,
+        projectNumber: project.projectNumber ?? project.project_number ?? project.name ?? 'Untitled project',
+        clientName: project.clientName ?? project.client_name ?? 'Unknown client',
+    };
+}
+
 /**
  * Fetch all payments for admin dashboard with optional filters
  */
@@ -73,7 +145,16 @@ export async function fetchAllPayments(filters?: PaymentFilters, signal?: AbortS
         throw new Error(msg);
     }
 
-    return response.json();
+    const data = await response.json();
+
+    if (Array.isArray(data)) {
+        return data.map(normalizeAdminPayment);
+    }
+
+    return {
+        ...data,
+        payments: Array.isArray(data.payments) ? data.payments.map(normalizeAdminPayment) : [],
+    };
 }
 
 /**
@@ -136,7 +217,7 @@ export async function refundPayment(paymentId: string, reason?: string): Promise
 /**
  * Fetch active projects for linking (minimal data)
  */
-export async function fetchProjectsForLinking(): Promise<Array<{ id: string; projectNumber: string; clientName: string }>> {
+export async function fetchProjectsForLinking(): Promise<LinkableProject[]> {
     const response = await fetch('/api/payments/admin/projects', {
         credentials: 'include',
     });
@@ -146,7 +227,8 @@ export async function fetchProjectsForLinking(): Promise<Array<{ id: string; pro
         throw new Error(errorData.error || 'Failed to fetch projects');
     }
 
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(normalizeLinkableProject) : [];
 }
 
 export const fetchPaymentsForProject = async (projectId: string): Promise<Payment[]> => {
