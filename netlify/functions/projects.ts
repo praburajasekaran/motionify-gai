@@ -208,23 +208,84 @@ export const handler = compose(
         if (!validation.success) return validation.response;
         const payload = validation.data;
 
-        const projectNumber = await generateProjectNumber();
-        const result = await dbQuery(
-          `INSERT INTO projects (
-            project_number, name, client_user_id, status, total_revisions_allowed
-          ) VALUES ($1, $2, $3, 'active', $4)
-          RETURNING *`,
-          [projectNumber, payload.name.trim(), payload.clientUserId, payload.totalRevisions ?? 2]
-        );
-
-        const project = result.rows[0];
-        for (const deliverableName of payload.deliverables) {
-          await dbQuery(
-            `INSERT INTO deliverables (project_id, name, description, status)
-             VALUES ($1, $2, '', 'pending')`,
-            [project.id, deliverableName]
+        const { project, projectNumber } = await transaction(async (client) => {
+          const clientUserResult = await client.query(
+            `SELECT id FROM users WHERE id = $1 AND role = 'client' AND is_active = true`,
+            [payload.clientUserId]
           );
-        }
+
+          if (clientUserResult.rows.length === 0) {
+            const error = new Error('Selected client was not found or is inactive');
+            (error as Error & { statusCode?: number }).statusCode = 400;
+            throw error;
+          }
+
+          const projectNumber = await generateProjectNumber(client);
+          const result = await client.query(
+            `INSERT INTO projects (
+              project_number, name, client_user_id, description, website, start_date, due_date, status, total_revisions_allowed
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)
+            RETURNING *`,
+            [
+              projectNumber,
+              payload.name.trim(),
+              payload.clientUserId,
+              payload.description?.trim() || null,
+              payload.website?.trim() || null,
+              payload.startDate || null,
+              payload.dueDate || null,
+              payload.totalRevisions ?? 2,
+            ]
+          );
+
+          const project = result.rows[0];
+          for (const deliverableName of payload.deliverables) {
+            await client.query(
+              `INSERT INTO deliverables (project_id, name, description, status)
+               VALUES ($1, $2, '', 'pending')`,
+              [project.id, deliverableName]
+            );
+          }
+
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             VALUES ($1, $2, 'client', true, $3)
+             ON CONFLICT (user_id, project_id) DO UPDATE
+             SET removed_at = NULL,
+                 removed_by = NULL,
+                 role = 'client',
+                 is_primary_contact = true`,
+            [payload.clientUserId, project.id, auth?.user?.userId || null]
+          );
+
+          if (auth?.user?.userId && auth.user.userId !== payload.clientUserId) {
+            await client.query(
+              `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+               VALUES ($1, $2, $3, false, $1)
+               ON CONFLICT (user_id, project_id) DO UPDATE
+               SET removed_at = NULL,
+                   removed_by = NULL,
+                   role = EXCLUDED.role,
+                   is_primary_contact = false`,
+              [auth.user.userId, project.id, auth.user.role || 'super_admin']
+            );
+          }
+
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             SELECT id, $1, 'support', false, $2
+             FROM users
+             WHERE role = 'support' AND is_active = true
+             ON CONFLICT (user_id, project_id) DO UPDATE
+             SET removed_at = NULL,
+                 removed_by = NULL,
+                 role = 'support',
+                 is_primary_contact = false`,
+            [project.id, auth?.user?.userId || null]
+          );
+
+          return { project, projectNumber };
+        });
 
         await logActivity({
           type: 'PROJECT_CREATED',
@@ -615,6 +676,13 @@ export const handler = compose(
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return createAuthorizationResponse(error, origin);
+    }
+    if (error instanceof Error && 'statusCode' in error) {
+      return {
+        statusCode: (error as Error & { statusCode: number }).statusCode,
+        headers,
+        body: JSON.stringify({ error: error.message }),
+      };
     }
     console.error('Projects API error:', error);
     return {

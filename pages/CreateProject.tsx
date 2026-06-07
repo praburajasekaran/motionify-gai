@@ -32,7 +32,8 @@ import { formatCurrency } from '../utils/format';
 
 interface ClientUser {
     id: string;
-    full_name: string;
+    full_name?: string;
+    name?: string;
     email: string;
 }
 
@@ -99,8 +100,13 @@ export const CreateProject = () => {
     useEffect(() => {
         api.get('/users-list?role=client&status=active')
             .then(res => {
-                if (res.success && Array.isArray(res.data)) {
-                    setClients(res.data);
+                const users = Array.isArray(res.data)
+                    ? res.data
+                    : Array.isArray(res.data?.users)
+                        ? res.data.users
+                        : [];
+                if (res.success) {
+                    setClients(users);
                 }
             })
             .finally(() => setClientsLoading(false));
@@ -283,6 +289,10 @@ export const CreateProject = () => {
             : await api.post('/projects', {
                 name: formData.title.trim(),
                 clientUserId: formData.clientUserId,
+                description: formData.description.trim() || undefined,
+                website: formData.website.trim() || undefined,
+                startDate: formData.startDate || undefined,
+                dueDate: formData.dueDate || undefined,
                 deliverables: formData.deliverables.map(d => d.title.trim()).filter(Boolean),
                 totalRevisions: formData.maxRevisions,
             });
@@ -341,7 +351,7 @@ export const CreateProject = () => {
                         options={[
                             { label: clientsLoading ? 'Loading clients...' : 'Select a client', value: '' },
                             ...clients.map(c => ({
-                                label: `${c.full_name} (${c.email})`,
+                                label: `${c.full_name || c.name || c.email} (${c.email})`,
                                 value: c.id,
                             }))
                         ]}
@@ -513,7 +523,7 @@ export const CreateProject = () => {
                 <div className="p-6 border-b border-border bg-muted/20">
                     <h2 className="text-2xl font-bold text-foreground">{formData.title || 'Untitled Project'}</h2>
                     <p className="text-muted-foreground">
-                        {selectedClient ? `${selectedClient.full_name} — ${selectedClient.email}` : 'No client selected'}
+                        {selectedClient ? `${selectedClient.full_name || selectedClient.name || selectedClient.email} — ${selectedClient.email}` : 'No client selected'}
                     </p>
                 </div>
                 <div className="p-6 grid gap-6 md:grid-cols-3">

@@ -114,6 +114,15 @@ const MOCK_PROJECT = {
   total_revisions_allowed: 3,
 };
 
+const MOCK_DIRECT_PROJECT = {
+  ...MOCK_PROJECT,
+  id: 'proj-direct-uuid-001',
+  inquiry_id: null,
+  proposal_id: null,
+  name: 'Direct Client Project',
+  client_user_id: 'client-001',
+};
+
 const MOCK_PAYMENTS: any[] = [{
   id: 'pay-uuid-001',
   proposal_id: 'prop-uuid-001',
@@ -311,6 +320,64 @@ async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
 // ──────────────────────────────────────────
 
 test.describe('Proposal Accepted -> Create Project Flow', () => {
+  test('direct project creation loads wrapped client list and submits selected client', async ({ page }) => {
+    projectCreateRequests = [];
+
+    await page.route('**/.netlify/functions/**', route => {
+      if (route.request().method() === 'POST' || route.request().method() === 'PUT' || route.request().method() === 'PATCH') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    await page.route('**/.netlify/functions/auth-me*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, user: MOCK_ADMIN_USER }) })
+    );
+
+    await page.route('**/.netlify/functions/notifications*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, notifications: [], unreadCount: 0 }) })
+    );
+
+    await page.route('**/.netlify/functions/proposals*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+
+    await page.route('**/.netlify/functions/users-list*', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, users: [MOCK_CLIENT_USER], total: 1 }),
+      })
+    );
+
+    await page.route('**/.netlify/functions/projects*', route => {
+      if (route.request().method() === 'POST') {
+        projectCreateRequests.push(route.request().postDataJSON());
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(MOCK_DIRECT_PROJECT) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    await page.goto(`${BASE}/projects/new`);
+
+    await page.getByLabel('Project Title').fill('Direct Client Project');
+    await page.getByRole('button', { name: 'Select a client' }).click();
+    await page.getByRole('option', { name: 'Jane Doe (jane@techstart.io)' }).click();
+
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByPlaceholder('Deliverable 1').fill('Launch Video');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Create Project/ }).click();
+
+    await expect(page).toHaveURL(/\/portal\/projects\/proj-direct-uuid-001/);
+    expect(projectCreateRequests).toEqual([{
+      name: 'Direct Client Project',
+      clientUserId: 'client-001',
+      deliverables: ['Launch Video'],
+      totalRevisions: 2,
+    }]);
+  });
 
   test('accepted proposal should show Create Project action within proposal section', async ({ page }) => {
     await setupMocksAndLogin(page);

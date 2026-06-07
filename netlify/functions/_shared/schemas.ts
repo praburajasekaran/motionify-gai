@@ -163,6 +163,10 @@ export const createProjectFromProposalSchema = z.object({
 export const createProjectDirectSchema = z.object({
     name: nameSchema,
     clientUserId: uuidSchema,
+    description: z.string().max(5000).optional(),
+    website: z.string().max(500).optional(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional(),
+    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional(),
     deliverables: z.array(z.string().min(1).max(500)).min(1).max(50),
     nonInclusions: z.array(z.string().min(1).max(500)).optional(),
     totalRevisions: z.number().int().min(0).max(100).optional().default(2),
