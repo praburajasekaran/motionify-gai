@@ -47,8 +47,8 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to accept terms');
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || errorData?.error || 'Failed to accept terms');
             }
 
             // Trigger callback to update parent state

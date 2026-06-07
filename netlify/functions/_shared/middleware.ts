@@ -189,7 +189,7 @@ export function withRateLimit(config: RateLimitConfig, action?: string): Middlew
  * Validate request body against Zod schema
  */
 export function withValidation(schema: z.ZodSchema): Middleware {
-    return (handler: Handler) => async (event: NetlifyEvent) => {
+    return (handler: Handler) => async (event: NetlifyEvent, auth?: AuthResult) => {
         const origin = event.headers.origin || event.headers.Origin;
 
         const validation = validateRequest(event.body, schema, origin);
@@ -204,7 +204,7 @@ export function withValidation(schema: z.ZodSchema): Middleware {
         // Attach validated data to event for handler to use
         (event as any).validatedData = validation.data;
 
-        return handler(event);
+        return handler(event, auth);
     };
 }
 
