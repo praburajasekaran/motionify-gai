@@ -32,7 +32,8 @@ export function AboutPage() {
           />
         </div>
 
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-7xl lg:pl-10">
+          <div className="max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
             Create with clarity
@@ -107,6 +108,7 @@ export function AboutPage() {
                 </svg>
               </a>
             </section>
+          </div>
           </div>
         </div>
       </section>

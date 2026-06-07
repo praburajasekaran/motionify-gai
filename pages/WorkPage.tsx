@@ -40,7 +40,7 @@ export function WorkPage() {
           />
         </div>
 
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl lg:pl-10">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[12px] text-white/80 ring-1 ring-white/10 backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
@@ -69,7 +69,7 @@ export function WorkPage() {
       </section>
 
       <section className="bg-white px-4 py-16 text-gray-950 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7xl lg:pl-10">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">Our approach</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">

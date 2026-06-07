@@ -32,23 +32,46 @@ test.describe('Public Work page', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 
-  test('header portal links open in a new tab and footer uses header logo', async ({ page }) => {
+  test('header shows login link in a new tab when signed out and footer uses header logo', async ({ page }) => {
     await page.goto('/work');
 
     const desktopLogin = page.getByRole('link', { name: 'Login' }).first();
-    const desktopPortal = page.getByRole('link', { name: 'Portal' }).first();
 
     await expect(desktopLogin).toHaveAttribute('target', '_blank');
     await expect(desktopLogin).toHaveAttribute('rel', /noopener/);
     await expect(desktopLogin).toHaveAttribute('rel', /noreferrer/);
-    await expect(desktopPortal).toHaveAttribute('target', '_blank');
-    await expect(desktopPortal).toHaveAttribute('rel', /noopener/);
-    await expect(desktopPortal).toHaveAttribute('rel', /noreferrer/);
+    await expect(page.getByRole('link', { name: 'Portal' })).toHaveCount(0);
 
     await expect(page.locator('footer img[alt="Motionify Studio"]')).toHaveAttribute(
       'src',
       '/images/motionify-studio-web.png',
     );
+  });
+
+  test('header shows portal link in a new tab when signed in', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'auth_user',
+        JSON.stringify({
+          id: 'user-1',
+          name: 'Test User',
+          email: 'test@example.com',
+          role: 'client',
+          avatar: '',
+          projectTeamMemberships: {},
+        }),
+      );
+      localStorage.setItem('auth_expires', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
+    });
+
+    await page.goto('/work');
+
+    const desktopPortal = page.getByRole('link', { name: 'Portal' }).first();
+
+    await expect(desktopPortal).toHaveAttribute('target', '_blank');
+    await expect(desktopPortal).toHaveAttribute('rel', /noopener/);
+    await expect(desktopPortal).toHaveAttribute('rel', /noreferrer/);
+    await expect(page.getByRole('link', { name: 'Login' })).toHaveCount(0);
   });
 });
 
