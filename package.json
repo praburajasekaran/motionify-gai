@@ -12,6 +12,7 @@
     "build": "vite build",
     "verify:production-flip": "node scripts/verify-production-flip.mjs",
     "verify:runtime-retirement": "node scripts/verify-production-flip.mjs --runtime-retirement",
+    "verify:spa-redirects": "node scripts/verify-spa-redirects.mjs",
     "preview": "vite preview",
     "docs:api": "tsx shared/docs/generate-api-docs.ts",
     "test:e2e": "playwright test",
