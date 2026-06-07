@@ -384,6 +384,7 @@ export function ProposalDetail() {
   };
 
   const editPermission = proposal ? getEditPermission() : { canEdit: false, canForceEdit: false, reason: '' };
+  const resendReadyAfterRevision = proposal?.status === 'changes_requested' && hasBeenEdited;
 
   const handleForceEdit = async () => {
     setShowForceEditDialog(false);
@@ -452,6 +453,7 @@ export function ProposalDetail() {
       }
 
       setProposal(updatedProposal);
+      setHasBeenEdited(false);
       alert('Proposal resent to client!');
     } catch (error) {
       console.error('Error resending proposal:', error);
@@ -536,15 +538,17 @@ export function ProposalDetail() {
                 </button>
               ) : null}
 
-              {/* Resend button for revision cycle */}
-              {proposal.status === 'changes_requested' && (
-                <div
-                  title={!hasBeenEdited ? "Save your changes to the proposal before resending" : undefined}
-                  className="inline-block"
-                >
+              {proposal.status === 'changes_requested' && !hasBeenEdited && (
+                <div className="max-w-xs rounded-lg border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm text-orange-800">
+                  Edit and save the proposal before sending it again.
+                </div>
+              )}
+
+              {resendReadyAfterRevision && (
+                <div className="inline-block">
                   <button
                     onClick={handleResend}
-                    disabled={isResending || !hasBeenEdited}
+                    disabled={isResending}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isResending ? (
