@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { query as dbQuery } from './_shared/db';
+import { query as dbQuery, transaction } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
@@ -24,10 +24,14 @@ const { types } = pg;
 // when serialized in timezones ahead of UTC (like IST).
 types.setTypeParser(1082, (val: string) => val); // 1082 = DATE OID
 
-const generateProjectNumber = async (): Promise<string> => {
+type QueryRunner = {
+  query(queryText: string, values?: any[]): Promise<{ rows: any[] }>;
+};
+
+const generateProjectNumber = async (runner: QueryRunner = { query: dbQuery }): Promise<string> => {
   const year = new Date().getFullYear();
 
-  const result = await dbQuery(
+  const result = await runner.query(
     `SELECT project_number FROM projects
      WHERE project_number LIKE $1
      ORDER BY project_number DESC LIMIT 1`,
@@ -196,7 +200,47 @@ export const handler = compose(
     if (event.httpMethod === 'POST') {
       assertAdminLike(auth?.user, 'projects.createFromProposal');
 
-      // Validate request body using Zod schema
+      const body = JSON.parse(event.body || '{}');
+      const isProposalCreate = Boolean(body.proposalId || body.inquiryId);
+
+      if (!isProposalCreate) {
+        const validation = validateRequest(event.body, SCHEMAS.project.direct, origin);
+        if (!validation.success) return validation.response;
+        const payload = validation.data;
+
+        const projectNumber = await generateProjectNumber();
+        const result = await dbQuery(
+          `INSERT INTO projects (
+            project_number, name, client_user_id, status, total_revisions_allowed
+          ) VALUES ($1, $2, $3, 'active', $4)
+          RETURNING *`,
+          [projectNumber, payload.name.trim(), payload.clientUserId, payload.totalRevisions ?? 2]
+        );
+
+        const project = result.rows[0];
+        for (const deliverableName of payload.deliverables) {
+          await dbQuery(
+            `INSERT INTO deliverables (project_id, name, description, status)
+             VALUES ($1, $2, '', 'pending')`,
+            [project.id, deliverableName]
+          );
+        }
+
+        await logActivity({
+          type: 'PROJECT_CREATED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: project.id,
+          details: { projectNumber },
+        });
+
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(project),
+        };
+      }
+
       const validation = validateRequest(event.body, SCHEMAS.project.fromProposal, origin);
       if (!validation.success) return validation.response;
       const { inquiryId, proposalId } = validation.data;
@@ -216,6 +260,14 @@ export const handler = compose(
 
       const proposal = proposalResult.rows[0];
       await requireProposalAccess(auth?.user, proposalId, { operation: 'projects.createFromProposal' });
+
+      if (proposal.inquiry_id !== inquiryId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Inquiry does not belong to proposal' }),
+        };
+      }
 
       if (proposal.status !== 'accepted') {
         return {
@@ -257,101 +309,128 @@ export const handler = compose(
 
       let assignedClientUserId: string | null = null;
 
-      const existingUserResult = await dbQuery(
-        'SELECT id FROM users WHERE email = $1',
-        [contact_email]
-      );
+      const { project, created, projectNumber } = await transaction(async (client) => {
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`proposal-project:${proposalId}`]);
 
-      if (existingUserResult.rows.length > 0) {
-        assignedClientUserId = existingUserResult.rows[0].id;
-      } else {
-        const newUserResult = await dbQuery(
-          `INSERT INTO users (email, full_name, role)
-           VALUES ($1, $2, 'client')
-           RETURNING id`,
-          [contact_email, contact_name]
+        const existingProject = await client.query(
+          `SELECT * FROM projects WHERE proposal_id = $1 LIMIT 1`,
+          [proposalId]
         );
-        assignedClientUserId = newUserResult.rows[0].id;
-      }
 
-      const projectNumber = await generateProjectNumber();
+        if (existingProject.rows.length > 0) {
+          const project = existingProject.rows[0];
+          await client.query(
+            `UPDATE payments
+             SET project_id = $1
+             WHERE proposal_id = $2 AND payment_type = 'advance' AND status = 'completed' AND project_id IS NULL`,
+            [project.id, proposalId]
+          );
+          return { project, created: false, projectNumber: project.project_number };
+        }
 
-      const result = await dbQuery(
-        `INSERT INTO projects (
-          project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
-        ) VALUES ($1, $2, $3, $4, 'active', $5)
-        RETURNING *`,
-        [projectNumber, inquiryId, proposalId, assignedClientUserId, proposal.revisions_included ?? 2]
-      );
-
-      const project = result.rows[0];
-
-      const deliverables = JSON.parse(proposal.deliverables);
-      for (const deliverable of deliverables) {
-        await dbQuery(
-          `INSERT INTO deliverables (
-            id, project_id, name, description, estimated_completion_week, status
-          ) VALUES ($1, $2, $3, $4, $5, 'pending')`,
-          [
-            deliverable.id,
-            project.id,
-            deliverable.name,
-            deliverable.description,
-            deliverable.estimatedCompletionWeek
-          ]
+        const existingUserResult = await client.query(
+          'SELECT id FROM users WHERE email = $1',
+          [contact_email]
         );
-      }
 
-      await dbQuery(
-        `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW() WHERE id = $1`,
-        [inquiryId, project.id]
-      );
+        if (existingUserResult.rows.length > 0) {
+          assignedClientUserId = existingUserResult.rows[0].id;
+        } else {
+          const newUserResult = await client.query(
+            `INSERT INTO users (email, full_name, role)
+             VALUES ($1, $2, 'client')
+             RETURNING id`,
+            [contact_email, contact_name]
+          );
+          assignedClientUserId = newUserResult.rows[0].id;
+        }
 
-      // Auto-populate project team: add client as primary contact
-      if (assignedClientUserId) {
-        await dbQuery(
+        const projectNumber = await generateProjectNumber(client);
+
+        const result = await client.query(
+          `INSERT INTO projects (
+            project_number, inquiry_id, proposal_id, client_user_id, status, total_revisions_allowed
+          ) VALUES ($1, $2, $3, $4, 'active', $5)
+          RETURNING *`,
+          [projectNumber, inquiryId, proposalId, assignedClientUserId, proposal.revisions_included ?? 2]
+        );
+
+        const project = result.rows[0];
+
+        const deliverables = typeof proposal.deliverables === 'string'
+          ? JSON.parse(proposal.deliverables)
+          : (proposal.deliverables ?? []);
+        for (const deliverable of deliverables) {
+          await client.query(
+            `INSERT INTO deliverables (
+              id, project_id, name, description, estimated_completion_week, status
+            ) VALUES ($1, $2, $3, $4, $5, 'pending')
+            ON CONFLICT (id) DO NOTHING`,
+            [
+              deliverable.id,
+              project.id,
+              deliverable.name,
+              deliverable.description,
+              deliverable.estimatedCompletionWeek
+            ]
+          );
+        }
+
+        await client.query(
+          `UPDATE inquiries SET status = 'converted', converted_to_project_id = $2, converted_at = NOW() WHERE id = $1`,
+          [inquiryId, project.id]
+        );
+
+        await client.query(
+          `UPDATE payments
+           SET project_id = $1
+           WHERE proposal_id = $2 AND payment_type = 'advance' AND status = 'completed'`,
+          [project.id, proposalId]
+        );
+
+        if (assignedClientUserId) {
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             VALUES ($1, $2, 'client', true, $3)
+             ON CONFLICT (user_id, project_id) DO NOTHING`,
+            [assignedClientUserId, project.id, auth?.user?.userId || null]
+          );
+        }
+
+        if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
+          await client.query(
+            `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+             VALUES ($1, $2, $3, false, $1)
+             ON CONFLICT (user_id, project_id) DO NOTHING`,
+            [auth.user.userId, project.id, auth.user.role || 'super_admin']
+          );
+        }
+
+        await client.query(
           `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-           VALUES ($1, $2, 'client', true, $3)
+           SELECT id, $1, 'support', false, $2
+           FROM users
+           WHERE role = 'support' AND is_active = true
            ON CONFLICT (user_id, project_id) DO NOTHING`,
-          [assignedClientUserId, project.id, auth?.user?.userId || null]
+          [project.id, auth?.user?.userId || null]
         );
-      }
 
-      // Log activity
-      await logActivity({
-        type: 'PROJECT_CREATED',
-        userId: auth?.user?.userId || '',
-        userName: auth?.user?.fullName || 'Unknown',
-        projectId: project.id,
-        inquiryId: inquiryId,
-        details: { projectNumber },
+        return { project, created: true, projectNumber };
       });
 
-      // Auto-populate project team: add creator (the authenticated user)
-      if (auth?.user?.userId && auth.user.userId !== assignedClientUserId) {
-        await dbQuery(
-          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-           VALUES ($1, $2, $3, false, $1)
-           ON CONFLICT (user_id, project_id) DO NOTHING`,
-          [auth.user.userId, project.id, auth.user.role || 'super_admin']
-        );
-      }
-
-      // Auto-add all active support users to the project team
-      const supportUsersResult = await dbQuery(
-        `SELECT id FROM users WHERE role = 'support' AND is_active = true`
-      );
-      for (const supportUser of supportUsersResult.rows) {
-        await dbQuery(
-          `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
-           VALUES ($1, $2, 'support', false, $3)
-           ON CONFLICT (user_id, project_id) DO NOTHING`,
-          [supportUser.id, project.id, auth?.user?.userId || null]
-        );
+      if (created) {
+        await logActivity({
+          type: 'PROJECT_CREATED',
+          userId: auth?.user?.userId || '',
+          userName: auth?.user?.fullName || 'Unknown',
+          projectId: project.id,
+          inquiryId: inquiryId,
+          details: { projectNumber },
+        });
       }
 
       return {
-        statusCode: 201,
+        statusCode: created ? 201 : 200,
         headers,
         body: JSON.stringify(project),
       };

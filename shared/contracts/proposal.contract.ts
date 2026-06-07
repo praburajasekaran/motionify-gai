@@ -35,6 +35,16 @@ export const ProposalSchema = z.object({
   rejectedAt: z.string().datetime().optional(),
   feedback: z.string().optional(),
   editHistory: z.array(z.any()).optional(),
+  handoff: z.object({
+    inquiryNumber: z.string().nullable(),
+    clientName: z.string().nullable(),
+    companyName: z.string().nullable(),
+    completedAdvancePayment: z.boolean(),
+    advancePaymentId: z.string().nullable(),
+    advancePaidAt: z.string().nullable(),
+    linkedProjectId: z.string().nullable(),
+    linkedProjectNumber: z.string().nullable(),
+  }).optional(),
 });
 
 export const CreateProposalDtoSchema = ProposalSchema.pick({

@@ -4,7 +4,7 @@ import { getProposalById, updateProposal, type Proposal, type ProposalDeliverabl
 import { fetchPaymentsForProposal, markPaymentAsPaid } from '../../services/paymentApi';
 import { type Payment } from '../../types';
 import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2, GripVertical, IndianRupee, DollarSign, CheckCircle2, XCircle, Clock, Lock, Send, Briefcase, AlertCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { getStatusConfig } from '../../lib/status-config';
@@ -13,6 +13,8 @@ import { PromptDialog } from '../../components/ui/PromptDialog';
 import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { sanitizeHtml } from '../../lib/sanitize';
+import { toast } from 'sonner';
+import { api } from '../../lib/api-config';
 
 interface DeliverableInput {
   id: string;
@@ -28,6 +30,7 @@ export function ProposalDetail() {
 
   const isAdmin = Permissions.canCreateProposals(user);
   const isClient = user?.role === 'client';
+  const canManageProjectHandoff = Permissions.canViewAllProjects(user);
 
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
@@ -47,8 +50,11 @@ export function ProposalDetail() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [createProjectError, setCreateProjectError] = useState<string | null>(null);
   const [promptDialog, setPromptDialog] = useState<{ open: boolean; type: 'reject' | 'revise' | null }>({ open: false, type: null });
   const [showForceEditDialog, setShowForceEditDialog] = useState(false);
+  const [markPaidPaymentId, setMarkPaidPaymentId] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [hasBeenEdited, setHasBeenEdited] = useState(false);
 
@@ -99,7 +105,7 @@ export function ProposalDetail() {
 
   // Check if user has permission to view this proposal
   // Admins can view all, clients can only view their own (checked after data loads)
-  if (!isAdmin && !isClient) {
+  if (!isAdmin && !canManageProjectHandoff && !isClient) {
     return <Navigate to="/" replace />;
   }
 
@@ -143,7 +149,7 @@ export function ProposalDetail() {
 
   const handleRemoveDeliverable = (id: string) => {
     if (deliverables.length === 1) {
-      alert('You must have at least one deliverable');
+      toast.error('You must have at least one deliverable');
       return;
     }
     setDeliverables(deliverables.filter((d) => d.id !== id));
@@ -221,13 +227,13 @@ export function ProposalDetail() {
   const handleSaveChanges = async () => {
     const error = validateForm();
     if (error) {
-      alert(error);
+      toast.error(error);
       return;
     }
 
     const pricing = calculatePricing();
     if (!pricing) {
-      alert('Invalid pricing');
+      toast.error('Invalid pricing');
       return;
     }
 
@@ -253,11 +259,11 @@ export function ProposalDetail() {
 
       setProposal(updatedProposal);
       setHasBeenEdited(true);
-      alert('Proposal updated successfully!');
+      toast.success('Proposal updated successfully.');
       setIsEditMode(false);
     } catch (error) {
       console.error('Error updating proposal:', error);
-      alert('Failed to update proposal. Please try again.');
+      toast.error('Failed to update proposal. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -291,10 +297,10 @@ export function ProposalDetail() {
       const updatedInquiry = await getInquiryById(inquiry.id);
       setInquiry(updatedInquiry);
 
-      alert('Proposal rejected. We will review your feedback and get back to you.');
+      toast.success('Proposal rejected. We will review your feedback and get back to you.');
     } catch (error) {
       console.error('Error rejecting proposal:', error);
-      alert('Failed to reject proposal. Please try again.');
+      toast.error('Failed to reject proposal. Please try again.');
     } finally {
       setIsRejecting(false);
     }
@@ -318,10 +324,10 @@ export function ProposalDetail() {
       const updatedInquiry = await getInquiryById(inquiry.id);
       setInquiry(updatedInquiry);
 
-      alert('Revision requested. We will review your feedback and send an updated proposal.');
+      toast.success('Revision requested. We will review your feedback and send an updated proposal.');
     } catch (error) {
       console.error('Error requesting changes:', error);
-      alert('Failed to request changes. Please try again.');
+      toast.error('Failed to request changes. Please try again.');
     } finally {
       setIsRequestingChanges(false);
     }
@@ -332,11 +338,9 @@ export function ProposalDetail() {
   };
 
   const handleMarkAsPaid = async (paymentId: string) => {
-    if (!confirm('Are you sure you want to mark this payment as paid? This will trigger project creation if applicable.')) return;
-
     try {
       await markPaymentAsPaid(paymentId);
-      alert('Payment marked as paid successfully!');
+      toast.success('Payment marked as paid successfully.');
 
       // Refresh payments and potentially proposal/inquiry status
       if (proposalId) {
@@ -349,7 +353,55 @@ export function ProposalDetail() {
       }
     } catch (error) {
       console.error('Error marking payment as paid:', error);
-      alert('Failed to mark payment as paid.');
+      toast.error('Failed to mark payment as paid.');
+    } finally {
+      setMarkPaidPaymentId(null);
+    }
+  };
+
+  const refreshProposal = async () => {
+    if (!proposalId) return null;
+    const refreshedProposal = await getProposalById(proposalId);
+    setProposal(refreshedProposal);
+    return refreshedProposal;
+  };
+
+  const handleCreateProject = async () => {
+    if (!proposal || !inquiry) return;
+
+    setIsCreatingProject(true);
+    setCreateProjectError(null);
+
+    try {
+      const result = await api.post('/projects', {
+        inquiryId: inquiry.id,
+        proposalId: proposal.id,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error?.message || result.message || 'Failed to create project.');
+      }
+
+      const data = result.data;
+
+      setProposal(prev => prev ? {
+        ...prev,
+        handoff: {
+          inquiryNumber: prev.handoff?.inquiryNumber ?? inquiry.inquiryNumber ?? null,
+          clientName: prev.handoff?.clientName ?? inquiry.contactName ?? null,
+          companyName: prev.handoff?.companyName ?? inquiry.companyName ?? null,
+          completedAdvancePayment: true,
+          advancePaymentId: prev.handoff?.advancePaymentId ?? null,
+          advancePaidAt: prev.handoff?.advancePaidAt ?? null,
+          linkedProjectId: data.id,
+          linkedProjectNumber: data.project_number ?? data.projectNumber ?? prev.handoff?.linkedProjectNumber ?? null,
+        },
+      } : prev);
+    } catch (error) {
+      console.error('Error creating project from proposal:', error);
+      setCreateProjectError(error instanceof Error ? error.message : 'Failed to create project.');
+    } finally {
+      setIsCreatingProject(false);
     }
   };
 
@@ -454,10 +506,10 @@ export function ProposalDetail() {
 
       setProposal(updatedProposal);
       setHasBeenEdited(false);
-      alert('Proposal resent to client!');
+      toast.success('Proposal resent to client.');
     } catch (error) {
       console.error('Error resending proposal:', error);
-      alert('Failed to resend proposal. Please try again.');
+      toast.error('Failed to resend proposal. Please try again.');
     } finally {
       setIsResending(false);
     }
@@ -479,6 +531,16 @@ export function ProposalDetail() {
     advanceAmount: proposal.advanceAmount,
     balanceAmount: proposal.balanceAmount,
   };
+  const handoff = proposal.handoff;
+  const inquiryNumber = handoff?.inquiryNumber ?? inquiry?.inquiryNumber ?? 'Proposal';
+  const handoffClientName = handoff?.clientName ?? inquiry?.contactName ?? 'Client';
+  const completedAdvancePayment = Boolean(handoff?.completedAdvancePayment);
+  const linkedProjectId = handoff?.linkedProjectId ?? null;
+  const linkedProjectNumber = handoff?.linkedProjectNumber ?? null;
+  const canCreateProject = canManageProjectHandoff
+    && proposal.status === 'accepted'
+    && completedAdvancePayment
+    && !linkedProjectId;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -878,6 +940,96 @@ export function ProposalDetail() {
           )}
         </div>
 
+        {proposal.status === 'accepted' && (
+          <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Proposal Journey</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {inquiryNumber} · {handoffClientName}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-500/20">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Accepted
+                </span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ${
+                  completedAdvancePayment
+                    ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-700 ring-amber-500/20'
+                }`}>
+                  {completedAdvancePayment ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                  {completedAdvancePayment ? 'Advance payment received' : 'Advance payment pending'}
+                </span>
+                {linkedProjectNumber && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-500/20">
+                    <Briefcase className="h-3.5 w-3.5" />
+                    {linkedProjectNumber}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Reference</p>
+                <p className="mt-1 font-semibold text-foreground">{inquiryNumber}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Client</p>
+                <p className="mt-1 font-semibold text-foreground">{handoffClientName}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Project</p>
+                <p className="mt-1 font-semibold text-foreground">
+                  {linkedProjectNumber || (linkedProjectId ? 'Linked project' : completedAdvancePayment ? 'Ready to create' : 'Waiting for payment')}
+                </p>
+              </div>
+            </div>
+
+            {createProjectError && (
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{createProjectError}</span>
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-3">
+              {linkedProjectId ? (
+                <button
+                  onClick={() => navigate(`/projects/${linkedProjectId}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Open Project
+                </button>
+              ) : canCreateProject ? (
+                <button
+                  onClick={handleCreateProject}
+                  disabled={isCreatingProject}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreatingProject ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Briefcase className="w-4 h-4" />
+                  )}
+                  {isCreatingProject ? 'Creating...' : 'Create Project'}
+                </button>
+              ) : isClient && !completedAdvancePayment ? (
+                <button
+                  onClick={() => navigate(`/payment/${proposal.id}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Proceed to Payment
+                </button>
+              ) : null}
+            </div>
+          </div>
+        )}
+
         {/* Payments Section (Admin Only) */}
         {isAdmin && (
           <div className="bg-card rounded-xl p-6 ring-1 ring-border shadow-sm">
@@ -919,7 +1071,7 @@ export function ProposalDetail() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {payment.status === 'pending' && (
                             <button
-                              onClick={() => handleMarkAsPaid(payment.id)}
+                              onClick={() => setMarkPaidPaymentId(payment.id)}
                               className="text-violet-600 hover:text-violet-900"
                             >
                               Mark as Paid
@@ -927,7 +1079,7 @@ export function ProposalDetail() {
                           )}
                           {payment.status === 'completed' && !payment.project_id && (
                             <button
-                              onClick={() => handleMarkAsPaid(payment.id)}
+                              onClick={() => setMarkPaidPaymentId(payment.id)}
                               className="text-orange-600 hover:text-orange-900"
                             >
                               Retry Project Creation
@@ -1081,6 +1233,19 @@ export function ProposalDetail() {
         title="Force Edit Proposal?"
         message="This proposal has already received a client response. Editing it may cause confusion or inconsistency. Your action will be logged. Are you sure you want to proceed?"
         confirmLabel="Yes, Force Edit"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        isOpen={markPaidPaymentId !== null}
+        onClose={() => setMarkPaidPaymentId(null)}
+        onConfirm={() => {
+          if (markPaidPaymentId) handleMarkAsPaid(markPaidPaymentId);
+        }}
+        title="Mark Payment as Paid?"
+        message="This will mark the payment as paid and may trigger project creation if applicable."
+        confirmLabel="Mark as Paid"
         cancelLabel="Cancel"
         variant="warning"
       />

@@ -48,7 +48,28 @@ export const handler = compose(
       await requireProposalAccess(auth?.user, id, { operation: 'proposal-detail.get' });
 
       const result = await dbQuery(
-        `SELECT * FROM proposals WHERE id = $1`,
+        `SELECT p.*,
+                (pay.id IS NOT NULL) AS completed_advance_payment,
+                pay.id AS advance_payment_id,
+                pay.paid_at AS advance_paid_at,
+                pr.id AS linked_project_id,
+                pr.project_number AS linked_project_number,
+                i.inquiry_number,
+                i.contact_name AS client_name,
+                i.company_name AS company_name
+         FROM proposals p
+         LEFT JOIN LATERAL (
+           SELECT id, paid_at
+           FROM payments
+           WHERE proposal_id = p.id
+             AND payment_type = 'advance'
+             AND status = 'completed'
+           ORDER BY paid_at DESC NULLS LAST, created_at DESC
+           LIMIT 1
+         ) pay ON TRUE
+         LEFT JOIN projects pr ON pr.proposal_id = p.id
+         LEFT JOIN inquiries i ON i.id = p.inquiry_id
+         WHERE p.id = $1`,
         [id]
       );
 
@@ -60,10 +81,25 @@ export const handler = compose(
         };
       }
 
+      const handoffRow = result.rows[0] || {};
+      const proposal = {
+        ...result.rows[0],
+        handoff: {
+          inquiryNumber: handoffRow.inquiry_number ?? null,
+          clientName: handoffRow.client_name ?? null,
+          companyName: handoffRow.company_name ?? null,
+          completedAdvancePayment: Boolean(handoffRow.completed_advance_payment),
+          advancePaymentId: handoffRow.advance_payment_id ?? null,
+          advancePaidAt: handoffRow.advance_paid_at ?? null,
+          linkedProjectId: handoffRow.linked_project_id ?? null,
+          linkedProjectNumber: handoffRow.linked_project_number ?? null,
+        },
+      };
+
       return {
         statusCode: 200,
-        headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
-        body: JSON.stringify(result.rows[0]),
+        headers: { ...headers, 'Cache-Control': 'private, no-store' },
+        body: JSON.stringify(proposal),
       };
     }
 

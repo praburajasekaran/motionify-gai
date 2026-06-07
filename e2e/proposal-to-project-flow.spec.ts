@@ -92,9 +92,41 @@ const MOCK_PROPOSAL = {
   createdAt: '2026-03-10T09:00:00.000Z',
   updated_at: '2026-03-15T14:30:00.000Z',
   updatedAt: '2026-03-15T14:30:00.000Z',
+  handoff: {
+    inquiryNumber: 'INQ-2026-67',
+    clientName: 'John Smith',
+    companyName: 'Acme Corp',
+    completedAdvancePayment: true,
+    advancePaymentId: 'pay-uuid-001',
+    advancePaidAt: '2026-03-15T14:30:00.000Z',
+    linkedProjectId: null,
+    linkedProjectNumber: null,
+  },
 };
 
-const MOCK_PAYMENTS: any[] = [];
+const MOCK_PROJECT = {
+  id: 'proj-uuid-001',
+  project_number: 'PROJ-2026-001',
+  inquiry_id: 'inq-uuid-001',
+  proposal_id: 'prop-uuid-001',
+  client_user_id: 'client-001',
+  status: 'active',
+  total_revisions_allowed: 3,
+};
+
+const MOCK_PAYMENTS: any[] = [{
+  id: 'pay-uuid-001',
+  proposal_id: 'prop-uuid-001',
+  project_id: null,
+  payment_type: 'advance',
+  status: 'completed',
+  amount: 4000000,
+  currency: 'INR',
+  created_at: '2026-03-15T14:00:00.000Z',
+  paid_at: '2026-03-15T14:30:00.000Z',
+}];
+
+let projectCreateRequests: any[] = [];
 
 const MOCK_INQUIRY_NEW = {
   ...MOCK_INQUIRY,
@@ -120,6 +152,16 @@ const MOCK_PROPOSAL_SENT = {
   status: 'sent',
   accepted_at: null,
   acceptedAt: null,
+  handoff: {
+    inquiryNumber: 'INQ-2026-68',
+    clientName: 'Jane Doe',
+    companyName: 'TechStart',
+    completedAdvancePayment: false,
+    advancePaymentId: null,
+    advancePaidAt: null,
+    linkedProjectId: null,
+    linkedProjectNumber: null,
+  },
 };
 
 // ──────────────────────────────────────────
@@ -127,6 +169,7 @@ const MOCK_PROPOSAL_SENT = {
 // ──────────────────────────────────────────
 
 async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
+  projectCreateRequests = [];
   // Log console errors for debugging
   page.on('console', msg => {
     if (msg.type() === 'error') {
@@ -136,9 +179,6 @@ async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
   page.on('pageerror', err => {
     console.log(`[PAGE ERROR] ${err.message}`);
   });
-
-  // IMPORTANT: In Playwright, routes match in reverse order (last registered = highest priority).
-  // Register catch-all FIRST so specific mocks override it.
 
   // IMPORTANT: In Playwright, routes match in reverse order (last registered = highest priority).
   // Register catch-all FIRST so specific mocks override it.
@@ -176,18 +216,43 @@ async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
   // Proposal detail: plain object
   await page.route('**/.netlify/functions/proposal-detail/**', route => {
     const url = route.request().url();
-    const prop = url.includes('prop-uuid-002') ? MOCK_PROPOSAL_SENT : MOCK_PROPOSAL;
+    const createdProject = projectCreateRequests.length > 0;
+    const prop = url.includes('prop-uuid-002')
+      ? MOCK_PROPOSAL_SENT
+      : createdProject
+        ? {
+            ...MOCK_PROPOSAL,
+            handoff: {
+              ...MOCK_PROPOSAL.handoff,
+              linkedProjectId: MOCK_PROJECT.id,
+              linkedProjectNumber: MOCK_PROJECT.project_number,
+            },
+          }
+        : MOCK_PROPOSAL;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prop) });
   });
 
   // Proposals list: plain array
-  await page.route('**/.netlify/functions/proposals*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_PROPOSAL, MOCK_PROPOSAL_SENT]) })
-  );
+  await page.route('**/.netlify/functions/proposals*', route => {
+    const url = route.request().url();
+    if (url.includes('projectCreationCandidates=true')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
+        ...MOCK_PROPOSAL,
+        inquiry_number: 'INQ-2026-67',
+        client_name: 'John Smith',
+        company_name: 'Acme Corp',
+        project_notes: MOCK_INQUIRY.project_notes,
+        client_user_id: 'client-001',
+        client_full_name: 'Jane Doe',
+        client_email: 'jane@techstart.io',
+      }]) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_PROPOSAL, MOCK_PROPOSAL_SENT]) });
+  });
 
   // Payments: plain array
   await page.route('**/.netlify/functions/payments*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PAYMENTS) })
   );
 
   // Comments: plain array
@@ -195,10 +260,21 @@ async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
   );
 
-  // Projects: plain array
-  await page.route('**/.netlify/functions/projects*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-  );
+  // Projects: create returns persisted project; list remains array
+  await page.route('**/.netlify/functions/projects*', route => {
+    if (route.request().method() === 'POST') {
+      projectCreateRequests.push(route.request().postDataJSON());
+      return route.fulfill({
+        status: projectCreateRequests.length === 1 ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_PROJECT),
+      });
+    }
+    if (route.request().url().includes('proj-uuid-001')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PROJECT) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
 
   // Users: plain array
   await page.route('**/.netlify/functions/users*', route =>
@@ -239,35 +315,9 @@ test.describe('Proposal Accepted -> Create Project Flow', () => {
   test('accepted proposal should show Create Project action within proposal section', async ({ page }) => {
     await setupMocksAndLogin(page);
 
-    // STEP 1: Navigate to Inquiries
-    console.log('Step 1: Navigate to Inquiries Dashboard');
-    await page.locator('a:has-text("Inquiries"), button:has-text("Inquiries")').first().click();
-    await expect(page).toHaveURL(/inquiries/);
-    await page.screenshot({ path: 'test-results/ptpf-01-inquiries-dashboard.png', fullPage: true });
-
-    // STEP 2: Click on the accepted inquiry (INQ-2026-67)
-    console.log('Step 2: Open inquiry INQ-2026-67');
-    const inquiryItem = page.locator('a[href*="/admin/inquiries/"], [data-testid="inquiry-card"]').first();
-    await expect(inquiryItem).toBeVisible({ timeout: 10000 });
-    await inquiryItem.click();
-    await page.waitForTimeout(1000);
-
-    // Verify inquiry number is shown
-    const inqNumber = page.locator('code:has-text("INQ-2026-67")');
-    if (await inqNumber.isVisible({ timeout: 3000 })) {
-      console.log('  PASS: Inquiry number INQ-2026-67 displayed');
-    }
-    await page.screenshot({ path: 'test-results/ptpf-02-inquiry-detail.png', fullPage: true });
-
-    // STEP 3: Navigate to the Proposal
-    console.log('Step 3: Navigate to proposal');
-    const viewProposalBtn = page.locator('button:has-text("View Proposal"), a:has-text("View Proposal")').first();
-    if (await viewProposalBtn.isVisible({ timeout: 5000 })) {
-      await viewProposalBtn.click();
-    } else {
-      // Try direct navigation to proposal
-      await page.goto(`${BASE}/admin/proposals/prop-uuid-001`);
-    }
+    // STEP 1: Navigate directly to the accepted proposal
+    console.log('Step 1: Navigate to accepted proposal INQ-2026-67');
+    await page.goto(`${BASE}/admin/proposals/prop-uuid-001`);
     await page.waitForTimeout(1500);
     await page.screenshot({ path: 'test-results/ptpf-03-proposal-detail.png', fullPage: true });
 
@@ -332,16 +382,17 @@ test.describe('Proposal Accepted -> Create Project Flow', () => {
     console.log(`  Create Project button: ${foundCreateProject ? 'FOUND' : 'MISSING - FEATURE GAP'}`);
     console.log(`  Proceed to Payment button: ${hasProceedToPayment ? 'FOUND' : 'NOT VISIBLE (admin view)'}`);
     console.log('');
-    if (!foundCreateProject) {
-      console.log('  FEATURE GAP DETECTED:');
-      console.log('  After proposal is accepted, the admin/support view should show a');
-      console.log('  "Create Project" button within the proposal section so that:');
-      console.log('    - The inquiry number INQ-2026-67 gets auto-bound to the project');
-      console.log('    - Proposal pricing, deliverables, and terms carry forward');
-      console.log('    - The client can track the entire journey from proposal to delivery');
-      console.log('    - Payment is made within the proposal flow, not a separate page');
-    }
     console.log('========================================\n');
+
+    expect(foundCreateProject).toBe(true);
+    await expect(page.getByText('Proposal Journey')).toBeVisible();
+    await expect(page.getByText('Advance payment received')).toBeVisible();
+
+    const createProjectButton = page.getByRole('button', { name: 'Create Project' });
+    await createProjectButton.click();
+    await expect(page.getByRole('button', { name: 'Open Project' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create Project' })).toHaveCount(0);
+    expect(projectCreateRequests).toEqual([{ inquiryId: 'inq-uuid-001', proposalId: 'prop-uuid-001' }]);
   });
 
   test('non-accepted proposal should NOT show Create Project button', async ({ page }) => {
@@ -441,6 +492,7 @@ test.describe('Proposal Accepted -> Create Project Flow', () => {
     }
 
     console.log(`\n  Create Project in proposal view: ${hasCreateProject ? 'YES' : 'NEEDS IMPLEMENTATION'}`);
+    expect(hasCreateProject).toBe(true);
 
     console.log('\n========================================');
     console.log(`RESULTS: ${passCount} passed, ${missCount} missed`);
@@ -500,6 +552,11 @@ test.describe('Project Creation - Inquiry Number Binding (INQ-2026-XX)', () => {
       console.log('  MISSING: No inquiry/proposal binding field in project creation');
     }
 
+    expect(hasBinding).toBe(true);
+    await page.getByRole('button', { name: /No proposal selected|Create directly|Loading accepted paid proposals/ }).click();
+    await page.getByRole('option', { name: /INQ-2026-67/ }).click();
+    await expect(page.locator('input[id="title"]')).toHaveValue(/INQ-2026-67 Project/);
+
     // Verify current form fields
     console.log('\nCurrent form fields (Step 1 - Details):');
     for (const [name, sel] of Object.entries({
@@ -524,11 +581,16 @@ test.describe('Project Creation - Inquiry Number Binding (INQ-2026-XX)', () => {
         console.log(`  Wizard step: ${step} - loaded`);
         await page.screenshot({ path: `test-results/ptpf-wizard-${step.toLowerCase()}.png`, fullPage: true });
 
+        if (step === 'Deliverables') {
+          await expect(page.locator('input').first()).toHaveValue('Product Demo Video');
+        }
+
         // On Review step, check for inquiry/proposal reference
         if (step === 'Review') {
-          const reviewRef = page.locator('text=INQ-, text=Inquiry, text=Proposal Number').first();
+          const reviewRef = page.getByText(/INQ-2026-67.*Proposal.*Project/);
           const hasRef = await reviewRef.isVisible({ timeout: 2000 });
           console.log(`  Review shows inquiry/proposal binding: ${hasRef ? 'YES' : 'NO'}`);
+          expect(hasRef).toBe(true);
         }
 
         if (!(await nextBtn.isVisible({ timeout: 1000 }))) break;
