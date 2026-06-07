@@ -112,7 +112,9 @@ function formatCurrency(amount: number, currency: string = 'INR'): string {
 }
 
 function formatDate(dateString: string): string {
+    if (!dateString) return '-';
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -121,7 +123,9 @@ function formatDate(dateString: string): string {
 }
 
 function formatDateTime(dateString: string): string {
+    if (!dateString) return '-';
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '-';
     return date.toLocaleString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -299,10 +303,13 @@ export function Payments() {
         }
     };
 
-    const filteredProjects = availableProjects.filter((p) =>
-        p.projectNumber.toLowerCase().includes(projectSearchQuery.toLowerCase()) ||
-        p.clientName.toLowerCase().includes(projectSearchQuery.toLowerCase())
-    );
+    const filteredProjects = availableProjects.filter((p) => {
+        const query = projectSearchQuery.toLowerCase();
+        return (
+            (p.projectNumber || '').toLowerCase().includes(query) ||
+            (p.clientName || '').toLowerCase().includes(query)
+        );
+    });
 
     // Wait for auth to load before checking permissions
     if (authLoading) {
@@ -543,12 +550,12 @@ export function Payments() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {payment.projectNumber ? (
+                                            {payment.projectId ? (
                                                 <button
                                                     onClick={() => handleViewProject(payment.projectId)}
                                                     className="text-sm font-mono text-violet-600 hover:text-violet-800 hover:underline"
                                                 >
-                                                    {payment.projectNumber}
+                                                    {payment.projectNumber || 'View project'}
                                                 </button>
                                             ) : payment.status !== 'refunded' ? (
                                                 <button

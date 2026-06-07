@@ -28,6 +28,33 @@ export async function acceptProposalAndCreateProject(
   client: DbClient,
   paymentId: string
 ): Promise<ProjectActivationResult> {
+  async function ensureProjectMembership(projectId: string, clientUserId?: string | null) {
+    if (clientUserId) {
+      await client.query(
+        `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+         VALUES ($1, $2, 'client', true, NULL)
+         ON CONFLICT (user_id, project_id) DO UPDATE
+         SET removed_at = NULL,
+             removed_by = NULL,
+             role = 'client',
+             is_primary_contact = true`,
+        [clientUserId, projectId]
+      );
+    }
+
+    await client.query(
+      `INSERT INTO project_team (user_id, project_id, role, is_primary_contact, added_by)
+       SELECT id, $1, 'support', false, NULL
+       FROM users
+       WHERE role = 'support' AND is_active = true
+       ON CONFLICT (user_id, project_id) DO UPDATE
+       SET removed_at = NULL,
+           removed_by = NULL,
+           role = 'support'`,
+      [projectId]
+    );
+  }
+
   // Fetch payment
   const paymentResult = await client.query(
     `SELECT id, proposal_id, payment_type FROM payments WHERE id = $1`,
@@ -94,6 +121,7 @@ export async function acceptProposalAndCreateProject(
     );
 
     const details = existingDetails.rows[0] || {};
+    await ensureProjectMembership(projectId, details.client_user_id);
     return {
       projectId,
       projectNumber: details.project_number,
@@ -105,10 +133,14 @@ export async function acceptProposalAndCreateProject(
     };
   }
 
-  // Fetch inquiry
+  // Fetch inquiry. Prefer the proposal's canonical inquiry_id and keep the
+  // inquiry.proposal_id lookup as a fallback for older records.
   const inquiryResult = await client.query(
-    `SELECT * FROM inquiries WHERE proposal_id = $1`,
-    [proposalId]
+    `SELECT * FROM inquiries
+     WHERE id = $1 OR proposal_id = $2
+     ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [proposal.inquiry_id, proposalId]
   );
 
   if (inquiryResult.rows.length === 0) {
@@ -192,8 +224,11 @@ export async function acceptProposalAndCreateProject(
 
   // Mark inquiry converted
   await client.query(
-    `UPDATE inquiries SET status = 'converted' WHERE id = $1`,
-    [inquiry.id]
+    `UPDATE inquiries
+     SET status = 'converted',
+         proposal_id = COALESCE(proposal_id, $2)
+     WHERE id = $1`,
+    [inquiry.id, proposalId]
   );
 
   // Link payment to project
@@ -201,6 +236,8 @@ export async function acceptProposalAndCreateProject(
     `UPDATE payments SET project_id = $1 WHERE id = $2`,
     [project.id, paymentId]
   );
+
+  await ensureProjectMembership(project.id, clientUserId);
 
   console.log(`[acceptProposalAndCreateProject] Project ${projectNumber} created for proposal ${proposalId}`);
 
