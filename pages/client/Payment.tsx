@@ -3,7 +3,7 @@ import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { getProposalById, type Proposal } from '../../lib/proposals';
 import { getInquiryById, updateInquiryStatus } from '../../lib/inquiries';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { ArrowLeft, CreditCard, Lock, CheckCircle2, ShieldCheck, DollarSign } from 'lucide-react';
+import { ArrowLeft, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface RazorpayOptions {
     key: string;
@@ -277,37 +277,10 @@ export function Payment() {
                     {/* Payment Method */}
                     <div className="md:col-span-1">
                         <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sticky top-6">
-                            <h3 className="font-semibold text-foreground mb-4">Pay with Card</h3>
+                            <h3 className="font-semibold text-foreground mb-4">Pay Securely</h3>
 
                             <div className="space-y-4">
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        disabled
-                                        value="•••• •••• •••• 4242"
-                                        className="block w-full pl-10 pr-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input
-                                        type="text"
-                                        disabled
-                                        value="12/28"
-                                        className="block w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm text-center"
-                                    />
-                                    <input
-                                        type="text"
-                                        disabled
-                                        value="•••"
-                                        className="block w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground text-sm text-center"
-                                    />
-                                </div>
-
-                                <div className="pt-4 border-t border-border">
+                                <div>
                                     <button
                                         onClick={handlePayment}
                                         disabled={isProcessing}
@@ -326,7 +299,7 @@ export function Payment() {
                                         )}
                                     </button>
                                     <p className="text-xs text-center text-muted-foreground mt-3">
-                                        This is a secure 256-bit SSL encrypted payment.
+                                        Razorpay secure checkout
                                     </p>
                                 </div>
                             </div>
