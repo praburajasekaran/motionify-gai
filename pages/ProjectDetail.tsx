@@ -309,7 +309,7 @@ export const ProjectDetail = () => {
     const { data: deliverables = [], isLoading: deliverablesLoading } = useQuery({
         queryKey: ['deliverables', id],
         queryFn: async () => {
-            const response = await fetch(`/api/deliverables?projectId=${id}`, { credentials: 'include' });
+            const response = await fetch(`${API_BASE}/deliverables?projectId=${id}`, { credentials: 'include' });
             if (!response.ok) return [];
             const data = await response.json();
             return (data || []).map((d: any) => ({

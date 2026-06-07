@@ -1,2 +1,5 @@
+# API endpoints to Netlify Functions
+/api/*  /.netlify/functions/:splat  200
+
 # Handle React Client-Side Routing
 /*  /index.html  200
