@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DetailPageHeaderSkeleton } from '../components/ui/SkeletonLoaders';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
+import { API_BASE } from '../lib/api-config';
 
 /** Extract YYYY-MM-DD from a date value, avoiding timezone shift issues.
  *  PostgreSQL DATE columns come through as ISO strings like "2026-02-09T00:00:00.000Z".
@@ -122,7 +123,7 @@ export const ProjectSettings = () => {
     const handleSave = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/projects/${id}`, {
+            const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(id!)}`, {
                 method: 'PATCH',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -164,7 +165,7 @@ export const ProjectSettings = () => {
         if (deleteConfirmInput !== project.title) return;
 
         try {
-            const response = await fetch(`/api/projects/${id}`, {
+            const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(id!)}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });
@@ -206,7 +207,7 @@ export const ProjectSettings = () => {
         }
 
         try {
-            const response = await fetch(`/api/projects/${id}`, {
+            const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(id!)}`, {
                 method: 'PATCH',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

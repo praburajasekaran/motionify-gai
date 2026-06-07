@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { API_BASE } from '@/lib/api-config';
 import type { Project } from '@/types';
 import { dbStatusToDisplay } from '@/utils/projectStatusMapping';
 
@@ -11,8 +12,8 @@ export const projectKeys = {
 };
 
 export async function fetchProjects(userId: string): Promise<Project[]> {
-  const res = await fetch(`/api/projects?userId=${userId}`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to load projects');
+  const res = await fetch(`${API_BASE}/projects?userId=${encodeURIComponent(userId)}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
   const data = await res.json();
 
   return data.map((p: any) => ({
@@ -53,7 +54,7 @@ export function useProjects(userId: string | undefined) {
  * Returns a comprehensive Project with all fields (team, description, terms, etc.).
  */
 export async function fetchProject(projectId: string): Promise<Project> {
-  const res = await fetch(`/api/projects/${projectId}`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectId)}`, { credentials: 'include' });
   if (!res.ok) throw new Error(`Failed to fetch project: ${res.status}`);
   const data = await res.json();
 
