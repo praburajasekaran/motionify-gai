@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-    Calendar, Users, FileVideo, MessageSquare, CheckSquare, Sparkles,
+    Calendar, Users, FileVideo, MessageSquare, CheckSquare,
     Edit2, Clock, CheckCircle2, AlertTriangle, FileBox,
     ArrowRight, Activity, Zap, ClipboardList, FolderOpen, LayoutDashboard, Package, Folder, ChevronDown,
     Bell, BellOff, Settings, CreditCard, Trash2
@@ -12,7 +12,6 @@ import {
     TabsContent, CircularProgress, DropdownMenu, DropdownMenuItem, EmptyState, ErrorState, cn, useToast, Switch
 } from '../components/ui/design-system';
 import { TEAM_MEMBERS, TAB_INDEX_MAP, INDEX_TAB_MAP, TabIndex, TabName } from '../constants';
-import { analyzeProjectRisk } from '../services/geminiService';
 import { dbStatusToDisplay } from '../utils/projectStatusMapping';
 import { ProjectStatus, Task, Project } from '../types';
 import { DeliverablesTab } from '../components/deliverables/DeliverablesTab';
@@ -23,13 +22,13 @@ import { TeamTab } from '../components/team/TeamTab';
 import { useAuthContext } from '../contexts/AuthContext';
 import { FileUpload } from '../components/files/FileUpload';
 import { FileList } from '../components/files/FileList';
-import { createTask, updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
+import { updateTask as updateTaskAPI, deleteTask, followTask, unfollowTask, addComment } from '../services/taskApi';
 import { Activity as ApiActivity } from '../services/activityApi';
 import { useTasks, useActivities, useInvalidateActivities, taskKeys, useProjectFiles, useDeleteProjectFile } from '../shared/hooks';
 import { createProjectFile } from '../services/projectFileApi';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { parseTaskInput, formatTimeAgo } from '../utils/taskParser';
+import { formatTimeAgo } from '../utils/taskParser';
 import { formatTimestamp } from '../utils/dateFormatting';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
@@ -252,7 +251,6 @@ export const ProjectDetail = () => {
 
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
-    const [riskAssessment, setRiskAssessment] = useState<string>('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -364,16 +362,6 @@ export const ProjectDetail = () => {
         });
     }, [activities, user?.id]);
 
-
-    // Auto-analysis on load
-    useEffect(() => {
-        if (project && !riskAssessment) {
-            analyzeProjectRisk({ title: project.title, status: project.status, progress: project.progress, dueDate: project.dueDate })
-                .then(setRiskAssessment)
-                .catch(err => console.warn('Gemini risk analysis failed:', err));
-        }
-    }, [project, riskAssessment]);
-
     // Handle invalid tab URLs and redirect to tab 1 if no tab specified
     useEffect(() => {
         if (!tab) {
@@ -410,48 +398,6 @@ export const ProjectDetail = () => {
             />
         );
     }
-
-
-
-    const handleAddTask = async () => {
-        if (!newTaskInput.trim() || !project) return;
-
-        const userIsClient = user && isClient(user);
-
-        try {
-            // Parse natural language input (clients don't get assignee parsing)
-            const parsed = parseTaskInput(newTaskInput, userIsClient ? [] : project.team);
-
-            const newTask = await createTask({
-                project_id: project.id,
-                title: parsed.title,
-                description: parsed.title, // Use title as description for now
-                visible_to_client: userIsClient ? true : false,
-                status: 'pending',
-                assignee_id: userIsClient ? undefined : parsed.assigneeId,
-                deadline: parsed.deadline
-            });
-
-            invalidateTasks();
-            setNewTaskInput('');
-
-            // Refresh activity feed (backend logs the activity)
-            invalidateActivities(project.id);
-
-            addToast({
-                title: 'Task Created',
-                description: 'Task has been created successfully',
-                variant: 'success'
-            });
-        } catch (error) {
-            console.error('Failed to create task:', error);
-            addToast({
-                title: 'Error',
-                description: 'Failed to create task. Please try again.',
-                variant: 'destructive'
-            });
-        }
-    };
 
     const handleEditTask = (task: Task) => {
         if (!user) {
@@ -881,15 +827,6 @@ export const ProjectDetail = () => {
                                         </div>
                                         <div className="flex-1 space-y-4 w-full">
                                             <p className="text-muted-foreground text-[14px] leading-relaxed">{project.description}</p>
-                                            <div className="bg-muted/50 p-3 rounded-lg border border-border">
-                                                <div className="flex items-center gap-2 mb-1.5">
-                                                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                                                    <h4 className="text-[14px] font-semibold text-foreground">AI Risk Analysis</h4>
-                                                </div>
-                                                <p className="text-[14px] text-muted-foreground">
-                                                    {riskAssessment || 'Analyzing...'}
-                                                </p>
-                                            </div>
                                         </div>
                                     </div>
                                 </CardContent>
