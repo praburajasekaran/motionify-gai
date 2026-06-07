@@ -32,7 +32,7 @@ import { CardGridSkeleton } from '../components/ui/SkeletonLoaders';
 import { ProjectStatus, Project } from '../types';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { useAuthContext } from '../contexts/AuthContext';
-import { isClient } from '../lib/permissions';
+import { isClient, isMotionifyAdmin } from '../lib/permissions';
 import { useProjects } from '../shared/hooks/useProjects';
 
 export const ProjectList = () => {
@@ -43,7 +43,8 @@ export const ProjectList = () => {
     const navigate = useNavigate();
     const selectedRef = useRef<HTMLDivElement>(null);
     const { user } = useAuthContext();
-    const projectsQuery = useProjects(user?.id);
+    const projectListUserId = user ? (isMotionifyAdmin(user) ? null : user.id) : undefined;
+    const projectsQuery = useProjects(projectListUserId);
 
     const isLoading = projectsQuery.isLoading;
     const allProjects = projectsQuery.data ?? [];

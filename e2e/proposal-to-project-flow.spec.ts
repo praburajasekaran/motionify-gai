@@ -320,6 +320,39 @@ async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
 // ──────────────────────────────────────────
 
 test.describe('Proposal Accepted -> Create Project Flow', () => {
+  test('super admin projects page requests all projects without user filter', async ({ page }) => {
+    let projectsListUrl = '';
+
+    await page.route('**/.netlify/functions/**', route => {
+      if (route.request().method() === 'POST' || route.request().method() === 'PUT' || route.request().method() === 'PATCH') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    await page.route('**/.netlify/functions/auth-me*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, user: MOCK_ADMIN_USER }) })
+    );
+
+    await page.route('**/.netlify/functions/notifications*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, notifications: [], unreadCount: 0 }) })
+    );
+
+    await page.route('**/.netlify/functions/projects*', route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/projects')) {
+        projectsListUrl = route.request().url();
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_DIRECT_PROJECT]) });
+    });
+
+    await page.goto(`${BASE}/projects`);
+
+    await expect(page.getByText('Direct Client Project')).toBeVisible();
+    expect(projectsListUrl).toBeTruthy();
+    expect(new URL(projectsListUrl).searchParams.has('userId')).toBe(false);
+  });
+
   test('direct project creation loads wrapped client list and submits selected client', async ({ page }) => {
     projectCreateRequests = [];
 
