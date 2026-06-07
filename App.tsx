@@ -16,6 +16,7 @@ import { PublicPaymentPage } from './pages/public/PublicPaymentPage';
 import { InquiryVerification } from './pages/public/InquiryVerification';
 import { classifyRoute } from './lib/route-classification';
 import { resolveRouteAlias } from './shared/route-aliases';
+import TawkChat from './components/TawkChat';
 
 // Lazy-loaded page components for route-based code splitting
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -29,6 +30,7 @@ const ProjectAccess = React.lazy(() => import('./pages/ProjectAccess').then(m =>
 const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const ContactPage = React.lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const AboutPage = React.lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const WorkPage = React.lazy(() => import('./pages/WorkPage').then(m => ({ default: m.WorkPage })));
 const InquiryTracking = React.lazy(() => import('./pages/InquiryTracking').then(m => ({ default: m.InquiryTracking })));
 const PermissionTest = React.lazy(() => import('./pages/PermissionTest'));
 const DeliverableReview = React.lazy(() => import('./pages/DeliverableReview').then(m => ({ default: m.DeliverableReview })));
@@ -150,6 +152,7 @@ function App() {
                 </BrowserRouter>
               ) : (
                 <BrowserRouter>
+                  <TawkChat />
                   <React.Suspense fallback={
                     <div className="min-h-screen flex items-center justify-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
@@ -159,6 +162,7 @@ function App() {
                       <Route path="/" element={<LandingPage />} />
                       <Route path="/about" element={<AboutPage />} />
                       <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/work" element={<WorkPage />} />
                       <Route path="/proposal/:proposalId" element={<PublicProposalPage />} />
                       <Route path="/payment/:proposalId" element={<PublicPaymentPage />} />
                       <Route path="/verify-inquiry" element={<InquiryVerification />} />

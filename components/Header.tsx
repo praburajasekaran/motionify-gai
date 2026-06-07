@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { portalLoginPath, portalPath } from "@/lib/canonical-links";
+import { getStoredUser } from "@/lib/auth";
 import { landingButtonVariants } from "@/components/landing/LandingButton";
+
+const externalPortalLinkProps = {
+  target: "_blank",
+  rel: "noopener noreferrer",
+};
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasStoredUser, setHasStoredUser] = useState(() => getStoredUser() !== null);
+
+  const portalEntry = hasStoredUser
+    ? { href: portalPath(), label: "Portal" }
+    : { href: portalLoginPath(), label: "Login" };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +26,21 @@ export default function Header() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      setHasStoredUser(getStoredUser() !== null);
+    };
+
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('focus', syncAuthState);
+    syncAuthState();
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('focus', syncAuthState);
+    };
   }, []);
 
   return (
@@ -31,8 +57,7 @@ export default function Header() {
           <div className="hidden sm:flex items-center gap-8">
             <a href="/work" className="text-sm text-white/80 hover:text-white transition">Work</a>
             <a href="/about" className="text-sm text-white/80 hover:text-white transition">About</a>
-            <a href={portalLoginPath()} className="text-sm text-white/80 hover:text-white transition">Login</a>
-            <a href={portalPath()} className="text-sm text-white/80 hover:text-white transition">Portal</a>
+            <a href={portalEntry.href} {...externalPortalLinkProps} className="text-sm text-white/80 hover:text-white transition">{portalEntry.label}</a>
             <a href="/contact" className={landingButtonVariants({ variant: "primaryOrange", size: isScrolled ? "sm" : "md" })}>
               Get in touch
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -53,8 +78,7 @@ export default function Header() {
             <div className="flex flex-col gap-1">
               <a href="/work" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/5 hover:text-white">Work</a>
               <a href="/about" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/5 hover:text-white">About</a>
-              <a href={portalLoginPath()} onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/5 hover:text-white">Login</a>
-              <a href={portalPath()} onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/5 hover:text-white">Portal</a>
+              <a href={portalEntry.href} {...externalPortalLinkProps} onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/5 hover:text-white">{portalEntry.label}</a>
               <a href="/contact" onClick={() => setIsMenuOpen(false)} className={landingButtonVariants({ variant: "primaryOrange", size: "md", className: "mt-2" })}>
                 Get in touch
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>

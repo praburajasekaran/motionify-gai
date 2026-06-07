@@ -26,4 +26,15 @@ test.describe('Accessibility: Public Screens — AAA Contrast', () => {
     );
     assertNoViolations(results, 'Inquiry Tracking');
   });
+
+  test('Work Page', async ({ page }) => {
+    await page.route('https://embed.tawk.to/**', (route) => {
+      route.abort();
+    });
+
+    const results = await auditScreen(page, '/work', 'Work Page', {
+      takeScreenshot: true,
+    });
+    assertNoViolations(results, 'Work Page');
+  });
 });

@@ -1,6 +1,9 @@
+import LazyYouTubeEmbed from '../LazyYouTubeEmbed';
+import { motionifyProcessVideo } from '../../data/workVideos';
+
 export default function ProcessTimeline() {
   return (
-    <section className="relative overflow-hidden py-20 sm:py-28 bg-gradient-to-br from-gray-950 via-slate-900 to-gray-900 text-white">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-gradient-to-br from-gray-950 via-slate-900 to-gray-900 text-white">
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0" style={{ background: "linear-gradient(120deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18) 40%, rgba(236,72,153,0.18))", animation: 'panGradient 22s ease-in-out infinite' }} />
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg, rgba(99,102,241,0.06) 0px, rgba(99,102,241,0.06) 2px, transparent 2px, transparent 12px)" }} />
@@ -13,7 +16,7 @@ export default function ProcessTimeline() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative">
-          <div className="text-center mb-12 sm:mb-16">
+          <div className="text-center mb-10 sm:mb-12">
             <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500/15 to-fuchsia-500/15 px-4 py-1.5 text-xs font-medium text-violet-300 ring-1 ring-violet-500/30 backdrop-blur mb-4">
               <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 animate-pulse" />
               Your Journey with Motionify Studio
@@ -22,61 +25,77 @@ export default function ProcessTimeline() {
             <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">Every frame, every milestone — crafted with clarity, creativity, and care.</p>
           </div>
 
-          {/* Vertical Timeline Diagram - Simplified Layout */}
-          <div className="relative max-w-5xl mx-auto">
-            {/* Animated gradient timeline line */}
-            <div className="absolute left-6 sm:left-12 top-0 bottom-0 w-1 overflow-hidden rounded-full">
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: 'linear-gradient(to bottom, #d946ef 0%, #a855f7 25%, #3b82f6 50%, #06b6d4 75%, #14b8a6 100%)',
-                }}
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)] lg:gap-10">
+            <div className="overflow-hidden rounded-lg bg-white/[0.04] ring-1 ring-white/10 shadow-2xl">
+              <LazyYouTubeEmbed
+                videoId={motionifyProcessVideo.id}
+                title={motionifyProcessVideo.title}
+                className="rounded-b-none ring-0"
               />
-              {/* Animated glow effect */}
-              <div
-                className="absolute inset-0 rounded-full opacity-50"
-                style={{
-                  background: 'linear-gradient(to bottom, #d946ef 0%, #a855f7 25%, #3b82f6 50%, #06b6d4 75%, #14b8a6 100%)',
-                  filter: 'blur(4px)',
-                  animation: 'pulse 3s ease-in-out infinite',
-                }}
-              />
+              <div className="px-5 py-4 sm:px-6">
+                <h3 className="text-lg font-semibold text-white">See the Motionify process</h3>
+                <p className="mt-1 text-sm leading-6 text-gray-400">
+                  A quick look at how ideas move through strategy, creative production, review, and delivery.
+                </p>
+              </div>
             </div>
 
-            {/* Timeline steps - Simplified horizontal layout */}
-            <div className="space-y-6 sm:space-y-8">
-              {processSteps.map((s, idx) => (
-                <div key={s.title} className="relative group">
-                  {/* Single row: Marker + Icon + Content */}
-                  <div className={`flex items-center gap-4 sm:gap-6 rounded-3xl ${s.cardBg} ring-1 ${s.cardRing} backdrop-blur p-5 sm:p-7 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ml-16 sm:ml-24`}>
-                    {/* Icon */}
-                    <div className={`flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-2xl ${s.iconBg} ring-1 ${s.iconRing} backdrop-blur flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`} dangerouslySetInnerHTML={{ __html: s.icon }} />
+            {/* Vertical Timeline Diagram - Simplified Layout */}
+            <div className="relative">
+              {/* Animated gradient timeline line */}
+              <div className="absolute left-5 sm:left-6 top-0 bottom-0 w-1 overflow-hidden rounded-full">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: 'linear-gradient(to bottom, #d946ef 0%, #a855f7 25%, #3b82f6 50%, #06b6d4 75%, #14b8a6 100%)',
+                  }}
+                />
+                {/* Animated glow effect */}
+                <div
+                  className="absolute inset-0 rounded-full opacity-50"
+                  style={{
+                    background: 'linear-gradient(to bottom, #d946ef 0%, #a855f7 25%, #3b82f6 50%, #06b6d4 75%, #14b8a6 100%)',
+                    filter: 'blur(4px)',
+                    animation: 'pulse 3s ease-in-out infinite',
+                  }}
+                />
+              </div>
 
-                    {/* Text content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg sm:text-xl md:text-2xl font-semibold mb-2 text-white">{s.title}</h3>
-                      <p className="text-sm sm:text-base text-gray-400 leading-relaxed">{s.desc}</p>
+              {/* Timeline steps - Simplified horizontal layout */}
+              <div className="space-y-4 sm:space-y-5">
+                {processSteps.map((s, idx) => (
+                  <div key={s.title} className="relative group">
+                    {/* Single row: Marker + Icon + Content */}
+                    <div className={`flex items-center gap-3 rounded-2xl ${s.cardBg} ring-1 ${s.cardRing} backdrop-blur p-4 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ml-14 sm:ml-16`}>
+                      {/* Icon */}
+                      <div className={`flex-shrink-0 h-11 w-11 rounded-xl ${s.iconBg} ring-1 ${s.iconRing} backdrop-blur flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`} dangerouslySetInnerHTML={{ __html: s.icon }} />
+
+                      {/* Text content */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold mb-1 text-white">{s.title}</h3>
+                        <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Timeline marker (numbered circle) - absolute positioned */}
-                  <div className="absolute left-0 sm:left-6 top-1/2 -translate-y-1/2">
-                    <div className={`relative z-10 h-12 w-12 sm:h-14 sm:w-14 rounded-full ${s.badgeBg} flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xl ring-4 ${s.ringColor} transition-transform duration-300 group-hover:scale-110`}>
-                      <span>{idx + 1}</span>
-                      {/* Pulse effect on hover */}
-                      <div className={`absolute inset-0 rounded-full ${s.badgeBg} blur-lg opacity-0 group-hover:opacity-60 transition-opacity duration-300`} />
+                    {/* Timeline marker (numbered circle) - absolute positioned */}
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                      <div className={`relative z-10 h-11 w-11 rounded-full ${s.badgeBg} flex items-center justify-center text-white font-bold text-base shadow-xl ring-4 ${s.ringColor} transition-transform duration-300 group-hover:scale-110`}>
+                        <span>{idx + 1}</span>
+                        {/* Pulse effect on hover */}
+                        <div className={`absolute inset-0 rounded-full ${s.badgeBg} blur-lg opacity-0 group-hover:opacity-60 transition-opacity duration-300`} />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Connecting line from marker to card */}
-                  <div className="absolute left-12 sm:left-20 top-1/2 -translate-y-1/2 w-4 sm:w-4 h-0.5" style={{ background: `linear-gradient(to right, ${s.badgeBg.includes('fuchsia') ? '#d946ef' : s.badgeBg.includes('violet') ? '#a855f7' : s.badgeBg.includes('blue') && s.badgeBg.includes('cyan') ? '#3b82f6' : s.badgeBg.includes('cyan') ? '#06b6d4' : '#14b8a6'}, transparent)`, opacity: 0.6 }} />
-                </div>
-              ))}
+                    {/* Connecting line from marker to card */}
+                    <div className="absolute left-11 top-1/2 -translate-y-1/2 w-4 h-0.5" style={{ background: `linear-gradient(to right, ${s.badgeBg.includes('fuchsia') ? '#d946ef' : s.badgeBg.includes('violet') ? '#a855f7' : s.badgeBg.includes('blue') && s.badgeBg.includes('cyan') ? '#3b82f6' : s.badgeBg.includes('cyan') ? '#06b6d4' : '#14b8a6'}, transparent)`, opacity: 0.6 }} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Bottom note */}
-          <div className="mt-12 text-center">
+          <div className="mt-10 text-center">
             <p className="text-sm text-gray-500 italic">Your complete journey — from concept to delivery</p>
           </div>
           
@@ -148,7 +167,4 @@ const processSteps = [
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-teal-400"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>`
   },
 ];
-
-
-
 
