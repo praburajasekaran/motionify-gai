@@ -7,6 +7,9 @@ Shared domain vocabulary for this project — entities, named processes, and sta
 ### Portal
 The authenticated Motionify Studio workspace where internal users and clients manage the lifecycle from inquiry through proposal, project execution, deliverable review, and payment.
 
+### Landing Page
+The public Motionify Studio website surface that introduces the studio and routes prospective clients into inquiry or work-request flows before they enter the Portal.
+
 ### Client
 The customer-side user or organization receiving Motionify Studio work; clients can submit inquiries, review proposals, follow projects, and act on deliverables according to their role.
 
