@@ -36,6 +36,7 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'fetch',
                 },
                 credentials: 'include',
                 body: JSON.stringify({
