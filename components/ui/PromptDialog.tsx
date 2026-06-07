@@ -92,6 +92,9 @@ export function PromptDialog({
                   // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                 />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Press Enter to submit. Press Shift+Enter for a new line.
+                </p>
               </div>
             </div>
           </div>
