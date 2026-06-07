@@ -92,4 +92,23 @@ test.describe('Landing process video', () => {
     await page.getByRole('button', { name: /play motionify studio process video/i }).click();
     await expect(page.locator('iframe[src*="Lvv_T_8fNjI"]')).toBeVisible();
   });
+
+  test('places the process video beside the steps on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+
+    const videoCard = page
+      .getByRole('heading', { name: 'See the Motionify process' })
+      .locator('xpath=ancestor::div[contains(@class, "ring-1")][1]');
+    const firstStep = page
+      .getByRole('heading', { name: 'Choose & Customize' })
+      .locator('xpath=ancestor::div[contains(@class, "ring-1")][1]');
+    const videoBox = await videoCard.boundingBox();
+    const stepBox = await firstStep.boundingBox();
+
+    expect(videoBox).not.toBeNull();
+    expect(stepBox).not.toBeNull();
+    expect(videoBox!.x).toBeLessThan(stepBox!.x);
+    expect(Math.abs(videoBox!.y - stepBox!.y)).toBeLessThan(80);
+  });
 });
