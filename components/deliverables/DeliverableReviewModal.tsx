@@ -37,6 +37,7 @@ import { Project } from '@/types';
 import { useDeliverablePermissions } from '@/hooks/useDeliverablePermissions';
 import { storageService } from '../../services/storage';
 import { AdditionalRevisionRequestModal } from './AdditionalRevisionRequestModal';
+import { toast } from 'sonner';
 
 export interface DeliverableReviewModalProps {
   deliverable: Deliverable | null;
@@ -358,7 +359,7 @@ export const DeliverableReviewModal: React.FC<DeliverableReviewModalProps> = ({
                             className="w-full gap-2 border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
                             onClick={() => {
                               // For now, show an alert. In production, this would open a form or redirect
-                              alert('Additional revision requests will be available soon. Please contact your account manager at support@motionify.studio');
+                              toast.info('Additional revision requests will be available soon. Please contact your account manager at support@motionify.studio');
                             }}
                           >
                             <Plus className="h-5 w-5" />

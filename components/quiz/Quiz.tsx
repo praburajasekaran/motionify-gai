@@ -7,6 +7,7 @@ import ContactForm from "./ContactForm";
 import InquirySuccess from "./InquirySuccess";
 import type { ContactInfo } from "../../lib/inquiries";
 import { landingButtonVariants } from "@/components/landing/LandingButton";
+import { toast } from "sonner";
 
 type Option = { key: keyof ReturnType<typeof useQuiz>["selections"]; value: string; label: string };
 
@@ -87,7 +88,7 @@ export default function Quiz() {
       // Success screen will be shown automatically by useQuiz
     } catch (error) {
       console.error('Error submitting inquiry:', error);
-      alert('Failed to submit inquiry. Please try again.');
+      toast.error('Failed to submit inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

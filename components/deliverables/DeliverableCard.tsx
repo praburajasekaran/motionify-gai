@@ -184,7 +184,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     console.log(`[DeliverableCard] File selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
 
     if (file.size > MAX_FILE_SIZE) {
-      alert(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max size is 100MB. For larger files, contact support.`);
+      toast.error(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Max size is 100MB. For larger files, contact support.`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -198,7 +198,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     });
 
     if (!isValidType) {
-      alert('Invalid file type. Allowed: Video, Image, PDF, DOCX, XLSX.');
+      toast.error('Invalid file type. Allowed: Video, Image, PDF, DOCX, XLSX.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -268,7 +268,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         throw new Error('Failed to update deliverable record');
       }
 
-      alert(`${uploadTypeRef.current === 'beta' ? 'Beta' : 'Final'} file uploaded and saved successfully!`);
+      toast.success(`${uploadTypeRef.current === 'beta' ? 'Beta' : 'Final'} file uploaded and saved successfully.`);
 
     } catch (error) {
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
@@ -276,7 +276,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         return;
       }
       console.error('Upload failed:', error);
-      alert('Upload failed. Check console for details.');
+      toast.error('Upload failed. Check console for details.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

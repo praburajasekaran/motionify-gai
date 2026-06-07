@@ -19,6 +19,17 @@ export interface ProposalEditHistory {
   reason?: string;
 }
 
+export interface ProposalHandoff {
+  inquiryNumber: string | null;
+  clientName: string | null;
+  companyName: string | null;
+  completedAdvancePayment: boolean;
+  advancePaymentId: string | null;
+  advancePaidAt: string | null;
+  linkedProjectId: string | null;
+  linkedProjectNumber: string | null;
+}
+
 export interface Proposal {
   id: string;
   inquiryId: string;
@@ -41,6 +52,7 @@ export interface Proposal {
   editHistory?: ProposalEditHistory[];
   proposalReviewToken?: string;
   proposalReviewUrl?: string;
+  handoff?: ProposalHandoff;
 }
 
 function mapProposalFromApi(proposal: any): Proposal {
@@ -63,6 +75,16 @@ function mapProposalFromApi(proposal: any): Proposal {
       : proposal.deliverables,
     proposalReviewToken: proposal.proposalReviewToken,
     proposalReviewUrl: proposal.proposalReviewUrl,
+    handoff: proposal.handoff ? {
+      inquiryNumber: proposal.handoff.inquiryNumber ?? proposal.handoff.inquiry_number ?? null,
+      clientName: proposal.handoff.clientName ?? proposal.handoff.client_name ?? null,
+      companyName: proposal.handoff.companyName ?? proposal.handoff.company_name ?? null,
+      completedAdvancePayment: Boolean(proposal.handoff.completedAdvancePayment ?? proposal.handoff.completed_advance_payment),
+      advancePaymentId: proposal.handoff.advancePaymentId ?? proposal.handoff.advance_payment_id ?? null,
+      advancePaidAt: proposal.handoff.advancePaidAt ?? proposal.handoff.advance_paid_at ?? null,
+      linkedProjectId: proposal.handoff.linkedProjectId ?? proposal.handoff.linked_project_id ?? null,
+      linkedProjectNumber: proposal.handoff.linkedProjectNumber ?? proposal.handoff.linked_project_number ?? null,
+    } : undefined,
   };
 }
 

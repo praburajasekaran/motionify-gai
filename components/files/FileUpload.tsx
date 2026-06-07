@@ -2,6 +2,7 @@ import React, { useRef, useState, DragEvent } from 'react';
 import { Upload, Loader2, PlusCircle, FileVideo, FileImage, FileText, File as FileIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/design-system';
 import { storageService } from '@/services/storage';
+import { toast } from 'sonner';
 
 interface FileUploadProps {
     projectId: string;
@@ -51,7 +52,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         if (file.size > maxSizeInBytes) {
             const error = new Error(`File too large. Max size is ${(maxSizeInBytes / (1024 * 1024)).toFixed(0)}MB`);
             if (onError) onError(error);
-            else alert(error.message);
+            else toast.error(error.message);
             return;
         }
 
@@ -67,7 +68,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             if (!isValidType) {
                 const error = new Error(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`);
                 if (onError) onError(error);
-                else alert(error.message);
+                else toast.error(error.message);
                 return;
             }
         }
@@ -98,7 +99,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             }
             console.error("Upload failed", error);
             if (onError && error instanceof Error) onError(error);
-            else alert("Upload failed");
+            else toast.error("Upload failed");
         } finally {
             setIsUploading(false);
             setProgress(0);

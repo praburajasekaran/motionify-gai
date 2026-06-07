@@ -4,6 +4,7 @@ import { getProposalById, type Proposal } from '../../lib/proposals';
 import { getInquiryById, updateInquiryStatus } from '../../lib/inquiries';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { ArrowLeft, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface RazorpayOptions {
     key: string;
@@ -143,12 +144,12 @@ export function Payment() {
                                 || errorData.error?.message
                                 || errorData.error
                                 || 'Unknown error';
-                            alert(`Payment verification failed: ${errorDetails}`);
+                            toast.error(`Payment verification failed: ${errorDetails}`);
                             setIsProcessing(false);
                         }
                     } catch (error) {
                         console.error('Verification error:', error);
-                        alert('Payment verification failed.');
+                        toast.error('Payment verification failed.');
                         setIsProcessing(false);
                     }
                 },
@@ -167,14 +168,14 @@ export function Payment() {
 
             const rzp1 = new window.Razorpay(options);
             rzp1.on('payment.failed', function (response: any) {
-                alert(response.error.description);
+                toast.error(response.error.description);
                 setIsProcessing(false);
             });
             rzp1.open();
 
         } catch (error) {
             console.error("Payment initiation failed", error);
-            alert("Failed to initiate payment. Please try again.");
+            toast.error("Failed to initiate payment. Please try again.");
             setIsProcessing(false);
         }
     };

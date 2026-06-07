@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
@@ -8,7 +8,6 @@ import {
     Plus,
     X,
     GripVertical,
-    Calendar,
     Users,
     Briefcase,
     Layers,
@@ -22,7 +21,6 @@ import {
     Textarea,
     Select,
     Avatar,
-    Badge,
     Separator,
     cn
 } from '../components/ui/design-system';
@@ -30,11 +28,51 @@ import { TEAM_MEMBERS } from '../constants';
 import { api } from '../lib/api-config';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
+import { formatCurrency } from '../utils/format';
 
 interface ClientUser {
     id: string;
     full_name: string;
     email: string;
+}
+
+interface ProposalCandidate {
+    id: string;
+    inquiry_id?: string;
+    inquiryId?: string;
+    inquiry_number?: string;
+    inquiryNumber?: string;
+    client_user_id?: string;
+    clientUserId?: string;
+    client_full_name?: string;
+    client_name?: string;
+    clientName?: string;
+    client_email?: string;
+    company_name?: string;
+    companyName?: string;
+    project_notes?: string;
+    projectNotes?: string;
+    description?: string;
+    deliverables?: Array<{ id?: string; name?: string; description?: string; estimatedCompletionWeek?: number }> | string;
+    total_price?: number;
+    totalPrice?: number;
+    currency?: 'INR' | 'USD';
+    revisions_included?: number;
+    revisionsIncluded?: number;
+}
+
+interface NormalizedProposalCandidate {
+    id: string;
+    inquiryId?: string;
+    inquiryNumber: string;
+    clientUserId: string;
+    clientName: string;
+    companyName?: string;
+    description: string;
+    deliverables: Array<{ id?: string; name?: string; description?: string; estimatedCompletionWeek?: number }>;
+    totalPrice?: number;
+    currency: 'INR' | 'USD';
+    revisionsIncluded?: number;
 }
 
 const STEPS = [
@@ -54,6 +92,9 @@ export const CreateProject = () => {
     // Client users fetched from the API
     const [clients, setClients] = useState<ClientUser[]>([]);
     const [clientsLoading, setClientsLoading] = useState(true);
+    const [proposalCandidates, setProposalCandidates] = useState<ProposalCandidate[]>([]);
+    const [proposalsLoading, setProposalsLoading] = useState(true);
+    const [selectedProposalId, setSelectedProposalId] = useState('');
 
     useEffect(() => {
         api.get('/users-list?role=client&status=active')
@@ -63,6 +104,16 @@ export const CreateProject = () => {
                 }
             })
             .finally(() => setClientsLoading(false));
+    }, []);
+
+    useEffect(() => {
+        api.get('/proposals?projectCreationCandidates=true')
+            .then(res => {
+                if (res.success && Array.isArray(res.data)) {
+                    setProposalCandidates(res.data);
+                }
+            })
+            .finally(() => setProposalsLoading(false));
     }, []);
 
     // Form State — aligned with createProjectDirectSchema
@@ -85,6 +136,79 @@ export const CreateProject = () => {
         if (validationErrors[field]) {
             setValidationErrors(prev => ({ ...prev, [field]: '' }));
         }
+    };
+
+    const parseDeliverables = (deliverables: ProposalCandidate['deliverables']) => {
+        if (!deliverables) return [];
+        if (typeof deliverables === 'string') {
+            try {
+                return JSON.parse(deliverables);
+            } catch {
+                return [];
+            }
+        }
+        return deliverables;
+    };
+
+    const stripHtml = (value: string) => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const normalizeProposalCandidate = (candidate: ProposalCandidate): NormalizedProposalCandidate => ({
+        id: candidate.id,
+        inquiryId: candidate.inquiry_id ?? candidate.inquiryId,
+        inquiryNumber: candidate.inquiry_number ?? candidate.inquiryNumber ?? candidate.id,
+        clientUserId: candidate.client_user_id ?? candidate.clientUserId ?? '',
+        clientName: candidate.client_full_name ?? candidate.client_name ?? candidate.clientName ?? 'Client',
+        companyName: candidate.company_name ?? candidate.companyName,
+        description: stripHtml(candidate.project_notes ?? candidate.projectNotes ?? candidate.description ?? ''),
+        deliverables: parseDeliverables(candidate.deliverables),
+        totalPrice: candidate.total_price ?? candidate.totalPrice,
+        currency: candidate.currency || 'INR',
+        revisionsIncluded: candidate.revisions_included ?? candidate.revisionsIncluded,
+    });
+
+    const proposalOptions = useMemo(() => [
+        { label: proposalsLoading ? 'Loading accepted paid proposals...' : 'No proposal selected', value: '' },
+        ...proposalCandidates.map(candidate => {
+            const proposal = normalizeProposalCandidate(candidate);
+            const amount = typeof proposal.totalPrice === 'number'
+                ? formatCurrency(proposal.totalPrice, proposal.currency, { maximumFractionDigits: 0 })
+                : '';
+            return {
+                label: [proposal.inquiryNumber, proposal.clientName, proposal.companyName, amount].filter(Boolean).join(' | '),
+                value: proposal.id,
+            };
+        }),
+    ], [proposalCandidates, proposalsLoading]);
+
+    const selectedProposal = selectedProposalId
+        ? proposalCandidates.find(p => p.id === selectedProposalId)
+        : undefined;
+    const selectedProposalData = selectedProposal ? normalizeProposalCandidate(selectedProposal) : undefined;
+
+    const handleProposalSelect = (proposalId: string) => {
+        setSelectedProposalId(proposalId);
+        if (!proposalId) return;
+
+        const candidate = proposalCandidates.find(p => p.id === proposalId);
+        if (!candidate) return;
+
+        const proposal = normalizeProposalCandidate(candidate);
+
+        setFormData(prev => ({
+            ...prev,
+            title: `${proposal.inquiryNumber} Project`,
+            clientUserId: proposal.clientUserId,
+            description: proposal.description,
+            maxRevisions: proposal.revisionsIncluded ?? prev.maxRevisions,
+            deliverables: proposal.deliverables.length > 0
+                ? proposal.deliverables.map((deliverable, index) => ({
+                    id: deliverable.id || String(index + 1),
+                    title: deliverable.name || deliverable.description || `Deliverable ${index + 1}`,
+                }))
+                : prev.deliverables,
+        }));
+
+        setValidationErrors({});
     };
 
     // Deliverable Actions
@@ -138,7 +262,7 @@ export const CreateProject = () => {
     const validate = (): boolean => {
         const errors: Record<string, string> = {};
         if (!formData.title.trim()) errors.title = 'Project name is required';
-        if (!formData.clientUserId) errors.clientUserId = 'Please select a client';
+        if (!formData.clientUserId && !selectedProposalId) errors.clientUserId = 'Please select a client';
         const validDeliverables = formData.deliverables.filter(d => d.title.trim());
         if (validDeliverables.length === 0) errors.deliverables = 'At least one deliverable is required';
         setValidationErrors(errors);
@@ -151,15 +275,21 @@ export const CreateProject = () => {
         setIsSubmitting(true);
         setSubmitError(null);
 
-        const result = await api.post('/projects', {
-            name: formData.title.trim(),
-            clientUserId: formData.clientUserId,
-            deliverables: formData.deliverables.map(d => d.title.trim()).filter(Boolean),
-            totalRevisions: formData.maxRevisions,
-        });
+        const result = selectedProposalData
+            ? await api.post('/projects', {
+                inquiryId: selectedProposalData.inquiryId,
+                proposalId: selectedProposalData.id,
+            })
+            : await api.post('/projects', {
+                name: formData.title.trim(),
+                clientUserId: formData.clientUserId,
+                deliverables: formData.deliverables.map(d => d.title.trim()).filter(Boolean),
+                totalRevisions: formData.maxRevisions,
+            });
 
         if (result.success) {
-            navigate('/projects');
+            const projectId = result.data?.id;
+            navigate(projectId ? `/projects/${projectId}` : '/projects');
         } else {
             setSubmitError(result.error?.message || 'Failed to create project. Please try again.');
             setIsSubmitting(false);
@@ -169,6 +299,25 @@ export const CreateProject = () => {
     // Step Content Renderers
     const renderDetails = () => (
         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+            <div className="space-y-2">
+                <Label>Link to Proposal</Label>
+                <Select
+                    value={selectedProposalId}
+                    onValueChange={handleProposalSelect}
+                    placeholder={proposalsLoading ? 'Loading accepted paid proposals...' : 'Create directly or choose a proposal'}
+                    options={proposalOptions}
+                    triggerClassName="min-h-10 text-left"
+                />
+                {selectedProposalId && (
+                    <p className="text-xs text-muted-foreground">
+                        Proposal fields will drive project creation and preserve the inquiry, payment, and proposal binding.
+                    </p>
+                )}
+                {!proposalsLoading && proposalCandidates.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No accepted paid proposals are ready for project creation.</p>
+                )}
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                     <Label htmlFor="title">Project Title <span className="text-destructive">*</span></Label>
@@ -188,6 +337,7 @@ export const CreateProject = () => {
                     <Select
                         value={formData.clientUserId}
                         onValueChange={v => updateField('clientUserId', v)}
+                        triggerClassName={selectedProposalId ? 'opacity-70' : undefined}
                         options={[
                             { label: clientsLoading ? 'Loading clients...' : 'Select a client', value: '' },
                             ...clients.map(c => ({
@@ -383,6 +533,16 @@ export const CreateProject = () => {
                         <Label className="text-muted-foreground mb-1 block">Deliverables</Label>
                         <p className="font-medium">{formData.deliverables.filter(d => d.title.trim()).length} items</p>
                     </div>
+                    {selectedProposalId && (
+                        <div className="md:col-span-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <Label className="text-muted-foreground mb-1 block">Proposal Binding</Label>
+                            <p className="font-medium">
+                                {selectedProposalData
+                                    ? `${selectedProposalData.inquiryNumber} -> Proposal -> Project`
+                                    : 'Proposal -> Project'}
+                            </p>
+                        </div>
+                    )}
                     <div className="md:col-span-3">
                         <Label className="text-muted-foreground mb-1 block">Description</Label>
                         <p className="text-sm leading-relaxed">{formData.description || 'No description provided.'}</p>

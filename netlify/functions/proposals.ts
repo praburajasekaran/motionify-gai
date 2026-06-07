@@ -494,7 +494,7 @@ export const handler = compose(
         };
       }
 
-      const { inquiryId } = event.queryStringParameters || {};
+      const { inquiryId, projectCreationCandidates } = event.queryStringParameters || {};
 
       let sql = 'SELECT * FROM proposals ORDER BY created_at DESC';
       const params: any[] = [];
@@ -503,6 +503,39 @@ export const handler = compose(
         await requireInquiryAccess(auth?.user, inquiryId, { operation: 'proposals.listByInquiry' });
         sql = 'SELECT * FROM proposals WHERE inquiry_id = $1 ORDER BY created_at DESC';
         params.push(inquiryId);
+      } else if (projectCreationCandidates === 'true') {
+        assertAdminLike(auth?.user, 'proposals.projectCreationCandidates');
+        sql = `
+          SELECT
+            p.*,
+            i.inquiry_number,
+            i.contact_name AS client_name,
+            i.company_name,
+            i.project_notes,
+            client_user.id AS client_user_id,
+            client_user.full_name AS client_full_name,
+            client_user.email AS client_email
+          FROM proposals p
+          JOIN inquiries i ON i.id = p.inquiry_id
+          LEFT JOIN LATERAL (
+            SELECT id, full_name, email
+            FROM users
+            WHERE id = p.client_user_id OR LOWER(email) = LOWER(i.contact_email)
+            ORDER BY CASE WHEN id = p.client_user_id THEN 0 ELSE 1 END
+            LIMIT 1
+          ) client_user ON TRUE
+          WHERE p.status = 'accepted'
+            AND EXISTS (
+              SELECT 1 FROM payments pay
+              WHERE pay.proposal_id = p.id
+                AND pay.payment_type = 'advance'
+                AND pay.status = 'completed'
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM projects pr WHERE pr.proposal_id = p.id
+            )
+          ORDER BY i.inquiry_number DESC, p.created_at DESC
+        `;
       } else if (!isAdminLike(getAuthRole(auth?.user))) {
         sql = `
           SELECT DISTINCT p.*

@@ -35,6 +35,7 @@ import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
 import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
+import { CommentThread } from '../components/proposals';
 import { API_BASE } from '../lib/api-config';
 
 // --- Activity formatting helpers ---
@@ -299,6 +300,7 @@ export const ProjectDetail = () => {
                 activityLog: [],
                 termsAcceptedAt: data.terms_accepted_at,
                 termsAcceptedBy: data.terms_accepted_by,
+                proposal_id: data.proposal_id || undefined,
             };
         },
         enabled: !!id,
@@ -958,6 +960,16 @@ export const ProjectDetail = () => {
                             </Card>
                         </div>
                     </div>
+                    {project.proposal_id && (
+                        <div className="mt-6">
+                            <CommentThread
+                                proposalId={project.proposal_id}
+                                currentUserId={user?.id}
+                                currentUserName={user?.name}
+                                isAuthenticated={!!user}
+                            />
+                        </div>
+                    )}
                 </TabsContent>
 
                 {/* --- TEAM TAB --- */}

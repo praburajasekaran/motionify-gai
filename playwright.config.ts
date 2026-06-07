@@ -38,7 +38,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'python3 -m http.server 8888 --directory dist',
+    command: 'npm run preview -- --host 127.0.0.1 --port 8888',
     url: 'http://localhost:8888',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

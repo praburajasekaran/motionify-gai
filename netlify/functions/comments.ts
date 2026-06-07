@@ -6,7 +6,7 @@ import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
 import { maskSupportName } from './_shared/displayName';
-import { absoluteProposalReviewUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { absolutePortalAdminProposalUrl, absolutePortalProposalUrl, appOriginFromEnv } from '../../shared/canonical-links';
 import {
     AuthorizationError,
     createAuthorizationResponse,
@@ -155,6 +155,29 @@ export const handler = compose(
                 updatedAt: new Date(result.rows[0].updatedAt).toISOString(),
             };
 
+            const projectResult = await dbQuery(
+                `SELECT id FROM projects WHERE proposal_id = $1 LIMIT 1`,
+                [proposalId]
+            );
+            const projectId = projectResult.rows[0]?.id ?? null;
+
+            try {
+                await dbQuery(
+                    `INSERT INTO activities (type, user_id, user_name, proposal_id, project_id, details)
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [
+                        'COMMENT_ADDED',
+                        user.userId,
+                        user.fullName,
+                        proposalId,
+                        projectId,
+                        JSON.stringify({ commentPreview: trimmedContent.substring(0, 100) }),
+                    ]
+                );
+            } catch (activityError) {
+                console.error('❌ Failed to create comment activity:', activityError);
+            }
+
             // ========================================================================
             // Send comment notification email
             // ========================================================================
@@ -214,14 +237,17 @@ export const handler = compose(
                 if (recipientUserId && recipientUserId !== user.userId) {
                     try {
                         const commentPreview = trimmedContent.substring(0, 100);
-                        const proposalUrl = absoluteProposalReviewUrl(proposalId, undefined, appOriginFromEnv(process.env));
+                        const appOrigin = appOriginFromEnv(process.env);
+                        const proposalUrl = user.role === 'client'
+                            ? absolutePortalAdminProposalUrl(proposalId, appOrigin)
+                            : absolutePortalProposalUrl(proposalId, appOrigin);
 
                         await dbQuery(
                             `INSERT INTO notifications (user_id, project_id, type, title, message, action_url, actor_id, actor_name)
                              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                             [
                                 recipientUserId,
-                                proposalId,
+                                projectId,
                                 'comment_created',
                                 'New Comment',
                                 `"${user.fullName}" commented: "${commentPreview}"`,
