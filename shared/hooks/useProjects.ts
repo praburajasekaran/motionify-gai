@@ -6,13 +6,16 @@ import { dbStatusToDisplay } from '@/utils/projectStatusMapping';
 export const projectKeys = {
   all: ['projects'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
-  list: (userId: string) => [...projectKeys.lists(), { userId }] as const,
+  list: (userId: string | null) => [...projectKeys.lists(), { userId: userId ?? 'all' }] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
 };
 
-export async function fetchProjects(userId: string): Promise<Project[]> {
-  const res = await fetch(`${API_BASE}/projects?userId=${encodeURIComponent(userId)}`, { credentials: 'include' });
+export async function fetchProjects(userId: string | null): Promise<Project[]> {
+  const url = userId
+    ? `${API_BASE}/projects?userId=${encodeURIComponent(userId)}`
+    : `${API_BASE}/projects`;
+  const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
   const data = await res.json();
 
@@ -39,11 +42,11 @@ export async function fetchProjects(userId: string): Promise<Project[]> {
   }));
 }
 
-export function useProjects(userId: string | undefined) {
+export function useProjects(userId: string | null | undefined) {
   return useQuery({
-    queryKey: projectKeys.list(userId!),
-    queryFn: () => fetchProjects(userId!),
-    enabled: !!userId,
+    queryKey: projectKeys.list(userId ?? null),
+    queryFn: () => fetchProjects(userId ?? null),
+    enabled: userId !== undefined,
     placeholderData: keepPreviousData,
     throwOnError: false,
   });
