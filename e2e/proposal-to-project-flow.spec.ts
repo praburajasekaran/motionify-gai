@@ -26,6 +26,14 @@ const MOCK_ADMIN_USER = {
   timezone: 'Asia/Kolkata',
 };
 
+const MOCK_CLIENT_USER = {
+  id: 'client-001',
+  name: 'Jane Doe',
+  email: 'jane@techstart.io',
+  role: 'client',
+  timezone: 'Asia/Kolkata',
+};
+
 const MOCK_INQUIRY = {
   id: 'inq-uuid-001',
   inquiry_number: 'INQ-2026-67',
@@ -45,6 +53,8 @@ const MOCK_INQUIRY = {
   recommendedVideoType: 'Product Demo',
   proposal_id: 'prop-uuid-001',
   proposalId: 'prop-uuid-001',
+  client_user_id: 'client-001',
+  clientUserId: 'client-001',
   assigned_to_admin_id: 'admin-001',
   created_at: '2026-03-01T10:00:00.000Z',
   createdAt: '2026-03-01T10:00:00.000Z',
@@ -116,7 +126,7 @@ const MOCK_PROPOSAL_SENT = {
 // Helper: Setup API mocks & login
 // ──────────────────────────────────────────
 
-async function setupMocksAndLogin(page: Page) {
+async function setupMocksAndLogin(page: Page, user = MOCK_ADMIN_USER) {
   // Log console errors for debugging
   page.on('console', msg => {
     if (msg.type() === 'error') {
@@ -143,7 +153,7 @@ async function setupMocksAndLogin(page: Page) {
 
   // Auth: { success, user }
   await page.route('**/.netlify/functions/auth-me*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, user: MOCK_ADMIN_USER }) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, user }) })
   );
 
   // Notifications: { success, notifications, unreadCount }
@@ -192,7 +202,7 @@ async function setupMocksAndLogin(page: Page) {
 
   // Users: plain array
   await page.route('**/.netlify/functions/users*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_ADMIN_USER]) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_ADMIN_USER, MOCK_CLIENT_USER]) })
   );
 
   // Navigate to portal - auth mock will auto-login as super_admin -> Dashboard
@@ -352,6 +362,35 @@ test.describe('Proposal Accepted -> Create Project Flow', () => {
     const isVisible = await createProjectBtn.isVisible({ timeout: 3000 });
     console.log(`  Create Project hidden for non-accepted: ${!isVisible ? 'PASS' : 'FAIL'}`);
     expect(isVisible).toBe(false);
+  });
+
+  test('client sent proposal routes Accept & Pay to payment without direct acceptance update', async ({ page }) => {
+    await setupMocksAndLogin(page, MOCK_CLIENT_USER);
+
+    const directAcceptanceRequests: string[] = [];
+    page.on('request', request => {
+      const method = request.method();
+      if (
+        request.url().includes('/.netlify/functions/proposal-detail/prop-uuid-002') &&
+        (method === 'PUT' || method === 'PATCH')
+      ) {
+        directAcceptanceRequests.push(`${method} ${request.url()}`);
+      }
+    });
+
+    await page.goto(`${BASE}/proposals/prop-uuid-002`);
+    await page.waitForTimeout(1500);
+
+    const acceptAndPayButton = page.getByRole('button', { name: 'Accept & Pay' });
+    await expect(acceptAndPayButton).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Accept Proposal' })).toHaveCount(0);
+
+    await Promise.all([
+      page.waitForURL(/\/payment\/prop-uuid-002/),
+      acceptAndPayButton.click(),
+    ]);
+
+    expect(directAcceptanceRequests).toEqual([]);
   });
 
   test('full journey verification: INQ-2026-67 -> proposal -> payments -> project binding', async ({ page }) => {

@@ -265,44 +265,11 @@ export function ProposalDetail() {
 
 
 
-  const handleAcceptProposal = async () => {
-    if (!proposal || !inquiry) return;
-    if (!confirm('Are you sure you want to accept this proposal? This will move the project to the setup phase.')) return;
+  const handleAcceptProposal = () => {
+    if (!proposal) return;
 
     setIsAccepting(true);
-    try {
-      // 1. Update Proposal Status
-      const updatedProposal = await updateProposal(proposal.id, {
-        status: 'accepted',
-        acceptedAt: new Date().toISOString(),
-      });
-      setProposal(updatedProposal);
-
-      // 2. Update Inquiry Status
-      // We need to import updateInquiryStatus or just use updateInquiry if status logic isn't complex there.
-      // Looking at imports, updateInquiry is imported.
-      // Let's use updateInquiry directly as we want to be explicit.
-      // Actually checking lib/inquiries.ts, updateInquiryStatus handles some side effects maybe?
-      // updateInquiryStatus(id, status, additionalData)
-      // But we haven't imported updateInquiryStatus at the top yet.
-      // Let's stick to updateProposal for now and maybe update inquiry manually.
-
-      // We need to update inquiry status to 'accepted'
-      await import('../../lib/inquiries').then(({ updateInquiryStatus }) =>
-        updateInquiryStatus(inquiry.id, 'accepted')
-      );
-
-      // Refresh inquiry data
-      const updatedInquiry = await getInquiryById(inquiry.id);
-      setInquiry(updatedInquiry);
-
-      alert('Proposal accepted! You can now proceed to payment.');
-    } catch (error) {
-      console.error('Error accepting proposal:', error);
-      alert('Failed to accept proposal. Please try again.');
-    } finally {
-      setIsAccepting(false);
-    }
+    navigate(`/payment/${proposal.id}`);
   };
 
   const handleRejectProposal = async (feedback: string) => {
@@ -1058,33 +1025,46 @@ export function ProposalDetail() {
               {isAccepting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Accepting...
+                  Opening payment...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Accept Proposal
+                  <DollarSign className="w-4 h-4" />
+                  Accept &amp; Pay
                 </>
               )}
             </button>
           </div>
         )}
 
-        {/* Payment Button for Accepted Proposals */}
+        {/* Payment / project state for accepted proposals */}
         {isClient && proposal.status === 'accepted' && (
           <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-card/80 backdrop-blur-sm p-4 -mx-4 border-t border-border">
             <div className="mr-auto text-sm text-muted-foreground">
-              <span className="font-medium text-emerald-600">Proposal Accepted!</span> Please proceed to payment to start the project.
+              <span className="font-medium text-emerald-600">Proposal Accepted!</span>{' '}
+              {linkedProjectId
+                ? 'Your project is ready.'
+                : completedAdvancePayment
+                  ? 'Payment received. Project setup is finishing.'
+                  : 'Please proceed to payment to start the project.'}
             </div>
-            <button
-              onClick={() => {
-                navigate(`/payment/${proposal.id}`);
-              }}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors shadow-lg shadow-violet-500/20"
-            >
-              <DollarSign className="w-4 h-4" />
-              Proceed to Payment
-            </button>
+            {linkedProjectId ? (
+              <button
+                onClick={() => navigate(`/projects/${linkedProjectId}`)}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors shadow-lg shadow-violet-500/20"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Open Project
+              </button>
+            ) : !completedAdvancePayment ? (
+              <button
+                onClick={() => navigate(`/payment/${proposal.id}`)}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-700 transition-colors shadow-lg shadow-violet-500/20"
+              >
+                <DollarSign className="w-4 h-4" />
+                Proceed to Payment
+              </button>
+            ) : null}
           </div>
         )}
       </div>
