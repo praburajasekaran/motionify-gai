@@ -1,3 +1,6 @@
+import LazyYouTubeEmbed from '../LazyYouTubeEmbed';
+import { motionifyProcessVideo } from '../../data/workVideos';
+
 export default function ProcessTimeline() {
   return (
     <section className="relative overflow-hidden py-20 sm:py-28 bg-gradient-to-br from-gray-950 via-slate-900 to-gray-900 text-white">
@@ -75,6 +78,22 @@ export default function ProcessTimeline() {
             </div>
           </div>
 
+          <div className="mx-auto mt-12 max-w-4xl">
+            <div className="overflow-hidden rounded-lg bg-white/[0.04] ring-1 ring-white/10 shadow-2xl">
+              <LazyYouTubeEmbed
+                videoId={motionifyProcessVideo.id}
+                title={motionifyProcessVideo.title}
+                className="rounded-b-none ring-0"
+              />
+              <div className="px-5 py-4 sm:px-6">
+                <h3 className="text-lg font-semibold text-white">See the Motionify process</h3>
+                <p className="mt-1 text-sm leading-6 text-gray-400">
+                  A quick look at how ideas move through strategy, creative production, review, and delivery.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Bottom note */}
           <div className="mt-12 text-center">
             <p className="text-sm text-gray-500 italic">Your complete journey — from concept to delivery</p>
@@ -148,7 +167,5 @@ const processSteps = [
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-teal-400"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>`
   },
 ];
-
-
 
 
