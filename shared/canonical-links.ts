@@ -74,6 +74,10 @@ export function portalProjectPath(projectId: string, params?: { tab?: string; ta
   return withQuery(portalPath(`/projects/${projectId}`), params);
 }
 
+export function portalProposalPath(proposalId: string): string {
+  return portalPath(`/proposals/${proposalId}`);
+}
+
 export function portalAdminProposalPath(proposalId: string): string {
   return portalPath(`/admin/proposals/${proposalId}`);
 }
@@ -111,6 +115,10 @@ export function absolutePortalProjectUrl(
   origin?: string,
 ): string {
   return absoluteUrl(portalProjectPath(projectId, params), origin);
+}
+
+export function absolutePortalProposalUrl(proposalId: string, origin?: string): string {
+  return absoluteUrl(portalProposalPath(proposalId), origin);
 }
 
 export function absolutePortalAdminProposalUrl(proposalId: string, origin?: string): string {

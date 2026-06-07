@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import type { Handler } from '@netlify/functions';
 import {
   absolutePortalAdminProposalUrl,
+  absolutePortalProposalUrl,
   absoluteProposalReviewUrl,
   absoluteUrl,
   appOriginFromEnv,
@@ -438,7 +439,10 @@ export async function sendCommentNotificationEmail(data: {
 }) {
   const roleLabel = data.commenterRole === 'client' ? 'Client' : 'Admin';
   const proposalDisplay = data.proposalNumber ? `Proposal ${data.proposalNumber}` : 'your proposal';
-  const proposalUrl = absolutePortalAdminProposalUrl(data.proposalId, appOriginFromEnv(process.env));
+  const appOrigin = appOriginFromEnv(process.env);
+  const proposalUrl = data.commenterRole === 'client'
+    ? absolutePortalAdminProposalUrl(data.proposalId, appOrigin)
+    : absolutePortalProposalUrl(data.proposalId, appOrigin);
 
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">New Comment on Your Proposal</h2>
