@@ -36,6 +36,7 @@ import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
 import { TermsBanner } from '../components/project/TermsBanner';
 import { ProjectSectionHeader } from '../components/portal/ProjectSectionHeader';
+import { API_BASE } from '../lib/api-config';
 
 // --- Activity formatting helpers ---
 // isCurrentUser: true when the activity's userId matches the logged-in user
@@ -267,7 +268,7 @@ export const ProjectDetail = () => {
     const { data: project = null, isLoading: projectLoading } = useQuery<Project | null>({
         queryKey: ['project', id],
         queryFn: async () => {
-            const response = await fetch(`/api/projects/${id}`, { credentials: 'include' });
+            const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(id!)}`, { credentials: 'include' });
             if (!response.ok) {
                 console.error(`API returned ${response.status} for project ${id}`);
                 return null;
