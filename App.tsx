@@ -17,6 +17,7 @@ import { InquiryVerification } from './pages/public/InquiryVerification';
 import { classifyRoute } from './lib/route-classification';
 import { resolveRouteAlias } from './shared/route-aliases';
 import TawkChat from './components/TawkChat';
+import { Toaster } from './components/ui/sonner';
 
 // Lazy-loaded page components for route-based code splitting
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -103,6 +104,7 @@ function App() {
                 <AuthProvider>
                   <NotificationProvider>
                     <SentryUserSync />
+                    <Toaster />
                     <React.Suspense fallback={
                       <div className="min-h-screen flex items-center justify-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
@@ -153,6 +155,7 @@ function App() {
               ) : (
                 <BrowserRouter>
                   <TawkChat />
+                  <Toaster />
                   <React.Suspense fallback={
                     <div className="min-h-screen flex items-center justify-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>

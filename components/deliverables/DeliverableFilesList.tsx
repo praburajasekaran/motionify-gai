@@ -6,6 +6,8 @@ import { storageService } from '@/services/storage';
 import { useDeliverables } from './DeliverableContext';
 import { isClient } from '@/utils/deliverablePermissions';
 import { formatTimestamp, formatDateTime } from '@/utils/dateFormatting';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from 'sonner';
 
 export interface DeliverableFilesListProps {
     deliverable: Deliverable;
@@ -79,6 +81,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [fileIdPendingDelete, setFileIdPendingDelete] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
     // Clients cannot see files when deliverable is still in beta_ready (not yet sent for review)
@@ -97,7 +100,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             if (url) window.open(url, '_blank');
         } catch (e) {
             console.error("Failed to get download URL", e);
-            alert("Failed to open file");
+            toast.error("Failed to open file");
         }
     };
 
@@ -142,8 +145,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     };
 
     const handleDeleteFile = async (fileId: string) => {
-        if (!confirm('Are you sure you want to delete this file?')) return;
-
         setDeletingId(fileId);
         try {
             const response = await fetch(`/api/deliverable-files/${fileId}`, {
@@ -157,9 +158,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 
             setFileItems(prev => prev.filter(f => f.id !== fileId));
             onFilesChange?.();
+            setFileIdPendingDelete(null);
         } catch (e) {
             console.error("Failed to delete file", e);
-            alert("Failed to delete file");
+            toast.error("Failed to delete file");
         } finally {
             setDeletingId(null);
         }
@@ -342,7 +344,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id); }}
+                                                        onClick={(e) => { e.stopPropagation(); setFileIdPendingDelete(file.id); }}
                                                         disabled={deletingId === file.id}
                                                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                                     >
@@ -435,6 +437,18 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                     )}
                 </>
             )}
+            <ConfirmDialog
+                isOpen={fileIdPendingDelete !== null}
+                onClose={() => setFileIdPendingDelete(null)}
+                onConfirm={() => {
+                    if (fileIdPendingDelete) handleDeleteFile(fileIdPendingDelete);
+                }}
+                title="Delete File?"
+                message="Are you sure you want to delete this file?"
+                confirmLabel="Delete"
+                variant="danger"
+                isLoading={deletingId !== null}
+            />
         </div>
     );
 };

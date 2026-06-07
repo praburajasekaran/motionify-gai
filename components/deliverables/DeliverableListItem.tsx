@@ -5,7 +5,7 @@
  * Shows: icon | title | status badge | due date | progress | actions
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -21,6 +21,8 @@ import { Deliverable, DeliverableStatus } from '../../types/deliverable.types';
 import { storageService } from '../../services/storage';
 import { useDeliverables } from './DeliverableContext';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { toast } from 'sonner';
 
 export interface DeliverableListItemProps {
   deliverable: Deliverable;
@@ -48,6 +50,7 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
 }) => {
   const navigate = useNavigate();
   const { currentUser, deleteDeliverable } = useDeliverables();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const rawStatusConfig = STATUS_CONFIG[deliverable.status];
   // Clients see "In Progress" instead of "Beta Ready" — it's an internal team concept
@@ -60,15 +63,18 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   // Permission check: only super_admin and support can delete
   const canDelete = currentUser?.role === 'super_admin' || currentUser?.role === 'support';
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Delete "${deliverable.title}"? This will permanently remove all files.`)) {
-      try {
-        await deleteDeliverable(deliverable.id);
-      } catch (err) {
-        console.error('Delete error:', err);
-        alert(err instanceof Error ? err.message : 'Failed to delete deliverable');
-      }
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteDeliverable(deliverable.id);
+      setShowDeleteDialog(false);
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete deliverable');
     }
   };
 
@@ -101,7 +107,8 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
   };
 
   return (
-    <div
+    <>
+      <div
       className={cn(
         'group flex items-center gap-4 p-4 bg-card border border-border rounded-lg',
         'hover:border-foreground/15 transition-colors cursor-pointer',
@@ -193,6 +200,16 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
         )}
         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </div>
-    </div>
+      </div>
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Deliverable?"
+        message={`Delete "${deliverable.title}"? This will permanently remove all files.`}
+        confirmLabel="Delete"
+        variant="danger"
+      />
+    </>
   );
 };

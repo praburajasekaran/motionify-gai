@@ -7,6 +7,7 @@ import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions } from '../../lib/permissions';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { toast } from 'sonner';
 
 interface DeliverableInput {
   id: string;
@@ -104,7 +105,7 @@ export function ProposalBuilder() {
 
   const handleRemoveDeliverable = (id: string) => {
     if (deliverables.length === 1) {
-      alert('You must have at least one deliverable');
+      toast.error('You must have at least one deliverable');
       return;
     }
     setDeliverables(deliverables.filter((d) => d.id !== id));
@@ -172,13 +173,13 @@ export function ProposalBuilder() {
   const handleSaveProposal = async () => {
     const error = validateForm();
     if (error) {
-      alert(error);
+      toast.error(error);
       return;
     }
 
     const pricing = calculatePricing();
     if (!pricing) {
-      alert('Invalid pricing');
+      toast.error('Invalid pricing');
       return;
     }
 
@@ -216,16 +217,13 @@ export function ProposalBuilder() {
       console.log('Advance Payment:', formatCurrency(pricing.advanceAmount));
       console.log('========================================');
 
-      alert(`Proposal created successfully!
-
-Share this link with client:
-${proposalLink}
-
-✅ Email notification logged to console.`);
+      toast.success('Proposal created successfully. Email notification logged to console.', {
+        description: proposalLink,
+      });
       navigate(`/admin/inquiries/${inquiry.id}`);
     } catch (error) {
       console.error('Error creating proposal:', error);
-      alert('Failed to create proposal. Please try again.');
+      toast.error('Failed to create proposal. Please try again.');
     } finally {
       setIsSaving(false);
     }

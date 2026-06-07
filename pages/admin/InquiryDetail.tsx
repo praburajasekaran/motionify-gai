@@ -9,6 +9,7 @@ import { encodeBase64 } from '../../utils/encoding';
 import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { absoluteProposalReviewUrl } from '../../lib/canonical-links';
 import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
+import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -148,7 +149,7 @@ export function InquiryDetail() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating inquiry:', error);
-      alert('Failed to update inquiry. Please try again.');
+      toast.error('Failed to update inquiry. Please try again.');
     } finally {
       setIsSaving(false);
     }

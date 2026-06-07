@@ -5,6 +5,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
+import { toast } from 'sonner';
 
 interface User {
     id: string;
@@ -97,7 +98,7 @@ export function UserManagement() {
                 await loadUsers();
                 setIsCreateModalOpen(false);
                 setFormData({ email: '', full_name: '', role: 'support' });
-                alert(`User created! Magic link sent to ${formData.email} (check server logs)`);
+                toast.success(`User created. Magic link sent to ${formData.email}.`);
             } else {
                 setError(data.error || 'Failed to create user');
             }
@@ -141,7 +142,7 @@ export function UserManagement() {
             if (data.success) {
                 await loadUsers();
                 closeDeactivateModal();
-                alert(`User ${userToDeactivate.full_name} has been deactivated. They have been notified via email.`);
+                toast.success(`User ${userToDeactivate.full_name} has been deactivated. They have been notified via email.`);
             } else {
                 setError(data.error || 'Failed to deactivate user');
             }

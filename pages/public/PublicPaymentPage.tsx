@@ -5,6 +5,7 @@ import { getInquiryById, type Inquiry } from '../../lib/inquiries';
 import { getPublicProposalById, type Proposal } from '../../lib/proposals';
 import { formatCurrency } from '../../utils/format';
 import { projectAccessPath } from '../../lib/canonical-links';
+import { toast } from 'sonner';
 
 interface RazorpayOptions {
   key: string;
@@ -135,13 +136,13 @@ export function PublicPaymentPage() {
 
       const checkout = new window.Razorpay(options);
       checkout.on('payment.failed', (failure: any) => {
-        alert(failure.error?.description || 'Payment failed. Please try again.');
+        toast.error(failure.error?.description || 'Payment failed. Please try again.');
         setProcessing(false);
       });
       checkout.open();
     } catch (error) {
       console.error('Payment initiation failed', error);
-      alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
       setProcessing(false);
     }
   }
