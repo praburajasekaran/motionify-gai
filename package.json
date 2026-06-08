@@ -10,6 +10,7 @@
     "dev:portal-functions": "concurrently -n \"portal,functions\" -c \"cyan,green\" \"npm run dev:portal\" \"npm run dev:functions\"",
     "dev:all": "concurrently -n \"app,functions\" -c \"cyan,green\" \"npm run dev:portal\" \"npm run dev:functions\"",
     "build": "vite build",
+    "verify:netlify-redirects": "npm run build && node scripts/verify-netlify-redirects.mjs",
     "verify:production-flip": "node scripts/verify-production-flip.mjs",
     "verify:runtime-retirement": "node scripts/verify-production-flip.mjs --runtime-retirement",
     "verify:spa-redirects": "node scripts/verify-spa-redirects.mjs",
