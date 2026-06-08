@@ -134,6 +134,54 @@ function buildAdminPaymentFilters(queryStringParameters: Record<string, string> 
   };
 }
 
+export function buildAdminPaymentsQuery(queryStringParameters: Record<string, string> | undefined) {
+  const { whereClause, params } = buildAdminPaymentFilters(queryStringParameters);
+
+  return {
+    params,
+    text: `SELECT
+       pay.id,
+       pay.amount,
+       pay.currency,
+       pay.payment_type,
+       pay.status,
+       pay.razorpay_order_id,
+       pay.razorpay_payment_id,
+       pay.paid_at,
+       pay.created_at,
+       COALESCE(pay.project_id, proj.id) AS project_id,
+       proj.project_number,
+       proj.status AS project_status,
+       u.id AS client_id,
+       COALESCE(u.full_name, i.contact_name) AS client_name,
+       COALESCE(u.email, i.contact_email) AS client_email
+     FROM payments pay
+     LEFT JOIN proposals prop ON pay.proposal_id = prop.id
+     LEFT JOIN inquiries i ON prop.inquiry_id = i.id
+     LEFT JOIN LATERAL (
+       SELECT
+         p.id,
+         p.project_number,
+         p.status,
+         p.client_user_id
+       FROM projects p
+       WHERE p.id = pay.project_id OR (
+         pay.project_id IS NULL
+         AND pay.proposal_id IS NOT NULL
+         AND p.proposal_id = pay.proposal_id
+       )
+       ORDER BY
+         CASE WHEN p.id = pay.project_id THEN 0 ELSE 1 END,
+         p.created_at DESC,
+         p.id
+       LIMIT 1
+     ) proj ON TRUE
+     LEFT JOIN users u ON proj.client_user_id = u.id
+     ${whereClause}
+     ORDER BY pay.created_at DESC`,
+  };
+}
+
 async function handleAdminProjects(headers: Record<string, string>) {
   const result = await dbQuery(
     `SELECT
@@ -162,37 +210,11 @@ async function handleAdminPayments(
   event: NetlifyEvent,
   headers: Record<string, string>
 ) {
-  const { whereClause, params } = buildAdminPaymentFilters(event.queryStringParameters);
+  const query = buildAdminPaymentsQuery(event.queryStringParameters);
 
   const result = await dbQuery(
-    `SELECT
-       pay.id,
-       pay.amount,
-       pay.currency,
-       pay.payment_type,
-       pay.status,
-       pay.razorpay_order_id,
-       pay.razorpay_payment_id,
-       pay.paid_at,
-       pay.created_at,
-       COALESCE(pay.project_id, proj.id) AS project_id,
-       proj.project_number,
-       proj.status AS project_status,
-       u.id AS client_id,
-       COALESCE(u.full_name, i.contact_name) AS client_name,
-       COALESCE(u.email, i.contact_email) AS client_email
-     FROM payments pay
-     LEFT JOIN proposals prop ON pay.proposal_id = prop.id
-     LEFT JOIN inquiries i ON prop.inquiry_id = i.id
-     LEFT JOIN projects proj ON proj.id = pay.project_id OR (
-       pay.project_id IS NULL
-       AND pay.proposal_id IS NOT NULL
-       AND proj.proposal_id = pay.proposal_id
-     )
-     LEFT JOIN users u ON proj.client_user_id = u.id
-     ${whereClause}
-     ORDER BY pay.created_at DESC`,
-    params
+    query.text,
+    query.params
   );
 
   const payments = result.rows.map(mapAdminPayment);
