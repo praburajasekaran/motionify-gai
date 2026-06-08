@@ -23,6 +23,11 @@ landing-page-new/public/portal/
 # Local Netlify folder
 .netlify
 
+# Local generated data
+data/state_store.db/
+data/stream_store/
+graphify-out/
+
 # Git worktrees
 worktrees/
 .worktrees/

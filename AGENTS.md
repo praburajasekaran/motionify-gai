@@ -2,6 +2,12 @@
 
 ## Agent skills
 
+### Disabled connectors
+
+Do not use the Aquarius Zap / Zapier MCP connector in this project. Do not call
+`mcp__codex_apps__aquarius_zap` tools, enable/disable Zapier actions, execute
+Zapier reads/writes, or modify Zapier skills from this repository context.
+
 ### Issue tracker
 
 Issues are tracked as local markdown files under `.scratch/<feature>/`, even though this project pushes to `https://github.com/praburajasekaran/motionify-gai`. See `docs/agents/issue-tracker.md`.
