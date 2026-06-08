@@ -6,7 +6,8 @@
  * Implements TC-NT-004: In-App Notification Bell
  */
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthContext } from './AuthContext';
 import { API_BASE } from '@/lib/api-config';
 
@@ -64,53 +65,50 @@ interface NotificationProviderProps {
     children: ReactNode;
 }
 
+const notificationKeys = {
+    list: (userId: string) => ['notifications', userId] as const,
+};
 
+async function fetchNotifications(userId: string): Promise<AppNotification[]> {
+    const response = await fetch(`${API_BASE}/notifications?userId=${userId}`, {
+        credentials: 'include',
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error?.message || data.message || 'Failed to fetch notifications');
+    }
+
+    return data.success && data.notifications ? data.notifications : [];
+}
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
     const { user } = useAuthContext();
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const queryClient = useQueryClient();
+    const notificationsQuery = useQuery({
+        queryKey: user?.id ? notificationKeys.list(user.id) : ['notifications', 'anonymous'],
+        queryFn: () => fetchNotifications(user!.id),
+        enabled: !!user?.id,
+        staleTime: 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+        retry: false,
+        throwOnError: false,
+    });
+
+    const notifications = notificationsQuery.data ?? [];
 
     const unreadCount = useMemo(
         () => notifications.filter(n => !n.read).length,
         [notifications]
     );
 
-    // Fetch notifications from API
-    const fetchNotifications = useCallback(async () => {
-        if (!user?.id) {
-            setNotifications([]);
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await fetch(`${API_BASE}/notifications?userId=${user.id}`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-
-            if (data.success && data.notifications) {
-                setNotifications(data.notifications);
-            }
-        } catch (error) {
-            console.error('Failed to fetch notifications:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [user?.id]);
-
-    // Fetch on mount and when user changes
-    useEffect(() => {
-        fetchNotifications();
-    }, [fetchNotifications]);
-
     const markAsRead = useCallback(async (id: string) => {
         if (!user?.id) return;
+        const queryKey = notificationKeys.list(user.id);
 
         // Optimistic update
-        setNotifications(prev =>
-            prev.map(n => (n.id === id ? { ...n, read: true } : n))
+        queryClient.setQueryData<AppNotification[]>(queryKey, prev =>
+            (prev ?? []).map(n => (n.id === id ? { ...n, read: true } : n))
         );
 
         try {
@@ -122,16 +120,18 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             });
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
-            // Revert on error
-            fetchNotifications();
+            queryClient.invalidateQueries({ queryKey });
         }
-    }, [user?.id, fetchNotifications]);
+    }, [queryClient, user?.id]);
 
     const markAllAsRead = useCallback(async () => {
         if (!user?.id) return;
+        const queryKey = notificationKeys.list(user.id);
 
         // Optimistic update
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        queryClient.setQueryData<AppNotification[]>(queryKey, prev =>
+            (prev ?? []).map(n => ({ ...n, read: true }))
+        );
 
         try {
             await fetch(`${API_BASE}/notifications?markAll=true`, {
@@ -142,13 +142,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             });
         } catch (error) {
             console.error('Failed to mark all notifications as read:', error);
-            // Revert on error
-            fetchNotifications();
+            queryClient.invalidateQueries({ queryKey });
         }
-    }, [user?.id, fetchNotifications]);
+    }, [queryClient, user?.id]);
 
     const addNotification = useCallback(
         (notification: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+            if (!user?.id) return;
             // For now, just add to local state
             // In production, this would be handled by real-time updates (WebSocket/SSE)
             const newNotification: AppNotification = {
@@ -157,19 +157,23 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
                 timestamp: Date.now(),
                 read: false,
             };
-            setNotifications(prev => [newNotification, ...prev]);
+            queryClient.setQueryData<AppNotification[]>(
+                notificationKeys.list(user.id),
+                prev => [newNotification, ...(prev ?? [])]
+            );
         },
-        []
+        [queryClient, user?.id]
     );
 
     const refreshNotifications = useCallback(async () => {
-        await fetchNotifications();
-    }, [fetchNotifications]);
+        if (!user?.id) return;
+        await queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) });
+    }, [queryClient, user?.id]);
 
     const value: NotificationContextType = {
         notifications,
         unreadCount,
-        isLoading,
+        isLoading: notificationsQuery.isLoading,
         markAsRead,
         markAllAsRead,
         addNotification,

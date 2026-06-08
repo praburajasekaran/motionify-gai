@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE } from '@/lib/api-config';
+import { clearAuthSession, getStoredUser } from '@/lib/auth';
 import { setUserTimezone } from '@/utils/dateFormatting';
 import type { User } from '@/types';
 
@@ -27,6 +28,7 @@ async function fetchAuthSession(): Promise<User | null> {
     }
   }
 
+  clearAuthSession();
   setUserTimezone(null);
   return null;
 }
@@ -35,6 +37,10 @@ export function useAuth() {
   return useQuery({
     queryKey: authKeys.session(),
     queryFn: fetchAuthSession,
+    initialData: () => getStoredUser(),
+    // Stored user data is only a paint optimization. Always validate the
+    // httpOnly cookie in the background instead of trusting localStorage.
+    initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000, // 5 minutes — match existing refresh interval
     gcTime: 10 * 60 * 1000,
     retry: false, // Auth failures shouldn't retry
