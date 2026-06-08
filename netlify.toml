@@ -43,6 +43,15 @@
   status = 404
   force = true
 
+# Missing Vite assets must not fall through to the SPA entrypoint. A stale
+# browser session can request old hashed chunks after a deploy; serving
+# index.html for those URLs turns a recoverable cache miss into a module error.
+[[redirects]]
+  from = "/assets/*"
+  to = "/404"
+  status = 404
+  force = true
+
 # Slice B compatibility aliases for public handoff links
 [[redirects]]
   from = "/auth/verify"

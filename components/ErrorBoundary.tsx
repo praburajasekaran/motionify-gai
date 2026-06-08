@@ -7,6 +7,40 @@ interface Props {
   onReset?: () => void;
 }
 
+const CHUNK_RELOAD_STORAGE_KEY = 'motionify:chunk-reload-attempted';
+
+function isChunkLoadError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk \d+ failed/i.test(error.message);
+}
+
+function hasAttemptedChunkReload(): boolean {
+  try {
+    return window.sessionStorage.getItem(CHUNK_RELOAD_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function setAttemptedChunkReload(): void {
+  try {
+    window.sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, 'true');
+  } catch {
+    // If sessionStorage is unavailable, still reload once for stale chunk recovery.
+  }
+}
+
+function clearAttemptedChunkReload(): void {
+  try {
+    window.sessionStorage.removeItem(CHUNK_RELOAD_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors; the explicit reload below is still the recovery path.
+  }
+}
+
 function ErrorFallback({
   error,
   resetError,
@@ -18,11 +52,33 @@ function ErrorFallback({
   onReset?: () => void;
   fallback?: ReactNode;
 }) {
+  const isRecoverableChunkError = isChunkLoadError(error);
+  const shouldAutoReload = !fallback && typeof window !== 'undefined' && isRecoverableChunkError && !hasAttemptedChunkReload();
+
+  React.useEffect(() => {
+    if (!shouldAutoReload) {
+      return;
+    }
+
+    setAttemptedChunkReload();
+    window.location.reload();
+  }, [shouldAutoReload]);
+
+  if (shouldAutoReload) {
+    return null;
+  }
+
   if (fallback) {
     return <>{fallback}</>;
   }
 
   const handleReset = () => {
+    if (isRecoverableChunkError) {
+      clearAttemptedChunkReload();
+      window.location.reload();
+      return;
+    }
+
     onReset?.();
     resetError();
   };

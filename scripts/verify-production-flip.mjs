@@ -9,6 +9,10 @@ const paymentSpec = fs.readFileSync('e2e/payment-flow.spec.ts', 'utf8');
 const rootScriptEntries = Object.entries(packageJson.scripts || {});
 const rootScriptText = rootScriptEntries.map(([name, value]) => `${name}: ${value}`).join('\n');
 const removedLandingDir = ['landing-page', 'new'].join('-');
+const missingAssetsRedirectPattern = /from\s*=\s*"\/assets\/\*"\s+to\s*=\s*"\/404"\s+status\s*=\s*404\s+force\s*=\s*true/s;
+const spaFallbackPattern = /from\s*=\s*"\/\*"\s+to\s*=\s*"\/index\.html"\s+status\s*=\s*200/s;
+const missingAssetsRedirectIndex = netlifyToml.search(missingAssetsRedirectPattern);
+const spaFallbackIndex = netlifyToml.search(spaFallbackPattern);
 
 function pathExists(relativePath) {
   return fs.existsSync(path.join(process.cwd(), relativePath));
@@ -69,7 +73,7 @@ const checks = [
   },
   {
     name: 'catch-all SPA fallback rewrites to the Vite entrypoint',
-    pass: /from\s*=\s*"\/\*"\s+to\s*=\s*"\/index\.html"\s+status\s*=\s*200/s.test(netlifyToml),
+    pass: spaFallbackIndex !== -1,
   },
   {
     name: 'Vite hashed assets have immutable cache headers',
@@ -78,6 +82,14 @@ const checks = [
   {
     name: 'Vite sourcemaps are blocked',
     pass: /from\s*=\s*"\/assets\/\*\.map"\s+to\s*=\s*"\/404"\s+status\s*=\s*404\s+force\s*=\s*true/s.test(netlifyToml),
+  },
+  {
+    name: 'missing Vite assets return 404 instead of the SPA entrypoint',
+    pass: missingAssetsRedirectIndex !== -1,
+  },
+  {
+    name: 'missing Vite asset 404 is evaluated before the SPA fallback',
+    pass: missingAssetsRedirectIndex !== -1 && spaFallbackIndex !== -1 && missingAssetsRedirectIndex < spaFallbackIndex,
   },
   {
     name: 'legacy portal host redirects to motionify.studio',
