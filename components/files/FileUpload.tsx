@@ -1,6 +1,6 @@
 import React, { useRef, useState, DragEvent } from 'react';
-import { Upload, Loader2, PlusCircle, FileVideo, FileImage, FileText, File as FileIcon, X } from 'lucide-react';
-import { Button } from '@/components/ui/design-system';
+import { Upload, Loader2, X } from 'lucide-react';
+import { cn } from '@/components/ui/design-system';
 import { storageService } from '@/services/storage';
 import { toast } from 'sonner';
 
@@ -13,12 +13,14 @@ interface FileUploadProps {
     folder?: 'beta' | 'final' | 'misc';
 }
 
-const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('video/')) return FileVideo;
-    if (mimeType.startsWith('image/')) return FileImage;
-    if (mimeType.includes('pdf') || mimeType.includes('document')) return FileText;
-    return FileIcon;
-};
+const FILE_TYPE_HINTS = [
+    { label: 'MP4', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+    { label: 'MOV', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+    { label: 'PNG', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { label: 'JPG', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { label: 'PDF', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+    { label: 'AI', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+];
 
 export const FileUpload: React.FC<FileUploadProps> = ({
     projectId,
@@ -48,7 +50,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     };
 
     const validateAndUpload = async (file: File) => {
-        // 1. Validation
         if (file.size > maxSizeInBytes) {
             const error = new Error(`File too large. Max size is ${(maxSizeInBytes / (1024 * 1024)).toFixed(0)}MB`);
             if (onError) onError(error);
@@ -73,7 +74,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             }
         }
 
-        // 2. Upload
         setIsUploading(true);
         setProgress(0);
         setUploadingFileName(file.name);
@@ -146,8 +146,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         await validateAndUpload(file);
     };
 
-    const FileTypeIcon = uploadingFileName ? getFileIcon(uploadingFileName.split('.').pop() || '') : PlusCircle;
-
     return (
         <>
             <input
@@ -159,17 +157,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             />
 
             <div
-                className={`
-                    group flex flex-col items-center justify-center 
-                    border-dashed border-2 
-                    aspect-video rounded-xl
-                    transition-all duration-200
-                    ${isUploading ? 'cursor-default' : 'cursor-pointer'}
-                    ${isDragging
-                        ? 'bg-primary/5 border-primary scale-[1.02] shadow-lg'
-                        : 'bg-muted/50 hover:bg-muted border-border hover:border-primary/50'
-                    }
-                `}
+                className={cn(
+                    "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-300",
+                    isUploading
+                        ? "cursor-default border-primary/30 bg-primary/2"
+                        : isDragging
+                            ? "cursor-grab border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/5"
+                            : "cursor-pointer border-border hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm",
+                )}
+                style={{ minHeight: '180px' }}
                 onClick={handleClick}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
@@ -177,17 +173,22 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 onDrop={handleDrop}
             >
                 {isUploading ? (
-                    <div className="flex flex-col items-center gap-3 px-4 w-full">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <div className="w-full max-w-[200px]">
-                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                <span className="truncate max-w-[140px]" title={uploadingFileName}>
+                    <div className="flex flex-col items-center gap-4 px-6 py-8 w-full max-w-sm">
+                        <div className="relative">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="h-2 w-2 rounded-full bg-primary" />
+                            </div>
+                        </div>
+                        <div className="w-full space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="truncate max-w-[200px] font-medium text-foreground" title={uploadingFileName}>
                                     {uploadingFileName}
                                 </span>
-                                <span className="font-mono">{progress}%</span>
+                                <span className="font-mono text-sm text-muted-foreground tabular-nums">{progress}%</span>
                             </div>
                             <div className="relative flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
                                         style={{ width: `${progress}%` }}
@@ -198,7 +199,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                                         e.stopPropagation();
                                         handleCancel();
                                     }}
-                                    className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                                    className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-destructive transition-colors shrink-0"
                                     title="Cancel upload"
                                 >
                                     <X className="h-4 w-4" />
@@ -208,29 +209,60 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                     </div>
                 ) : (
                     <>
-                        <div className={`
-                            h-14 w-14 rounded-full bg-card shadow-sm border flex items-center justify-center mb-4 
-                            transition-all duration-300
-                            ${isDragging
-                                ? 'border-primary scale-110 shadow-md'
-                                : 'border-border group-hover:scale-110 group-hover:border-primary/50'
-                            }
-                        `}>
-                            <PlusCircle className={`
-                                h-7 w-7 transition-colors
-                                ${isDragging ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}
-                            `} />
+                        {/* Upload icon */}
+                        <div
+                            className={cn(
+                                "h-14 w-14 rounded-2xl flex items-center justify-center mb-3 transition-all duration-300",
+                                isDragging
+                                    ? "bg-primary/10 scale-110"
+                                    : "bg-card border border-border group-hover:border-primary/30 shadow-sm"
+                            )}
+                        >
+                            <Upload
+                                className={cn(
+                                    "h-6 w-6 transition-colors duration-300",
+                                    isDragging ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                                )}
+                            />
                         </div>
-                        <p className={`
-                            text-sm font-bold transition-colors
-                            ${isDragging ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}
-                        `}>
-                            {isDragging ? 'Drop file here' : 'Upload New Asset'}
+
+                        {/* Text */}
+                        <p
+                            className={cn(
+                                "text-base font-semibold transition-colors",
+                                isDragging ? "text-primary" : "text-foreground"
+                            )}
+                        >
+                            {isDragging ? 'Drop file to upload' : 'Upload a file'}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-[80%] text-center">
-                            Drag & drop or click to browse • Up to 1GB
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Drag & drop or <span className="text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary">click to browse</span>
                         </p>
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">
+                            Max file size: {(maxSizeInBytes / (1024 * 1024 * 1024)).toFixed(0)}GB
+                        </p>
+
+                        {/* File type hints */}
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4">
+                            {FILE_TYPE_HINTS.map((hint) => (
+                                <span
+                                    key={hint.label}
+                                    className={cn(
+                                        "inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md border transition-opacity",
+                                        hint.color,
+                                        isDragging ? "opacity-80" : "opacity-60 group-hover:opacity-90"
+                                    )}
+                                >
+                                    {hint.label}
+                                </span>
+                            ))}
+                        </div>
                     </>
+                )}
+
+                {/* Drag indicator glow */}
+                {isDragging && (
+                    <div className="absolute inset-0 rounded-xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background pointer-events-none animate-pulse" />
                 )}
             </div>
         </>

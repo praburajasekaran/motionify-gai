@@ -1229,33 +1229,30 @@ export const ProjectDetail = () => {
                 {/* --- FILES TAB --- */}
                 <TabsContent value="files">
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-bold tracking-tight text-foreground">Project Files</h3>
-                                <p className="text-sm text-muted-foreground">Shared assets and documents for this project.</p>
-                            </div>
+                        {/* Header */}
+                        <div>
+                            <h3 className="text-xl font-bold tracking-tight text-foreground">Project Files</h3>
+                            <p className="text-sm text-muted-foreground">Shared assets and documents for this project.</p>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {/* Upload Button Card - Permission Checked */}
-                            {user && canUploadProjectFile(user, project) && (
-                                <FileUpload
-                                    projectId={project.id}
-                                    onUploadComplete={handleFileUploadComplete}
-                                    onError={(error) => addToast({
-                                        title: 'Upload Failed',
-                                        description: error.message,
-                                        variant: 'destructive'
-                                    })}
-                                />
-                            )}
-
-                            {/* File List - Delete Permission Checked via Prop */}
-                            <FileList
-                                files={projectFiles}
-                                onDelete={user && canDeleteProjectFile(user, project) ? handleFileDelete : undefined}
+                        {/* Upload Area */}
+                        {user && canUploadProjectFile(user, project) && (
+                            <FileUpload
+                                projectId={project.id}
+                                onUploadComplete={handleFileUploadComplete}
+                                onError={(error) => addToast({
+                                    title: 'Upload Failed',
+                                    description: error.message,
+                                    variant: 'destructive'
+                                })}
                             />
-                        </div>
+                        )}
+
+                        {/* File List */}
+                        <FileList
+                            files={projectFiles}
+                            onDelete={user && canDeleteProjectFile(user, project) ? handleFileDelete : undefined}
+                        />
                     </div>
                 </TabsContent>
 
