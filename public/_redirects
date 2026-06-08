@@ -4,8 +4,8 @@
 # Missing Vite assets must not fall through to the SPA entrypoint. Stale
 # browser sessions can request old hashed chunks after a deploy; serving
 # index.html for those URLs causes strict MIME module errors.
-/assets/*.map  /404  404!
-/assets/*  /404  404!
+/assets/*.map  /404  404
+/assets/*  /404  404
 
 # Handle React Client-Side Routing for known SPA routes
 /verify-inquiry  /index.html  200
