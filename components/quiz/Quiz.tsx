@@ -125,7 +125,7 @@ export default function Quiz() {
   ];
 
   return (
-    <section id="video-style-quiz" className="relative py-24 sm:py-32 overflow-hidden text-white">
+    <section id="video-style-quiz" className="relative scroll-mt-24 py-24 sm:scroll-mt-28 sm:py-32 overflow-hidden text-white">
       {/* Dark animated background matching original with base fill */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-gray-950 -z-20" />
