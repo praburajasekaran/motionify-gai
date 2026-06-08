@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Quiz from '../components/quiz/Quiz';
@@ -13,6 +13,17 @@ import ReadyToTellYourStory from '../components/ReadyToTellYourStory';
 import Footer from '../components/Footer';
 
 export function LandingPage() {
+  useEffect(() => {
+    if (!window.location.hash) return;
+
+    const targetId = decodeURIComponent(window.location.hash.slice(1));
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <main className="min-h-screen">
       <Header />
