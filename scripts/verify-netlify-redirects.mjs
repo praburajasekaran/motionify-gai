@@ -5,7 +5,7 @@ const redirects = readFileSync('dist/_redirects', 'utf8')
   .map((line) => line.trim())
   .filter((line) => line && !line.startsWith('#'));
 
-const assetsRuleIndex = redirects.findIndex((line) => /^\/assets\/\*\s+\/404\s+404!$/.test(line));
+const assetsRuleIndex = redirects.findIndex((line) => /^\/assets\/\*\s+\/404\s+404$/.test(line));
 const firstSpaRewriteIndex = redirects.findIndex((line) => /\s+\/index\.html\s+200$/.test(line));
 
 if (assetsRuleIndex === -1) {
