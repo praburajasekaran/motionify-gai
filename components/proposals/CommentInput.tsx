@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Paperclip, X, File } from 'lucide-react';
-import { formatFileSize, getPresignedUploadUrl, uploadFile, Attachment } from '@/lib/attachments';
+import { formatFileSize, getPresignedUploadUrl, normalizeAttachmentFileType, uploadFile, Attachment } from '@/lib/attachments';
 
 interface CommentInputProps {
     onSubmit: (content: string, attachmentIds?: string[]) => Promise<void>;
@@ -99,7 +99,8 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                 prev.map(f => f.id === uploadingFile.id ? { ...f, progress: 10 } : f)
             );
 
-            const presignedData = await getPresignedUploadUrl(file.name, file.type, proposalId);
+            const fileType = normalizeAttachmentFileType(file.type);
+            const presignedData = await getPresignedUploadUrl(file.name, fileType, file.size);
             if (!presignedData) {
                 throw new Error('Failed to get upload URL');
             }
@@ -123,7 +124,7 @@ export function CommentInput({ onSubmit, placeholder = 'Write a comment...', dis
                     {
                         tempId: uploadingFile.id,
                         fileName: file.name,
-                        fileType: file.type,
+                        fileType,
                         fileSize: file.size,
                         r2Key: presignedData.key,
                     },

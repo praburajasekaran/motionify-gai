@@ -6,6 +6,7 @@ import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type Netli
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
+import { isAuthorizedCommentAttachmentKey } from './_shared/attachment-keys';
 import {
     AuthorizationError,
     createAuthorizationResponse,
@@ -224,7 +225,7 @@ export const handler = compose(
 
             await requireCommentAccess(user, commentId, { operation: 'attachments.create' });
 
-            if (!r2Key.startsWith(`comments/${commentId}/`)) {
+            if (!isAuthorizedCommentAttachmentKey(r2Key, commentId, user.userId)) {
                 return {
                     statusCode: 400,
                     headers,
