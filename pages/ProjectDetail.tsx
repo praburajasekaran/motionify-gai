@@ -30,6 +30,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { formatTimeAgo } from '../utils/taskParser';
 import { formatTimestamp } from '../utils/dateFormatting';
+import { formatCurrency } from '../utils/format';
 import { MentionInput } from '../components/tasks/MentionInput';
 import { CommentItem } from '../components/tasks/CommentItem';
 import { PaymentHistory } from '../components/payments/PaymentHistory';
@@ -85,7 +86,9 @@ function formatActivityAction(type: string, details: Record<string, string | num
 }
 
 function formatActivityTarget(type: string, details: Record<string, string | number>, targetUserName?: string): string {
-    if (type === 'PAYMENT_RECEIVED' && details.amount) return String(details.amount);
+    if (type === 'PAYMENT_RECEIVED' && details.amount !== undefined) {
+        return formatCurrency(Number(details.amount), String(details.currency || 'INR'));
+    }
     if (details.taskTitle) return String(details.taskTitle);
     if (details.proposalName) return String(details.proposalName);
     if (details.fileName) return String(details.fileName);
