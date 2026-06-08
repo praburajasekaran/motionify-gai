@@ -36,6 +36,22 @@ function createPaymentError(statusCode: number, message: string) {
   return error;
 }
 
+function buildPaymentOrderPayload(payment: any, options: {
+  amount: number;
+  currency: string;
+  description: string;
+}) {
+  return {
+    ...payment,
+    razorpayOrderId: payment.razorpay_order_id,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    amount: options.amount,
+    currency: options.currency,
+    name: 'Motionify Studio',
+    description: options.description,
+  };
+}
+
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
   withRateLimit(RATE_LIMITS.apiStrict, 'payment_handoff')
@@ -80,34 +96,84 @@ export const handler = compose(
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid advance payment amount' }) };
     }
 
-    const razorpayOrder = await getRazorpayClient().orders.create({
-      amount,
-      currency: proposal.currency,
-      receipt: `advance_${proposalId.substring(0, 8)}_${Date.now()}`,
-      notes: { proposalId, paymentType: 'advance' },
-    });
+    try {
+      const order = await transaction(async (client) => {
+        await client.query(
+          `SELECT pg_advisory_xact_lock(hashtext($1))`,
+          [`payment-order:${proposalId}:advance`]
+        );
 
-    const result = await dbQuery(
-      `INSERT INTO payments (
-        proposal_id, payment_type, amount, currency, status, razorpay_order_id
-      ) VALUES ($1, 'advance', $2, $3, 'pending', $4)
-      RETURNING *`,
-      [proposalId, amount, proposal.currency, razorpayOrder.id]
-    );
+        const completedPayment = await client.query(
+          `SELECT id FROM payments
+           WHERE proposal_id = $1
+             AND payment_type = 'advance'
+             AND status = 'completed'
+           ORDER BY paid_at DESC NULLS LAST, created_at DESC
+           LIMIT 1`,
+          [proposalId]
+        );
+        if (completedPayment.rows.length > 0) {
+          throw createPaymentError(409, 'Payment has already been completed for this proposal');
+        }
 
-    return {
-      statusCode: 201,
-      headers,
-      body: JSON.stringify({
-        ...result.rows[0],
-        razorpayOrderId: razorpayOrder.id,
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-        amount,
-        currency: proposal.currency,
-        name: 'Motionify Studio',
-        description: 'Advance Payment',
-      }),
-    };
+        const reusablePayment = await client.query(
+          `SELECT * FROM payments
+           WHERE proposal_id = $1
+             AND payment_type = 'advance'
+             AND amount = $2
+             AND currency = $3
+             AND status IN ('pending', 'processing')
+             AND razorpay_order_id IS NOT NULL
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [proposalId, amount, proposal.currency]
+        );
+        if (reusablePayment.rows.length > 0) {
+          return { payment: reusablePayment.rows[0], statusCode: 200 };
+        }
+
+        const razorpayOrder = await getRazorpayClient().orders.create({
+          amount,
+          currency: proposal.currency,
+          receipt: `advance_${proposalId.substring(0, 8)}_${Date.now()}`,
+          notes: { proposalId, paymentType: 'advance' },
+        });
+
+        const result = await client.query(
+          `INSERT INTO payments (
+            proposal_id, payment_type, amount, currency, status, razorpay_order_id
+          ) VALUES ($1, 'advance', $2, $3, 'pending', $4)
+          RETURNING *`,
+          [proposalId, amount, proposal.currency, razorpayOrder.id]
+        );
+
+        return { payment: result.rows[0], statusCode: 201 };
+      });
+
+      return {
+        statusCode: order.statusCode,
+        headers,
+        body: JSON.stringify(buildPaymentOrderPayload(order.payment, {
+          amount,
+          currency: proposal.currency,
+          description: 'Advance Payment',
+        })),
+      };
+    } catch (error: any) {
+      if (error?.statusCode) {
+        return {
+          statusCode: error.statusCode,
+          headers,
+          body: JSON.stringify({ error: error.message }),
+        };
+      }
+      console.error('Payment handoff order creation failed:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Failed to create payment order' }),
+      };
+    }
   }
 
   if (action === 'verify') {

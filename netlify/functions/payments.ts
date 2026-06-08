@@ -88,6 +88,22 @@ function mapAdminPayment(row: any) {
   };
 }
 
+function buildPaymentOrderPayload(payment: any, options: {
+  amount: number;
+  currency: string;
+  description: string;
+}) {
+  return {
+    ...payment,
+    razorpayOrderId: payment.razorpay_order_id,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    amount: options.amount,
+    currency: options.currency,
+    name: "Motionify Studio",
+    description: options.description,
+  };
+}
+
 function buildAdminPaymentFilters(queryStringParameters: Record<string, string> | undefined) {
   const { status, dateFrom, dateTo, clientName, projectSearch } = queryStringParameters || {};
   const clauses: string[] = [];
@@ -137,9 +153,37 @@ function buildAdminPaymentFilters(queryStringParameters: Record<string, string> 
 export function buildAdminPaymentsQuery(queryStringParameters: Record<string, string> | undefined) {
   const { whereClause, params } = buildAdminPaymentFilters(queryStringParameters);
 
+  const canonicalWhereClause = whereClause
+    ? `${whereClause} AND pay.row_rank = 1`
+    : 'WHERE pay.row_rank = 1';
+
   return {
     params,
-    text: `SELECT
+    text: `WITH ranked_payments AS (
+       SELECT
+         pay.*,
+         ROW_NUMBER() OVER (
+           PARTITION BY
+             CASE
+               WHEN pay.proposal_id IS NOT NULL THEN pay.proposal_id::text || ':' || pay.payment_type
+               ELSE pay.id::text
+             END
+           ORDER BY
+             CASE pay.status
+               WHEN 'completed' THEN 0
+               WHEN 'processing' THEN 1
+               WHEN 'pending' THEN 2
+               WHEN 'refunded' THEN 3
+               WHEN 'failed' THEN 4
+               ELSE 5
+             END,
+             pay.paid_at DESC NULLS LAST,
+             pay.created_at DESC,
+             pay.id
+         ) AS row_rank
+       FROM payments pay
+     )
+     SELECT
        pay.id,
        pay.amount,
        pay.currency,
@@ -155,7 +199,7 @@ export function buildAdminPaymentsQuery(queryStringParameters: Record<string, st
        u.id AS client_id,
        COALESCE(u.full_name, i.contact_name) AS client_name,
        COALESCE(u.email, i.contact_email) AS client_email
-     FROM payments pay
+     FROM ranked_payments pay
      LEFT JOIN proposals prop ON pay.proposal_id = prop.id
      LEFT JOIN inquiries i ON prop.inquiry_id = i.id
      LEFT JOIN LATERAL (
@@ -177,7 +221,7 @@ export function buildAdminPaymentsQuery(queryStringParameters: Record<string, st
        LIMIT 1
      ) proj ON TRUE
      LEFT JOIN users u ON proj.client_user_id = u.id
-     ${whereClause}
+     ${canonicalWhereClause}
      ORDER BY pay.created_at DESC`,
   };
 }
@@ -377,33 +421,72 @@ export const handler = compose(
           };
         }
 
-        console.log('Creating Razorpay order:', orderOptions);
-
         try {
-          const razorpayOrder = await getRazorpayClient().orders.create(orderOptions);
+          const order = await transaction(async (client) => {
+            await client.query(
+              `SELECT pg_advisory_xact_lock(hashtext($1))`,
+              [`payment-order:${proposalId}:${paymentType}`]
+            );
 
-          const result = await dbQuery(
-            `INSERT INTO payments (
-                proposal_id, payment_type, amount, currency, status, razorpay_order_id
-              ) VALUES ($1, $2, $3, $4, 'pending', $5)
-              RETURNING *`,
-            [proposalId, paymentType, amount, proposal.currency, razorpayOrder.id]
-          );
+            const completedPayment = await client.query(
+              `SELECT id FROM payments
+               WHERE proposal_id = $1
+                 AND payment_type = $2
+                 AND status = 'completed'
+               ORDER BY paid_at DESC NULLS LAST, created_at DESC
+               LIMIT 1`,
+              [proposalId, paymentType]
+            );
+            if (completedPayment.rows.length > 0) {
+              throw createPaymentError(409, 'Payment has already been completed for this proposal');
+            }
+
+            const reusablePayment = await client.query(
+              `SELECT * FROM payments
+               WHERE proposal_id = $1
+                 AND payment_type = $2
+                 AND amount = $3
+                 AND currency = $4
+                 AND status IN ('pending', 'processing')
+                 AND razorpay_order_id IS NOT NULL
+               ORDER BY created_at DESC
+               LIMIT 1`,
+              [proposalId, paymentType, amount, proposal.currency]
+            );
+            if (reusablePayment.rows.length > 0) {
+              return { payment: reusablePayment.rows[0], statusCode: 200 };
+            }
+
+            console.log('Creating Razorpay order:', orderOptions);
+            const razorpayOrder = await getRazorpayClient().orders.create(orderOptions);
+            const result = await client.query(
+              `INSERT INTO payments (
+                  proposal_id, payment_type, amount, currency, status, razorpay_order_id
+                ) VALUES ($1, $2, $3, $4, 'pending', $5)
+                RETURNING *`,
+              [proposalId, paymentType, amount, proposal.currency, razorpayOrder.id]
+            );
+
+            return { payment: result.rows[0], statusCode: 201 };
+          });
 
           return {
-            statusCode: 201,
+            statusCode: order.statusCode,
             headers,
-            body: JSON.stringify({
-              ...result.rows[0],
-              razorpayOrderId: razorpayOrder.id,
-              razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-              amount: amount,
+            body: JSON.stringify(buildPaymentOrderPayload(order.payment, {
+              amount,
               currency: proposal.currency,
-              name: "Motionify Studio",
               description: "Project Payment",
-            }),
+            })),
           };
         } catch (err: any) {
+          if (err?.statusCode) {
+            return {
+              statusCode: err.statusCode,
+              headers,
+              body: JSON.stringify({ error: err.message }),
+            };
+          }
           console.error('Error creating Razorpay order:', err);
           const errorMessage = err?.error?.description || err?.message || 'Unknown Razorpay error';
           const errorCode = err?.error?.code || err?.statusCode || 'UNKNOWN';
