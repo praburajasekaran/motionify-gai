@@ -78,15 +78,50 @@
   to = "/index.html"
   status = 200
 
+[[redirects]]
+  from = "/payments/proforma/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/inquiry-status/*"
+  to = "/index.html"
+  status = 200
+
 # Vite SPA fallbacks. Public Site, public handoff routes, and Portal routes
 # all boot through the single Vite entrypoint in dist/index.html.
+[[redirects]]
+  from = "/portal"
+  to = "/index.html"
+  status = 200
+
 [[redirects]]
   from = "/portal/*"
   to = "/index.html"
   status = 200
 
 [[redirects]]
-  from = "/*"
+  from = "/about"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/work"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/project-access"
   to = "/index.html"
   status = 200
 

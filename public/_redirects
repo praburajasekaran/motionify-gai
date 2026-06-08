@@ -1,5 +1,16 @@
 # API endpoints to Netlify Functions
 /api/*  /.netlify/functions/:splat  200
 
-# Handle React Client-Side Routing
-/*  /index.html  200
+# Handle React Client-Side Routing for known SPA routes
+/verify-inquiry  /index.html  200
+/proposal/*  /index.html  200
+/payment/*  /index.html  200
+/payments/proforma/*  /index.html  200
+/inquiry-status/*  /index.html  200
+/portal  /index.html  200
+/portal/*  /index.html  200
+/about  /index.html  200
+/contact  /index.html  200
+/work  /index.html  200
+/login  /index.html  200
+/project-access  /index.html  200
