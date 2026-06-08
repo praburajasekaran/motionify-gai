@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { query as dbQuery, transaction } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
+import { linkProposalActivitiesToProject } from './_shared/proposal-activity-link';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -386,6 +387,7 @@ export const handler = compose(
              WHERE proposal_id = $2 AND payment_type = 'advance' AND status = 'completed' AND project_id IS NULL`,
             [project.id, proposalId]
           );
+          await linkProposalActivitiesToProject(client, { proposalId, projectId: project.id });
           return { project, created: false, projectNumber: project.project_number };
         }
 
@@ -475,6 +477,8 @@ export const handler = compose(
            ON CONFLICT (user_id, project_id) DO NOTHING`,
           [project.id, auth?.user?.userId || null]
         );
+
+        await linkProposalActivitiesToProject(client, { proposalId, projectId: project.id });
 
         return { project, created: true, projectNumber };
       });
