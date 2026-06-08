@@ -10,6 +10,8 @@
  * Returns the project ID (existing or newly created), or null if not applicable.
  */
 
+import { linkProposalActivitiesToProject } from './proposal-activity-link';
+
 interface DbClient {
   query(queryText: string, values?: any[]): Promise<{ rows: any[] }>;
 }
@@ -122,6 +124,7 @@ export async function acceptProposalAndCreateProject(
 
     const details = existingDetails.rows[0] || {};
     await ensureProjectMembership(projectId, details.client_user_id);
+    await linkProposalActivitiesToProject(client, { proposalId, projectId });
     return {
       projectId,
       projectNumber: details.project_number,
@@ -238,6 +241,7 @@ export async function acceptProposalAndCreateProject(
   );
 
   await ensureProjectMembership(project.id, clientUserId);
+  await linkProposalActivitiesToProject(client, { proposalId, projectId: project.id });
 
   console.log(`[acceptProposalAndCreateProject] Project ${projectNumber} created for proposal ${proposalId}`);
 
