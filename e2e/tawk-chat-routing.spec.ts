@@ -17,6 +17,12 @@ test.describe('Tawk.to route gating', () => {
     });
   }
 
+  test('loads chat script without forcing CORS mode', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator(`script[src="${tawkScriptUrl}"]`)).not.toHaveAttribute('crossorigin', /.*/);
+  });
+
   test('does not duplicate script during marketing navigation', async ({ page }) => {
     await page.goto('/');
     await page.goto('/about');

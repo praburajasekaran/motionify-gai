@@ -45,7 +45,6 @@ export default function TawkChat() {
     script.async = true;
     script.src = TAWK_SCRIPT_SRC;
     script.charset = 'UTF-8';
-    script.setAttribute('crossorigin', '*');
     document.body.appendChild(script);
   }, [pathname]);
 
