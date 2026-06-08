@@ -166,6 +166,7 @@ export function buildAdminPaymentsQuery(queryStringParameters: Record<string, st
            PARTITION BY
              CASE
                WHEN pay.proposal_id IS NOT NULL THEN pay.proposal_id::text || ':' || pay.payment_type
+               WHEN pay.project_id IS NOT NULL THEN pay.project_id::text || ':' || pay.payment_type
                ELSE pay.id::text
              END
            ORDER BY

@@ -26,6 +26,16 @@ describe('admin payments query', () => {
     assert.match(query.text, /WHERE pay\.row_rank = 1/);
   });
 
+  it('falls back to project and payment type for payments without a proposal', async () => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-min-32-characters';
+
+    const { buildAdminPaymentsQuery } = await import('../payments');
+    const query = buildAdminPaymentsQuery(undefined);
+
+    assert.match(query.text, /WHEN pay\.project_id IS NOT NULL THEN pay\.project_id::text \|\| ':' \|\| pay\.payment_type/);
+    assert.match(query.text, /ELSE pay\.id::text/);
+  });
+
   it('keeps status and project search filters parameterized', async () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-min-32-characters';
 
