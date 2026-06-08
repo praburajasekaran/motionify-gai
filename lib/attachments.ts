@@ -32,6 +32,11 @@ export interface PresignedUrlResponse {
 }
 
 const ATTACHMENTS_ENDPOINT = '/attachments';
+const DEFAULT_FILE_TYPE = 'application/octet-stream';
+
+export function normalizeAttachmentFileType(fileType: string): string {
+    return fileType || DEFAULT_FILE_TYPE;
+}
 
 export async function getAttachments(commentId: string): Promise<Attachment[]> {
     try {
@@ -85,13 +90,12 @@ export async function createAttachment(
 export async function getPresignedUploadUrl(
     fileName: string,
     fileType: string,
-    projectId: string
+    fileSize: number
 ): Promise<PresignedUrlResponse | null> {
     const response = await api.post<PresignedUrlResponse>('/r2-presign', {
         fileName,
-        fileType,
-        projectId,
-        folder: 'comment-attachments',
+        fileType: normalizeAttachmentFileType(fileType),
+        fileSize,
     });
 
     if (!response.success || !response.data) {
@@ -130,7 +134,7 @@ export async function uploadFile(uploadUrl: string, file: File): Promise<boolean
             method: 'PUT',
             body: file,
             headers: {
-                'Content-Type': file.type,
+                'Content-Type': normalizeAttachmentFileType(file.type),
             },
         });
 
@@ -156,7 +160,7 @@ export async function uploadAttachment(
     onProgress?.(10);
 
     // Step 1: Get presigned upload URL
-    const presignedData = await getPresignedUploadUrl(fileName, fileType, proposalId);
+    const presignedData = await getPresignedUploadUrl(fileName, fileType, fileSize);
     if (!presignedData) {
         console.error('Failed to get presigned upload URL');
         return null;
