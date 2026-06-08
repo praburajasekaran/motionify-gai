@@ -14,11 +14,11 @@ test.describe('Public Work page', () => {
 
     await expect(page.getByRole('heading', { name: /visual stories built/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /a clear path from brief/i })).toBeVisible();
-    await expect(page.getByText('Portfolio video')).toHaveCount(29);
+    await expect(page.locator('section:first-of-type article')).toHaveCount(29);
     await expect(page.getByText(/pricing/i)).toHaveCount(0);
     await expect(page.locator('iframe[src*="youtube"]')).toHaveCount(0);
 
-    await page.getByRole('button', { name: /play portfolio video 01/i }).click();
+    await page.getByRole('button', { name: /play mastering the art of visual storytelling/i }).click();
     await expect(page.locator('iframe[src*="youtube-nocookie.com/embed/"]').first()).toHaveAttribute('src', youtubeEmbedPattern);
   });
 
