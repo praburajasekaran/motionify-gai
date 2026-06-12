@@ -274,12 +274,7 @@ export type RazorpayWebhookPayload = z.infer<typeof razorpayWebhookSchema>;
 // ==========================================
 
 export const updateUserSettingsSchema = z.object({
-    email_task_assignment: z.boolean().optional(),
-    email_mention: z.boolean().optional(),
-    email_project_update: z.boolean().optional(),
-    email_marketing: z.boolean().optional(),
-    notification_sound: z.boolean().optional(),
-    notification_desktop: z.boolean().optional(),
+    full_name: nameSchema.refine(value => value.length > 0, 'Name is required').optional(),
     timezone: z.string().max(100).optional().nullable(),
 });
 

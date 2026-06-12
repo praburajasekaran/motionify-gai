@@ -7,12 +7,19 @@ export const handler = compose(
     withAuth(),
     withRateLimit(RATE_LIMITS.api, 'auth_me')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
-    // Fetch timezone and project count in parallel (both non-critical, fall back gracefully)
+    // Fetch current profile data, timezone, and project count in parallel.
+    // The JWT proves identity, but the response should reflect profile edits.
+    let profile = {
+        email: auth!.user!.email,
+        role: auth!.user!.role,
+        name: auth!.user!.fullName,
+    };
     let timezone: string | null = null;
     let projectCount: number | undefined;
 
     try {
         const queries = [
+            query('SELECT email, full_name, role FROM users WHERE id = $1', [auth!.user!.userId]),
             query('SELECT timezone FROM user_preferences WHERE user_id = $1', [auth!.user!.userId]),
         ];
 
@@ -26,13 +33,20 @@ export const handler = compose(
         const results = await Promise.all(queries);
 
         if (results[0].rows.length > 0) {
-            timezone = results[0].rows[0].timezone;
+            profile = {
+                email: results[0].rows[0].email,
+                role: results[0].rows[0].role,
+                name: results[0].rows[0].full_name,
+            };
         }
-        if (results[1]?.rows.length > 0) {
-            projectCount = results[1].rows[0].count;
+        if (results[1].rows.length > 0) {
+            timezone = results[1].rows[0].timezone;
+        }
+        if (results[2]?.rows.length > 0) {
+            projectCount = results[2].rows[0].count;
         }
     } catch (e) {
-        // Non-critical — fall back to browser defaults
+        // Non-critical — fall back to token profile and browser defaults
     }
 
     return {
@@ -42,9 +56,9 @@ export const handler = compose(
             success: true,
             user: {
                 id: auth!.user!.userId,
-                email: auth!.user!.email,
-                role: auth!.user!.role,
-                name: auth!.user!.fullName,
+                email: profile.email,
+                role: profile.role,
+                name: profile.name,
                 timezone,
                 ...(projectCount !== undefined && { projectCount }),
             },

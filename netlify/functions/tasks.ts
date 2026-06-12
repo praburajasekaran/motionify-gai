@@ -276,31 +276,19 @@ export const handler = compose(
             const taskProjectId = taskDetailsResult.rows[0]?.project_id || taskId;
             const taskUrl = absolutePortalProjectUrl(taskProjectId, { task: taskId }, appOriginFromEnv(process.env));
 
-            // Send emails if user has mentions enabled
+            // Send mention emails for every matched user.
             await Promise.all(usersResult.rows.map(async (user: any) => {
               // Don't notify the person who wrote the comment
               if (user.id === auth?.user?.userId) return;
 
-              // Check user preferences
-              const prefResult = await dbQuery(
-                `SELECT email_mention FROM user_preferences WHERE user_id = $1`,
-                [user.id]
-              );
-              // Default to true if no preference record found
-              const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_mention;
-
-              if (emailEnabled) {
-                await sendMentionNotification({
-                  to: user.email,
-                  mentionedByName: auth!.user!.fullName,
-                  taskTitle: taskTitle,
-                  commentContent: content,
-                  taskUrl: taskUrl
-                });
-                console.log(`Sent mention notification to ${user.email}`);
-              } else {
-                console.log(`Skipped mention notification for ${user.email} (disabled in preferences)`);
-              }
+              await sendMentionNotification({
+                to: user.email,
+                mentionedByName: auth!.user!.fullName,
+                taskTitle: taskTitle,
+                commentContent: content,
+                taskUrl: taskUrl
+              });
+              console.log(`Sent mention notification to ${user.email}`);
             }));
           }
         } catch (error) {
@@ -518,26 +506,15 @@ export const handler = compose(
             const assignee = assigneeResult.rows[0];
             const taskUrl = absolutePortalProjectUrl(taskData.projectId, { task: newTask.id }, appOriginFromEnv(process.env));
 
-            // Check user preferences
-            const prefResult = await dbQuery(
-              `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [taskData.assignedTo]
-            );
-            const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
-
-            if (emailEnabled) {
-              await sendTaskAssignmentEmail({
-                to: assignee.email,
-                assigneeName: assignee.full_name,
-                taskTitle: newTask.title,
-                projectNumber: projectNumber,
-                dueDate: newTask.deadline,
-                taskUrl: taskUrl
-              });
-              console.log(`Sent assignment email to ${assignee.email}`);
-            } else {
-              console.log(`Skipped assignment email to ${assignee.email} (disabled in preferences)`);
-            }
+            await sendTaskAssignmentEmail({
+              to: assignee.email,
+              assigneeName: assignee.full_name,
+              taskTitle: newTask.title,
+              projectNumber: projectNumber,
+              dueDate: newTask.deadline,
+              taskUrl: taskUrl
+            });
+            console.log(`Sent assignment email to ${assignee.email}`);
           }
         } catch (error) {
           console.error('Failed to send assignment email:', error);
@@ -680,26 +657,14 @@ export const handler = compose(
             const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
             const revisionStatus = `${project.revisions_used + 1} of ${project.total_revisions_allowed} used`;
 
-            const emailPromises = teamRes.rows.map(async (admin) => {
-              // Check preferences for each admin
-              // Using email_project_update for revision requests
-              const prefResult = await dbQuery(
-                `SELECT email_project_update FROM user_preferences WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
-                [admin.email]
-              );
-              const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_project_update;
-
-              if (emailEnabled) {
-                return sendRevisionRequestEmail({
-                  to: admin.email,
-                  projectName: project.name || project.project_number,
-                  taskTitle: taskTitle,
-                  taskUrl: taskUrl,
-                  revisionCount: revisionStatus,
-                  requestedBy: requestedBy
-                });
-              }
-            });
+            const emailPromises = teamRes.rows.map(async (admin) => sendRevisionRequestEmail({
+              to: admin.email,
+              projectName: project.name || project.project_number,
+              taskTitle: taskTitle,
+              taskUrl: taskUrl,
+              revisionCount: revisionStatus,
+              requestedBy: requestedBy
+            }));
 
             await Promise.all(emailPromises);
             console.log(`Sent revision request emails to ${teamRes.rows.length} team members`);
@@ -827,26 +792,15 @@ export const handler = compose(
             const assignee = assigneeResult.rows[0];
             const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
 
-            // Check user preferences
-            const prefResult = await dbQuery(
-              `SELECT email_task_assignment FROM user_preferences WHERE user_id = $1`,
-              [assignedTo]
-            );
-            const emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_task_assignment;
-
-            if (emailEnabled) {
-              await sendTaskAssignmentEmail({
-                to: assignee.email,
-                assigneeName: assignee.full_name,
-                taskTitle: updatedTask.title,
-                projectNumber: projectNumber,
-                dueDate: updatedTask.deadline,
-                taskUrl: taskUrl
-              });
-              console.log(`Sent assignment email to ${assignee.email}`);
-            } else {
-              console.log(`Skipped assignment email to ${assignee.email} (disabled in preferences)`);
-            }
+            await sendTaskAssignmentEmail({
+              to: assignee.email,
+              assigneeName: assignee.full_name,
+              taskTitle: updatedTask.title,
+              projectNumber: projectNumber,
+              dueDate: updatedTask.deadline,
+              taskUrl: taskUrl
+            });
+            console.log(`Sent assignment email to ${assignee.email}`);
           }
         } catch (error) {
           console.error('Failed to send assignment update email:', error);

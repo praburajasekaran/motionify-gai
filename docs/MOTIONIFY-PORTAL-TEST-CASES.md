@@ -987,23 +987,25 @@ Comprehensive test cases for the Motionify Studio Project Management Portal - a 
 
 ---
 
-### TC-NT-005: Notification Preferences ✅ COMPLETE
+### TC-NT-005: Account Settings and Default Email Notifications ✅ COMPLETE
 **Priority:** Low  
 **Type:** Functional  
-**Status:** ✅ Verified 2026-01-12 - Settings page at `/settings`, backend API in `users-settings.ts`
+**Status:** ✅ Updated 2026-06-11 - Settings page at `/settings`, backend API in `users-settings.ts`
 
 **Test Steps:**
-1. Navigate to Settings → Notifications
-2. Toggle "Email on task assignment" OFF
-3. Verify no email received on next assignment
+1. Navigate to Settings
+2. Verify email, role, and organization are visible and read-only
+3. Update the editable name field and save
+4. Move to the lower timezone section and save a timezone
+5. Create a task assignment, mention, or deliverable update
 
 **Expected Results:**
-- ✅ Preferences saved
-- ✅ Emails respect preferences
-- ✅ In-app notifications separate toggle
-- ✅ Cannot disable critical notifications
+- ✅ Name persists to the user profile
+- ✅ Timezone persists to `user_preferences.timezone`
+- ✅ Email notification toggles are not present
+- ✅ Operational emails are sent by default and are not gated by retired preference rows
 
-> **Implementation Notes:** Created `pages/Settings.tsx` with 4 toggles: Task Assignments, Mentions & Comments, Project Updates, Product Updates. Backend `users-settings.ts` handles GET/PUT with PostgreSQL upsert. Database migration in `add-user-preferences.sql`. Email functions (`tasks.ts`, `deliverables.ts`) check `user_preferences` table before sending.
+> **Implementation Notes:** `pages/Settings.tsx` now shows account details first, with read-only email, role, and organization fields, an editable name field, and a lower timezone section. Backend `users-settings.ts` handles authenticated profile and timezone updates. Email functions send operational notifications by default instead of checking retired notification preference flags.
 
 ---
 
@@ -1450,29 +1452,27 @@ Comprehensive test cases for the Motionify Studio Project Management Portal - a 
 
 ### 🟢 Low Priority
 - TC-FM-006: Rename File
-- TC-NT-005: Notification Preferences ✅
+- TC-NT-005: Account Settings and Default Email Notifications ✅
 
 ---
 
-### TC-NT-005: Notification Preferences ✅ COMPLETE
+### TC-NT-005: Account Settings and Default Email Notifications ✅ COMPLETE
 **Priority:** Low  
 **Type:** Functional  
-**Status:** ✅ Verified 2026-01-12 - Implemented in `Settings.tsx` and `users-settings.ts`
+**Status:** ✅ Updated 2026-06-11 - Implemented in `Settings.tsx` and `users-settings.ts`
 
 **Test Steps:**
-1. Navigate to Settings -> Email Notifications
-2. Toggle "Task Assignments" OFF
-3. Create a task assigned to user
-4. Verify NO email is sent
-5. Toggle "Task Assignments" ON
-6. Create another task
-7. Verify email IS sent
+1. Navigate to Settings
+2. Verify account email, role, and organization display as read-only
+3. Update the editable name field and save
+4. Select a timezone in the lower Regional Settings section
+5. Verify no email notification preference toggles appear
 
 **Expected Results:**
-- ✅ Settings persist across reloads
-- ✅ Backend respects preferences
-- ✅ Default preferences are "ON" for critical notifications
-- ✅ Marketing emails default to "OFF"
+- ✅ Name changes persist across reloads
+- ✅ Timezone changes persist across reloads
+- ✅ Backend does not allow role, email, or organization edits from Settings
+- ✅ Operational emails remain default-on
 
 ---
 
