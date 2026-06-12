@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const functionsOrigin = env.VITE_NETLIFY_FUNCTIONS_ORIGIN || 'http://127.0.0.1:8888';
   return {
     base: '/',
     server: {
@@ -12,7 +13,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/.netlify/functions': {
-          target: 'http://127.0.0.1:8888',
+          target: functionsOrigin,
           changeOrigin: true,
           secure: false,
           configure: (proxy, _options) => {
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => {
         },
         // Mirror Netlify's /api/* redirect for local development
         '/api': {
-          target: 'http://127.0.0.1:8888',
+          target: functionsOrigin,
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/.netlify/functions'),

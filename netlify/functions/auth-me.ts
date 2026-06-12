@@ -16,11 +16,22 @@ export const handler = compose(
     };
     let timezone: string | null = null;
     let projectCount: number | undefined;
+    let projectTeamMemberships: Record<string, {
+        projectId: string;
+        isPrimaryContact: boolean;
+        joinedAt?: string;
+    }> = {};
 
     try {
         const queries = [
             query('SELECT email, full_name, role FROM users WHERE id = $1', [auth!.user!.userId]),
             query('SELECT timezone FROM user_preferences WHERE user_id = $1', [auth!.user!.userId]),
+            query(
+                `SELECT project_id, is_primary_contact, joined_at
+                 FROM project_team
+                 WHERE user_id = $1 AND removed_at IS NULL`,
+                [auth!.user!.userId]
+            ),
         ];
 
         // For client users, include project count to avoid an extra redirect fetch
@@ -42,8 +53,18 @@ export const handler = compose(
         if (results[1].rows.length > 0) {
             timezone = results[1].rows[0].timezone;
         }
-        if (results[2]?.rows.length > 0) {
-            projectCount = results[2].rows[0].count;
+        projectTeamMemberships = Object.fromEntries(
+            (results[2]?.rows || []).map((row: any) => [
+                row.project_id,
+                {
+                    projectId: row.project_id,
+                    isPrimaryContact: row.is_primary_contact === true,
+                    ...(row.joined_at && { joinedAt: row.joined_at }),
+                },
+            ])
+        );
+        if (results[3]?.rows.length > 0) {
+            projectCount = results[3].rows[0].count;
         }
     } catch (e) {
         // Non-critical — fall back to token profile and browser defaults
@@ -60,6 +81,7 @@ export const handler = compose(
                 role: profile.role,
                 name: profile.name,
                 timezone,
+                projectTeamMemberships,
                 ...(projectCount !== undefined && { projectCount }),
             },
         }),

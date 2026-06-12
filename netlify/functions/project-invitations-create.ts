@@ -4,13 +4,14 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
 import { sendProjectInvitationEmail } from './send-email';
-import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { absoluteProjectAccessUrl, appOriginFromEnv } from '../../shared/canonical-links';
 import {
   AuthorizationError,
   createAuthorizationResponse,
   getAuthRole,
   requireProjectManagerAccess,
 } from './_shared/authorization';
+import { normalizeProjectInvitationRole } from './_shared/roles';
 
 /**
  * Create a project-level invitation.
@@ -53,6 +54,7 @@ export const handler = compose(
   }
 
   const { email, role } = body;
+  const normalizedRole = normalizeProjectInvitationRole(role);
 
   if (!email || !role) {
     return {
@@ -64,7 +66,7 @@ export const handler = compose(
 
   // Validate role (support is managed at admin level, not per-project invitations)
   const validRoles = ['client', 'team_member'];
-  if (!validRoles.includes(role)) {
+  if (normalizedRole === 'unknown') {
     return {
       statusCode: 400,
       headers,
@@ -98,7 +100,7 @@ export const handler = compose(
 
   if (currentUserRole === 'client') {
     // Client primary contact can only invite other clients
-    if (role !== 'client') {
+    if (normalizedRole !== 'client') {
       return {
         statusCode: 403,
         headers,
@@ -169,7 +171,7 @@ export const handler = compose(
       `INSERT INTO project_invitations (token, email, role, project_id, invited_by, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, email, role, status, created_at, expires_at`,
-      [token, email.toLowerCase(), role, projectId, currentUserId, expiresAt]
+      [token, email.toLowerCase(), normalizedRole, projectId, currentUserId, expiresAt]
     );
 
     const invitation = result.rows[0];
@@ -183,7 +185,7 @@ export const handler = compose(
           currentUserId,
           auth?.user?.fullName || 'Unknown',
           projectId,
-          JSON.stringify({ email, role }),
+          JSON.stringify({ email, role: normalizedRole }),
         ]
       );
     } catch (logError) {
@@ -191,7 +193,7 @@ export const handler = compose(
     }
 
     // Send invitation email
-    const inviteLink = absolutePortalLoginUrl({ token }, appOriginFromEnv(process.env));
+    const inviteLink = absoluteProjectAccessUrl({ token }, appOriginFromEnv(process.env));
 
     // Fetch project name for the email
     let projectName = projectId;
@@ -213,7 +215,7 @@ export const handler = compose(
         to: email,
         inviteLink,
         projectName,
-        role,
+        role: normalizedRole,
         invitedByName: auth?.user?.fullName || 'A team member',
       });
     } catch (emailError) {

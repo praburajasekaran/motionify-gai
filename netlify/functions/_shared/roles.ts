@@ -1,4 +1,5 @@
 export type CanonicalUserRole = 'super_admin' | 'support' | 'team_member' | 'client';
+export type ProjectInvitationRole = 'client' | 'team_member';
 
 export type UserRoleInput = CanonicalUserRole | 'team' | 'admin' | 'project_manager' | string | null | undefined;
 
@@ -36,4 +37,12 @@ export function isClientLike(role: UserRoleInput): boolean {
 export function isInternalRole(role: UserRoleInput): boolean {
   const normalized = normalizeRole(role);
   return normalized === 'super_admin' || normalized === 'support' || normalized === 'team_member';
+}
+
+export function normalizeProjectInvitationRole(role: UserRoleInput): ProjectInvitationRole | 'unknown' {
+  const normalized = normalizeRole(role);
+  if (normalized === 'client' || normalized === 'team_member') {
+    return normalized;
+  }
+  return 'unknown';
 }

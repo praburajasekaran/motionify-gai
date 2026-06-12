@@ -6,7 +6,7 @@ import { SCHEMAS } from './_shared/schemas';
 import {
     AuthorizationError,
     createAuthorizationResponse,
-    requireProjectAccess,
+    requireClientPrimaryContact,
 } from './_shared/authorization';
 
 export const handler = compose(
@@ -24,7 +24,7 @@ export const handler = compose(
         const { projectId, accepted } = data;
 
         const userId = auth!.user!.userId;
-        await requireProjectAccess(auth?.user, projectId, { operation: 'projects.acceptTerms' });
+        await requireClientPrimaryContact(auth?.user, projectId, { operation: 'projects.acceptTerms' });
 
         // Verify project exists
         const projectResult = await dbQuery(

@@ -14,6 +14,7 @@ import {
   assertAdminLike,
   createAuthorizationResponse,
   getAuthRole,
+  requireClientPrimaryContact,
   requireDeliverableAccess,
   requireProjectAccess,
 } from './_shared/authorization';
@@ -204,7 +205,10 @@ export const handler = compose(
       const updates = validation.data;
 
       const currentDeliverable = await dbQuery(
-        'SELECT status, name, project_id FROM deliverables WHERE id = $1',
+        `SELECT d.status, d.name, d.project_id, p.status AS project_status, p.terms_accepted_at
+         FROM deliverables d
+         JOIN projects p ON d.project_id = p.id
+         WHERE d.id = $1`,
         [id]
       );
       const oldDeliverableStatus = currentDeliverable.rows[0]?.status;
@@ -233,6 +237,37 @@ export const handler = compose(
             statusCode: 403,
             headers,
             body: JSON.stringify({ error: 'Access denied' }),
+          };
+        }
+        await requireClientPrimaryContact(auth?.user, deliverableProjectId, { operation: 'deliverables.approve' });
+        if (oldDeliverableStatus !== 'awaiting_approval') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+              error: 'Invalid deliverable status',
+              message: `Cannot approve deliverable with status "${oldDeliverableStatus}"`,
+            }),
+          };
+        }
+        if (!currentDeliverable.rows[0].terms_accepted_at) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({
+              error: 'Terms not accepted',
+              message: 'Project terms must be accepted before approving deliverables',
+            }),
+          };
+        }
+        if (['on_hold', 'archived', 'cancelled'].includes(currentDeliverable.rows[0].project_status)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({
+              error: 'Project is not active',
+              message: `Cannot approve deliverables while project status is "${currentDeliverable.rows[0].project_status}"`,
+            }),
           };
         }
         updates.approved_by = auth!.user!.userId;

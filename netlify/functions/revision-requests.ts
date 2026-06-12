@@ -20,6 +20,7 @@ import {
   AuthorizationError,
   createAuthorizationResponse,
   getAuthRole,
+  requireClientPrimaryContact,
   requireDeliverableAccess,
 } from './_shared/authorization';
 
@@ -135,7 +136,8 @@ export const handler = compose(
       // Verify deliverable exists and is awaiting_approval
       const deliverableResult = await dbQuery(
         `SELECT d.id, d.name, d.status, d.project_id, p.client_user_id,
-                p.revisions_used, p.total_revisions_allowed, p.project_number
+                p.revisions_used, p.total_revisions_allowed, p.project_number,
+                p.status AS project_status, p.terms_accepted_at
          FROM deliverables d
          JOIN projects p ON d.project_id = p.id
          WHERE d.id = $1`,
@@ -173,14 +175,26 @@ export const handler = compose(
         };
       }
 
-      // Permission check: only client who owns the project can request revisions
-      if (userRole === 'client' && deliverable.client_user_id !== userId) {
+      await requireClientPrimaryContact(auth?.user, deliverable.project_id, { operation: 'revision-requests.create' });
+
+      if (!deliverable.terms_accepted_at) {
         return {
           statusCode: 403,
           headers,
           body: JSON.stringify({
-            error: 'Access denied',
-            message: 'You do not have permission to request revisions for this deliverable',
+            error: 'Terms not accepted',
+            message: 'Project terms must be accepted before requesting revisions',
+          }),
+        };
+      }
+
+      if (['on_hold', 'archived', 'cancelled'].includes(deliverable.project_status)) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Project is not active',
+            message: `Cannot request revisions while project status is "${deliverable.project_status}"`,
           }),
         };
       }

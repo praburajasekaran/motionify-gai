@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import crypto from 'node:crypto';
-import { isAdminLike, isTeamLike, normalizeRole } from '../roles';
+import { isAdminLike, isTeamLike, normalizeProjectInvitationRole, normalizeRole } from '../roles';
 import { verifyRazorpayCheckoutSignature } from '../payment-verification';
-import { AuthorizationError, requirePaymentAccess, requireProjectAccess } from '../authorization';
+import { AuthorizationError, requireClientPrimaryContact, requirePaymentAccess, requireProjectAccess } from '../authorization';
 
 function createRunner(handler: (text: string, params?: any[]) => any[]) {
   return {
@@ -27,6 +27,14 @@ describe('role helpers', () => {
     assert.equal(isAdminLike('support'), true);
     assert.equal(isAdminLike('super_admin'), true);
     assert.equal(isAdminLike('client'), false);
+  });
+
+  it('normalizes project invitation role aliases without allowing admin roles', () => {
+    assert.equal(normalizeProjectInvitationRole('team'), 'team_member');
+    assert.equal(normalizeProjectInvitationRole('team_member'), 'team_member');
+    assert.equal(normalizeProjectInvitationRole('client'), 'client');
+    assert.equal(normalizeProjectInvitationRole('support'), 'unknown');
+    assert.equal(normalizeProjectInvitationRole('super_admin'), 'unknown');
   });
 });
 
@@ -165,5 +173,46 @@ describe('authorization helpers', () => {
     );
 
     assert.equal((payment as any).id, 'payment-1');
+  });
+
+  it('allows only an active client primary contact through the primary-contact guard', async () => {
+    const runner = createRunner((text) => {
+      if (text.includes('FROM projects WHERE id')) {
+        return [{ id: 'project-1', client_user_id: 'client-a' }];
+      }
+      if (text.includes('FROM project_team')) {
+        return [{ role: 'client', is_primary_contact: true }];
+      }
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const project = await requireClientPrimaryContact(
+      { userId: 'client-a', role: 'client', email: 'client@example.com' },
+      'project-1',
+      { runner, operation: 'test.primaryContact' }
+    );
+
+    assert.equal((project as any).id, 'project-1');
+  });
+
+  it('denies regular client members through the primary-contact guard', async () => {
+    const runner = createRunner((text) => {
+      if (text.includes('FROM projects WHERE id')) {
+        return [{ id: 'project-1', client_user_id: 'client-a' }];
+      }
+      if (text.includes('FROM project_team')) {
+        return [{ role: 'client', is_primary_contact: false }];
+      }
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    await assert.rejects(
+      () => requireClientPrimaryContact(
+        { userId: 'client-a', role: 'client', email: 'client@example.com' },
+        'project-1',
+        { runner, operation: 'test.primaryContact' }
+      ),
+      (error) => error instanceof AuthorizationError && error.statusCode === 403
+    );
   });
 });
