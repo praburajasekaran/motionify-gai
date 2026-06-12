@@ -330,29 +330,15 @@ export const handler = compose(
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            const userIdResult = await dbQuery('SELECT id FROM users WHERE email = $1', [email]);
-            let emailEnabled = true;
-            if (userIdResult.rows.length > 0) {
-              const prefResult = await dbQuery(
-                `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
-                [userIdResult.rows[0].id]
-              );
-              emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_project_update;
-            }
-
-            if (emailEnabled) {
-              await sendDeliverableReadyEmail({
-                to: email,
-                clientName: full_name,
-                projectNumber: project_number,
-                deliverableName: updatedDeliverable.name,
-                deliverableUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
-                deliveryNotes: updatedDeliverable.description
-              });
-              console.log('✅ Deliverable ready email sent to:', email);
-            } else {
-              console.log('Skipped deliverable ready email to:', email, '(disabled in preferences)');
-            }
+            await sendDeliverableReadyEmail({
+              to: email,
+              clientName: full_name,
+              projectNumber: project_number,
+              deliverableName: updatedDeliverable.name,
+              deliverableUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
+              deliveryNotes: updatedDeliverable.description
+            });
+            console.log('✅ Deliverable ready email sent to:', email);
           }
         } catch (emailError) {
           console.error('❌ Failed to send deliverable ready email:', emailError);
@@ -371,29 +357,15 @@ export const handler = compose(
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            const userIdResult = await dbQuery('SELECT id FROM users WHERE email = $1', [email]);
-            let emailEnabled = true;
-            if (userIdResult.rows.length > 0) {
-              const prefResult = await dbQuery(
-                `SELECT email_project_update FROM user_preferences WHERE user_id = $1`,
-                [userIdResult.rows[0].id]
-              );
-              emailEnabled = prefResult.rows.length === 0 || prefResult.rows[0].email_project_update;
-            }
-
-            if (emailEnabled) {
-              await sendFinalDeliverablesEmail({
-                to: email,
-                clientName: full_name,
-                projectNumber: project_number,
-                deliverableName: updatedDeliverable.name,
-                downloadUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
-                expiryDays: 365
-              });
-              console.log('✅ Final deliverables email sent to:', email);
-            } else {
-              console.log('Skipped final deliverables email to:', email, '(disabled in preferences)');
-            }
+            await sendFinalDeliverablesEmail({
+              to: email,
+              clientName: full_name,
+              projectNumber: project_number,
+              deliverableName: updatedDeliverable.name,
+              downloadUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
+              expiryDays: 365
+            });
+            console.log('✅ Final deliverables email sent to:', email);
           }
         } catch (emailError) {
           console.error('❌ Failed to send final deliverables email:', emailError);
