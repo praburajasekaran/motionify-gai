@@ -78,25 +78,22 @@ export const handler = compose(
             };
         }
 
-        // 3. If not the assigned PM, assume it's an invited team member or client team member
-        // Check invitations
-        const deleteInvitationResult = await dbQuery(
-            `DELETE FROM project_invitations
-       USING users
-       WHERE project_invitations.email = users.email
-       AND users.id = $1
-       AND project_invitations.project_id = $2
-       RETURNING project_invitations.id`,
-            [userIdToRemove, projectId]
+        const memberResult = await dbQuery(
+            `SELECT id, role, is_primary_contact
+             FROM project_team
+             WHERE project_id = $1 AND user_id = $2 AND removed_at IS NULL`,
+            [projectId, userIdToRemove]
         );
 
-        // Also check if they are the Client Primary Contact
-        const projectClientResult = await dbQuery(
-            `SELECT client_user_id FROM projects WHERE id = $1`,
-            [projectId]
-        );
+        if (memberResult.rows.length === 0) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ error: 'Team member not found or already removed' }),
+            };
+        }
 
-        if (projectClientResult.rows.length > 0 && projectClientResult.rows[0].client_user_id === userIdToRemove) {
+        if (memberResult.rows[0].is_primary_contact) {
             return {
                 statusCode: 400,
                 headers,
@@ -106,6 +103,24 @@ export const handler = compose(
                 }),
             };
         }
+
+        if (memberResult.rows[0].role === 'support') {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({
+                    error: 'Cannot remove support user.',
+                    message: 'Support users are automatically assigned to projects and cannot be removed.'
+                }),
+            };
+        }
+
+        await dbQuery(
+            `UPDATE project_team
+             SET removed_at = NOW(), removed_by = $1
+             WHERE project_id = $2 AND user_id = $3 AND removed_at IS NULL`,
+            [auth?.user?.userId, projectId, userIdToRemove]
+        );
 
         return {
             statusCode: 200,

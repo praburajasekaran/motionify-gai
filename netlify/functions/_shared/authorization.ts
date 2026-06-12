@@ -157,6 +157,27 @@ export async function requireProjectManagerAccess<T = any>(
   forbidden(user, 'Project', projectId, options?.operation);
 }
 
+export async function requireClientPrimaryContact<T = any>(
+  user: AuthorizationUser | undefined | null,
+  projectId: string,
+  options?: AuthorizationOptions
+): Promise<T> {
+  const project = await requireProjectAccess<T>(user, projectId, { ...options, allowClient: true, allowTeam: false });
+  const userId = getAuthUserId(user);
+  const role = getAuthRole(user);
+
+  if (!userId || role !== 'client') {
+    forbidden(user, 'Project', projectId, options?.operation);
+  }
+
+  const membership = await hasActiveProjectMembership(runnerFrom(options), projectId, userId);
+  if (membership?.is_primary_contact === true && normalizeRole(membership.role) === 'client') {
+    return project;
+  }
+
+  forbidden(user, 'Project', projectId, options?.operation);
+}
+
 export async function requireProposalAccess<T = any>(
   user: AuthorizationUser | undefined | null,
   proposalId: string,

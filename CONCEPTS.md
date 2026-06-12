@@ -45,6 +45,15 @@ Payment records may exist before a Project is available, so payment views need p
 ### Project
 The active workspace for approved client work after intake and proposal steps, containing team activity, tasks, deliverables, files, revisions, and client-visible progress.
 
+### Project Team
+The project-scoped membership list that determines which internal and client users can access a Project and what project-local permissions they have.
+
+### Client Primary Contact
+The client-side Project Team member with approval and team-management authority for a Project.
+
+### Project Invitation
+A token-based invitation that adds an existing or new user to a Project Team with a project-scoped role.
+
 ### Task
 A manually managed unit of project work inside a Project, owned by Motionify users rather than generated automatically by the system.
 

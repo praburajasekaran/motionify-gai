@@ -30,7 +30,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     currentUserRole
 }) => {
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState<'client' | 'team'>('client');
+    const [role, setRole] = useState<'client' | 'team_member'>('client');
     const [emailError, setEmailError] = useState<string | null>(null);
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -196,12 +196,12 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                         <select
                             id="invite-role"
                             value={role}
-                            onChange={(e) => setRole(e.target.value as 'client' | 'team')}
+                            onChange={(e) => setRole(e.target.value as 'client' | 'team_member')}
                             disabled={isSending}
                             className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors bg-card"
                         >
                             <option value="client">Client Team Member</option>
-                            {canInviteTeam && <option value="team">Motionify Studio Team</option>}
+                            {canInviteTeam && <option value="team_member">Motionify Studio Team</option>}
                         </select>
                         <p className="mt-1.5 text-xs text-muted-foreground">
                             {role === 'client'

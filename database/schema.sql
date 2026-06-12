@@ -323,7 +323,7 @@ CREATE TABLE project_invitations (
   
   -- Invitee information
   email VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('client', 'team')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('client', 'team_member')),
   
   -- Invitation token (URL-safe)
   token VARCHAR(500) UNIQUE NOT NULL,

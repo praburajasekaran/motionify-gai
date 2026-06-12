@@ -66,7 +66,7 @@ export function portalLoginPath(params?: { token?: string; next?: string; email?
   return withQuery(portalPath('/login'), params);
 }
 
-export function projectAccessPath(params: { projectId?: string | null; email?: string | null }): string {
+export function projectAccessPath(params: { projectId?: string | null; email?: string | null; token?: string | null }): string {
   return withQuery(portalPath('/project-access'), params);
 }
 
@@ -103,7 +103,7 @@ export function absolutePortalLoginUrl(params?: { token?: string; next?: string;
 }
 
 export function absoluteProjectAccessUrl(
-  params: { projectId?: string | null; email?: string | null },
+  params: { projectId?: string | null; email?: string | null; token?: string | null },
   origin?: string,
 ): string {
   return absoluteUrl(projectAccessPath(params), origin);

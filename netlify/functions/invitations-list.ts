@@ -50,13 +50,13 @@ export const handler = compose(
     // Format response
     const invitations = result.rows.map((row) => ({
       id: row.id,
-      project_id: row.project_id,
+      projectId: row.project_id,
       email: row.email,
       role: row.role,
       status: row.status,
-      expires_at: row.expires_at,
-      created_at: row.created_at,
-      invited_by_name: row.invited_by_name || undefined,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+      invitedByName: row.invited_by_name || undefined,
     }));
 
     return {

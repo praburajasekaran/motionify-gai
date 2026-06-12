@@ -2,6 +2,7 @@ import { query as dbQuery } from './_shared/db';
 import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { normalizeProjectInvitationRole } from './_shared/roles';
 
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
@@ -45,6 +46,15 @@ export const handler = compose(
     }
 
     const invitation = result.rows[0];
+    const invitationRole = normalizeProjectInvitationRole(invitation.role);
+
+    if (invitationRole === 'unknown') {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid invitation role' }),
+      };
+    }
 
     // Check if user already exists
     const userCheck = await dbQuery(
@@ -54,6 +64,24 @@ export const handler = compose(
 
     const requiresSignup = userCheck.rows.length === 0;
     const acceptedByUserId = userCheck.rows[0]?.id || null;
+
+    if (requiresSignup) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          project: {
+            id: invitation.project_id,
+            name: invitation.project_name,
+          },
+          email: invitation.email,
+          role: invitationRole,
+          user_id: null,
+          requires_signup: true,
+        }),
+      };
+    }
 
     // Mark invitation as accepted
     await dbQuery(
@@ -70,7 +98,7 @@ export const handler = compose(
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (user_id, project_id) DO UPDATE SET
            removed_at = NULL, removed_by = NULL, invitation_id = $4`,
-        [acceptedByUserId, invitation.project_id, invitation.role, invitation.id]
+        [acceptedByUserId, invitation.project_id, invitationRole, invitation.id]
       );
 
       // Log activity
@@ -83,7 +111,7 @@ export const handler = compose(
             acceptedByUserId,
             userName.rows[0]?.full_name || 'Unknown',
             invitation.project_id,
-            JSON.stringify({ role: invitation.role, viaInvitation: true }),
+            JSON.stringify({ role: invitationRole, viaInvitation: true }),
           ]
         );
       } catch (logError) {
@@ -100,8 +128,10 @@ export const handler = compose(
           id: invitation.project_id,
           name: invitation.project_name,
         },
+        email: invitation.email,
+        role: invitationRole,
         user_id: acceptedByUserId,
-        requires_signup: requiresSignup,
+        requires_signup: false,
       }),
     };
   } catch (error) {
