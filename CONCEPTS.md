@@ -59,3 +59,18 @@ A manually managed unit of project work inside a Project, owned by Motionify use
 
 ### Deliverable
 A client-reviewable output within a project, such as a video, image, or document, that moves through review, approval, revision, payment, and final delivery states.
+
+### Deliverable-as-Milestone
+The v1 production model where proposal deliverables are treated as the milestone unit for sequencing project work.
+
+Tasks can attach to a Deliverable so support can organize production work without introducing a separate milestone table.
+
+### Revision Quota
+The project-level count of included revision rounds derived from the accepted Proposal.
+
+Revision quota is displayed from Project data and decremented by server-owned revision request logic; client UI state is only a presentation of that source of truth.
+
+### Additional Revision Purchase
+A paid project-scoped capacity increase requested after the included Revision Quota is exhausted.
+
+The purchase is not an informal admin edit: it should be represented by a persisted request, approval/payment state, and an auditable capacity change after valid payment completion.

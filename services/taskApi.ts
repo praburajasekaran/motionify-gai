@@ -72,6 +72,7 @@ export async function createTask(taskData: {
     if (taskData.assignee_id) apiPayload.assignedTo = taskData.assignee_id;
     if (taskData.deadline) apiPayload.dueDate = new Date(taskData.deadline).toISOString();
     if (taskData.status) apiPayload.status = taskData.status;
+    if (taskData.deliverable_id) apiPayload.deliverableId = taskData.deliverable_id;
     if (taskData.visible_to_client !== undefined) apiPayload.visible_to_client = taskData.visible_to_client;
 
     const response = await api.post<Task>('/tasks', apiPayload);
@@ -107,6 +108,7 @@ export async function updateTask(
     if (updates.status !== undefined) apiPayload.status = updates.status;
     if (updates.visibleToClient !== undefined) apiPayload.visibleToClient = updates.visibleToClient;
     if (updates.assigneeId !== undefined) apiPayload.assignedTo = updates.assigneeId || null;
+    if (updates.deliverableId !== undefined) apiPayload.deliverableId = updates.deliverableId || null;
     if (updates.deadline !== undefined) apiPayload.dueDate = updates.deadline ? new Date(updates.deadline).toISOString() : null;
 
     const response = await api.patch<Task>(`/tasks/${taskId}`, apiPayload);

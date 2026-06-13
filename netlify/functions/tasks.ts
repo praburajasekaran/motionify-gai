@@ -34,6 +34,21 @@ const isValidTransition = (oldStatus: string, newStatus: string): boolean => {
   return validTransitions[oldStatus]?.includes(newStatus) ?? false;
 };
 
+export async function deliverableBelongsToProject(
+  deliverableId: string | null | undefined,
+  projectId: string,
+  queryRunner: typeof dbQuery = dbQuery,
+): Promise<boolean> {
+  if (!deliverableId) return true;
+
+  const result = await queryRunner(
+    `SELECT 1 FROM deliverables WHERE id = $1 AND project_id = $2 LIMIT 1`,
+    [deliverableId, projectId],
+  );
+
+  return result.rows.length > 0;
+}
+
 // Map database row to Task object
 function mapTaskFromDB(row: any): any {
   return {
@@ -43,6 +58,7 @@ function mapTaskFromDB(row: any): any {
     description: row.description,
     status: row.stage, // Map stage to status for frontend
     visibleToClient: row.is_client_visible,
+    deliverableId: row.deliverable_id,
     assignedTo: row.assigned_to,
     deadline: row.due_date,
     createdAt: row.created_at,
@@ -463,12 +479,20 @@ export const handler = compose(
         ? true
         : (rawBody.visible_to_client !== undefined ? rawBody.visible_to_client : false);
 
+      if (!(await deliverableBelongsToProject(taskData.deliverableId, taskData.projectId))) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable must belong to this project' }),
+        };
+      }
+
       const result = await dbQuery(
         `INSERT INTO tasks (
           project_id, title, description, stage,
-          is_client_visible, assigned_to, due_date, position, created_by
+          is_client_visible, deliverable_id, assigned_to, due_date, position, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *`,
         [
           taskData.projectId,
@@ -476,6 +500,7 @@ export const handler = compose(
           taskData.description,
           taskData.status || 'pending',
           visibleToClient,
+          taskData.deliverableId || null,
           isClientUser ? null : (taskData.assignedTo || null),
           taskData.dueDate || null,
           0, // position - default to 0
@@ -571,6 +596,14 @@ export const handler = compose(
       if (!validation.success) return validation.response;
       const updates = validation.data;
 
+      if ('deliverableId' in updates && !(await deliverableBelongsToProject(updates.deliverableId, authorizedTask.project_id))) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Deliverable must belong to this project' }),
+        };
+      }
+
       // Clients can only update a subset of fields on their own tasks
       const clientAllowedFields = ['title', 'description', 'status', 'dueDate'];
       const allowedFields = isClientRole
@@ -580,6 +613,7 @@ export const handler = compose(
             'description',
             'status', // maps to 'stage' in DB
             'visibleToClient', // maps to 'is_client_visible' in DB
+            'deliverableId', // maps to 'deliverable_id' in DB
             'assignedTo', // maps to 'assigned_to' in DB
             'dueDate', // maps to 'due_date' in DB
           ];
@@ -683,6 +717,7 @@ export const handler = compose(
       // Map camelCase input keys to snake_case DB columns
       const fieldMapping: Record<string, string> = {
         visibleToClient: 'is_client_visible',
+        deliverableId: 'deliverable_id',
         assignedTo: 'assigned_to',
         dueDate: 'due_date',
         status: 'stage',
