@@ -8,7 +8,7 @@ const DB_TO_DISPLAY: Record<string, ProjectStatus> = {
     'on_hold': 'On Hold',
     'completed': 'Completed',
     'archived': 'Archived',
-    'cancelled': 'Archived',
+    'cancelled': 'Cancelled',
 };
 
 const DISPLAY_TO_DB: Record<ProjectStatus, string> = {
@@ -19,6 +19,7 @@ const DISPLAY_TO_DB: Record<ProjectStatus, string> = {
     'On Hold': 'on_hold',
     'Completed': 'completed',
     'Archived': 'archived',
+    'Cancelled': 'cancelled',
 };
 
 export function dbStatusToDisplay(dbStatus: string): ProjectStatus {

@@ -45,6 +45,9 @@ Payment records may exist before a Project is available, so payment views need p
 ### Project
 The active workspace for approved client work after intake and proposal steps, containing team activity, tasks, deliverables, files, revisions, and client-visible progress.
 
+### Project Status
+The canonical persisted project states are `draft`, `active`, `in_review`, `awaiting_payment`, `on_hold`, `completed`, `archived`, and `cancelled`. API validation, database constraints, transition rules, and frontend display labels use this same set; `archived` and `cancelled` are terminal states.
+
 ### Project Team
 The project-scoped membership list that determines which internal and client users can access a Project and what project-local permissions they have.
 

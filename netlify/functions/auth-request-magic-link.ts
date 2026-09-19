@@ -26,6 +26,7 @@ import {
     getCorrelationId,
 } from './_shared';
 import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { getAppEnvironment } from './_shared/app-env';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -46,6 +47,7 @@ async function sendMagicLinkEmail(data: {
     to: string;
     userName: string;
     magicLink: string;
+    correlationId?: string;
 }) {
     const content = `
       <h2 style="color: #7c3aed; text-align: center; margin: 0 0 24px;">Log In to Your Account</h2>
@@ -63,6 +65,7 @@ async function sendMagicLinkEmail(data: {
         to: data.to,
         subject: 'Log in to Motionify Studio Portal',
         html: emailWrapper(content),
+        correlationId: data.correlationId,
     });
 }
 
@@ -105,7 +108,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
     try {
         // Check if user exists - but don't reveal this in response (TC-AUTH-002)
         const userResult = await query(
-            'SELECT id, email, full_name, role FROM users WHERE email = $1',
+            'SELECT id, email, full_name, role FROM users WHERE email = $1 AND is_active = true',
             [email.toLowerCase()]
         );
 
@@ -151,7 +154,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
         logger.info('Magic link generated', { portalUrl });
 
         // Log full magic link in local development for easy access
-        if (portalUrl.includes('localhost')) {
+        if (getAppEnvironment(process.env) === 'development') {
             console.log(`\n🔗 [DEV] Magic link for ${email}:\n${magicLink}\n`);
         }
 
@@ -160,12 +163,18 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
             to: email,
             userName: user.full_name || email.split('@')[0],
             magicLink,
+            correlationId,
         });
 
-        if (emailResult) {
+        if (emailResult.status === 'sent') {
             logger.info('Magic link email sent', { email: email.slice(0, 3) + '***' });
         } else {
-            logger.error('Failed to send magic link email', undefined, { email: email.slice(0, 3) + '***' });
+            await query('DELETE FROM magic_link_tokens WHERE token = $1', [token]);
+            logger.error('Failed to send magic link email', undefined, {
+                email: email.slice(0, 3) + '***',
+                providerCode: emailResult.code,
+                retryable: emailResult.retryable,
+            });
         }
 
         return {

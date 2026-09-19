@@ -206,20 +206,15 @@ export function ProposalBuilder() {
 
       const proposalLink = proposal.proposalReviewUrl || `/proposal/${proposal.id}`;
 
-      // Console log "email sent" with proposal link
-      console.log('📧 EMAIL SENT TO CLIENT:');
-      console.log('========================================');
-      console.log('To:', inquiry.contactEmail);
-      console.log('Subject: Proposal for', inquiry.inquiryNumber);
-      console.log('');
-      console.log('Proposal Link:', proposalLink);
-      console.log('Total Amount:', formatCurrency(pricing.totalPrice));
-      console.log('Advance Payment:', formatCurrency(pricing.advanceAmount));
-      console.log('========================================');
-
-      toast.success('Proposal created successfully. Email notification logged to console.', {
-        description: proposalLink,
-      });
+      if (proposal.emailDelivery?.status === 'failed') {
+        toast.warning('Proposal created, but the email could not be delivered. Please notify the client manually.', {
+          description: proposalLink,
+        });
+      } else {
+        toast.success('Proposal created and emailed to the client.', {
+          description: proposalLink,
+        });
+      }
       navigate(`/admin/inquiries/${inquiry.id}`);
     } catch (error) {
       console.error('Error creating proposal:', error);

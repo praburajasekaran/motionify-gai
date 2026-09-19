@@ -135,7 +135,10 @@ export const createProjectSchema = z.object({
     name: nameSchema,
     clientUserId: uuidSchema,
     description: z.string().max(5000).optional(),
-    status: z.enum(['draft', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']).optional(),
+    status: z.enum([
+        'draft', 'active', 'in_review', 'awaiting_payment',
+        'on_hold', 'completed', 'archived', 'cancelled',
+    ]).optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -144,7 +147,7 @@ export const updateProjectSchema = z.object({
     website: z.string().max(500).optional().nullable(),
     status: z.enum([
         'draft', 'active', 'in_review', 'awaiting_payment',
-        'on_hold', 'completed', 'archived',
+        'on_hold', 'completed', 'archived', 'cancelled',
     ]).optional(),
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
     due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format').optional().nullable(),
@@ -241,8 +244,7 @@ export const manualCompletePaymentSchema = z.object({
 });
 
 // Razorpay webhook payload schema (validated AFTER signature verification)
-// Note: Validation failure should still return 200 but log error
-// to avoid rejecting valid Razorpay webhooks due to schema drift
+// A valid signature with malformed JSON or an invalid payload returns 400.
 export const razorpayWebhookSchema = z.object({
     entity: z.literal('event'),
     account_id: z.string(),

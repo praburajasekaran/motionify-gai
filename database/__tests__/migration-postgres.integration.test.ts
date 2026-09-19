@@ -1,0 +1,198 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, before, describe, it } from 'node:test';
+import pg from 'pg';
+import { fileURLToPath } from 'node:url';
+import { LATEST_SCHEMA_MIGRATION, verifyDatabaseContract } from '../contract';
+
+const { Pool } = pg;
+
+function executable(name: string): string | null {
+  const pathValue = process.env.PATH?.split(':')
+    .map((directory) => join(directory, name))
+    .find(existsSync);
+  return pathValue ?? null;
+}
+
+async function availablePort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  return port;
+}
+
+const initdb = executable('initdb');
+const pgCtl = executable('pg_ctl');
+const createdb = executable('createdb');
+const postgresAvailable = Boolean(initdb && pgCtl && createdb);
+
+describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () => {
+  let clusterRoot = '';
+  let dataDirectory = '';
+  let port = 0;
+
+  before(async () => {
+    clusterRoot = await mkdtemp(join(tmpdir(), 'motionify-migration-'));
+    dataDirectory = join(clusterRoot, 'data');
+    port = await availablePort();
+    execFileSync(initdb!, ['-D', dataDirectory, '-A', 'trust', '--no-locale', '-E', 'UTF8'], { stdio: 'ignore' });
+    execFileSync(pgCtl!, ['-D', dataDirectory, '-l', join(clusterRoot, 'postgres.log'), '-o', `-F -p ${port}`, '-w', 'start'], { stdio: 'ignore' });
+  });
+
+  after(async () => {
+    if (dataDirectory && pgCtl) {
+      try {
+        execFileSync(pgCtl, ['-D', dataDirectory, '-m', 'fast', '-w', 'stop'], { stdio: 'ignore' });
+      } catch {
+        // The temp cluster may already be stopped after a failed assertion.
+      }
+    }
+    if (clusterRoot) await rm(clusterRoot, { recursive: true, force: true });
+  });
+
+  async function createDatabase(name: string): Promise<pg.Pool> {
+    execFileSync(createdb!, ['-h', '127.0.0.1', '-p', String(port), name], { stdio: 'ignore' });
+    return new Pool({ connectionString: `postgresql://127.0.0.1:${port}/${name}` });
+  }
+
+  async function recordMigration(pool: pg.Pool): Promise<void> {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id SERIAL PRIMARY KEY,
+        version VARCHAR(20) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(
+      `INSERT INTO migrations (version, name)
+       VALUES ($1, $2)
+       ON CONFLICT (version) DO UPDATE SET name = EXCLUDED.name`,
+      [LATEST_SCHEMA_MIGRATION.version, LATEST_SCHEMA_MIGRATION.name]
+    );
+  }
+
+  it('applies to both a clean schema and the production-shaped drift fixture', async () => {
+    const schemaSql = await readFile(fileURLToPath(new URL('../schema.sql', import.meta.url)), 'utf8');
+    const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
+    const migrationSql = await readFile(fileURLToPath(new URL(
+      `../migrations/${LATEST_SCHEMA_MIGRATION.version}_${LATEST_SCHEMA_MIGRATION.name}.sql`,
+      import.meta.url
+    )), 'utf8');
+
+    for (const [databaseName, setupSql] of [
+      ['contract_clean', schemaSql],
+      ['contract_drift', driftSql],
+    ] as const) {
+      const pool = await createDatabase(databaseName);
+      try {
+        await pool.query(setupSql);
+        await pool.query(migrationSql);
+        await recordMigration(pool);
+
+        const result = await verifyDatabaseContract(pool);
+        assert.equal(result.ready, true, JSON.stringify(result.issues));
+
+        const statuses = await pool.query<{ status: string }>(
+          'SELECT DISTINCT status FROM projects ORDER BY status'
+        );
+        assert.ok(statuses.rows.every(({ status }) => ['active', 'in_review'].includes(status) || databaseName === 'contract_clean'));
+
+        const project = await pool.query<{ id: string }>(
+          databaseName === 'contract_clean'
+            ? `INSERT INTO projects (project_number, status)
+               VALUES ('PROJECT-UNIQUE-KEY-TEST', 'active')
+               RETURNING id`
+            : 'SELECT id FROM projects ORDER BY id LIMIT 1'
+        );
+        const user = await pool.query<{ id: string }>('SELECT id FROM users ORDER BY id LIMIT 1');
+
+        await pool.query(
+          `INSERT INTO project_files (project_id, file_name, r2_key, uploaded_by)
+           VALUES ($1, 'first.pdf', 'projects/shared/object.pdf', $2)`,
+          [project.rows[0].id, user.rows[0].id]
+        );
+        await assert.rejects(
+          pool.query(
+            `INSERT INTO project_files (project_id, file_name, r2_key, uploaded_by)
+             VALUES ($1, 'second.pdf', 'projects/shared/object.pdf', $2)`,
+            [project.rows[0].id, user.rows[0].id]
+          ),
+          (error: unknown) => Boolean(error && typeof error === 'object' && (error as { code?: string }).code === '23505')
+        );
+
+        await pool.query(
+          `INSERT INTO sessions (user_id, token, jwt_token_hash, expires_at)
+           VALUES ($1, 'session-a', 'shared-jwt-hash', NOW() + INTERVAL '1 hour')`,
+          [user.rows[0].id]
+        );
+        await assert.rejects(
+          pool.query(
+            `INSERT INTO sessions (user_id, token, jwt_token_hash, expires_at)
+             VALUES ($1, 'session-b', 'shared-jwt-hash', NOW() + INTERVAL '1 hour')`,
+            [user.rows[0].id]
+          ),
+          (error: unknown) => Boolean(error && typeof error === 'object' && (error as { code?: string }).code === '23505')
+        );
+
+        const deliverable = databaseName === 'contract_clean'
+          ? await pool.query<{ id: string }>(
+            `INSERT INTO deliverables (project_id, name)
+             VALUES ($1, 'Generated ID') RETURNING id`,
+            [project.rows[0].id]
+          )
+          : await pool.query<{ id: string }>(
+            'INSERT INTO deliverables (project_id) VALUES ($1) RETURNING id',
+            [project.rows[0].id]
+          );
+        assert.match(deliverable.rows[0].id, /^[0-9a-f-]{36}$/i);
+      } finally {
+        await pool.end();
+      }
+    }
+  });
+
+  it('stops with an actionable diagnostic for incomplete legacy project requests', async () => {
+    const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
+    const migrationSql = await readFile(fileURLToPath(new URL(
+      `../migrations/${LATEST_SCHEMA_MIGRATION.version}_${LATEST_SCHEMA_MIGRATION.name}.sql`,
+      import.meta.url
+    )), 'utf8');
+    const pool = await createDatabase('contract_incomplete_requests');
+
+    try {
+      await pool.query(driftSql);
+      await pool.query(`
+        CREATE TABLE project_requests (
+          id UUID,
+          status VARCHAR(50),
+          created_at TIMESTAMPTZ,
+          updated_at TIMESTAMPTZ
+        );
+        INSERT INTO project_requests (id, status) VALUES (gen_random_uuid(), 'new');
+      `);
+
+      await assert.rejects(
+        pool.query(migrationSql),
+        (error: unknown) => Boolean(
+          error
+          && typeof error === 'object'
+          && (error as { code?: string }).code === '23502'
+          && /missing required request data/i.test((error as { message?: string }).message ?? '')
+        )
+      );
+    } finally {
+      await pool.end();
+    }
+  });
+});

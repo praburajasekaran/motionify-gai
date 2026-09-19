@@ -21,6 +21,14 @@ export function isClient(user: User): boolean {
   return user.role === 'client';
 }
 
+function isTerminalProject(status: ProjectStatus): boolean {
+  return status === 'Archived' || status === 'Cancelled';
+}
+
+function isWorkPaused(status: ProjectStatus): boolean {
+  return status === 'On Hold' || isTerminalProject(status);
+}
+
 /**
  * Helper: Check if user is Client Primary Contact for a specific project
  *
@@ -55,8 +63,8 @@ export function canViewDeliverable(
   deliverable: Deliverable,
   project: Project
 ): boolean {
-  // Project must not be archived
-  if (project.status === 'Archived') {
+  // Terminal projects are visible only to super admins.
+  if (isTerminalProject(project.status)) {
     return user.role === 'super_admin';
   }
 
@@ -87,8 +95,8 @@ export function canUploadBetaFiles(
   project: Project,
   task?: Task
 ): boolean {
-  // Project must not be on hold or archived
-  if (project.status === 'On Hold' || project.status === 'Archived') {
+  // Paused or terminal projects accept uploads only from super admins.
+  if (isWorkPaused(project.status)) {
     return user.role === 'super_admin';
   }
 
@@ -114,8 +122,8 @@ export function canUploadFinalFiles(
   user: User,
   project: Project
 ): boolean {
-  // Project must not be on hold or archived
-  if (project.status === 'On Hold' || project.status === 'Archived') {
+  // Paused or terminal projects accept uploads only from super admins.
+  if (isWorkPaused(project.status)) {
     return user.role === 'super_admin';
   }
 
@@ -142,8 +150,7 @@ export function canApproveDeliverable(
     return false;
   }
 
-  // Project must not be on hold or archived
-  if (project.status === 'On Hold' || project.status === 'Archived') {
+  if (isWorkPaused(project.status)) {
     return false;
   }
 
@@ -179,8 +186,7 @@ export function canRequestRevisions(
     return false;
   }
 
-  // Project must not be on hold or archived
-  if (project.status === 'On Hold' || project.status === 'Archived') {
+  if (isWorkPaused(project.status)) {
     return false;
   }
 
@@ -262,8 +268,8 @@ export function canEditDeliverable(
     return false;
   }
 
-  // Project must not be completed or archived
-  if (project.status === 'Completed' || project.status === 'Archived') {
+  // Completed or terminal projects are editable only by super admins.
+  if (project.status === 'Completed' || isTerminalProject(project.status)) {
     return user.role === 'super_admin';
   }
 
@@ -369,8 +375,7 @@ export function canSendForReview(
     return false;
   }
 
-  // Project must not be on hold or archived
-  if (project.status === 'On Hold' || project.status === 'Archived') {
+  if (isWorkPaused(project.status)) {
     return false;
   }
 
@@ -441,6 +446,7 @@ export function getPermissionDeniedReason(
   switch (action) {
     case 'view':
       if (project.status === 'Archived') return 'Project is archived';
+      if (project.status === 'Cancelled') return 'Project is cancelled';
       if (project.status === 'Draft') return 'Project is in draft status';
       return 'You do not have permission to view this deliverable';
 
@@ -533,8 +539,8 @@ export function canUploadProjectFile(
   user: User,
   project: Project
 ): boolean {
-  // Project must not be archived
-  if (project.status === 'Archived') {
+  // Terminal projects accept uploads only from super admins.
+  if (isTerminalProject(project.status)) {
     return user.role === 'super_admin';
   }
 
@@ -550,8 +556,8 @@ export function canDeleteProjectFile(
   user: User,
   project: Project
 ): boolean {
-  // Project must not be archived
-  if (project.status === 'Archived') {
+  // Terminal projects allow deletion only by super admins.
+  if (isTerminalProject(project.status)) {
     return user.role === 'super_admin';
   }
 

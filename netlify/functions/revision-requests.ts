@@ -14,7 +14,7 @@ import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
-import { sendEmail } from './send-email';
+import { sendEmail, summarizeEmailDelivery, type EmailDeliveryResult } from './send-email';
 import { absolutePortalProjectUrl, appOriginFromEnv } from '../../shared/canonical-links';
 import {
   AuthorizationError,
@@ -298,10 +298,12 @@ export const handler = compose(
       });
 
       // 6. Send email notification to admins (outside transaction)
+      const emailResults: EmailDeliveryResult[] = [];
       try {
+        let sentCount = 0;
         for (const admin of adminsRows) {
           if (admin.id !== userId) {
-            await sendEmail({
+            const emailResult = await sendEmail({
               to: admin.email,
               subject: `Revision Requested: ${deliverable.name}`,
               html: `
@@ -333,13 +335,20 @@ export const handler = compose(
                 </div>
               `,
             });
+            if (emailResult.status === 'sent') sentCount++;
+            emailResults.push(emailResult);
           }
         }
-        console.log('✅ Revision request notification emails sent');
+        if (sentCount > 0) {
+          console.log(`✅ Revision request notification emails sent: ${sentCount}`);
+        }
       } catch (emailError) {
         console.error('❌ Failed to send revision request emails:', emailError);
+        emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
         // Don't fail the request if email fails
       }
+
+      const emailDelivery = summarizeEmailDelivery(emailResults);
 
       return {
         statusCode: 201,
@@ -351,6 +360,7 @@ export const handler = compose(
           createdAt: revisionCreatedAt,
           revisionsUsed: deliverable.revisions_used + 1,
           revisionsAllowed: deliverable.total_revisions_allowed,
+          ...(emailDelivery ? { emailDelivery } : {}),
         }),
       };
     }

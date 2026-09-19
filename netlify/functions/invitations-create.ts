@@ -5,6 +5,9 @@ import { query } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
 import crypto from 'crypto';
 import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { sendUserInvitationEmail } from './send-email';
+import { getAppEnvironment } from './_shared/app-env';
+import { createLogger, getCorrelationId } from './_shared/logger';
 
 export const handler = compose(
   withCORS(['POST']),
@@ -12,6 +15,8 @@ export const handler = compose(
   withRateLimit(RATE_LIMITS.apiStrict, 'invitation_create'),
   withValidation(SCHEMAS.invitation.create)
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const correlationId = getCorrelationId(event.headers);
+  const logger = createLogger('invitations-create', correlationId);
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -72,13 +77,19 @@ export const handler = compose(
 
     const invitation = result.rows[0];
 
-    // TODO: Send email with invitation link
-    // For development, log the invitation link
-    const inviteLink = absolutePortalLoginUrl({ token }, appOriginFromEnv(process.env));
-    console.log(`[Invitation] Sent to ${email}:`);
-    console.log(`  Link: ${inviteLink}`);
-    console.log(`  Expires: ${expiresAt.toISOString()}`);
-    console.log(`  Invited by: ${auth!.user!.email}`);
+    const inviteLink = absolutePortalLoginUrl({ token, email }, appOriginFromEnv(process.env));
+    const emailResult = await sendUserInvitationEmail({
+      to: email,
+      inviteLink,
+      fullName: full_name,
+      role,
+      invitedByName: auth!.user!.fullName || auth!.user!.email,
+      correlationId,
+    });
+
+    if (getAppEnvironment(process.env) === 'development') {
+      logger.debug('Global user invitation link generated for local development', { inviteLink });
+    }
 
     return {
       statusCode: 201,
@@ -94,10 +105,11 @@ export const handler = compose(
           expires_at: invitation.expires_at,
           created_at: invitation.created_at,
         },
+        emailDelivery: { status: emailResult.status },
       }),
     };
   } catch (error) {
-    console.error('Create invitation error:', error);
+    logger.error('Create invitation failed', error);
     return {
       statusCode: 500,
       headers,

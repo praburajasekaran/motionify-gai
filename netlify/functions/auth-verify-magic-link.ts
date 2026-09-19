@@ -24,6 +24,7 @@ import {
 import type { PoolClient } from './_shared';
 import { generateJWT, createAuthCookie } from './_shared/jwt';
 import { appOriginFromEnv } from '../../shared/canonical-links';
+import { normalizeRole, type CanonicalUserRole } from './_shared/roles';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -59,6 +60,106 @@ const generateInquiryNumber = async (client: PoolClient): Promise<string> => {
     const nextNumber = maxNumber + 1;
     return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
+
+type InvitationClient = Pick<PoolClient, 'query'>;
+
+interface UserInvitationRow {
+    id: string;
+    email: string;
+    full_name: string | null;
+    role: string;
+    status: string;
+    expires_at: string | Date;
+}
+
+interface CreatedUserRow {
+    id: string;
+    email: string;
+    full_name: string;
+    role: CanonicalUserRole;
+}
+
+export async function consumeUserInvitation(
+    client: InvitationClient,
+    token: string,
+    email?: string
+): Promise<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: CanonicalUserRole;
+    avatarUrl: null;
+} | null> {
+    const invitationResult = await client.query(
+        `SELECT id, email, full_name, role, status, expires_at
+         FROM user_invitations
+         WHERE token = $1
+         FOR UPDATE`,
+        [token]
+    );
+
+    if (invitationResult.rows.length === 0) return null;
+
+    const invitation = invitationResult.rows[0] as UserInvitationRow;
+    if (email && invitation.email.toLowerCase() !== email.toLowerCase()) {
+        throw { statusCode: 401, code: 'INVALID_EMAIL', message: 'Email does not match token' };
+    }
+    if (invitation.status !== 'pending') {
+        throw {
+            statusCode: 401,
+            code: invitation.status === 'revoked' ? 'TOKEN_REVOKED' : 'TOKEN_ALREADY_USED',
+            message: 'This invitation is no longer valid.',
+        };
+    }
+    if (new Date() > new Date(invitation.expires_at)) {
+        throw { statusCode: 401, code: 'TOKEN_EXPIRED', message: 'This invitation has expired.' };
+    }
+
+    const role = normalizeRole(invitation.role);
+    if (role === 'unknown') {
+        throw { statusCode: 401, code: 'INVALID_ROLE', message: 'This invitation is invalid.' };
+    }
+
+    const existingUser = await client.query(
+        `SELECT id FROM users WHERE LOWER(email) = LOWER($1)`,
+        [invitation.email]
+    );
+    if (existingUser.rows.length > 0) {
+        throw {
+            statusCode: 409,
+            code: 'USER_ALREADY_EXISTS',
+            message: 'An account already exists for this email. Request a new login link.',
+        };
+    }
+
+    const fullName = invitation.full_name?.trim() || invitation.email.split('@')[0];
+    const newUser = await client.query(
+        `INSERT INTO users (email, full_name, role, is_active)
+         VALUES ($1, $2, $3, true)
+         RETURNING id, email, full_name, role`,
+        [invitation.email.toLowerCase(), fullName, role]
+    );
+
+    const accepted = await client.query(
+        `UPDATE user_invitations
+         SET status = 'accepted', accepted_at = NOW(), updated_at = NOW()
+         WHERE id = $1 AND status = 'pending'
+         RETURNING id`,
+        [invitation.id]
+    );
+    if (accepted.rows.length === 0) {
+        throw { statusCode: 401, code: 'TOKEN_ALREADY_USED', message: 'This invitation is no longer valid.' };
+    }
+
+    const user = newUser.rows[0] as CreatedUserRow;
+    return {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        avatarUrl: null,
+    };
+}
 
 export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
     const correlationId = getCorrelationId(event.headers);
@@ -178,7 +279,9 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
                 // Get user
                 const userResult = await client.query(
-                    `SELECT id, email, full_name, role, profile_picture_url FROM users WHERE email = $1`,
+                    `SELECT id, email, full_name, role, profile_picture_url
+                     FROM users
+                     WHERE email = $1 AND is_active = true`,
                     [userEmail.toLowerCase()]
                 );
 
@@ -196,7 +299,17 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 userRole = user.role;
                 userAvatar = user.profile_picture_url;
             } else {
-                // 2. Try to find Pending Inquiry Verification
+                // 2. Try to consume a pending global user invitation.
+                const invitedUser = await consumeUserInvitation(client, token, email);
+                if (invitedUser) {
+                    userId = invitedUser.id;
+                    userEmail = invitedUser.email;
+                    userFullName = invitedUser.fullName;
+                    userRole = invitedUser.role;
+                    userAvatar = invitedUser.avatarUrl;
+                    rememberMe = true;
+                } else {
+                // 3. Try to find Pending Inquiry Verification
                 const inquiryResult = await client.query(
                     `SELECT * FROM pending_inquiry_verifications WHERE token = $1`,
                     [token]
@@ -229,7 +342,9 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
                 // Check if user exists
                 const userCheck = await client.query(
-                    `SELECT id, full_name, role, profile_picture_url FROM users WHERE email = $1`,
+                    `SELECT id, full_name, role, profile_picture_url
+                     FROM users
+                     WHERE email = $1 AND is_active = true`,
                     [userEmail]
                 );
 
@@ -296,9 +411,10 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                 });
 
                 logger.info('Inquiry created', { inquiryNumber });
+                }
             }
 
-            // 3. Create Session (Common for both flows)
+            // 4. Create Session (Common for all flows)
             const sessionDurationSeconds = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
             const sessionExpiresAt = new Date(Date.now() + sessionDurationSeconds * 1000);
 

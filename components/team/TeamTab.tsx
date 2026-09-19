@@ -147,7 +147,14 @@ export const TeamTab: React.FC<TeamTabProps> = ({
                 credentials: 'include',
             });
 
-            if (response.ok) {
+            const result = await response.json().catch(() => ({}));
+            if (response.ok && result.emailDelivery?.status === 'failed') {
+                addToast({
+                    title: 'Email Not Delivered',
+                    description: 'The invitation was refreshed, but its email could not be delivered. Please try again.',
+                    variant: 'destructive',
+                });
+            } else if (response.ok) {
                 addToast({
                     title: 'Invitation Resent',
                     description: 'The invitation email has been resent.',

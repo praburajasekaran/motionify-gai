@@ -7,7 +7,8 @@
  * - extractTokenFromCookie: Parse auth token from cookie header
  */
 
-import * as jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { createLogger } from './logger';
 import { normalizeRole, type CanonicalUserRole } from './roles';
 
@@ -39,6 +40,10 @@ export interface JWTVerifyResult {
     error?: string;
 }
 
+export function hashJWT(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 /**
  * Generate a signed JWT token for authenticated user
  */
@@ -60,6 +65,7 @@ export function generateJWT(user: {
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
         expiresIn: rememberMe ? TOKEN_EXPIRY_REMEMBER : TOKEN_EXPIRY_DEFAULT,
+        jwtid: crypto.randomUUID(),
     };
 
     return jwt.sign(payload, JWT_SECRET, options);

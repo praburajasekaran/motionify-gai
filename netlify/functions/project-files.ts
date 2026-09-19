@@ -10,6 +10,7 @@ import {
   requireProjectAccess,
 } from './_shared/authorization';
 import { isAdminLike } from './_shared/roles';
+import { deleteFromR2 } from './_shared/r2';
 
 const createProjectFileSchema = z.object({
   projectId: z.string().uuid(),
@@ -18,6 +19,92 @@ const createProjectFileSchema = z.object({
   fileSize: z.number().optional(),
   r2Key: z.string().min(1),
 });
+
+type QueryFunction = (text: string, params?: any[]) => Promise<{ rows: any[] }>;
+
+export interface DeleteProjectFileDependencies {
+  deleteObject: (key: string) => Promise<void>;
+  query: QueryFunction;
+}
+
+const defaultDeleteProjectFileDependencies: DeleteProjectFileDependencies = {
+  deleteObject: deleteFromR2,
+  query: dbQuery,
+};
+
+export class ProjectFileStorageDeleteError extends Error {
+  constructor(public readonly cause: unknown) {
+    super('Project file storage deletion failed');
+    this.name = 'ProjectFileStorageDeleteError';
+  }
+}
+
+export class ProjectFileKeyConflictError extends Error {
+  constructor() {
+    super('Project file key is referenced by another metadata row');
+    this.name = 'ProjectFileKeyConflictError';
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === '23505');
+}
+
+function createProjectFileKeyConflictResponse(headers: Record<string, string>) {
+  return {
+    statusCode: 409,
+    headers,
+    body: JSON.stringify({
+      error: {
+        code: 'FILE_KEY_ALREADY_REGISTERED',
+        message: 'This uploaded file is already registered.',
+      },
+    }),
+  };
+}
+
+/**
+ * Remove storage before metadata so an R2 failure leaves a retriable database
+ * record. R2 deletion is idempotent, allowing a retry to finish metadata
+ * cleanup after a later database failure.
+ */
+export async function deleteProjectFileObjectAndMetadata(
+  fileId: string,
+  r2Key: string,
+  dependencies: DeleteProjectFileDependencies = defaultDeleteProjectFileDependencies
+): Promise<void> {
+  const aliases = await dependencies.query(
+    `SELECT id FROM project_files WHERE r2_key = $1 AND id <> $2 LIMIT 1`,
+    [r2Key, fileId]
+  );
+  if (aliases.rows.length > 0) {
+    throw new ProjectFileKeyConflictError();
+  }
+
+  try {
+    await dependencies.deleteObject(r2Key);
+  } catch (error) {
+    throw new ProjectFileStorageDeleteError(error);
+  }
+  await dependencies.query(`DELETE FROM project_files WHERE id = $1`, [fileId]);
+}
+
+export function createProjectFileStorageDeleteFailureResponse(headers: Record<string, string>) {
+  return {
+    statusCode: 502,
+    headers: {
+      ...headers,
+      'Retry-After': '5',
+    },
+    body: JSON.stringify({
+      error: {
+        code: 'STORAGE_DELETE_FAILED',
+        message: 'File storage is temporarily unavailable. Please retry.',
+        retryable: true,
+      },
+    }),
+  };
+}
 
 function mapFileFromDB(row: any) {
   return {
@@ -128,19 +215,27 @@ export const handler = compose(
         };
       }
 
-      const result = await dbQuery(
-        `INSERT INTO project_files (project_id, file_name, file_type, file_size, r2_key, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-          data.projectId,
-          data.fileName,
-          data.fileType || null,
-          data.fileSize || null,
-          data.r2Key,
-          userId,
-        ]
-      );
+      let result;
+      try {
+        result = await dbQuery(
+          `INSERT INTO project_files (project_id, file_name, file_type, file_size, r2_key, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            data.projectId,
+            data.fileName,
+            data.fileType || null,
+            data.fileSize || null,
+            data.r2Key,
+            userId,
+          ]
+        );
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          return createProjectFileKeyConflictResponse(headers);
+        }
+        throw error;
+      }
 
       // Log activity
       await logActivity({
@@ -175,7 +270,7 @@ export const handler = compose(
 
       // Only allow the uploader, admins, or PMs to delete
       const fileResult = await dbQuery(
-        `SELECT uploaded_by, file_name, project_id FROM project_files WHERE id = $1`,
+        `SELECT uploaded_by, file_name, project_id, r2_key FROM project_files WHERE id = $1`,
         [fileId]
       );
 
@@ -200,7 +295,19 @@ export const handler = compose(
       }
 
       const deletedFile = fileResult.rows[0];
-      await dbQuery(`DELETE FROM project_files WHERE id = $1`, [fileId]);
+      try {
+        await deleteProjectFileObjectAndMetadata(fileId, deletedFile.r2_key);
+      } catch (error) {
+        if (error instanceof ProjectFileKeyConflictError) {
+          return createProjectFileKeyConflictResponse(headers);
+        }
+        if (!(error instanceof ProjectFileStorageDeleteError)) throw error;
+        console.error('Project file storage deletion failed', {
+          fileId,
+          message: error.message,
+        });
+        return createProjectFileStorageDeleteFailureResponse(headers);
+      }
 
       // Log activity
       await logActivity({
@@ -232,10 +339,7 @@ export const handler = compose(
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }),
+      body: JSON.stringify({ error: 'Internal server error' }),
     };
   }
 });

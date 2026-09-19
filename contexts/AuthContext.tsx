@@ -57,6 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             await fetch(`${API_BASE}/auth-logout`, {
                 method: 'POST',
                 credentials: 'include',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
         } catch (error) {
             console.error('Logout API call failed:', error);

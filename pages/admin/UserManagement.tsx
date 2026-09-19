@@ -88,7 +88,9 @@ export function UserManagement() {
         try {
             const response = await fetch('/.netlify/functions/users-create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(formData),
                 credentials: 'include',
             });
@@ -98,7 +100,11 @@ export function UserManagement() {
                 await loadUsers();
                 setIsCreateModalOpen(false);
                 setFormData({ email: '', full_name: '', role: 'support' });
-                toast.success(`User created. Magic link sent to ${formData.email}.`);
+                if (data.emailDelivery?.status === 'failed') {
+                    toast.warning(`User created, but the invitation email could not be delivered to ${formData.email}.`);
+                } else {
+                    toast.success(`User created. Magic link sent to ${formData.email}.`);
+                }
             } else {
                 setError(data.error || 'Failed to create user');
             }

@@ -654,6 +654,7 @@ export const ProjectDetail = () => {
             case 'Completed': return 'success';
             case 'Awaiting Payment': return 'warning';
             case 'On Hold': return 'destructive';
+            case 'Cancelled': return 'outline';
             default: return 'outline';
         }
     };
@@ -748,9 +749,11 @@ export const ProjectDetail = () => {
                                     </button>
                                 }>
                                     <DropdownMenuItem>Active</DropdownMenuItem>
+                                    <DropdownMenuItem>In Review</DropdownMenuItem>
                                     <DropdownMenuItem>Awaiting Payment</DropdownMenuItem>
                                     <DropdownMenuItem>Completed</DropdownMenuItem>
                                     <DropdownMenuItem>On Hold</DropdownMenuItem>
+                                    <DropdownMenuItem>Cancelled</DropdownMenuItem>
                                 </DropdownMenu>
 
                                 <Badge variant={getStatusVariant(project.status)} className="text-[12px] font-medium">

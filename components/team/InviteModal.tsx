@@ -74,10 +74,14 @@ export const InviteModal: React.FC<InviteModalProps> = ({
             const result = await response.json();
 
             if (result.success) {
-                setSuccess(`Invitation sent to ${email}!`);
                 if (onInviteSent) {
                     onInviteSent();
                 }
+                if (result.emailDelivery?.status === 'failed') {
+                    setGeneralError(`Invitation created for ${email}, but the email could not be delivered. Please retry from the team list.`);
+                    return;
+                }
+                setSuccess(`Invitation sent to ${email}!`);
                 // Close modal after short delay
                 setTimeout(() => {
                     handleClose();

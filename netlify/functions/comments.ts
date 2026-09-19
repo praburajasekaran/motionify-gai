@@ -1,6 +1,10 @@
 import { query as dbQuery } from './_shared/db';
 import { getCorsHeaders } from './_shared/cors';
-import { sendCommentNotificationEmail } from './send-email';
+import {
+    sendCommentNotificationEmail,
+    summarizeEmailDelivery,
+    type EmailDeliveryResult,
+} from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
@@ -181,6 +185,7 @@ export const handler = compose(
             // ========================================================================
             // Send comment notification email
             // ========================================================================
+            const emailResults: EmailDeliveryResult[] = [];
             try {
                 // Determine commenter role for email subject
                 const commenterRole = user.role === 'client' ? 'client' : 'admin';
@@ -218,7 +223,7 @@ export const handler = compose(
                 // Send email if recipient found (don't notify sender)
                 if (recipientEmail) {
                     const commentPreview = trimmedContent.substring(0, 100);
-                    await sendCommentNotificationEmail({
+                    const emailResult = await sendCommentNotificationEmail({
                         to: recipientEmail,
                         commenterName: user.fullName,
                         commenterRole,
@@ -226,7 +231,10 @@ export const handler = compose(
                         proposalId,
                         proposalNumber,
                     });
-                    console.log(`✅ Comment notification sent to ${recipientEmail}`);
+                    if (emailResult.status === 'sent') {
+                        console.log(`✅ Comment notification sent to ${recipientEmail}`);
+                    }
+                    emailResults.push(emailResult);
                 } else {
                     console.warn(`⚠️ Could not find recipient email for comment notification on proposal ${proposalId}`);
                 }
@@ -265,7 +273,10 @@ export const handler = compose(
             } catch (emailError) {
                 // Log but don't fail the comment creation
                 console.error('❌ Failed to send comment notification email:', emailError);
+                emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
             }
+
+            const emailDelivery = summarizeEmailDelivery(emailResults);
 
             return {
                 statusCode: 201,
@@ -273,6 +284,7 @@ export const handler = compose(
                 body: JSON.stringify({
                     success: true,
                     comment,
+                    ...(emailDelivery ? { emailDelivery } : {}),
                 }),
             };
         }

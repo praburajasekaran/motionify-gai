@@ -21,7 +21,8 @@ export type ProjectStatus =
   | 'Awaiting Payment'  // Client PM cannot approve new deliverables
   | 'On Hold'           // No file uploads except Admin
   | 'Completed'         // Read-only except Admin, files accessible 365 days
-  | 'Archived';         // Admin read-only only
+  | 'Archived'          // Admin read-only only
+  | 'Cancelled';        // Terminal cancelled project
 
 export type Priority = 'Low' | 'Medium' | 'High';
 

@@ -26,8 +26,13 @@ CREATE TABLE sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   token VARCHAR(500) NOT NULL,
+  jwt_token_hash VARCHAR(255),
+  remember_me BOOLEAN NOT NULL DEFAULT false,
   expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================================
@@ -145,10 +150,40 @@ CREATE TABLE projects (
 );
 
 -- ============================================================================
--- 6. DELIVERABLES TABLE
+-- 6. PROJECT_REQUESTS TABLE
+-- ============================================================================
+CREATE TABLE project_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_number VARCHAR(50) UNIQUE NOT NULL,
+  client_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  tentative_deadline DATE NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (status IN ('pending', 'reviewing', 'approved', 'rejected', 'converted', 'cancelled'))
+);
+
+-- ============================================================================
+-- 7. PROJECT FILES TABLE
+-- ============================================================================
+CREATE TABLE project_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_type VARCHAR(100),
+  file_size BIGINT,
+  r2_key TEXT NOT NULL,
+  uploaded_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
+-- 8. DELIVERABLES TABLE
 -- ============================================================================
 CREATE TABLE deliverables (
-  id UUID PRIMARY KEY, -- Same ID as in proposal.deliverables[].id
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   
   -- Content
@@ -179,7 +214,7 @@ CREATE TABLE deliverables (
 );
 
 -- ============================================================================
--- 7. REVISION_REQUESTS TABLE
+-- 9. REVISION_REQUESTS TABLE
 -- ============================================================================
 CREATE TABLE revision_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -210,7 +245,7 @@ CREATE TABLE revision_requests (
 );
 
 -- ============================================================================
--- 8. PAYMENTS TABLE (Razorpay integration)
+-- 10. PAYMENTS TABLE (Razorpay integration)
 -- ============================================================================
 CREATE TABLE payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -251,6 +286,9 @@ CREATE INDEX idx_users_role ON users(role);
 
 -- Sessions
 CREATE INDEX idx_sessions_token ON sessions(token);
+CREATE UNIQUE INDEX idx_sessions_jwt_token_hash
+  ON sessions(jwt_token_hash)
+  WHERE jwt_token_hash IS NOT NULL;
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_sessions_expires ON sessions(expires_at);
 
@@ -268,6 +306,15 @@ CREATE INDEX idx_proposals_status ON proposals(status);
 CREATE INDEX idx_projects_client ON projects(client_user_id);
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_projects_number ON projects(project_number);
+
+-- Project Requests
+CREATE INDEX idx_project_requests_client ON project_requests(client_user_id);
+CREATE INDEX idx_project_requests_status ON project_requests(status);
+CREATE INDEX idx_project_requests_created_at ON project_requests(created_at DESC);
+
+-- Project Files
+CREATE INDEX idx_project_files_project_id ON project_files(project_id);
+CREATE UNIQUE INDEX idx_project_files_r2_key ON project_files(r2_key);
 
 -- Deliverables
 CREATE INDEX idx_deliverables_project ON deliverables(project_id);
@@ -308,6 +355,9 @@ CREATE TRIGGER update_proposals_updated_at BEFORE UPDATE ON proposals
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_project_requests_updated_at BEFORE UPDATE ON project_requests
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_deliverables_updated_at BEFORE UPDATE ON deliverables
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -315,7 +365,30 @@ CREATE TRIGGER update_revision_requests_updated_at BEFORE UPDATE ON revision_req
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 9. PROJECT_INVITATIONS TABLE
+-- 10. PROJECT_TEAM TABLE
+-- ============================================================================
+CREATE TABLE project_team (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('super_admin', 'support', 'team_member', 'client')),
+  is_primary_contact BOOLEAN NOT NULL DEFAULT false,
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  added_by UUID REFERENCES users(id),
+  invitation_id UUID,
+  removed_at TIMESTAMPTZ,
+  removed_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, project_id)
+);
+
+CREATE INDEX idx_project_team_project ON project_team(project_id);
+CREATE INDEX idx_project_team_user ON project_team(user_id);
+CREATE INDEX idx_project_team_active ON project_team(project_id) WHERE removed_at IS NULL;
+
+-- ============================================================================
+-- 11. PROJECT_INVITATIONS TABLE
 -- ============================================================================
 CREATE TABLE project_invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -332,12 +405,16 @@ CREATE TABLE project_invitations (
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
   
   -- Inviter information
-  invited_by UUID REFERENCES users(id),
+  invited_by UUID NOT NULL REFERENCES users(id),
   
   -- Timestamps
   expires_at TIMESTAMPTZ NOT NULL,
   accepted_at TIMESTAMPTZ,
+  accepted_by UUID REFERENCES users(id),
   revoked_at TIMESTAMPTZ,
+  revoked_by UUID REFERENCES users(id),
+  resent_at TIMESTAMPTZ,
+  resent_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
@@ -351,6 +428,7 @@ CREATE INDEX idx_invitations_token ON project_invitations(token);
 CREATE INDEX idx_invitations_email ON project_invitations(email);
 CREATE INDEX idx_invitations_status ON project_invitations(status);
 CREATE INDEX idx_invitations_expires ON project_invitations(expires_at);
+CREATE INDEX idx_invitations_pending ON project_invitations(project_id) WHERE status = 'pending';
 
 -- Trigger for updated_at
 CREATE TRIGGER update_project_invitations_updated_at
@@ -358,7 +436,7 @@ CREATE TRIGGER update_project_invitations_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 10. USER_INVITATIONS TABLE (for admin-level user creation)
+-- 12. USER_INVITATIONS TABLE (for admin-level user creation)
 -- ============================================================================
 CREATE TABLE user_invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -388,7 +466,7 @@ CREATE TRIGGER update_user_invitations_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 11. ACTIVITIES TABLE (for audit trail)
+-- 13. ACTIVITIES TABLE (for audit trail)
 -- ============================================================================
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -413,7 +491,7 @@ CREATE INDEX idx_activities_type ON activities(type);
 CREATE INDEX idx_activities_created_at ON activities(created_at DESC);
 
 -- ============================================================================
--- 12. USER PREFERENCES TABLE
+-- 14. USER PREFERENCES TABLE
 -- ============================================================================
 CREATE TABLE user_preferences (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -426,16 +504,6 @@ CREATE TABLE user_preferences (
   timezone VARCHAR(100) DEFAULT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- ============================================================================
--- INDEXES FOR INVITATIONS
--- ============================================================================
-
--- Payments
-CREATE INDEX idx_payments_proposal ON payments(proposal_id);
-CREATE INDEX idx_payments_project ON payments(project_id);
-CREATE INDEX idx_payments_status ON payments(status);
-CREATE INDEX idx_payments_razorpay_order ON payments(razorpay_order_id);
 
 -- ============================================================================
 -- SEED DATA (Admin user for testing)

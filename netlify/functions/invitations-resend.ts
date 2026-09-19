@@ -1,4 +1,5 @@
 import { query as dbQuery } from './_shared/db';
+import crypto from 'crypto';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -9,12 +10,17 @@ import {
   getAuthRole,
   requireProjectManagerAccess,
 } from './_shared/authorization';
+import { sendProjectInvitationEmail } from './send-email';
+import { createLogger, getCorrelationId } from './_shared/logger';
+import { getAppEnvironment } from './_shared/app-env';
 
 export const handler = compose(
   withCORS(['POST', 'OPTIONS']),
   withAuth(),
   withRateLimit(RATE_LIMITS.apiStrict, 'invitation_resend')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const correlationId = getCorrelationId(event.headers);
+  const logger = createLogger('invitations-resend', correlationId);
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -34,8 +40,20 @@ export const handler = compose(
   try {
     // Find pending invitation
     const result = await dbQuery(
-      `SELECT id, email, token, expires_at, project_id, role FROM project_invitations
-       WHERE id = $1 AND status = 'pending'`,
+      `SELECT
+         pi.id,
+         pi.email,
+         pi.token,
+         pi.expires_at,
+         pi.project_id,
+         pi.role,
+         p.name AS project_name,
+         p.project_number,
+         inviter.full_name AS invited_by_name
+       FROM project_invitations pi
+       JOIN projects p ON p.id = pi.project_id
+       LEFT JOIN users inviter ON inviter.id = pi.invited_by
+       WHERE pi.id = $1 AND pi.status = 'pending'`,
       [invitationId]
     );
 
@@ -71,28 +89,48 @@ export const handler = compose(
       };
     }
 
-    // Resend email (log in development)
-    const inviteLink = absoluteProjectAccessUrl({ token: invitation.token }, appOriginFromEnv(process.env));
-    console.log(`[Mock Email] Resent invitation to ${invitation.email}:`);
-    console.log(`  Link: ${inviteLink}`);
-    console.log(`  Expires: ${new Date(invitation.expires_at).toISOString()}`);
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await dbQuery(
+      `UPDATE project_invitations
+       SET token = $2,
+           expires_at = $3,
+           resent_at = NOW(),
+           resent_count = COALESCE(resent_count, 0) + 1,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [invitation.id, token, expiresAt]
+    );
+
+    const inviteLink = absoluteProjectAccessUrl({ token }, appOriginFromEnv(process.env));
+    const emailResult = await sendProjectInvitationEmail({
+      to: invitation.email,
+      inviteLink,
+      projectName: invitation.project_name || invitation.project_number || invitation.project_id,
+      role: invitation.role,
+      invitedByName: invitation.invited_by_name || auth?.user?.fullName || 'A team member',
+      correlationId,
+    });
+
+    if (getAppEnvironment(process.env) === 'development') {
+      logger.debug('Project invitation resend link generated for local development', { inviteLink });
+    }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true }),
+      body: JSON.stringify({ success: true, emailDelivery: { status: emailResult.status } }),
     };
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return createAuthorizationResponse(error, origin);
     }
-    console.error('Resend invitation error:', error);
+    logger.error('Resend invitation failed', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         error: 'Failed to resend invitation',
-        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
   }

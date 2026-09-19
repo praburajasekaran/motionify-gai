@@ -82,7 +82,7 @@ export default async function handler(req: Request, context: Context) {
                     daysOverdue,
                 });
 
-                if (emailResult) {
+                if (emailResult.status === 'sent') {
                     // Mark reminder as sent
                     await pool.query('UPDATE payments SET last_reminder_sent = NOW() WHERE id = $1', [
                         payment.payment_id,
@@ -96,9 +96,10 @@ export default async function handler(req: Request, context: Context) {
                     });
                 } else {
                     remindersFailed++;
-                    logger.error('Payment reminder email failed', undefined, {
+                    logger.error('Payment reminder email delivery failed', undefined, {
                         paymentId: payment.payment_id,
-                        clientEmail: payment.client_email.slice(0, 3) + '***',
+                        providerCode: emailResult.code,
+                        retryable: emailResult.retryable,
                     });
                 }
             } catch (emailError) {

@@ -53,6 +53,7 @@ export interface Proposal {
   proposalReviewToken?: string;
   proposalReviewUrl?: string;
   handoff?: ProposalHandoff;
+  emailDelivery?: { status: 'sent' | 'failed' };
 }
 
 function mapProposalFromApi(proposal: any): Proposal {
@@ -171,7 +172,9 @@ export async function createProposal(data: {
 
   const response = await fetch(`${API_BASE_URL}/proposals`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(data),
     credentials: 'include',
   });
@@ -220,7 +223,9 @@ export async function updateProposal(id: string, updates: Partial<Proposal>): Pr
 
   const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(snakeCaseUpdates),
     credentials: 'include',
   });
@@ -243,7 +248,9 @@ export async function updateProposalStatus(
 ): Promise<Proposal> {
   const response = await fetch(`${API_BASE_URL}/proposal-detail/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ status, feedback: additionalData?.feedback }),
     credentials: 'include',
   });

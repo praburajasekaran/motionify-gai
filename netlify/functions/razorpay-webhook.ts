@@ -20,33 +20,10 @@ import {
   sendPaymentFailureNotificationEmail,
 } from './send-email';
 import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
+import { razorpayWebhookSchema, type RazorpayWebhookPayload } from './_shared/schemas';
 import { absoluteProjectAccessUrl, absoluteUrl, appOriginFromEnv, portalPath } from '../../shared/canonical-links';
 
-/**
- * Razorpay webhook payload structure
- */
-interface RazorpayWebhookPayload {
-  entity: 'event';
-  account_id: string;
-  event: string;
-  contains: string[];
-  payload: {
-    payment?: {
-      entity: {
-        id: string;
-        order_id: string;
-        amount: number;
-        currency: string;
-        status: string;
-        method?: string;
-        captured?: boolean;
-        error_code?: string | null;
-        error_description?: string | null;
-      };
-    };
-  };
-  created_at: number;
-}
+const PAYMENT_EVENTS = new Set(['payment.captured', 'order.paid', 'payment.failed']);
 
 function buildProjectAccessUrl(projectId: string, email: string): string {
   return absoluteProjectAccessUrl({ projectId, email }, appOriginFromEnv(process.env));
@@ -64,6 +41,42 @@ function verifySignature(rawBody: string, signature: string, secret: string): bo
     return false;
   }
   return crypto.timingSafeEqual(expected, actual);
+}
+
+type WebhookValidationResult =
+  | { ok: true; payload: RazorpayWebhookPayload; auditPayload: Record<string, unknown> }
+  | { ok: false; statusCode: 400 | 401; error: 'Invalid signature' | 'Invalid JSON payload' | 'Invalid webhook payload' };
+
+function validateWebhookRequest(
+  rawBody: string,
+  signature: string,
+  webhookSecret: string,
+): WebhookValidationResult {
+  if (!verifySignature(rawBody, signature, webhookSecret)) {
+    return { ok: false, statusCode: 401, error: 'Invalid signature' };
+  }
+
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(rawBody);
+  } catch {
+    return { ok: false, statusCode: 400, error: 'Invalid JSON payload' };
+  }
+
+  const parsed = razorpayWebhookSchema.safeParse(candidate);
+  if (!parsed.success) {
+    return { ok: false, statusCode: 400, error: 'Invalid webhook payload' };
+  }
+
+  if (PAYMENT_EVENTS.has(parsed.data.event) && !parsed.data.payload.payment?.entity) {
+    return { ok: false, statusCode: 400, error: 'Invalid webhook payload' };
+  }
+
+  return {
+    ok: true,
+    payload: parsed.data,
+    auditPayload: candidate as Record<string, unknown>,
+  };
 }
 
 /**
@@ -87,7 +100,7 @@ async function logWebhook(
     eventId: string;
     orderId: string;
     paymentId: string | null;
-    payload: RazorpayWebhookPayload;
+    payload: Record<string, unknown>;
     signature: string;
     signatureVerified: boolean;
     status: 'RECEIVED' | 'PROCESSED' | 'FAILED';
@@ -277,15 +290,15 @@ async function handlePaymentFailed(
     const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
     if (!adminEmail) {
       console.warn('[Webhook] ADMIN_NOTIFICATION_EMAIL not configured, skipping failure notification');
-      return;
+    } else {
+      sendPaymentFailureNotificationEmail({
+        to: adminEmail,
+        orderId: razorpayOrderId,
+        paymentId: result.rows[0]?.id,
+        errorCode: error_code || undefined,
+        errorDescription: error_description || undefined,
+      }).catch((e) => console.error('[Webhook] Failure email error:', e));
     }
-    sendPaymentFailureNotificationEmail({
-      to: adminEmail,
-      orderId: razorpayOrderId,
-      paymentId: result.rows[0]?.id,
-      errorCode: error_code || undefined,
-      errorDescription: error_description || undefined,
-    }).catch((e) => console.error('[Webhook] Failure email error:', e));
   } catch (emailError) {
     console.error('[Webhook] Error sending failure notification:', emailError);
     // Don't fail the webhook - email is non-critical
@@ -299,7 +312,33 @@ async function handlePaymentFailed(
  *
  * Receives Razorpay webhook events for asynchronous payment confirmation.
  */
-export const handler: Handler = async (event) => {
+export interface RazorpayWebhookDependencies {
+  query: typeof query;
+  transaction: typeof transaction;
+  isEventProcessed: typeof isEventProcessed;
+  logWebhook: typeof logWebhook;
+  handlePaymentCaptured: typeof handlePaymentCaptured;
+  handlePaymentFailed: typeof handlePaymentFailed;
+}
+
+const defaultWebhookDependencies: RazorpayWebhookDependencies = {
+  query,
+  transaction,
+  isEventProcessed,
+  logWebhook,
+  handlePaymentCaptured,
+  handlePaymentFailed,
+};
+
+export function createRazorpayWebhookHandler(
+  overrides: Partial<RazorpayWebhookDependencies> = {},
+): Handler {
+  const dependencies: RazorpayWebhookDependencies = {
+    ...defaultWebhookDependencies,
+    ...overrides,
+  };
+
+  return async (event) => {
   // Only accept POST requests
   if (event.httpMethod !== 'POST') {
     return {
@@ -329,20 +368,22 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // Verify signature using raw body
-  const signatureVerified = verifySignature(rawBody, signature, webhookSecret);
-
-  // Parse payload after signature verification
-  let payload: RazorpayWebhookPayload;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    console.error('[Webhook] Failed to parse payload');
+  // Authenticate the exact raw body before parsing or trusting any payload field.
+  const validation = validateWebhookRequest(rawBody, signature, webhookSecret);
+  if (validation.ok === false) {
+    console.warn('[Webhook] Rejected request', {
+      eventId: eventId || null,
+      ipAddress,
+      statusCode: validation.statusCode,
+    });
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid JSON payload' }),
+      statusCode: validation.statusCode,
+      body: JSON.stringify({ error: validation.error }),
     };
   }
+
+  const payload = validation.payload;
+  const auditPayload = validation.auditPayload;
 
   const webhookEvent = payload.event;
   const orderId = payload.payload.payment?.entity?.order_id || '';
@@ -353,48 +394,14 @@ export const handler: Handler = async (event) => {
     eventId,
     orderId,
     razorpayPaymentId,
-    signatureVerified,
+    signatureVerified: true,
     ipAddress,
   });
-
-  // Reject if signature verification failed
-  if (!signatureVerified) {
-    console.error('[Webhook] Signature verification failed');
-
-    // Still log the failed attempt for audit
-    try {
-      await query(
-        `INSERT INTO payment_webhook_logs (
-          event, razorpay_event_id, razorpay_order_id, razorpay_payment_id,
-          payload, signature, signature_verified, status, error, ip_address
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [
-          webhookEvent,
-          eventId || null,
-          orderId,
-          razorpayPaymentId,
-          JSON.stringify(payload),
-          signature,
-          false,
-          'FAILED',
-          'Signature verification failed',
-          ipAddress,
-        ]
-      );
-    } catch (logError) {
-      console.error('[Webhook] Failed to log invalid signature attempt:', logError);
-    }
-
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Invalid signature' }),
-    };
-  }
 
   // Check for duplicate event (idempotency)
   if (eventId) {
     try {
-      const alreadyProcessed = await isEventProcessed(eventId);
+      const alreadyProcessed = await dependencies.isEventProcessed(eventId);
       if (alreadyProcessed) {
         console.log('[Webhook] Event already processed:', eventId);
         return {
@@ -410,7 +417,7 @@ export const handler: Handler = async (event) => {
 
   // Process webhook in a transaction
   try {
-    const result = await transaction(async (client) => {
+    const result = await dependencies.transaction(async (client) => {
       let processResult: { success: boolean; paymentId?: string; error?: string } = {
         success: true,
       };
@@ -419,11 +426,11 @@ export const handler: Handler = async (event) => {
       switch (webhookEvent) {
         case 'payment.captured':
         case 'order.paid':
-          processResult = await handlePaymentCaptured(client, payload);
+          processResult = await dependencies.handlePaymentCaptured(client, payload);
           break;
 
         case 'payment.failed':
-          processResult = await handlePaymentFailed(client, payload);
+          processResult = await dependencies.handlePaymentFailed(client, payload);
           break;
 
         default:
@@ -432,12 +439,12 @@ export const handler: Handler = async (event) => {
       }
 
       // Log webhook to audit table
-      await logWebhook(client, {
+      await dependencies.logWebhook(client, {
         event: webhookEvent,
         eventId,
         orderId,
         paymentId: razorpayPaymentId,
-        payload,
+        payload: auditPayload,
         signature,
         signatureVerified: true,
         status: processResult.success ? 'PROCESSED' : 'FAILED',
@@ -467,7 +474,7 @@ export const handler: Handler = async (event) => {
 
     // Try to log the failure
     try {
-      await query(
+      await dependencies.query(
         `INSERT INTO payment_webhook_logs (
           event, razorpay_event_id, razorpay_order_id, razorpay_payment_id,
           payload, signature, signature_verified, status, error, ip_address
@@ -477,7 +484,7 @@ export const handler: Handler = async (event) => {
           eventId || null,
           orderId,
           razorpayPaymentId,
-          JSON.stringify(payload),
+          JSON.stringify(auditPayload),
           signature,
           true,
           'FAILED',
@@ -495,8 +502,11 @@ export const handler: Handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         status: 'error',
-        error: errorMessage,
+        error: 'Webhook processing failed',
       }),
     };
   }
-};
+  };
+}
+
+export const handler: Handler = createRazorpayWebhookHandler();
