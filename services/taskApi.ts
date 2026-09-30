@@ -2,21 +2,12 @@
 // Communicates with Netlify Functions backend using centralized API client
 
 import { api } from '../lib/api-config';
+import type { Task as PortalTask } from '../types';
 
-export interface Task {
-    id: string;
-    title: string;
-    description?: string;
-    status: string;
-    visibleToClient?: boolean;
+export interface Task extends PortalTask {
     deliverableId?: string;
-    assigneeId?: string;
-    deadline?: string;
     delivery?: string;
     comments?: any[];
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: string;
 }
 
 /**

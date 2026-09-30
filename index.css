@@ -19,7 +19,7 @@
   --popover-foreground: #1a1a1a;
 
   /* --- Accent: Warm amber — tungsten studio lights --- */
-  --primary: #c2870a;
+  --primary: #92600a;
   --primary-foreground: #ffffff;
 
   /* --- Secondary: Slate — structural, recedes --- */
@@ -53,7 +53,7 @@
   /* --- Sidebar: Same background as canvas (no fragmentation) --- */
   --sidebar: #f8f8f7;
   --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #c2870a;
+  --sidebar-primary: #92600a;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f5f0e8;
   --sidebar-accent-foreground: #92600a;
@@ -85,8 +85,8 @@
   --spacing: 0.25rem;
 
   /* --- Studio Color System — warm amber accent with muted variations --- */
-  --studio-amber: #c2870a;
-  --studio-amber-hover: #a87408;
+  --studio-amber: #92600a;
+  --studio-amber-hover: #795008;
   --studio-amber-light: #fdf6e3;
   --studio-amber-dark: #8a6007;
 
@@ -108,8 +108,8 @@
   --studio-warm-900: #1c1917;
 
   /* Todoist compat aliases (used by Button component) */
-  --todoist-red: #c2870a;
-  --todoist-red-hover: #a87408;
+  --todoist-red: #92600a;
+  --todoist-red-hover: #795008;
   --todoist-red-light: #fdf6e3;
   --todoist-red-dark: #8a6007;
   --todoist-white: #ffffff;
@@ -214,6 +214,10 @@
   --popover-foreground: #e7e5e0;
   --primary: #d4a03a;
   --primary-foreground: #141311;
+  --studio-amber: #d4a03a;
+  --studio-amber-hover: #e4b34e;
+  --todoist-red: #d4a03a;
+  --todoist-red-hover: #e4b34e;
   --secondary: #2a2825;
   --secondary-foreground: #e7e5e0;
   --muted: #242220;
@@ -360,6 +364,10 @@ h6 {
   font-family: var(--font-serif);
   font-weight: 600;
   line-height: 1.3;
+}
+
+.portal-shell :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-sans);
 }
 
 /* Portal-specific styles - applied via .portal-container class */
@@ -1015,6 +1023,22 @@ html {
 
 .highlight-animation {
   animation: highlight 1.5s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer base {

@@ -72,7 +72,6 @@ export function InquiryDashboard() {
   const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all');
-  const [stats, setStats] = useState<ReturnType<typeof getInquiryStats> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,27 +88,8 @@ export function InquiryDashboard() {
         ? await getInquiriesByClientUserId(user.id)
         : await getInquiries();
 
-      // Compute stats locally from the already-fetched list (avoids duplicate API call)
-      const inquiryStats = isClient(user)
-        ? {
-            total: allInquiries.length,
-            pendingResponse: allInquiries.filter(i => i.status === 'new' || i.status === 'reviewing').length,
-            proposalReceived: allInquiries.filter(i => i.status === 'proposal_sent').length,
-            accepted: allInquiries.filter(i => i.status === 'accepted').length,
-          }
-        : {
-            total: allInquiries.length,
-            new: allInquiries.filter(i => i.status === 'new').length,
-            reviewing: allInquiries.filter(i => i.status === 'reviewing').length,
-            proposalSent: allInquiries.filter(i => i.status === 'proposal_sent').length,
-            accepted: allInquiries.filter(i => i.status === 'accepted').length,
-            converted: allInquiries.filter(i => i.status === 'converted').length,
-            rejected: allInquiries.filter(i => i.status === 'rejected').length,
-          };
-
       setInquiries(allInquiries);
       setFilteredInquiries(allInquiries);
-      setStats(inquiryStats);
     } catch (err) {
       console.error('Failed to load inquiries:', err);
       setError('Failed to load inquiries. Please try again.');
@@ -202,6 +182,7 @@ export function InquiryDashboard() {
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <select
+                aria-label="Filter inquiries by status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as InquiryStatus | 'all')}
                 className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--todoist-red)]/50 focus:border-transparent appearance-none cursor-pointer"

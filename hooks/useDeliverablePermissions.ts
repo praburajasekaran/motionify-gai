@@ -7,7 +7,8 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Deliverable, Project, Task } from '@/types';
+import { Project, Task } from '@/types';
+import type { DeliverablePermissionTarget } from '@/utils/deliverablePermissions';
 import {
   canViewDeliverable,
   canUploadBetaFiles,
@@ -30,7 +31,7 @@ import {
 } from '@/utils/deliverablePermissions';
 
 interface UseDeliverablePermissionsProps {
-  deliverable?: Deliverable;
+  deliverable?: DeliverablePermissionTarget;
   project: Project;
   task?: Task;
 }

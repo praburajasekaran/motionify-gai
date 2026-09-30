@@ -5,19 +5,11 @@ import App from './App';
 import { initWebVitals } from './lib/vitals';
 import { initSentry } from './lib/sentry';
 import { installCSRFProtection } from './lib/csrf';
-
-const STALE_CHUNK_RELOAD_KEY = 'motionify:stale-chunk-reload-at';
-const STALE_CHUNK_RELOAD_WINDOW_MS = 30_000;
+import { claimChunkReload } from './lib/chunk-recovery';
 
 window.addEventListener('vite:preloadError', (event) => {
+  if (!claimChunkReload()) return;
   event.preventDefault();
-
-  const lastReloadAt = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || 0);
-  if (Date.now() - lastReloadAt < STALE_CHUNK_RELOAD_WINDOW_MS) {
-    return;
-  }
-
-  sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(Date.now()));
   window.location.reload();
 });
 

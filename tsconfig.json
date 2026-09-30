@@ -1,6 +1,9 @@
 {
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "worktrees",
+    ".worktrees",
+    "dist"
   ],
   "compilerOptions": {
     "target": "ES2022",

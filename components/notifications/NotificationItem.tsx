@@ -9,6 +9,11 @@ import { cn } from '../ui/design-system';
 import { AppNotification, NOTIFICATION_ICONS } from '../../contexts/NotificationContext';
 import { formatTimestamp } from '../../utils/dateFormatting';
 
+interface NotificationItemProps {
+    notification: AppNotification;
+    onClick: (notification: AppNotification) => void;
+}
+
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
     const icon = NOTIFICATION_ICONS[notification.type] || '📢';
 

@@ -19,8 +19,8 @@ import {
   Clock,
   AlertCircle,
 } from 'lucide-react';
-import { User, UserRole, Project, DeliverableStatus, USER_ROLE_LABELS } from '@/types';
-import { Deliverable } from '../types/deliverable.types';
+import { User, Project, USER_ROLE_LABELS } from '@/types';
+import { Deliverable, DeliverableStatus } from '../types/deliverable.types';
 import {
   canViewDeliverable,
   canUploadBetaFiles,
@@ -185,7 +185,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
       {
         id: 'appr-1',
         deliverableId: 'del-4',
-        action: 'submitted_for_approval' as any, // Cast as any if type check fails, or change to valid 'approved' | 'rejected' if logic allows. Sticking to 'approved' for safety based on type definition.
+        action: 'approved',
         timestamp: new Date('2025-01-15'),
         userId: 'user-pm',
         userName: 'John Manager',
@@ -228,7 +228,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
     title: 'Explainer Video',
     description: 'Product explainer animation',
     type: 'Video',
-    status: 'rejected' as DeliverableStatus,
+    status: 'revision_requested',
     progress: 85,
     dueDate: '2025-02-01',
     betaFileUrl: 'https://example.com/beta/explainer.mp4',
@@ -320,7 +320,7 @@ const TEST_DELIVERABLES: Deliverable[] = [
 // ============================================================================
 
 export default function PermissionTest() {
-  const [currentRole, setCurrentRole] = useState<UserRole>('client_primary');
+  const [currentRole, setCurrentRole] = useState<string>('client_primary');
   const [selectedDeliverable, setSelectedDeliverable] = useState<Deliverable>(TEST_DELIVERABLES[3]); // awaiting_approval
 
   const currentUser = TEST_USERS[currentRole] || TEST_USERS.client_primary;
@@ -367,8 +367,8 @@ export default function PermissionTest() {
             {Object.entries(TEST_USERS).map(([roleKey, user]) => (
               <button
                 key={roleKey}
-                onClick={() => setCurrentRole(user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role as UserRole)}
-                className={`p-4 rounded-lg border-2 transition-all ${currentRole === (user.role === 'client' && user.projectTeamMemberships?.['project-test-1']?.isPrimaryContact ? 'client_primary' : user.role)
+                onClick={() => setCurrentRole(roleKey)}
+                className={`p-4 rounded-lg border-2 transition-all ${currentRole === roleKey
                   ? 'border-indigo-500 bg-indigo-50 shadow-md'
                   : 'border-border bg-card hover:border-border'
                   }`}
@@ -432,7 +432,7 @@ export default function PermissionTest() {
                         variant={
                           deliverable.status === 'final_delivered'
                             ? 'success'
-                            : deliverable.status === 'rejected'
+                            : deliverable.status === 'revision_requested'
                               ? 'destructive'
                               : deliverable.status === 'awaiting_approval'
                                 ? 'warning'

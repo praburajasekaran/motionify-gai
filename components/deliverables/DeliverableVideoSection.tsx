@@ -69,7 +69,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
   const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
-  const currentFileKeyRef = React.useRef<string | undefined>();
+  const currentFileKeyRef = React.useRef<string | undefined>(undefined);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {

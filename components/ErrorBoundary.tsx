@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
+import { claimChunkReload } from '../lib/chunk-recovery';
 
 interface Props {
   children: ReactNode;
@@ -7,38 +8,12 @@ interface Props {
   onReset?: () => void;
 }
 
-const CHUNK_RELOAD_STORAGE_KEY = 'motionify:chunk-reload-attempted';
-
 function isChunkLoadError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
 
   return /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk \d+ failed/i.test(error.message);
-}
-
-function hasAttemptedChunkReload(): boolean {
-  try {
-    return window.sessionStorage.getItem(CHUNK_RELOAD_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function setAttemptedChunkReload(): void {
-  try {
-    window.sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, 'true');
-  } catch {
-    // If sessionStorage is unavailable, still reload once for stale chunk recovery.
-  }
-}
-
-function clearAttemptedChunkReload(): void {
-  try {
-    window.sessionStorage.removeItem(CHUNK_RELOAD_STORAGE_KEY);
-  } catch {
-    // Ignore storage errors; the explicit reload below is still the recovery path.
-  }
 }
 
 function ErrorFallback({
@@ -53,20 +28,11 @@ function ErrorFallback({
   fallback?: ReactNode;
 }) {
   const isRecoverableChunkError = isChunkLoadError(error);
-  const shouldAutoReload = !fallback && typeof window !== 'undefined' && isRecoverableChunkError && !hasAttemptedChunkReload();
-
   React.useEffect(() => {
-    if (!shouldAutoReload) {
-      return;
+    if (!fallback && isRecoverableChunkError && claimChunkReload()) {
+      window.location.reload();
     }
-
-    setAttemptedChunkReload();
-    window.location.reload();
-  }, [shouldAutoReload]);
-
-  if (shouldAutoReload) {
-    return null;
-  }
+  }, [fallback, isRecoverableChunkError]);
 
   if (fallback) {
     return <>{fallback}</>;
@@ -74,7 +40,7 @@ function ErrorFallback({
 
   const handleReset = () => {
     if (isRecoverableChunkError) {
-      clearAttemptedChunkReload();
+      claimChunkReload();
       window.location.reload();
       return;
     }
@@ -84,8 +50,8 @@ function ErrorFallback({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8">
+    <main className="portal-shell min-h-dvh flex items-center justify-center bg-background px-4" aria-labelledby="app-error-title">
+      <div className="max-w-md w-full bg-card border border-border rounded-lg p-6 sm:p-8">
         <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
           <svg
             className="w-6 h-6 text-red-600"
@@ -102,12 +68,12 @@ function ErrorFallback({
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground text-center mb-2">
+        <h1 id="app-error-title" className="text-2xl font-semibold text-foreground text-center mb-2">
           Something went wrong
         </h1>
 
         <p className="text-muted-foreground text-center mb-6">
-          We're sorry for the inconvenience. An unexpected error occurred.
+          {isRecoverableChunkError ? 'A newer version of the app may be available. Reload this page to continue.' : 'We could not display this page. Try again or return to your workspace.'}
         </p>
 
         {import.meta.env.DEV && error && (
@@ -124,19 +90,19 @@ function ErrorFallback({
         <div className="flex gap-3">
           <button
             onClick={handleReset}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors"
+            className="flex-1 bg-primary hover:bg-[var(--studio-amber-hover)] text-primary-foreground font-medium py-2 px-4 rounded-lg transition-colors"
           >
-            Try Again
+            {isRecoverableChunkError ? 'Reload page' : 'Try again'}
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.assign(window.location.pathname.startsWith('/portal') ? '/portal' : '/')}
             className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-2 px-4 rounded transition-colors"
           >
-            Go Home
+            Go home
           </button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

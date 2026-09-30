@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 import { toast } from 'sonner';
 
@@ -48,6 +49,7 @@ export function UserManagement() {
     const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
     const [deactivateReason, setDeactivateReason] = useState('');
     const [deactivating, setDeactivating] = useState(false);
+    const deactivateTriggerRef = useRef<HTMLElement | null>(null);
 
     // Check if user is Super Admin
     const isSuperAdmin = currentUser?.role === 'super_admin';
@@ -108,6 +110,7 @@ export function UserManagement() {
     };
 
     const openDeactivateModal = (user: User) => {
+        deactivateTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setUserToDeactivate(user);
         setDeactivateReason('');
         setIsDeactivateModalOpen(true);
@@ -182,14 +185,16 @@ export function UserManagement() {
     }
 
     return (
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <div className="space-y-6 pb-20">
             {/* Header */}
             <PageHeader
                 title="User Management"
                 description="Manage users, roles, and permissions"
                 actions={
+                <DialogTrigger asChild>
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    type="button"
                     className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,6 +202,7 @@ export function UserManagement() {
                     </svg>
                     Add User
                 </button>
+                </DialogTrigger>
                 }
             />
 
@@ -224,6 +230,7 @@ export function UserManagement() {
 
                     {/* Status Filter */}
                     <select
+                        aria-label="Filter users by account status"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
                         className="w-full px-4 py-2 border rounded-lg"
@@ -235,6 +242,7 @@ export function UserManagement() {
 
                     {/* Role Filter */}
                     <select
+                        aria-label="Filter users by role"
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
                         className="w-full px-4 py-2 border rounded-lg"
@@ -252,7 +260,7 @@ export function UserManagement() {
             </div>
 
             {/* Users Table */}
-            <div className="bg-card rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-x-auto" role="region" aria-label="Team members" tabIndex={0}>
                 {loading ? (
                     <div className="text-center py-12 text-muted-foreground">
                         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
@@ -333,7 +341,7 @@ export function UserManagement() {
                                             return (
                                                 <button
                                                     onClick={() => openDeactivateModal(user)}
-                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"
                                                     title="Deactivate user"
                                                 >
                                                     Deactivate
@@ -356,15 +364,15 @@ export function UserManagement() {
             </div>
 
             {/* Create User Modal */}
-            {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
-                        <h2 className="text-xl font-semibold mb-4">Add New User</h2>
+            <DialogContent aria-describedby={undefined} className="portal-shell w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto rounded-lg">
+                        <DialogTitle className="text-xl font-semibold">Add New User</DialogTitle>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-foreground">Email Address</label>
+                                <label htmlFor="new-user-email" className="block text-sm font-medium text-foreground">Email Address</label>
                                 <input
+                                    id="new-user-email"
                                     type="email"
+                                    autoComplete="email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="mt-1 w-full px-3 py-2 border rounded-lg"
@@ -372,9 +380,11 @@ export function UserManagement() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-foreground">Full Name</label>
+                                <label htmlFor="new-user-name" className="block text-sm font-medium text-foreground">Full Name</label>
                                 <input
+                                    id="new-user-name"
                                     type="text"
+                                    autoComplete="name"
                                     value={formData.full_name}
                                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                                     className="mt-1 w-full px-3 py-2 border rounded-lg"
@@ -382,8 +392,9 @@ export function UserManagement() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-foreground">Role</label>
+                                <label htmlFor="new-user-role" className="block text-sm font-medium text-foreground">Role</label>
                                 <select
+                                    id="new-user-role"
                                     value={formData.role}
                                     onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                                     className="mt-1 w-full px-3 py-2 border rounded-lg"
@@ -405,21 +416,20 @@ export function UserManagement() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-[var(--studio-amber-hover)]"
                                 >
                                     Create User
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
+            </DialogContent>
 
             {/* Deactivate User Modal */}
             {isDeactivateModalOpen && userToDeactivate && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
-                        <h2 className="text-xl font-semibold mb-2 text-red-700">Deactivate User</h2>
+                <Dialog open={isDeactivateModalOpen} onOpenChange={(open) => { if (!open && !deactivating) closeDeactivateModal(); }}>
+                    <DialogContent aria-describedby={undefined} className="portal-shell w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto rounded-lg"
+                        onCloseAutoFocus={(event) => { event.preventDefault(); deactivateTriggerRef.current?.focus(); }}>
+                        <DialogTitle className="text-xl font-semibold text-red-700 dark:text-red-400">Deactivate User</DialogTitle>
                         <p className="text-muted-foreground mb-4">
                             Are you sure you want to deactivate <strong>{userToDeactivate.full_name}</strong>?
                             This will:
@@ -431,10 +441,11 @@ export function UserManagement() {
                             <li>Preserve historical data</li>
                         </ul>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-foreground mb-1">
+                            <label htmlFor="deactivation-reason" className="block text-sm font-medium text-foreground mb-1">
                                 Reason for deactivation <span className="text-red-500">*</span>
                             </label>
                             <textarea
+                                id="deactivation-reason"
                                 value={deactivateReason}
                                 onChange={(e) => setDeactivateReason(e.target.value)}
                                 placeholder="Enter reason for deactivating this user (min 10 characters)..."
@@ -468,10 +479,11 @@ export function UserManagement() {
                                 {deactivating ? 'Deactivating...' : 'Deactivate User'}
                             </button>
                         </div>
-                    </div>
-                </div>
+                    </DialogContent>
+                </Dialog>
             )}
         </div>
+        </Dialog>
     );
 }
 

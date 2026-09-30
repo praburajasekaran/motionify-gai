@@ -26,7 +26,7 @@ interface TeamTabProps {
     isInviteModalOpen: boolean;
     setIsInviteModalOpen: (open: boolean) => void;
     onTeamUpdated: (team: User[]) => void;
-    addToast: (toast: { title: string; description: string; variant: string }) => void;
+    addToast: (toast: Omit<import('../ui/design-system').ToastType, 'id'>) => void;
 }
 
 export const TeamTab: React.FC<TeamTabProps> = ({

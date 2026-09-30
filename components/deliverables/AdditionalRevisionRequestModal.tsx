@@ -164,7 +164,7 @@ export const AdditionalRevisionRequestModal: React.FC<AdditionalRevisionRequestM
         <Modal
             isOpen={isOpen}
             onClose={handleClose}
-            size="custom"
+            size="full"
             showCloseButton={true}
             className="max-w-lg"
         >

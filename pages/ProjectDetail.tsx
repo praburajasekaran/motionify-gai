@@ -98,7 +98,7 @@ function formatActivityTarget(type: string, details: Record<string, string | num
 }
 
 // Date grouping helpers for activity feed
-function getDateGroup(timestamp: number): string {
+function getDateGroup(timestamp: string): string {
     const date = new Date(timestamp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -127,7 +127,7 @@ interface GroupedActivities {
         userName: string;
         action: string;
         target: string;
-        timestamp: number;
+        timestamp: string;
         details: Record<string, string | number>;
     }>;
 }
@@ -139,7 +139,7 @@ function groupActivitiesByDate(activities: Array<{
     userName: string;
     action: string;
     target: string;
-    timestamp: number;
+    timestamp: string;
     details: Record<string, string | number>;
 }>): GroupedActivities[] {
     const groups: Map<string, GroupedActivities> = new Map();
@@ -506,7 +506,6 @@ export const ProjectDetail = () => {
                     title: "Following Task",
                     description: "You will now receive notifications for updates to this task.",
                     variant: "success",
-                    icon: <Bell className="h-4 w-4 text-emerald-500" />
                 });
             }
             invalidateTasks();

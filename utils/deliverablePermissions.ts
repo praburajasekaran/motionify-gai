@@ -5,7 +5,15 @@
  * Implements the 5-role permission system with state-based rules.
  */
 
-import { User, UserRole, Deliverable, DeliverableStatus, Project, ProjectStatus, Task } from '@/types';
+import { User, DeliverableStatus, Project, Task } from '@/types';
+import type { DeliverableStatus as ReviewStatus } from '@/types/deliverable.types';
+
+export interface DeliverablePermissionTarget {
+  status: DeliverableStatus | ReviewStatus;
+  expiresAt?: string | Date;
+}
+
+type Deliverable = DeliverablePermissionTarget;
 
 /**
  * Helper: Check if user is a Motionify Studio team member (Admin, PM, or Team Member)
@@ -231,7 +239,7 @@ export function canAccessFinalFiles(
 
   // Check if files have expired (365 days after delivery)
   if (deliverable.expiresAt) {
-    const expiryDate = new Date(deliverable.expiresAt);
+    const expiryDate = typeof deliverable.expiresAt === 'string' ? new Date(deliverable.expiresAt) : deliverable.expiresAt;
     const now = new Date();
     if (now > expiryDate) {
       // Only admin can access expired files
@@ -341,7 +349,7 @@ export function canViewBetaFiles(
   }
 
   // Beta files are only available in certain statuses
-  const betaViewableStatuses: DeliverableStatus[] = [
+  const betaViewableStatuses: Deliverable['status'][] = [
     'beta_ready',
     'awaiting_approval',
     'approved',
@@ -473,7 +481,7 @@ export function getPermissionDeniedReason(
 
     case 'access_final':
       if (deliverable?.status !== 'final_delivered') return 'Final files not yet delivered';
-      if (deliverable.expiresAt && new Date() > new Date(deliverable.expiresAt)) {
+      if (deliverable.expiresAt && Date.now() > (typeof deliverable.expiresAt === 'string' ? new Date(deliverable.expiresAt) : deliverable.expiresAt).getTime()) {
         return 'Files have expired (365 days after delivery)';
       }
       return 'Payment required to access final files';

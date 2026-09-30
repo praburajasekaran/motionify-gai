@@ -381,12 +381,13 @@ export function Payments() {
                 <div className="flex flex-col lg:flex-row gap-4 items-end">
                     {/* Status Filter */}
                     <div className="w-full lg:w-40">
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
+                        <label htmlFor="payment-status" className="block text-xs font-medium text-foreground mb-1.5">
                             Status
                         </label>
                         <div className="relative">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <select
+                                id="payment-status"
                                 value={apiFilters.status || 'all'}
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
                                 className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-transparent appearance-none cursor-pointer"
@@ -402,12 +403,13 @@ export function Payments() {
 
                     {/* Date From */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
+                        <label htmlFor="payment-date-from" className="block text-xs font-medium text-foreground mb-1.5">
                             From Date
                         </label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
+                                id="payment-date-from"
                                 type="date"
                                 value={apiFilters.dateFrom || ''}
                                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
@@ -418,12 +420,13 @@ export function Payments() {
 
                     {/* Date To */}
                     <div className="w-full lg:w-44">
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
+                        <label htmlFor="payment-date-to" className="block text-xs font-medium text-foreground mb-1.5">
                             To Date
                         </label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
+                                id="payment-date-to"
                                 type="date"
                                 value={apiFilters.dateTo || ''}
                                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}

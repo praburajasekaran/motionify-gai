@@ -231,7 +231,7 @@ export default function SolutionsSlider() {
             </button>
           </div>
 
-          <div ref={trackRef} id="solutionsTrack" className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-2 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div ref={trackRef} id="solutionsTrack" role="region" aria-label="Video solutions" tabIndex={0} className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-2 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <style>{`#solutionsTrack::-webkit-scrollbar{display:none;}`}</style>
 
             {loopedSolutions.map((s, i) => (

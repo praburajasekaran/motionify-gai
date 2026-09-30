@@ -47,7 +47,7 @@ export default function Header() {
     <header className={`fixed top-0 left-0 right-0 z-50 bg-gray-950 transition-all duration-300 ${isScrolled ? 'border-b border-white/10' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'py-3' : 'py-5'}`}>
-          <a href="/" className="inline-flex items-center gap-3 group">
+          <a href="/" aria-label="Motionify Studio home" className="inline-flex items-center gap-3 group">
             <img
               src="/images/motionify-studio-web.png"
               alt="Motionify Studio"
