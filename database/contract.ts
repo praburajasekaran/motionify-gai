@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '028',
-  name: 'reconcile_runtime_contracts',
+  version: '029',
+  name: 'reconcile_membership_nullability',
 } as const;
 
 export interface DatabaseContractQueryRunner {

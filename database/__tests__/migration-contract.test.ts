@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CANONICAL_PROJECT_STATUSES, LATEST_SCHEMA_MIGRATION } from '../contract';
+import { CANONICAL_PROJECT_STATUSES } from '../contract';
 
 const migrationPath = fileURLToPath(new URL(
-  `../migrations/${LATEST_SCHEMA_MIGRATION.version}_${LATEST_SCHEMA_MIGRATION.name}.sql`,
+  '../migrations/028_reconcile_runtime_contracts.sql',
+  import.meta.url
+));
+const nullabilityMigrationPath = fileURLToPath(new URL(
+  '../migrations/029_reconcile_membership_nullability.sql',
   import.meta.url
 ));
 const schemaPath = fileURLToPath(new URL('../schema.sql', import.meta.url));
@@ -15,6 +19,7 @@ const driftFixturePath = fileURLToPath(new URL(
 ));
 
 const migrationSql = readFileSync(migrationPath, 'utf8');
+const nullabilityMigrationSql = readFileSync(nullabilityMigrationPath, 'utf8');
 const schemaSql = readFileSync(schemaPath, 'utf8');
 const driftFixtureSql = readFileSync(driftFixturePath, 'utf8');
 
@@ -39,6 +44,13 @@ describe('runtime contract reconciliation migration', () => {
       assert.match(migrationSql, new RegExp(`'${status}'`));
       assert.match(schemaSql, new RegExp(`'${status}'`));
     }
+  });
+
+  it('reconciles required membership fields without dropping schema objects', () => {
+    assert.match(nullabilityMigrationSql, /project_team[\s\S]*is_primary_contact SET NOT NULL/i);
+    assert.match(nullabilityMigrationSql, /project_team[\s\S]*added_at SET NOT NULL/i);
+    assert.match(nullabilityMigrationSql, /project_invitations[\s\S]*status SET NOT NULL/i);
+    assert.doesNotMatch(nullabilityMigrationSql, /DROP\s+(?:TABLE|COLUMN)/i);
   });
 
   it('retains a fixture with the production-shaped pre-migration drift', () => {

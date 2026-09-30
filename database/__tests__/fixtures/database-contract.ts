@@ -75,7 +75,7 @@ export const canonicalIndexes = [
 ];
 
 export const canonicalMigrations = [
-  { version: '028', name: 'reconcile_runtime_contracts' },
+  { version: '029', name: 'reconcile_membership_nullability' },
 ];
 
 export function createContractRunner(overrides: {

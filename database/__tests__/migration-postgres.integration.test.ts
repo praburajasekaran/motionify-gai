@@ -161,11 +161,68 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
     }
   });
 
+  it('backfills nullable membership fields before enforcing the contract', async () => {
+    const migrationSql = await readFile(fileURLToPath(new URL(
+      '../migrations/029_reconcile_membership_nullability.sql',
+      import.meta.url
+    )), 'utf8');
+    const pool = await createDatabase('contract_migration_029');
+
+    try {
+      await pool.query(`
+        CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+        CREATE TABLE project_team (
+          id UUID,
+          is_primary_contact BOOLEAN,
+          added_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ
+        );
+        CREATE TABLE project_invitations (id UUID, status VARCHAR(50));
+        INSERT INTO project_team (id, created_at)
+        VALUES (gen_random_uuid(), NOW() - INTERVAL '1 day');
+        INSERT INTO project_invitations (id, status)
+        VALUES (gen_random_uuid(), NULL);
+      `);
+
+      await pool.query(migrationSql);
+
+      const nullRows = await pool.query<{ count: string }>(`
+        SELECT COUNT(*)::text AS count
+        FROM project_team
+        WHERE is_primary_contact IS NULL OR added_at IS NULL
+      `);
+      assert.equal(nullRows.rows[0].count, '0');
+
+      const invitation = await pool.query<{ status: string }>(
+        'SELECT status FROM project_invitations LIMIT 1'
+      );
+      assert.equal(invitation.rows[0].status, 'pending');
+
+      const nullableColumns = await pool.query<{ count: string }>(`
+        SELECT COUNT(*)::text AS count
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (
+            (table_name = 'project_team' AND column_name IN ('is_primary_contact', 'added_at'))
+            OR (table_name = 'project_invitations' AND column_name = 'status')
+          )
+          AND is_nullable = 'YES'
+      `);
+      assert.equal(nullableColumns.rows[0].count, '0');
+    } finally {
+      await pool.end();
+    }
+  });
+
   it('applies to both a clean schema and the production-shaped drift fixture', async () => {
     const schemaSql = await readFile(fileURLToPath(new URL('../schema.sql', import.meta.url)), 'utf8');
     const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
-    const migrationSql = await readFile(fileURLToPath(new URL(
-      `../migrations/${LATEST_SCHEMA_MIGRATION.version}_${LATEST_SCHEMA_MIGRATION.name}.sql`,
+    const reconciliationSql = await readFile(fileURLToPath(new URL(
+      '../migrations/028_reconcile_runtime_contracts.sql',
+      import.meta.url
+    )), 'utf8');
+    const nullabilitySql = await readFile(fileURLToPath(new URL(
+      '../migrations/029_reconcile_membership_nullability.sql',
       import.meta.url
     )), 'utf8');
 
@@ -176,7 +233,8 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
       const pool = await createDatabase(databaseName);
       try {
         await pool.query(setupSql);
-        await pool.query(migrationSql);
+        await pool.query(reconciliationSql);
+        await pool.query(nullabilitySql);
         await recordMigration(pool);
 
         const result = await verifyDatabaseContract(pool);
@@ -244,7 +302,7 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
   it('stops with an actionable diagnostic for incomplete legacy project requests', async () => {
     const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
     const migrationSql = await readFile(fileURLToPath(new URL(
-      `../migrations/${LATEST_SCHEMA_MIGRATION.version}_${LATEST_SCHEMA_MIGRATION.name}.sql`,
+      '../migrations/028_reconcile_runtime_contracts.sql',
       import.meta.url
     )), 'utf8');
     const pool = await createDatabase('contract_incomplete_requests');
