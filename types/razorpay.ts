@@ -16,6 +16,7 @@ export interface RazorpayOptions {
   prefill: { name: string; email: string; contact: string };
   notes: { address: string };
   theme: { color: string };
+  modal?: { ondismiss: () => void };
 }
 
 declare global {

@@ -403,7 +403,7 @@ export const handler = compose(
         }
 
         const proposal = proposalResult.rows[0];
-        const amount = paymentType === 'advance' ? proposal.advance_amount : proposal.balance_amount;
+        const amount = Number(paymentType === 'advance' ? proposal.advance_amount : proposal.balance_amount);
 
         // Create Razorpay order
         const orderOptions = {

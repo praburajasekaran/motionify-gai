@@ -91,7 +91,7 @@ export const handler = compose(
     }
 
     const proposal = proposalResult.rows[0];
-    const amount = proposal.advance_amount;
+    const amount = Number(proposal.advance_amount);
     if (!amount || amount <= 0) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid advance payment amount' }) };
     }

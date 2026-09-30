@@ -1,264 +1,153 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { setupAuthSession, E2E_SUPER_ADMIN } from './helpers/auth';
 
-/**
- * Razorpay Payment Flow E2E Tests
- *
- * Tests the complete payment workflow from proposal acceptance to payment completion.
- *
- * Note: These tests verify the UI flow and payment page rendering.
- * Actual Razorpay modal interactions require test mode cards and cannot be fully
- * automated without Razorpay test environment setup.
- *
- * Test Flow:
- * 1. Navigate to payment page
- * 2. Verify payment breakdown displays
- * 3. Verify payment button exists
- * 4. Test payment page elements
- * 5. Test success/failure page rendering
- */
+const proposalId = 'f260c88e-b24a-4a86-a9ba-19e7e0e40110';
+const projectId = 'f260c88e-b24a-4a86-a9ba-19e7e0e40111';
+const contact = { inquiryNumber: 'INQ-TEST-001', contactName: 'Payment Test Client', contactEmail: 'payment@example.test', contactPhone: null, companyName: null };
+const proposal = { id: proposalId, inquiry_id: 'f260c88e-b24a-4a86-a9ba-19e7e0e40112', description: 'Test project', deliverables: [], currency: 'INR', total_price: 200, advance_percentage: 50, advance_amount: 100, balance_amount: 100, status: 'sent' };
+const order = { id: 'f260c88e-b24a-4a86-a9ba-19e7e0e40113', razorpayKeyId: 'rzp_test_fixture', razorpayOrderId: 'order_fixture', amount: 100, currency: 'INR', name: 'Motionify Studio', description: 'Advance Payment' };
+const success = { activation: { projectId, clientEmail: 'confirmed-client@example.test' } };
 
-test.describe('Razorpay Payment Flow', () => {
-
-  test('payment page - loads and displays correctly', async ({ page }) => {
-    // Navigate directly to a payment page (using a mock proposal ID)
-    // In real scenario, this would be reached via proposal acceptance
-    await page.goto('/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
-
-    // Wait for either payment content or "not found" message to appear
-    await Promise.race([
-      page.waitForSelector('text=/Payment|Complete Your Payment/i', { timeout: 10000 }).catch(() => null),
-      page.waitForSelector('text=/not found|Not Found/i', { timeout: 10000 }).catch(() => null),
-    ]);
-
-    // Verify page loaded (might show error for non-existent proposal)
-    await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
-
-    // Verify payment-related content
-    // Page might show error if proposal doesn't exist, which is expected in test environment
-    const pageContent = await page.textContent('body');
-
-    if (pageContent?.includes('Payment')) {
-      console.log('✓ Payment page loaded');
-
-      // Look for payment breakdown or amount display
-      const hasPaymentInfo =
-        pageContent.includes('Amount') ||
-        pageContent.includes('Total') ||
-        pageContent.includes('Advance') ||
-        pageContent.includes('₹') ||
-        pageContent.includes('$');
-
-      if (hasPaymentInfo) {
-        console.log('✓ Payment information displayed');
+async function setup(page: Page, authenticated = false, mockCheckout = true) {
+  if (authenticated) await setupAuthSession(page, E2E_SUPER_ADMIN);
+  await page.route('**/*tawk.to/**', route => route.abort());
+  await page.route('**/checkout.razorpay.com/**', route => route.abort());
+  if (mockCheckout) await page.addInitScript(() => {
+    class Checkout {
+      options: any;
+      failed: any;
+      constructor(options: any) { this.options = options; }
+      on(_event: string, handler: any) { this.failed = handler; }
+      open() {
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-label', 'Mock Razorpay checkout');
+        const action = (name: string, handler: () => void) => {
+          const button = document.createElement('button');
+          button.textContent = name;
+          button.onclick = () => { dialog.remove(); handler(); };
+          dialog.append(button);
+        };
+        action('Complete test payment', () => this.options.handler({ razorpay_order_id: this.options.order_id, razorpay_payment_id: 'pay_fixture', razorpay_signature: 'signature_fixture' }));
+        action('Fail test payment', () => this.failed({ error: { description: 'Declined' } }));
+        action('Dismiss checkout', () => this.options.modal?.ondismiss());
+        document.body.append(dialog);
       }
-    } else if (pageContent?.includes('not found') || pageContent?.includes('error')) {
-      console.log('ℹ Proposal not found (expected in test environment)');
     }
+    (window as any).Razorpay = Checkout;
+  });
+  await page.route('**/.netlify/functions/public-proposal/**', route => route.fulfill({ json: { proposal, paymentContact: contact, accessStatus: 'valid' } }));
+  await page.route('**/.netlify/functions/proposal-detail/**', route => route.fulfill({ json: proposal }));
+  await page.route('**/.netlify/functions/inquiry-detail/**', route => route.fulfill({ json: { inquiry_number: contact.inquiryNumber, contact_name: contact.contactName, contact_email: contact.contactEmail } }));
+  const endpoint = authenticated ? 'payments' : 'payment-handoff';
+  await page.route(`**/.netlify/functions/${endpoint}/create-order`, route => route.fulfill({ status: 201, json: order }));
+  await page.route(`**/.netlify/functions/${endpoint}/verify`, route => route.fulfill({ json: success }));
+  return endpoint;
+}
 
-    // Take screenshot
-    await page.screenshot({ path: 'test-results/payment-page.png', fullPage: true });
+async function openPayment(page: Page, authenticated = false) {
+  await page.goto(`${authenticated ? '/portal' : ''}/payment/${proposalId}${authenticated ? '' : '?token=fixture-token'}`);
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+}
+
+for (const authenticated of [false, true]) {
+  const surface = authenticated ? 'authenticated' : 'public';
+  test(`${surface} checkout verifies provider proof and opens exactly the activated project`, async ({ page }) => {
+    const endpoint = await setup(page, authenticated);
+    await openPayment(page, authenticated);
+    const orderRequest = page.waitForRequest(`**/.netlify/functions/${endpoint}/create-order`);
+    await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+    expect((await orderRequest).postDataJSON()).toEqual(authenticated ? { proposalId, paymentType: 'advance' } : { proposalId, token: 'fixture-token' });
+    const verificationRequest = page.waitForRequest(`**/.netlify/functions/${endpoint}/verify`);
+    await page.getByRole('button', { name: 'Complete test payment', exact: true }).click();
+    expect((await verificationRequest).postDataJSON()).toEqual({ ...(authenticated ? {} : { proposalId, token: 'fixture-token' }), paymentId: order.id, razorpayOrderId: 'order_fixture', razorpayPaymentId: 'pay_fixture', razorpaySignature: 'signature_fixture' });
+    await expect(page.getByRole('heading', { name: /Payment Successful/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Open Project', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`project-access.*projectId=${projectId}`));
+    expect(new URL(page.url()).searchParams.get('email')).toBe(success.activation.clientEmail);
   });
 
-  test('payment breakdown component - displays pricing correctly', async ({ page }) => {
-    // This test verifies the payment breakdown component structure
-    // We'll create a test page or check for the component elements
-
-    await page.goto('/payment/test-proposal-id', { waitUntil: 'domcontentloaded' });
-
-    // Wait for content to load
-    await Promise.race([
-      page.waitForSelector('text=/Payment|Complete Your Payment/i', { timeout: 10000 }).catch(() => null),
-      page.waitForSelector('text=/not found|Not Found/i', { timeout: 10000 }).catch(() => null),
-    ]);
-
-    // Look for pricing elements (these may not exist if proposal not found)
-    const totalElement = page.locator('text=/Total.*Cost|Project.*Cost|Total.*Price/i').first();
-    const advanceElement = page.locator('text=/Advance.*Payment|Pay.*Now|Due.*Now/i').first();
-
-    if (await totalElement.isVisible({ timeout: 5000 }).catch(() => false)) {
-      console.log('✓ Total cost element found');
-    }
-
-    if (await advanceElement.isVisible({ timeout: 5000 }).catch(() => false)) {
-      console.log('✓ Advance payment element found');
-    }
-
-    // Verify currency symbols (₹ for INR or $ for USD)
-    const hasCurrency = await page.locator('text=/₹|\\$/').first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    if (hasCurrency) {
-      console.log('✓ Currency symbol displayed');
-    }
+  test(`${surface} checkout dismissal restores the pay button`, async ({ page }) => {
+    await setup(page, authenticated);
+    await openPayment(page, authenticated);
+    await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+    await page.getByRole('button', { name: 'Dismiss checkout', exact: true }).click();
+    await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+    await expect(page.getByRole('heading', { name: /Payment Successful/ })).toHaveCount(0);
   });
 
-  test('payment button - exists and is interactive', async ({ page }) => {
-    await page.goto('/payment/test-proposal-id');
-    await page.waitForLoadState('networkidle');
-
-    // Look for pay/payment button
-    const payButton = page.locator('button:has-text("Pay"), button:has-text("Proceed"), button:has-text("Payment")').first();
-
-    if (await payButton.isVisible({ timeout: 5000 })) {
-      console.log('✓ Payment button found');
-
-      // Verify button is enabled (might be disabled if proposal not loaded)
-      const isEnabled = await payButton.isEnabled();
-      console.log(`  Button enabled: ${isEnabled}`);
-
-      // Verify button has icon or loading state capability
-      const hasIcon = await page.locator('button svg, button [class*="icon"]').first().isVisible({ timeout: 1000 });
-
-      if (hasIcon) {
-        console.log('✓ Payment button has icon');
-      }
-    } else {
-      console.log('ℹ Payment button not found (proposal may not be loaded)');
-    }
+  test(`${surface} failed confirmation retries the same proof without another charge`, async ({ page }) => {
+    const endpoint = await setup(page, authenticated);
+    let orders = 0;
+    const proofs: object[] = [];
+    await page.route(`**/.netlify/functions/${endpoint}/create-order`, route => { orders++; return route.fulfill({ json: order }); });
+    await page.route(`**/.netlify/functions/${endpoint}/verify`, route => { proofs.push(route.request().postDataJSON()); return route.fulfill(proofs.length === 1 ? { status: 503, body: '' } : { json: success }); });
+    await openPayment(page, authenticated);
+    await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+    await page.getByRole('button', { name: 'Complete test payment', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('without paying again');
+    await page.getByRole('button', { name: 'Retry payment confirmation', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /Payment Successful/ })).toBeVisible();
+    expect(orders).toBe(1);
+    expect(proofs).toHaveLength(2);
+    expect(proofs[1]).toEqual(proofs[0]);
   });
+}
 
-  test('legacy payment success path is handled by the Vite payment surface', async ({ page }) => {
-    await page.goto('/payment/success?paymentId=test_payment_123');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=/Payment Not Found|Complete Your Advance Payment/i').first()).toBeVisible({ timeout: 10000 });
-
-    // Take screenshot
-    await page.screenshot({ path: 'test-results/payment-success.png', fullPage: true });
-  });
-
-  test('legacy payment failure path is handled by the Vite payment surface', async ({ page }) => {
-    await page.goto('/payment/failure?error=Payment%20declined%20by%20bank');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=/Payment Not Found|Complete Your Advance Payment/i').first()).toBeVisible({ timeout: 10000 });
-
-    // Take screenshot
-    await page.screenshot({ path: 'test-results/payment-failure.png', fullPage: true });
-  });
-
-  test('currency conversion - displays both INR and USD', async ({ page }) => {
-    await page.goto('/payment/test-proposal-id');
-    await page.waitForLoadState('networkidle');
-
-    // Check for currency symbols
-    const hasINR = await page.locator('text=₹').first().isVisible({ timeout: 3000 });
-    const hasUSD = await page.locator('text=$').first().isVisible({ timeout: 3000 });
-
-    if (hasINR || hasUSD) {
-      console.log(`✓ Currency displayed: ${hasINR ? 'INR' : ''} ${hasUSD ? 'USD' : ''}`);
-    }
-
-    // Look for conversion text (1 USD = 83 INR or similar)
-    const hasConversion = await page.locator('text=/conversion|rate|≈|~/i').first().isVisible({ timeout: 2000 });
-
-    if (hasConversion) {
-      console.log('✓ Currency conversion information displayed');
-    }
-  });
-
-  test('payment page - security and branding', async ({ page }) => {
-    await page.goto('/payment/test-proposal-id');
-    await page.waitForLoadState('networkidle');
-
-    // Verify secure connection (HTTPS in production)
-    const url = page.url();
-    console.log(`  Page URL: ${url}`);
-
-    // Verify Motionify Studio branding
-    const hasBranding = await page.locator('text=Motionify Studio, img[alt*="Motionify Studio"]').first().isVisible({ timeout: 5000 });
-
-    if (hasBranding) {
-      console.log('✓ Motionify Studio branding displayed');
-    }
-
-    // Check for security/trust indicators
-    const hasSecureText = await page.locator('text=/secure|safe|protected|encrypted/i').first().isVisible({ timeout: 2000 });
-
-    if (hasSecureText) {
-      console.log('✓ Security messaging present');
-    }
-
-    // Verify Razorpay attribution (usually shown in payment modal or footer)
-    const hasRazorpay = await page.locator('text=Razorpay').first().isVisible({ timeout: 2000 });
-
-    if (hasRazorpay) {
-      console.log('✓ Razorpay attribution found');
-    }
-  });
-
-  test('payment page - responsive design', async ({ page }) => {
-    // Test mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/payment/test-proposal-id');
-    await page.waitForLoadState('networkidle');
-
-    // Take mobile screenshot
-    await page.screenshot({ path: 'test-results/payment-mobile.png', fullPage: true });
-
-    console.log('✓ Mobile viewport tested (375x667)');
-
-    // Test tablet viewport
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto('/payment/test-proposal-id');
-    await page.waitForLoadState('networkidle');
-
-    // Take tablet screenshot
-    await page.screenshot({ path: 'test-results/payment-tablet.png', fullPage: true });
-
-    console.log('✓ Tablet viewport tested (768x1024)');
-
-    // Verify content is still accessible in different viewports
-    const bodyVisible = await page.locator('body').isVisible({ timeout: 2000 });
-    console.log(`✓ Body content visible in tablet viewport: ${bodyVisible}`);
-  });
+test('public checkout does not depend on authenticated inquiry data', async ({ page }) => {
+  await setup(page);
+  let inquiryRequests = 0;
+  await page.route('**/.netlify/functions/inquiry-detail/**', route => { inquiryRequests++; return route.fulfill({ status: 401, json: { error: 'Authentication required' } }); });
+  await openPayment(page);
+  await expect(page.getByText('Proposal for Inquiry INQ-TEST-001')).toBeVisible();
+  expect(inquiryRequests).toBe(0);
 });
 
-test.describe('Payment API Integration (Mock)', () => {
+test('provider failure restores checkout without claiming payment success', async ({ page }) => {
+  await setup(page);
+  await openPayment(page);
+  await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+  await page.getByRole('button', { name: 'Fail test payment', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('Payment failed. Please try again.');
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: /Payment Successful/ })).toHaveCount(0);
+});
 
-  test('create order API - structure verification', async ({ page }) => {
-    // We can't actually call the API from E2E tests easily,
-    // but we can verify the endpoint exists and returns proper structure
+test('an empty order response shows a recoverable error', async ({ page }) => {
+  await setup(page);
+  await page.route('**/.netlify/functions/payment-handoff/create-order', route => route.fulfill({ status: 500, body: '' }));
+  await openPayment(page);
+  await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+  await expect(page.getByRole('alert')).toHaveText('Payment service is temporarily unavailable. Please try again.');
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+});
 
-    console.log('ℹ API endpoints should be tested with integration tests');
-    console.log('  POST /api/payments/create-order');
-    console.log('  POST /api/payments/verify');
+test('incomplete activation keeps confirmation retry available', async ({ page }) => {
+  await setup(page);
+  await page.route('**/.netlify/functions/payment-handoff/verify', route => route.fulfill({ json: { status: 'completed', activation: { projectId: null } } }));
+  await openPayment(page);
+  await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+  await page.getByRole('button', { name: 'Complete test payment', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Retry payment confirmation' })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: /Payment Successful/ })).toHaveCount(0);
+});
 
-    // Verify the payment page attempts to load necessary scripts
-    await page.goto('/payment/test-proposal-id');
-
-    // Check if Razorpay script loading is attempted
-    await page.waitForTimeout(2000);
-
-    const scripts = await page.locator('script').count();
-    console.log(`  ${scripts} scripts loaded on payment page`);
-
-    // Look for Razorpay checkout script in network requests
-    const hasRazorpayScript = await page.evaluate(() => {
-      return Array.from(document.scripts).some(script =>
-        script.src.includes('razorpay') || script.src.includes('checkout')
-      );
-    });
-
-    if (hasRazorpayScript) {
-      console.log('✓ Razorpay checkout script loaded');
-    } else {
-      console.log('ℹ Razorpay script not loaded (expected if payment button not clicked)');
-    }
+test('checkout script failure is recoverable before any order is created', async ({ page }) => {
+  await setup(page, false, false);
+  let orders = 0;
+  await page.route('**/.netlify/functions/payment-handoff/create-order', route => {
+    orders++;
+    return route.fulfill({ json: order });
   });
-
-  test('payment verification - expected flow', async ({ page }) => {
-    console.log('Payment Verification Flow:');
-    console.log('  1. User completes Razorpay checkout');
-    console.log('  2. Razorpay returns: payment_id, order_id, signature');
-    console.log('  3. Client POSTs to /api/payments/verify');
-    console.log('  4. Server verifies HMAC SHA256 signature');
-    console.log('  5. Payment record updated to "completed"');
-    console.log('  6. Project created from proposal');
-    console.log('  7. User redirected to success page');
-
-    // This is documentation of the expected flow
-    // Actual verification would require mocking Razorpay responses
-  });
+  await openPayment(page);
+  await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+  await expect(page.getByRole('alert')).toContainText('Checkout could not load');
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+  expect(orders).toBe(0);
+  await page.route('**/checkout.razorpay.com/**', route => route.fulfill({ contentType: 'application/javascript', body:
+    `window.Razorpay = class { on() {} open() { const dialog = document.createElement('div');
+      dialog.setAttribute('role', 'dialog'); dialog.textContent = 'Checkout loaded after retry'; document.body.append(dialog); } };` }));
+  await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+  await expect(page.getByRole('dialog')).toHaveText('Checkout loaded after retry');
+  expect(orders).toBe(1);
 });
