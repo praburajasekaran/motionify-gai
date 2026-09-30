@@ -124,6 +124,43 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
     }
   });
 
+  it('indexes the runtime task assignee column', async () => {
+    const migrationSql = await readFile(fileURLToPath(new URL(
+      '../migrations/022_add_performance_indexes.sql',
+      import.meta.url
+    )), 'utf8');
+    const pool = await createDatabase('contract_migration_022');
+
+    try {
+      await pool.query(`
+        CREATE TABLE tasks (project_id UUID, assigned_to UUID, stage TEXT);
+        CREATE TABLE activities (
+          project_id UUID,
+          inquiry_id UUID,
+          user_id UUID,
+          created_at TIMESTAMPTZ
+        );
+        CREATE TABLE project_team (project_id UUID, user_id UUID);
+        CREATE TABLE deliverable_files (deliverable_id UUID);
+        CREATE TABLE rate_limit_entries (created_at TIMESTAMPTZ);
+      `);
+
+      await pool.query(migrationSql);
+
+      const assigneeIndex = await pool.query<{ indexdef: string }>(`
+        SELECT indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'tasks'
+          AND indexname = 'idx_tasks_assigned_to'
+      `);
+      assert.equal(assigneeIndex.rows.length, 1);
+      assert.match(assigneeIndex.rows[0].indexdef, /\(assigned_to\)/i);
+    } finally {
+      await pool.end();
+    }
+  });
+
   it('applies to both a clean schema and the production-shaped drift fixture', async () => {
     const schemaSql = await readFile(fileURLToPath(new URL('../schema.sql', import.meta.url)), 'utf8');
     const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
