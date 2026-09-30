@@ -71,7 +71,7 @@ export function WorkPage() {
       <section className="bg-white px-4 py-16 text-gray-950 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-7xl lg:pl-10">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">Our approach</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-orange-700">Our approach</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
               A clear path from brief to finished film
             </h2>
@@ -83,7 +83,7 @@ export function WorkPage() {
           <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
             {approachSteps.map((step, index) => (
               <article key={step.title} className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <span className="text-sm font-semibold text-orange-600">{String(index + 1).padStart(2, '0')}</span>
+                <span className="text-sm font-semibold text-orange-700">{String(index + 1).padStart(2, '0')}</span>
                 <h3 className="mt-4 text-lg font-semibold text-gray-950">{step.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-gray-600">{step.body}</p>
               </article>

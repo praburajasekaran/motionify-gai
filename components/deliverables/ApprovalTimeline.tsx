@@ -20,9 +20,9 @@ import {
   Paperclip,
   MessageSquare,
 } from 'lucide-react';
-import { cn, Badge } from '../ui/design-system';
-import { DeliverableApproval, IssueCategory, Priority } from '../../types/deliverable.types';
-import { formatTimestamp as formatContextualTimestamp, formatDateTime } from '../../utils/dateFormatting';
+import { cn } from '../ui/design-system';
+import { DeliverableApproval, IssueCategory } from '../../types/deliverable.types';
+import { formatTimestamp as formatContextualTimestamp } from '../../utils/dateFormatting';
 
 export interface ApprovalTimelineProps {
   approvalHistory: DeliverableApproval[];
@@ -49,13 +49,6 @@ const ISSUE_LABELS: Record<IssueCategory, string> = {
   other: 'Other',
 };
 
-// Priority styling
-const PRIORITY_STYLES: Record<Priority, { badge: string; text: string }> = {
-  critical: { badge: 'destructive', text: 'Critical' },
-  important: { badge: 'warning', text: 'Important' },
-  'nice-to-have': { badge: 'secondary', text: 'Nice to Have' },
-};
-
 export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
   approvalHistory,
   className,
@@ -68,7 +61,7 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
     );
   }
 
-const formatVideoTimestamp = (seconds: number): string => {
+  const formatVideoTimestamp = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -76,7 +69,7 @@ const formatVideoTimestamp = (seconds: number): string => {
 
   return (
     <div className={cn('space-y-6', className)}>
-      {approvalHistory.map((approval, idx) => (
+      {approvalHistory.map((approval) => (
         <div
           key={approval.id}
           className="relative pl-8 pb-6 last:pb-0 border-l-2 border-border last:border-l-0"
@@ -98,15 +91,15 @@ const formatVideoTimestamp = (seconds: number): string => {
               className={cn(
                 'px-4 py-3 flex items-center justify-between',
                 approval.action === 'approved'
-                  ? 'bg-emerald-50/50 border-b border-emerald-100'
-                  : 'bg-red-50/50 border-b border-red-100'
+                  ? 'bg-emerald-50/50 border-b border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900'
+                  : 'bg-red-50/50 border-b border-red-100 dark:bg-red-950/30 dark:border-red-900'
               )}
             >
               <div className="flex items-center gap-3">
                 {approval.action === 'approved' ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-red-600" />
+                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                 )}
                 <div>
                   <p className="font-semibold text-sm text-foreground">
@@ -117,11 +110,6 @@ const formatVideoTimestamp = (seconds: number): string => {
                   </p>
                 </div>
               </div>
-              {approval.action === 'rejected' && approval.priority && (
-                <Badge variant={PRIORITY_STYLES[approval.priority].badge as any}>
-                  {PRIORITY_STYLES[approval.priority].text}
-                </Badge>
-              )}
             </div>
 
             {/* Body */}
@@ -148,23 +136,22 @@ const formatVideoTimestamp = (seconds: number): string => {
                   </div>
                   <div className="space-y-2">
                     {approval.timestampedComments.map((comment) => {
-                      const CategoryIcon = ISSUE_ICONS[comment.category];
                       return (
                         <div
                           key={comment.id}
-                          className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-100 rounded-lg"
+                          className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-100 rounded-lg dark:bg-amber-950/30 dark:border-amber-900"
                         >
                           <div className="flex items-center gap-2 min-w-[60px]">
                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            <span className="text-xs font-mono font-bold text-amber-900">
+                            <span className="text-xs font-mono font-bold text-amber-900 dark:text-amber-200">
                               {formatVideoTimestamp(comment.timestamp)}
                             </span>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <CategoryIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="text-xs font-medium text-muted-foreground">
-                                {ISSUE_LABELS[comment.category]}
+                                {comment.userName}
                               </span>
                             </div>
                             <p className="text-sm text-foreground">{comment.comment}</p>
@@ -189,7 +176,7 @@ const formatVideoTimestamp = (seconds: number): string => {
                       return (
                         <div
                           key={category}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-xs font-medium text-blue-700"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:border-blue-900 dark:text-blue-300"
                         >
                           <Icon className="h-3.5 w-3.5" />
                           {ISSUE_LABELS[category]}

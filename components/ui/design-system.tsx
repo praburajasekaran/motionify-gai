@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState, useRef, useEffect, useCallback, createContext, useContext, useId } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { createPortal } from 'react-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -130,7 +131,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "active:scale-[0.98]",
           {
             // Default + Gradient: Warm amber — studio accent
-            'bg-[var(--todoist-red)] text-white hover:bg-[var(--todoist-red-hover)]': variant === 'default' || variant === 'gradient',
+            'bg-primary text-primary-foreground hover:bg-[var(--studio-amber-hover)]': variant === 'default' || variant === 'gradient',
 
             // Destructive: Muted red
             'bg-destructive text-white hover:bg-destructive/90': variant === 'destructive',
@@ -724,10 +725,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const listId = useId();
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
       setSearch('');
       setSelectedIndex(0);
     }
@@ -746,20 +748,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
   }, [filteredItems.length, selectedIndex]);
 
   useEffect(() => {
+    if (open) document.getElementById(`${listId}-${selectedIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [open, selectedIndex, listId]);
+
+  useEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        onOpenChange(false);
-        return;
-      }
-
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         event.stopPropagation();
-        setSelectedIndex(index => Math.min(index + 1, filteredItems.length - 1));
+        setSelectedIndex(index => Math.max(0, Math.min(index + 1, filteredItems.length - 1)));
         return;
       }
 
@@ -785,13 +784,30 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] p-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => onOpenChange(false)} />
-      <div className="relative w-full max-w-xl bg-card rounded-lg border border-border overflow-hidden animate-in scale-in fade-in duration-200 z-50 flex flex-col">
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-sm" />
+      <DialogPrimitive.Content
+        className="fixed left-1/2 top-[15dvh] z-[90] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 bg-card rounded-lg border border-border overflow-hidden flex flex-col shadow-lg"
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          inputRef.current?.focus();
+        }}
+        onCloseAutoFocus={event => { event.preventDefault(); previousFocusRef.current?.focus(); }}
+        aria-describedby={undefined}
+      >
+        <DialogPrimitive.Title className="sr-only">Command menu</DialogPrimitive.Title>
         <div className="flex items-center border-b border-border px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <input
             ref={inputRef}
+            role="combobox"
+            aria-label="Search commands"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            aria-controls={listId}
+            aria-activedescendant={filteredItems[selectedIndex] ? `${listId}-${selectedIndex}` : undefined}
             className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="Type a command or search..."
             value={search}
@@ -801,11 +817,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
             <span className="text-xs">ESC</span>
           </kbd>
         </div>
-        <div className="max-h-[300px] overflow-y-auto p-2">
-          {filteredItems.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">No results found.</p>}
+        {filteredItems.length === 0 && <p role="status" className="p-4 text-center text-sm text-muted-foreground">No commands found. Try a different search.</p>}
+        <div id={listId} role="listbox" aria-label="Commands" className="max-h-[min(300px,60dvh)] overflow-y-auto p-2">
           {filteredItems.map((item, i) => (
             <div
               key={i}
+              id={`${listId}-${i}`}
+              role="option"
               aria-selected={selectedIndex === i}
               onClick={() => {
                 item.action();
@@ -823,13 +841,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 
 // --- TOAST SYSTEM ---
-type ToastType = {
+export type ToastType = {
   id: string;
   title: string;
   description?: string;

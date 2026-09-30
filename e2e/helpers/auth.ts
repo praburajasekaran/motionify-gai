@@ -23,22 +23,28 @@ export const E2E_SUPER_ADMIN: E2EUser = {
 const API = '/.netlify/functions';
 
 export async function setupApiFallback(page: Page) {
-  await page.route(`**${API}/**`, async (route) => {
-    if (route.request().method() === 'GET') {
+  for (const pattern of [`**${API}/**`, '**/api/**']) {
+    await page.route(pattern, async (route) => {
+      if (route.request().method() === 'GET') {
+        if (new URL(route.request().url()).pathname.endsWith('/users-list')) {
+          await route.fulfill({ json: { success: true, users: [] } });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify({ success: true }),
       });
-      return;
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
     });
-  });
+  }
 }
 
 export async function setupAuthSession(page: Page, user: E2EUser = E2E_SUPER_ADMIN) {
@@ -51,6 +57,10 @@ export async function setupAuthSession(page: Page, user: E2EUser = E2E_SUPER_ADM
       body: JSON.stringify({ success: true, user }),
     });
   });
+
+  await page.route(`**${API}/users-settings`, route => route.fulfill({ json: {
+    account: { email: user.email, name: user.name, role: user.role, organizationName: 'Motionify', timezone: user.timezone || null },
+  } }));
 
   await page.addInitScript((userData) => {
     window.localStorage.setItem('auth_user', JSON.stringify(userData));

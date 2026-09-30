@@ -9,6 +9,7 @@
 
 import { API_BASE } from './api-config';
 import { User, UserRole } from '../types';
+import { z } from 'zod';
 
 // Storage keys
 const TOKEN_KEY = 'auth_token';
@@ -17,6 +18,37 @@ const EXPIRES_KEY = 'auth_expires';
 
 // Development mode check
 const isDevelopment = import.meta.env.DEV;
+
+const AUTH_UNAVAILABLE_MESSAGE = 'Sign-in is temporarily unavailable. Please try again shortly.';
+const AUTH_CONNECTION_MESSAGE = 'We could not connect to sign-in. Check your connection and try again.';
+
+const authResponseSchema = z.object({
+    success: z.boolean().optional(),
+    message: z.string().optional(),
+    error: z.union([
+        z.string(),
+        z.object({ code: z.string().optional(), message: z.string().optional() }).passthrough(),
+    ]).optional(),
+    data: z.unknown().optional(),
+}).passthrough();
+
+const authSessionSchema = z.object({
+    user: z.object({ id: z.string().min(1), email: z.string().min(1), role: z.string().min(1) }).passthrough(),
+    expiresAt: z.string().datetime({ offset: true }),
+    inquiryCreated: z.boolean().optional(),
+    inquiryId: z.string().optional(),
+    inquiryNumber: z.string().optional(),
+});
+
+async function readAuthResponse(response: Response) {
+    const parsed = authResponseSchema.safeParse(await response.json().catch(() => null));
+    return parsed.success ? parsed.data : null;
+}
+
+function authErrorMessage(data: z.infer<typeof authResponseSchema> | null): string {
+    const errorMessage = typeof data?.error === 'string' ? data.error : data?.error?.message;
+    return data?.message?.trim() || errorMessage?.trim() || AUTH_UNAVAILABLE_MESSAGE;
+}
 
 export interface MagicLinkRequestBody {
     email: string;
@@ -179,13 +211,13 @@ export async function requestMagicLink(body: MagicLinkRequestBody): Promise<Magi
             body: JSON.stringify(body),
         });
 
-        const data = await response.json();
+        const data = await readAuthResponse(response);
 
-        if (!response.ok) {
+        if (!response.ok || data?.success !== true) {
             return {
                 success: false,
-                message: data.message || data.error?.message || 'Failed to request magic link',
-                error: data.error,
+                message: authErrorMessage(data),
+                error: data?.error,
             };
         }
 
@@ -193,11 +225,10 @@ export async function requestMagicLink(body: MagicLinkRequestBody): Promise<Magi
             success: true,
             message: data.message || 'Magic link sent',
         };
-    } catch (error: any) {
+    } catch {
         return {
             success: false,
-            message: error.message || 'Network error',
-            error: error,
+            message: AUTH_CONNECTION_MESSAGE,
         };
     }
 }
@@ -216,18 +247,22 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
             body: JSON.stringify({ token, email }),
         });
 
-        const data = await response.json();
+        const data = await readAuthResponse(response);
 
-        if (!response.ok) {
+        if (!response.ok || data?.success !== true) {
+            const message = authErrorMessage(data);
             return {
                 success: false,
-                error: data.error || { message: 'Verification failed' },
-                message: data.message,
+                error: { ...(typeof data?.error === 'object' ? data.error : {}), message },
+                message,
             };
         }
 
-        // The backend should return the user in the data object
-        const responseData = data.data || data;
+        const session = authSessionSchema.safeParse(data.data ?? data);
+        if (!session.success) {
+            return { success: false, message: AUTH_UNAVAILABLE_MESSAGE, error: { message: AUTH_UNAVAILABLE_MESSAGE } };
+        }
+        const responseData = session.data;
         const user = transformUser(responseData.user);
 
         // Store user info in localStorage (token is now in httpOnly cookie)
@@ -245,12 +280,11 @@ export async function verifyMagicLink(token: string, email?: string): Promise<Ma
             },
             message: data.message,
         };
-    } catch (error: any) {
-        console.error('Verification error:', error);
+    } catch {
         return {
             success: false,
-            error: { message: error.message },
-            message: 'Verification failed',
+            error: { message: AUTH_CONNECTION_MESSAGE },
+            message: AUTH_CONNECTION_MESSAGE,
         };
     }
 }

@@ -71,6 +71,9 @@ interface RawDeliverableResponse {
   approval_history?: DeliverableApproval[];
   delivery_notes?: string;
   version?: number;
+  final_delivered_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Transform API response to match Deliverable type

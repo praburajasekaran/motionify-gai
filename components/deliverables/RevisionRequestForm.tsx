@@ -86,7 +86,7 @@ export const RevisionRequestForm: React.FC<RevisionRequestFormProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        size="custom"
+        size="full"
         showCloseButton={true}
         className="max-w-3xl max-h-[90vh]"
       >

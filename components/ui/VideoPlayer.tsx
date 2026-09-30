@@ -15,7 +15,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Plus, X, CheckSquare
 import { cn, Button, Input, Select } from './design-system';
 import { TimestampedComment } from '../../types/deliverable.types';
 import { TEAM_MEMBERS } from '../../constants';
-import { Avatar } from './Avatar';
+import { Avatar } from './design-system';
 
 export interface VideoPlayerProps {
   src: string;
@@ -587,9 +587,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(({
                     {/* Commenter Avatar + Name (Basecamp-style) */}
                     <div className="flex items-center gap-2 mb-2">
                       <Avatar
-                        name={comment.userName}
-                        avatarUrl={comment.userAvatar}
-                        size="sm"
+                        fallback={comment.userName}
+                        src={comment.userAvatar}
+                        className="h-8 w-8"
                       />
                       <span className="text-sm font-semibold text-foreground">
                         {comment.userName}

@@ -9,7 +9,7 @@ import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { VideoPlayer, VideoPlayerHandle } from '../ui/VideoPlayer';
 import { TimestampedComment } from '../../types/deliverable.types';
-import { Avatar } from '../ui/Avatar';
+import { Avatar } from '../ui/design-system';
 
 export interface VideoCommentTimelineHandle {
   seekTo: (timestamp: number) => void;
@@ -88,9 +88,9 @@ export const VideoCommentTimeline = forwardRef<VideoCommentTimelineHandle, Video
               >
                 <div className="flex items-start gap-2 mb-2">
                   <Avatar
-                    name={comment.userName}
-                    avatarUrl={comment.userAvatar}
-                    size="sm"
+                    fallback={comment.userName}
+                    src={comment.userAvatar}
+                    className="h-8 w-8"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

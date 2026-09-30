@@ -4,6 +4,13 @@ import { Button, Card, Input, Label } from '../components/ui/design-system';
 import { useAuthContext } from '../contexts/AuthContext';
 import { ArrowRight, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { requestMagicLink, verifyMagicLink } from '../lib/auth';
+import { useTheme } from 'next-themes';
+
+type LoginRequestState =
+  | { status: 'idle' }
+  | { status: 'sending' }
+  | { status: 'sent'; email: string }
+  | { status: 'failed'; message: string };
 
 function getSafeNextPath(next: string | null): string {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
@@ -16,12 +23,12 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, setUser } = useAuthContext();
+  const { resolvedTheme } = useTheme();
 
   const [email, setEmail] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
-  const [sendError, setSendError] = useState('');
+  const [requestState, setRequestState] = useState<LoginRequestState>({ status: 'idle' });
+  const isSending = requestState.status === 'sending';
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState('');
 
@@ -63,50 +70,47 @@ export const Login: React.FC = () => {
 
   const handleSendLink = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email) return;
-    setIsSending(true);
-    setSendError('');
-    setSendSuccess(false);
+    const submittedEmail = email.trim();
+    if (!submittedEmail || isSending) return;
+    setRequestState({ status: 'sending' });
     try {
       const next = getSafeNextPath(searchParams.get('next'));
       const result = await requestMagicLink({
-        email,
+        email: submittedEmail,
         rememberMe,
         ...(next !== '/' ? { next } : {}),
       });
       if (result.success) {
-        setSendSuccess(true);
+        setRequestState({ status: 'sent', email: submittedEmail });
       } else {
-        setSendError(result.message || 'Failed to send login link.');
+        setRequestState({ status: 'failed', message: result.message || 'Failed to send login link. Please try again.' });
       }
     } catch {
-      setSendError('An unexpected error occurred.');
-    } finally {
-      setIsSending(false);
+      setRequestState({ status: 'failed', message: 'We could not send your login link. Please try again.' });
     }
   };
 
   if (isVerifying) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-center">
+      <main className="portal-shell min-h-dvh bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center" role="status">
           <Loader2 className="h-7 w-7 text-primary animate-spin" />
           <p className="text-sm text-muted-foreground">Verifying your login link…</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm animate-fade-in-up">
+    <main className="portal-shell min-h-dvh bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img
-            src={`${import.meta.env.BASE_URL}images/motionify-studio-dark-web.png`}
+            src={`${import.meta.env.BASE_URL}${resolvedTheme === 'dark' ? 'motionify-dark-logo.png' : 'motionify-studio-dark.png'}`}
             alt="Motionify Studio"
-            className="h-8 w-auto"
+            className="h-10 w-auto"
           />
         </div>
 
@@ -118,28 +122,28 @@ export const Login: React.FC = () => {
 
         {/* Verification error */}
         {verifyError && (
-          <div className="flex items-start gap-2.5 bg-red-50 border border-red-200/60 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+          <div role="alert" className="flex items-start gap-2.5 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg px-4 py-3 mb-4 text-sm">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{verifyError}</span>
           </div>
         )}
 
         <Card className="p-6">
-          {sendSuccess ? (
-            <div className="text-center py-2">
+          {requestState.status === 'sent' ? (
+            <div className="text-center py-2" role="status">
               <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-emerald-50 border border-emerald-200/60 mb-3">
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
-              <h3 className="text-[15px] font-semibold text-foreground mb-1">Check your inbox</h3>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Check your inbox</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                We sent a magic link to <span className="font-medium text-foreground">{email}</span>
+                We sent a sign-in link to <span className="font-medium text-foreground break-words">{requestState.email}</span>.
               </p>
-              <Button variant="outline" size="sm" onClick={() => setSendSuccess(false)}>
+              <Button variant="outline" size="sm" onClick={() => setRequestState({ status: 'idle' })}>
                 Use a different email
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSendLink} className="space-y-4">
+            <form onSubmit={handleSendLink} className="space-y-4" aria-busy={isSending}>
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email address</Label>
                 <Input
@@ -150,6 +154,10 @@ export const Login: React.FC = () => {
                   placeholder="name@company.com"
                   required
                   autoFocus
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  disabled={isSending}
                 />
               </div>
 
@@ -157,14 +165,15 @@ export const Login: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={rememberMe}
+                  disabled={isSending}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="rounded border-input text-primary focus:ring-primary/20"
                 />
                 Remember me for 30 days
               </label>
 
-              {sendError && (
-                <p className="text-sm text-destructive" role="alert">{sendError}</p>
+              {requestState.status === 'failed' && (
+                <p className="text-sm text-destructive" role="alert">{requestState.message}</p>
               )}
 
               <Button type="submit" className="w-full" disabled={isSending}>
@@ -184,10 +193,10 @@ export const Login: React.FC = () => {
           )}
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground/60 mt-6">
-          Motionify Studio · Admin Portal
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Motionify Studio · Client and team workspace
         </p>
       </div>
-    </div>
+    </main>
   );
 };

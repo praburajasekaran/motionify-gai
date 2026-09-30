@@ -119,6 +119,26 @@
   status = 200
 
 [[redirects]]
+  from = "/terms"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/shipping"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/cancellation-refund"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
   from = "/project-access"
   to = "/index.html"
   status = 200

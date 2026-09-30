@@ -6,33 +6,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { ArrowLeft, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface RazorpayOptions {
-    key: string;
-    amount: number;
-    currency: string;
-    name: string;
-    description: string;
-    image?: string;
-    order_id: string;
-    handler: (response: any) => void;
-    prefill: {
-        name: string;
-        email: string;
-        contact: string;
-    };
-    notes: {
-        address: string;
-    };
-    theme: {
-        color: string;
-    };
-}
-
-declare global {
-    interface Window {
-        Razorpay: new (options: RazorpayOptions) => any;
-    }
-}
+import type { RazorpayOptions } from '../../types/razorpay';
 
 export function Payment() {
     const { proposalId } = useParams<{ proposalId: string }>();
@@ -154,7 +128,7 @@ export function Payment() {
                     }
                 },
                 prefill: {
-                    name: user?.user_metadata?.full_name || '',
+                    name: user?.name || '',
                     email: user?.email || '',
                     contact: ''
                 },

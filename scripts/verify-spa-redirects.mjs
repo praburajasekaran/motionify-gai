@@ -11,6 +11,10 @@ const SPA_ROUTES = [
   '/about',
   '/contact',
   '/work',
+  '/terms',
+  '/privacy',
+  '/shipping',
+  '/cancellation-refund',
   '/login',
   '/project-access',
 ];
