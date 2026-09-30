@@ -82,6 +82,48 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
     );
   }
 
+  it('converts the legacy project status enum while preserving its default', async () => {
+    const migrationSql = await readFile(fileURLToPath(new URL(
+      '../migrations/018_add_project_settings_fields.sql',
+      import.meta.url
+    )), 'utf8');
+    const pool = await createDatabase('contract_migration_018');
+
+    try {
+      await pool.query(`
+        CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+        CREATE TYPE project_status AS ENUM ('draft', 'active', 'in_review');
+        CREATE TABLE projects (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          status project_status NOT NULL DEFAULT 'active',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+
+      await pool.query(migrationSql);
+
+      const statusColumn = await pool.query<{
+        data_type: string;
+        column_default: string | null;
+      }>(`
+        SELECT data_type, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'projects'
+          AND column_name = 'status'
+      `);
+      assert.equal(statusColumn.rows[0].data_type, 'character varying');
+      assert.match(statusColumn.rows[0].column_default ?? '', /active/i);
+
+      const enumType = await pool.query<{ type_exists: boolean }>(
+        `SELECT to_regtype('public.project_status') IS NOT NULL AS type_exists`
+      );
+      assert.equal(enumType.rows[0].type_exists, false);
+    } finally {
+      await pool.end();
+    }
+  });
+
   it('applies to both a clean schema and the production-shaped drift fixture', async () => {
     const schemaSql = await readFile(fileURLToPath(new URL('../schema.sql', import.meta.url)), 'utf8');
     const driftSql = await readFile(fileURLToPath(new URL('./fixtures/pre-028-production-drift.sql', import.meta.url)), 'utf8');
