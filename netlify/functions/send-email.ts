@@ -70,6 +70,7 @@ export function emailWrapper(content: string): string {
 }
 
 export interface EmailOptions {
+  from?: string;
   to: string;
   subject: string;
   html: string;
@@ -192,7 +193,7 @@ export async function sendEmail(
     }
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: options.from || FROM_EMAIL,
       to: [options.to],
       subject: options.subject,
       html: options.html,
@@ -652,7 +653,7 @@ export async function sendPaymentFailureNotificationEmail(data: {
   });
 }
 
-export async function sendPaymentSuccessEmail(data: {
+export function buildPaymentSuccessEmail(data: {
   to: string;
   clientName: string;
   projectNumber: string;
@@ -661,7 +662,7 @@ export async function sendPaymentSuccessEmail(data: {
   paymentType: 'advance' | 'balance';
   projectUrl: string;
   idempotencyKey?: string;
-}, dependencies: SendEmailDependencies = {}) {
+}): EmailOptions {
   const paymentTypeLabel = data.paymentType === 'advance' ? 'Advance Payment' : 'Balance Payment';
 
   const content = `
@@ -695,12 +696,20 @@ export async function sendPaymentSuccessEmail(data: {
     </p>
   `;
 
-  return sendEmail({
+  return {
+    from: FROM_EMAIL,
     to: data.to,
     subject: `Payment Confirmed - ${data.projectNumber} (${data.currency} ${data.amount})`,
     html: emailWrapper(content),
     idempotencyKey: data.idempotencyKey,
-  }, dependencies);
+  };
+}
+
+export async function sendPaymentSuccessEmail(
+  data: Parameters<typeof buildPaymentSuccessEmail>[0],
+  dependencies: SendEmailDependencies = {},
+) {
+  return sendEmail(buildPaymentSuccessEmail(data), dependencies);
 }
 
 export async function sendProjectInvitationEmail(data: {

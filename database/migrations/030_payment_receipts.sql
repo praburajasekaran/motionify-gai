@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS payment_receipts (
 INSERT INTO payment_receipts (payment_id, payload, status)
 SELECT p.id, '{}', 'legacy' FROM payments p WHERE p.status = 'completed'
 AND EXISTS (
-  SELECT 1 FROM payment_webhook_logs w WHERE w.payment_id = p.id
+  SELECT 1 FROM payment_webhook_logs w WHERE (w.payment_id = p.id OR w.razorpay_order_id = p.razorpay_order_id)
   AND w.status = 'PROCESSED' AND w.signature_verified = true
   AND w.event IN ('payment.captured', 'order.paid')
 )

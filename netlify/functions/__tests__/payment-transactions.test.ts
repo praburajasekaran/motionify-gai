@@ -7,7 +7,7 @@ import { closePool } from '../_shared/db';
 import { verifyRazorpayCheckoutSignature } from '../_shared/payment-verification';
 import { createRazorpayWebhookHandler } from '../razorpay-webhook';
 import { createPaymentReceiptDelivery } from '../_shared/payment-receipts';
-import { sendPaymentSuccessEmail, type EmailSenderClient } from '../send-email';
+import { sendEmail, type EmailSenderClient } from '../send-email';
 import { handler as handoff } from '../payment-handoff';
 import { handler as publicProposal } from '../public-proposal';
 import { handler as authenticatedPayments } from '../payments';
@@ -264,7 +264,7 @@ test('concurrent captured and paid events deliver one receipt across retries', a
   const payment = await seedPendingPayment(pool);
   const provider = receiptProvider();
   const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
-    createPaymentReceiptDelivery(data => sendPaymentSuccessEmail(data, { client: provider.client })) });
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
   const events = [webhookEvent(payment.orderId), webhookEvent(payment.orderId, { event: 'order.paid' })];
   const responses = await Promise.all(events.map(event => runWebhook(event, handler)));
   assert.deepEqual(responses.map(r => r.status), [200, 200]);
@@ -298,7 +298,7 @@ test('provider acceptance followed by database rollback retries the same payload
   const payment = await seedPendingPayment(pool);
   const provider = receiptProvider();
   const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
-    createPaymentReceiptDelivery(data => sendPaymentSuccessEmail(data, { client: provider.client })) });
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
   await pool.query(`CREATE FUNCTION reject_test_receipt() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'Simulated receipt persistence failure'; END $$`);
   await pool.query(`CREATE TRIGGER reject_test_receipt BEFORE UPDATE ON payment_receipts
@@ -323,7 +323,7 @@ test('a receipt beyond the safe provider retry window requires reconciliation', 
   await pool.query("UPDATE payment_receipts SET created_at = NOW() - INTERVAL '24 hours' WHERE payment_id = $1", [payment.paymentId]);
   const provider = receiptProvider();
   const retry = createRazorpayWebhookHandler({ deliverPaymentReceipt:
-    createPaymentReceiptDelivery(data => sendPaymentSuccessEmail(data, { client: provider.client })) });
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
   assert.equal((await runWebhook(event, retry)).status, 503);
   assert.equal(provider.requests(), 0);
 });
@@ -333,6 +333,7 @@ test('migration excludes historical webhook receipts but preserves browser-first
   const oldEvent = webhookEvent(old.orderId);
   assert.equal((await runWebhook(oldEvent)).status, 200);
   await pool.query('DELETE FROM payment_receipts WHERE payment_id = $1', [old.paymentId]);
+  await pool.query('UPDATE payment_webhook_logs SET payment_id = NULL WHERE razorpay_order_id = $1', [old.orderId]);
   const browserFirst = await seedPendingPayment(pool);
   await pool.query("UPDATE payments SET status = 'completed', razorpay_payment_id = $2, paid_at = NOW() WHERE id = $1",
     [browserFirst.paymentId, `pay_${browserFirst.orderId}`]);
@@ -342,7 +343,7 @@ test('migration excludes historical webhook receipts but preserves browser-first
   assert.equal((await pool.query('SELECT status FROM payment_receipts WHERE payment_id = $1', [old.paymentId])).rows[0].status, 'legacy');
   const provider = receiptProvider();
   const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
-    createPaymentReceiptDelivery(data => sendPaymentSuccessEmail(data, { client: provider.client })) });
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
   assert.equal((await runWebhook(oldEvent, handler)).status, 200);
   assert.equal(provider.requests(), 0);
   assert.equal((await runWebhook(webhookEvent(browserFirst.orderId), handler)).status, 200);

@@ -1,14 +1,13 @@
 import { transaction, type PoolClient } from './db';
-import { sendPaymentSuccessEmail } from '../send-email';
+import { buildPaymentSuccessEmail, sendEmail, type EmailOptions } from '../send-email';
 import { absoluteProjectAccessUrl, appOriginFromEnv } from '../../../shared/canonical-links';
-
-type ReceiptPayload = Parameters<typeof sendPaymentSuccessEmail>[0];
 
 export async function queuePaymentReceipt(client: PoolClient, paymentId: string): Promise<void> {
   const existing = await client.query('SELECT payment_id FROM payment_receipts WHERE payment_id = $1', [paymentId]);
   if (existing.rows.length) return;
   const legacy = await client.query(`SELECT id FROM payment_webhook_logs
-    WHERE payment_id = $1 AND status = 'PROCESSED' AND signature_verified = true
+    WHERE (payment_id = $1 OR razorpay_order_id = (SELECT razorpay_order_id FROM payments WHERE id = $1))
+    AND status = 'PROCESSED' AND signature_verified = true
     AND event IN ('payment.captured', 'order.paid') LIMIT 1`, [paymentId]);
   if (legacy.rows.length) {
     await client.query(`INSERT INTO payment_receipts (payment_id, payload, status)
@@ -23,7 +22,7 @@ export async function queuePaymentReceipt(client: PoolClient, paymentId: string)
     WHERE p.id = $1`, [paymentId]);
   const info = rows[0];
   if (!info?.email) throw new Error('Receipt recipient is unavailable');
-  const payload: ReceiptPayload = {
+  const payload = buildPaymentSuccessEmail({
     to: info.email,
     clientName: info.full_name || 'Client',
     projectNumber: info.project_number || 'Your Project',
@@ -32,12 +31,12 @@ export async function queuePaymentReceipt(client: PoolClient, paymentId: string)
     paymentType: info.payment_type,
     projectUrl: absoluteProjectAccessUrl({ projectId: info.project_id, email: info.email }, appOriginFromEnv(process.env)),
     idempotencyKey: `payment-receipt/${paymentId}`,
-  };
+  });
   await client.query(`INSERT INTO payment_receipts (payment_id, payload)
     VALUES ($1, $2) ON CONFLICT (payment_id) DO NOTHING`, [paymentId, JSON.stringify(payload)]);
 }
 
-export function createPaymentReceiptDelivery(send: typeof sendPaymentSuccessEmail = sendPaymentSuccessEmail) {
+export function createPaymentReceiptDelivery(send: typeof sendEmail = sendEmail) {
   return async (paymentId: string): Promise<void> => {
     await transaction(async client => {
       const { rows } = await client.query(`SELECT payload, status,
@@ -47,7 +46,7 @@ export function createPaymentReceiptDelivery(send: typeof sendPaymentSuccessEmai
       if (!receipt) throw new Error('Payment receipt is not queued');
       if (receipt.status !== 'pending') return;
       if (receipt.expired) throw new Error('Payment receipt requires reconciliation before the provider idempotency key expires');
-      const result = await send(receipt.payload as ReceiptPayload);
+      const result = await send(receipt.payload as EmailOptions);
       if (result.status !== 'sent') throw new Error(`Payment receipt delivery failed: ${result.code}`);
       await client.query(`UPDATE payment_receipts
         SET status = 'sent', sent_at = NOW(), message_id = $2 WHERE payment_id = $1`, [paymentId, result.messageId]);
