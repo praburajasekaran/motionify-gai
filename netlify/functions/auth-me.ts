@@ -27,19 +27,12 @@ export const handler = compose(
             query('SELECT email, full_name, role FROM users WHERE id = $1', [auth!.user!.userId]),
             query('SELECT timezone FROM user_preferences WHERE user_id = $1', [auth!.user!.userId]),
             query(
-                `SELECT project_id, is_primary_contact, joined_at
+                `SELECT project_id, is_primary_contact, added_at
                  FROM project_team
                  WHERE user_id = $1 AND removed_at IS NULL`,
                 [auth!.user!.userId]
             ),
         ];
-
-        // For client users, include project count to avoid an extra redirect fetch
-        if (auth!.user!.role === 'client') {
-            queries.push(
-                query('SELECT COUNT(*)::int as count FROM project_members WHERE user_id = $1', [auth!.user!.userId])
-            );
-        }
 
         const results = await Promise.all(queries);
 
@@ -59,12 +52,16 @@ export const handler = compose(
                 {
                     projectId: row.project_id,
                     isPrimaryContact: row.is_primary_contact === true,
-                    ...(row.joined_at && { joinedAt: row.joined_at }),
+                    ...(row.added_at && {
+                        joinedAt: row.added_at instanceof Date
+                            ? row.added_at.toISOString()
+                            : String(row.added_at),
+                    }),
                 },
             ])
         );
-        if (results[3]?.rows.length > 0) {
-            projectCount = results[3].rows[0].count;
+        if (auth!.user!.role === 'client') {
+            projectCount = Object.keys(projectTeamMemberships).length;
         }
     } catch (e) {
         // Non-critical — fall back to token profile and browser defaults

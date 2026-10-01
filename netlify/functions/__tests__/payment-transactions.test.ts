@@ -11,6 +11,8 @@ import { sendEmail, type EmailSenderClient } from '../send-email';
 import { handler as handoff } from '../payment-handoff';
 import { handler as publicProposal } from '../public-proposal';
 import { handler as authenticatedPayments } from '../payments';
+import { handler as authMe } from '../auth-me';
+import { deactivateUserAccount } from '../users-delete';
 import { generateJWT, hashJWT } from '../_shared/jwt';
 import { requireProposalAccess, requireInquiryAccess } from '../_shared/authorization';
 
@@ -18,7 +20,18 @@ const pool = paymentTestPool();
 const webhook = createRazorpayWebhookHandler({
   deliverPaymentReceipt: createPaymentReceiptDelivery(async () => ({ status: 'sent', messageId: 'isolated-receipt' })),
 });
-before(async () => initializePaymentDatabase(pool));
+before(async () => {
+  await initializePaymentDatabase(pool);
+  await pool.query(`CREATE TABLE IF NOT EXISTS magic_link_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    remember_me BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used_at TIMESTAMPTZ
+  )`);
+});
 after(async () => { await closePool(); await pool.end(); });
 
 function webhookEvent(orderId: string, overrides: { event?: string; amount?: number; currency?: string; eventId?: string } = {}) {
@@ -46,6 +59,27 @@ async function authenticatedCookie(userId: string, email: string): Promise<strin
   return `auth_token=${token}`;
 }
 
+async function seedDeactivationTarget() {
+  const userId = crypto.randomUUID();
+  const email = `deactivate-${userId}@example.test`;
+  await pool.query(
+    `INSERT INTO users (id, email, full_name, role)
+     VALUES ($1, $2, 'Deactivation Target', 'client')`,
+    [userId, email],
+  );
+  await pool.query(
+    `INSERT INTO sessions (user_id, token, jwt_token_hash, expires_at)
+     VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour')`,
+    [userId, crypto.randomUUID(), crypto.randomUUID()],
+  );
+  await pool.query(
+    `INSERT INTO magic_link_tokens (email, token, expires_at)
+     VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+    [email, crypto.randomUUID()],
+  );
+  return { userId, email };
+}
+
 test('checkout signatures reject malformed suffixes even after a valid digest', () => {
   const secret = 'test_secret';
   const signature = crypto.createHmac('sha256', secret).update('order_1|pay_1').digest('hex');
@@ -64,6 +98,100 @@ test('a capture activates exactly one project and duplicate delivery is acknowle
   assert.equal(rows[0].status, 'completed');
   assert.equal(rows[0].project_count, '1');
   assert.equal(rows[0].is_primary_contact, true);
+});
+
+test('auth profile exposes the database-backed primary-contact membership', async () => {
+  const payment = await seedPendingPayment(pool);
+  await runWebhook(webhookEvent(payment.orderId));
+  const activatedPayment = await pool.query('SELECT project_id FROM payments WHERE id = $1', [payment.paymentId]);
+  const projectId = activatedPayment.rows[0].project_id as string;
+  const cookie = await authenticatedCookie(payment.userId, payment.email);
+  const response = await authMe({
+    httpMethod: 'GET',
+    path: '/.netlify/functions/auth-me',
+    headers: { cookie, 'x-requested-with': 'fetch' },
+    body: null,
+  });
+  assert.equal(response.statusCode, 200, response.body);
+  const { rows } = await pool.query(
+    'SELECT added_at FROM project_team WHERE project_id = $1 AND user_id = $2',
+    [projectId, payment.userId],
+  );
+  assert.deepEqual(JSON.parse(response.body).user.projectTeamMemberships, {
+    [projectId]: {
+      projectId,
+      isPrimaryContact: true,
+      joinedAt: rows[0].added_at.toISOString(),
+    },
+  });
+});
+
+test('deactivation commits revocation and reports a sent notification', async () => {
+  const target = await seedDeactivationTarget();
+  const result = await deactivateUserAccount({
+    userId: target.userId,
+    reason: 'The client engagement has ended.',
+    correlationId: 'deactivation-sent',
+  }, {
+    sendNotification: async (message) => {
+      assert.deepEqual(message, {
+        to: target.email,
+        recipientName: 'Deactivation Target',
+        reason: 'The client engagement has ended.',
+        correlationId: 'deactivation-sent',
+      });
+      return { status: 'sent', messageId: 'deactivation-message-1' };
+    },
+  });
+  assert.deepEqual(result, {
+    success: true,
+    message: 'User deactivated successfully',
+    emailDelivery: { status: 'sent' },
+  });
+  const user = await pool.query('SELECT is_active FROM users WHERE id = $1', [target.userId]);
+  const sessions = await pool.query('SELECT count(*)::int AS count FROM sessions WHERE user_id = $1', [target.userId]);
+  const tokens = await pool.query('SELECT count(*)::int AS count FROM magic_link_tokens WHERE email = $1', [target.email]);
+  assert.deepEqual({
+    isActive: user.rows[0].is_active,
+    sessions: sessions.rows[0].count,
+    tokens: tokens.rows[0].count,
+  }, {
+    isActive: false,
+    sessions: 0,
+    tokens: 0,
+  });
+});
+
+test('provider failure does not roll back deactivation', async () => {
+  const target = await seedDeactivationTarget();
+  const result = await deactivateUserAccount({
+    userId: target.userId,
+    reason: 'The account owner requested closure.',
+    correlationId: 'deactivation-failed',
+  }, {
+    sendNotification: async () => ({
+      status: 'failed',
+      code: 'RATE_LIMIT_EXCEEDED',
+      retryable: true,
+    }),
+  });
+  assert.deepEqual(result, {
+    success: true,
+    message: 'User deactivated successfully',
+    emailDelivery: { status: 'failed' },
+  });
+  const state = await pool.query(
+    `SELECT u.is_active,
+       (SELECT count(*)::int FROM sessions WHERE user_id = u.id) AS session_count,
+       (SELECT count(*)::int FROM magic_link_tokens WHERE email = u.email) AS token_count
+     FROM users u WHERE u.id = $1`,
+    [target.userId],
+  );
+  assert.deepEqual(state.rows[0], {
+    is_active: false,
+    session_count: 0,
+    token_count: 0,
+  });
 });
 
 test('failed payments persist without an admin notification address', async () => {

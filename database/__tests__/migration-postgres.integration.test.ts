@@ -259,7 +259,7 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
         await pool.query(setupSql);
         await pool.query(reconciliationSql);
         await pool.query(nullabilitySql);
-        await pool.query("CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), status VARCHAR(50) NOT NULL DEFAULT 'pending')");
+        await pool.query("CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), status VARCHAR(50) NOT NULL DEFAULT 'pending', razorpay_order_id VARCHAR(255) UNIQUE)");
         await pool.query(await readFile(new URL('../migrations/009_payment_webhook_logs.sql', import.meta.url), 'utf8'));
         const receipts = await readFile(new URL('../migrations/030_payment_receipts.sql', import.meta.url), 'utf8');
         await pool.query(receipts.split('-- DOWN')[0]);

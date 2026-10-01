@@ -176,6 +176,33 @@ test('the deactivation dialog restores focus without changing the user', async (
   expect(mutations).toBe(0);
 });
 
+for (const delivery of [
+  { status: 'sent', message: 'User Taylor has been deactivated. Notification email sent.' },
+  { status: 'failed', message: 'User Taylor was deactivated, but the notification email was not delivered.' },
+  { status: undefined, message: 'User Taylor was deactivated, but the notification email was not delivered.' },
+]) {
+  test(`deactivation reports ${delivery.status || 'missing'} email delivery truthfully`, async ({ page }) => {
+    await setupAuthSession(page);
+    await page.route('**/.netlify/functions/users-list*', route => route.fulfill({ json: { success: true, users: [
+      { id: 'polish-user', full_name: 'Taylor', email: 'taylor@example.test', role: 'client', is_active: true, created_at: '2026-09-29T10:00:00Z' },
+    ] } }));
+    await page.route('**/.netlify/functions/users-delete/*', route => route.fulfill({ json: {
+      success: true,
+      message: 'User deactivated successfully',
+      ...(delivery.status && { emailDelivery: { status: delivery.status } }),
+    } }));
+    await page.goto('/portal/admin/users');
+    await page.getByRole('button', { name: 'Deactivate', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Deactivate User' });
+    await dialog.getByRole('textbox', { name: 'Reason for deactivation' }).fill('The engagement has ended.');
+    await dialog.getByRole('button', { name: 'Deactivate User', exact: true }).click();
+    await expect(page.getByText(delivery.message, { exact: true })).toBeVisible();
+    if (delivery.status !== 'sent') {
+      await expect(page.getByText(/notified via email/i)).toHaveCount(0);
+    }
+  });
+}
+
 test('a repeated chunk failure reaches recovery instead of a reload loop', async ({ page }) => {
   await setupApiFallback(page);
   await page.addInitScript(() => sessionStorage.setItem('motionify:stale-chunk-reload-at', String(Date.now())));

@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { sendEmail, summarizeEmailDelivery, type EmailSenderClient } from '../send-email';
+import {
+  sendEmail,
+  sendUserDeactivationEmail,
+  summarizeEmailDelivery,
+  type EmailSenderClient,
+} from '../send-email';
 
 describe('sendEmail', () => {
   const options = {
@@ -76,5 +81,32 @@ describe('summarizeEmailDelivery', () => {
       { status: 'sent', messageId: 'message-1' },
       { status: 'failed', code: 'RATE_LIMIT_EXCEEDED', retryable: true },
     ]), { status: 'failed' });
+  });
+});
+
+describe('sendUserDeactivationEmail', () => {
+  it('sends an escaped account-deactivation notice through the shared delivery layer', async () => {
+    let payload: Parameters<EmailSenderClient['emails']['send']>[0] | undefined;
+    const client: EmailSenderClient = {
+      emails: {
+        async send(message) {
+          payload = message;
+          return { data: { id: 'deactivation-message-1' }, error: null };
+        },
+      },
+    };
+
+    const result = await sendUserDeactivationEmail({
+      to: 'client@example.test',
+      recipientName: 'Taylor <Admin>',
+      reason: 'Requested by <script>alert("x")</script>',
+      correlationId: 'deactivation-email-test',
+    }, { client });
+
+    assert.deepEqual(result, { status: 'sent', messageId: 'deactivation-message-1' });
+    assert.equal(payload?.subject, 'Your Motionify Studio account has been deactivated');
+    assert.match(payload?.html || '', /Taylor &lt;Admin&gt;/);
+    assert.match(payload?.html || '', /Requested by &lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
+    assert.doesNotMatch(payload?.html || '', /<script>alert/);
   });
 });
