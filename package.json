@@ -14,6 +14,7 @@
     "test:production": "npm run build && playwright test e2e/production-polish.spec.ts e2e/auth-resilience.spec.ts e2e/public-work.spec.ts e2e/admin-smoke.spec.ts --project=chromium",
     "verify:netlify-redirects": "npm run build && node scripts/verify-netlify-redirects.mjs",
     "verify:production-flip": "node scripts/verify-production-flip.mjs",
+    "verify:production-readiness": "node scripts/verify-production-readiness.mjs",
     "verify:runtime-retirement": "node scripts/verify-production-flip.mjs --runtime-retirement",
     "verify:spa-redirects": "node scripts/verify-spa-redirects.mjs",
     "preview": "vite preview",

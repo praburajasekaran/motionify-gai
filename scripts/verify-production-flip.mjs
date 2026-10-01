@@ -9,10 +9,27 @@ const paymentSpec = fs.readFileSync('e2e/payment-flow.spec.ts', 'utf8');
 const rootScriptEntries = Object.entries(packageJson.scripts || {});
 const rootScriptText = rootScriptEntries.map(([name, value]) => `${name}: ${value}`).join('\n');
 const removedLandingDir = ['landing-page', 'new'].join('-');
-const missingAssetsRedirectPattern = /from\s*=\s*"\/assets\/\*"\s+to\s*=\s*"\/404"\s+status\s*=\s*404\s+force\s*=\s*true/s;
-const spaFallbackPattern = /from\s*=\s*"\/\*"\s+to\s*=\s*"\/index\.html"\s+status\s*=\s*200/s;
+const missingAssetsRedirectPattern = /from\s*=\s*"\/assets\/\*"\s+to\s*=\s*"\/404"\s+status\s*=\s*404/s;
+const sourceMapRedirectPattern = /from\s*=\s*"\/assets\/\*\.map"\s+to\s*=\s*"\/404"\s+status\s*=\s*404/s;
 const missingAssetsRedirectIndex = netlifyToml.search(missingAssetsRedirectPattern);
-const spaFallbackIndex = netlifyToml.search(spaFallbackPattern);
+const spaRoutePatterns = [
+  '/verify-inquiry',
+  '/proposal/*',
+  '/payment/*',
+  '/payments/proforma/*',
+  '/inquiry-status/*',
+  '/portal',
+  '/portal/*',
+  '/about',
+  '/contact',
+  '/work',
+  '/login',
+  '/project-access',
+].map((route) => new RegExp(`from\\s*=\\s*"${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+to\\s*=\\s*"\\/index\\.html"\\s+status\\s*=\\s*200`, 's'));
+const firstSpaRouteIndex = spaRoutePatterns
+  .map((pattern) => netlifyToml.search(pattern))
+  .filter((index) => index !== -1)
+  .sort((a, b) => a - b)[0] ?? -1;
 
 function pathExists(relativePath) {
   return fs.existsSync(path.join(process.cwd(), relativePath));
@@ -72,8 +89,8 @@ const checks = [
     pass: /from\s*=\s*"\/portal\/\*"\s+to\s*=\s*"\/index\.html"\s+status\s*=\s*200/s.test(netlifyToml),
   },
   {
-    name: 'catch-all SPA fallback rewrites to the Vite entrypoint',
-    pass: spaFallbackIndex !== -1,
+    name: 'explicit SPA route fallbacks rewrite to the Vite entrypoint',
+    pass: spaRoutePatterns.every((pattern) => pattern.test(netlifyToml)),
   },
   {
     name: 'Vite hashed assets have immutable cache headers',
@@ -81,15 +98,15 @@ const checks = [
   },
   {
     name: 'Vite sourcemaps are blocked',
-    pass: /from\s*=\s*"\/assets\/\*\.map"\s+to\s*=\s*"\/404"\s+status\s*=\s*404\s+force\s*=\s*true/s.test(netlifyToml),
+    pass: sourceMapRedirectPattern.test(netlifyToml),
   },
   {
     name: 'missing Vite assets return 404 instead of the SPA entrypoint',
     pass: missingAssetsRedirectIndex !== -1,
   },
   {
-    name: 'missing Vite asset 404 is evaluated before the SPA fallback',
-    pass: missingAssetsRedirectIndex !== -1 && spaFallbackIndex !== -1 && missingAssetsRedirectIndex < spaFallbackIndex,
+    name: 'missing Vite asset 404 is evaluated before SPA route fallbacks',
+    pass: missingAssetsRedirectIndex !== -1 && firstSpaRouteIndex !== -1 && missingAssetsRedirectIndex < firstSpaRouteIndex,
   },
   {
     name: 'legacy portal host redirects to motionify.studio',
