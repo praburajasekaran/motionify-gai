@@ -9,7 +9,6 @@
  */
 
 import {
-    query,
     transaction,
     getCorsHeaders,
     uuidSchema,
@@ -20,6 +19,7 @@ import {
 } from './_shared';
 import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse, type AuthResult } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { sendUserDeactivationEmail, type EmailDeliveryResult } from './send-email';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -38,6 +38,94 @@ interface NetlifyResponse {
 const deleteUserSchema = z.object({
     reason: z.string().max(500).optional(),
 });
+
+interface DeactivateUserInput {
+    userId: string;
+    reason: string;
+    correlationId?: string;
+}
+
+interface DeactivateUserDependencies {
+    sendNotification?: (
+        data: Parameters<typeof sendUserDeactivationEmail>[0]
+    ) => Promise<EmailDeliveryResult>;
+}
+
+interface DeactivateUserResult {
+    success: true;
+    message: string;
+    emailDelivery: { status: EmailDeliveryResult['status'] };
+}
+
+export async function deactivateUserAccount(
+    input: DeactivateUserInput,
+    dependencies: DeactivateUserDependencies = {}
+): Promise<DeactivateUserResult> {
+    const user = await transaction(async (client) => {
+        const existingUser = await client.query(
+            'SELECT id, email, full_name, role FROM users WHERE id = $1',
+            [input.userId]
+        );
+
+        if (existingUser.rows.length === 0) {
+            throw { statusCode: 404, error: 'User not found' };
+        }
+
+        const target = existingUser.rows[0];
+
+        if (target.role === 'super_admin') {
+            const superAdminCount = await client.query(
+                `SELECT COUNT(*) as count FROM users WHERE role = 'super_admin' AND is_active = true`
+            );
+            const activeSuper = parseInt(superAdminCount.rows[0].count, 10);
+
+            if (activeSuper <= 1) {
+                throw {
+                    statusCode: 400,
+                    error: 'Cannot deactivate last Super Admin. Promote another user to Super Admin first.',
+                };
+            }
+        }
+
+        await client.query(
+            `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1`,
+            [input.userId]
+        );
+        await client.query(`DELETE FROM sessions WHERE user_id = $1`, [input.userId]);
+        await client.query(
+            `DELETE FROM magic_link_tokens WHERE email = $1`,
+            [target.email.toLowerCase()]
+        );
+
+        return {
+            email: target.email,
+            fullName: target.full_name,
+        };
+    });
+
+    const sendNotification = dependencies.sendNotification || sendUserDeactivationEmail;
+    let delivery: EmailDeliveryResult;
+    try {
+        delivery = await sendNotification({
+            to: user.email,
+            recipientName: user.fullName,
+            reason: input.reason,
+            correlationId: input.correlationId,
+        });
+    } catch {
+        createLogger('users-delete', input.correlationId).error(
+            'Deactivation email helper failed after account mutation',
+            new Error('Deactivation email helper failed')
+        );
+        delivery = { status: 'failed', code: 'EMAIL_DELIVERY_FAILED', retryable: true };
+    }
+
+    return {
+        success: true,
+        message: 'User deactivated successfully',
+        emailDelivery: { status: delivery.status },
+    };
+}
 
 export const handler = compose(
     withCORS(['DELETE']),
@@ -86,57 +174,21 @@ export const handler = compose(
     }
 
     try {
-        await transaction(async (client) => {
-            // Check if user exists
-            const existingUser = await client.query(
-                'SELECT id, email, full_name, role FROM users WHERE id = $1',
-                [userId]
-            );
-
-            if (existingUser.rows.length === 0) {
-                throw { statusCode: 404, error: 'User not found' };
-            }
-
-            const user = existingUser.rows[0];
-
-            // TC-AD-003: Prevent deactivating the last Super Admin
-            if (user.role === 'super_admin') {
-                const superAdminCount = await client.query(
-                    `SELECT COUNT(*) as count FROM users WHERE role = 'super_admin' AND is_active = true`
-                );
-                const activeSuper = parseInt(superAdminCount.rows[0].count, 10);
-
-                if (activeSuper <= 1) {
-                    throw {
-                        statusCode: 400,
-                        error: 'Cannot deactivate last Super Admin. Promote another user to Super Admin first.',
-                    };
-                }
-            }
-
-            // Soft delete - set is_active to false
-            await client.query(`UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1`, [userId]);
-
-            // Invalidate all sessions for this user
-            await client.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
-
-            // Also invalidate any magic link tokens
-            await client.query(`DELETE FROM magic_link_tokens WHERE email = $1`, [user.email.toLowerCase()]);
-
-            logger.info('User deactivated', {
-                userId,
-                email: user.email.slice(0, 3) + '***',
-                reason,
-            });
+        const result = await deactivateUserAccount({
+            userId,
+            reason,
+            correlationId,
+        });
+        logger.info('User deactivated', {
+            userId,
+            reason,
+            emailDeliveryStatus: result.emailDelivery.status,
         });
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({
-                success: true,
-                message: 'User deactivated successfully',
-            }),
+            body: JSON.stringify(result),
         };
     } catch (error: any) {
         if (error.statusCode) {

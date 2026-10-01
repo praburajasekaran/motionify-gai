@@ -151,7 +151,11 @@ export function UserManagement() {
             if (data.success) {
                 await loadUsers();
                 closeDeactivateModal();
-                toast.success(`User ${userToDeactivate.full_name} has been deactivated. They have been notified via email.`);
+                if (data.emailDelivery?.status === 'sent') {
+                    toast.success(`User ${userToDeactivate.full_name} has been deactivated. Notification email sent.`);
+                } else {
+                    toast.warning(`User ${userToDeactivate.full_name} was deactivated, but the notification email was not delivered.`);
+                }
             } else {
                 setError(data.error || 'Failed to deactivate user');
             }
@@ -443,7 +447,7 @@ export function UserManagement() {
                         <ul className="text-sm text-muted-foreground mb-4 list-disc list-inside space-y-1">
                             <li>Immediately revoke their access</li>
                             <li>Invalidate all active sessions</li>
-                            <li>Send them a notification email</li>
+                            <li>Attempt to send them a notification email</li>
                             <li>Preserve historical data</li>
                         </ul>
                         <div className="mb-4">

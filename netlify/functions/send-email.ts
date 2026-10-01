@@ -106,7 +106,7 @@ export interface EmailSenderClient {
   };
 }
 
-interface SendEmailDependencies {
+export interface SendEmailDependencies {
   client?: EmailSenderClient | null;
 }
 
@@ -774,6 +774,31 @@ export async function sendUserInvitationEmail(data: {
     html: emailWrapper(content),
     correlationId: data.correlationId,
   });
+}
+
+export async function sendUserDeactivationEmail(data: {
+  to: string;
+  recipientName: string;
+  reason: string;
+  correlationId?: string;
+}, dependencies: SendEmailDependencies = {}) {
+  const content = `
+    <h2 style="color: #dc2626; text-align: center; margin: 0 0 16px;">Your account has been deactivated</h2>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(data.recipientName)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;">Your Motionify Studio account has been deactivated and your active sessions have been revoked.</p>
+    <div style="background-color: #fef2f2; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #dc2626;">
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">Reason</p>
+      <p style="margin: 0; color: #111827;">${escapeHtml(data.reason)}</p>
+    </div>
+    <p style="color: #6b7280; font-size: 14px; margin: 0;">If you believe this was a mistake, contact the Motionify Studio team.</p>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: 'Your Motionify Studio account has been deactivated',
+    html: emailWrapper(content),
+    correlationId: data.correlationId,
+  }, dependencies);
 }
 
 export async function sendProposalStatusChangeEmail(data: {
