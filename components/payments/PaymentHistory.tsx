@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Button, EmptyState } f
 import { Payment, Project } from '../../types';
 import { fetchPaymentsForProject } from '../../services/paymentApi';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
+import { formatCurrency } from '../../utils/format';
 
 interface PaymentHistoryProps {
     project: Project;
@@ -32,14 +33,13 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
         loadPayments();
     }, [project.id]);
 
-    const getTotalPaid = () => {
-        return payments
-            .filter(p => p.status === 'completed')
-            .reduce((sum, p) => sum + Number(p.amount), 0);
-    };
-
-    const totalPaid = getTotalPaid();
-    const outstanding = (project.budget || 0) - totalPaid;
+    const paidByCurrency = new Map<string, number>();
+    for (const payment of payments) {
+        if (payment.status === 'completed') {
+            paidByCurrency.set(payment.currency,
+                (paidByCurrency.get(payment.currency) || 0) + Number(payment.amount));
+        }
+    }
 
     const getStatusBadge = (status: Payment['status']) => {
         switch (status) {
@@ -77,23 +77,17 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-card border-border">
-                    <CardContent className="p-6">
-                        <p className="text-sm text-muted-foreground mb-1">Total Budget</p>
-                        <p className="text-2xl font-bold text-foreground">${(project.budget || 0).toLocaleString()}</p>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 gap-4">
                 <Card className="bg-card border-border">
                     <CardContent className="p-6">
                         <p className="text-sm text-muted-foreground mb-1">Total Paid</p>
-                        <p className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-card border-border">
-                    <CardContent className="p-6">
-                        <p className="text-sm text-muted-foreground mb-1">Outstanding Balance</p>
-                        <p className="text-2xl font-bold text-amber-600">${Math.max(0, outstanding).toLocaleString()}</p>
+                        {paidByCurrency.size === 0 ? (
+                            <p className="text-sm text-muted-foreground">No completed payments</p>
+                        ) : Array.from(paidByCurrency, ([currency, amount]) => (
+                            <p key={currency} className="text-2xl font-bold text-emerald-600">
+                                {formatCurrency(amount, currency)}
+                            </p>
+                        ))}
                     </CardContent>
                 </Card>
             </div>
@@ -151,7 +145,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
                                                 </p>
                                             </td>
                                             <td className="px-6 py-4 font-mono font-medium text-foreground">
-                                                ${Number(payment.amount).toLocaleString()}
+                                                {formatCurrency(Number(payment.amount), payment.currency)}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {getStatusBadge(payment.status)}

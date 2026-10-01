@@ -10,6 +10,7 @@ const success = { activation: { projectId, clientEmail: 'confirmed-client@exampl
 
 async function setup(page: Page, authenticated = false, mockCheckout = true) {
   if (authenticated) await setupAuthSession(page, E2E_SUPER_ADMIN);
+  else await page.route('**/.netlify/functions/auth-me*', route => route.fulfill({ status: 401, json: { success: false } }));
   await page.route('**/*tawk.to/**', route => route.abort());
   await page.route('**/checkout.razorpay.com/**', route => route.abort());
   if (mockCheckout) await page.addInitScript(() => {
@@ -63,7 +64,13 @@ for (const authenticated of [false, true]) {
     expect((await verificationRequest).postDataJSON()).toEqual({ ...(authenticated ? {} : { proposalId, token: 'fixture-token' }), paymentId: order.id, razorpayOrderId: 'order_fixture', razorpayPaymentId: 'pay_fixture', razorpaySignature: 'signature_fixture' });
     await expect(page.getByRole('heading', { name: /Payment Successful/ })).toBeVisible();
     await page.getByRole('button', { name: 'Open Project', exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`project-access.*projectId=${projectId}`));
+    if (!authenticated) {
+      await expect(page.getByRole('heading', { name: 'Welcome back', exact: true })).toBeVisible();
+      await expect(page).toHaveURL(/\/portal\/login\?/);
+      expect(new URL(page.url()).searchParams.get('next')).toBe(`/projects/${projectId}`);
+    } else {
+      await expect(page).toHaveURL(new RegExp(`project-access.*projectId=${projectId}`));
+    }
     expect(new URL(page.url()).searchParams.get('email')).toBe(success.activation.clientEmail);
   });
 
