@@ -1,31 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck } from 'lucide-react';
-import { getInquiryById, type Inquiry } from '../../lib/inquiries';
-import { getPublicProposalById, type Proposal } from '../../lib/proposals';
+import { getPublicProposalById, type Proposal, type ProposalPaymentContact } from '../../lib/proposals';
 import { formatCurrency } from '../../utils/format';
 import { projectAccessPath } from '../../lib/canonical-links';
-import { toast } from 'sonner';
-
-import type { RazorpayOptions } from '../../types/razorpay';
+import { usePaymentCheckout } from '../../hooks/usePaymentCheckout';
 
 export function PublicPaymentPage() {
   const { proposalId } = useParams<{ proposalId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [inquiry, setInquiry] = useState<ProposalPaymentContact | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [activatedProjectId, setActivatedProjectId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (document.querySelector('script[src*="checkout.razorpay.com"]')) return;
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-  }, []);
+  const checkout = usePaymentCheckout({ proposalId: proposalId || '', token: searchParams.get('token') || '' }, {
+    name: inquiry?.contactName || '', email: inquiry?.contactEmail || '', contact: inquiry?.contactPhone || '',
+  });
+  const processing = checkout.processing;
+  const activatedProjectId = checkout.state.status === 'complete' ? checkout.state.projectId : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +28,9 @@ export function PublicPaymentPage() {
         return;
       }
 
-      const fetchedProposal = (await getPublicProposalById(proposalId, searchParams.get('token'))).proposal;
-      const fetchedInquiry = fetchedProposal ? await getInquiryById(fetchedProposal.inquiryId) : null;
+      const result = await getPublicProposalById(proposalId, searchParams.get('token')).catch(() => ({ proposal: null, paymentContact: null }));
+      const fetchedProposal = result.proposal;
+      const fetchedInquiry = result.paymentContact ?? null;
       if (!cancelled) {
         setProposal(fetchedProposal);
         setInquiry(fetchedInquiry);
@@ -50,85 +43,6 @@ export function PublicPaymentPage() {
       cancelled = true;
     };
   }, [proposalId, searchParams]);
-
-  async function handlePayment() {
-    if (!proposal || !inquiry) return;
-    setProcessing(true);
-
-    try {
-      const token = searchParams.get('token');
-      if (!token) {
-        throw new Error('This payment link is missing a valid proposal review token.');
-      }
-
-      const response = await fetch('/.netlify/functions/payment-handoff/create-order', {
-        method: 'POST',
-        body: JSON.stringify({ proposalId: proposal.id, token }),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      const orderData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(orderData.details || orderData.error || 'Failed to create order');
-      }
-
-      const options: RazorpayOptions = {
-        key: orderData.razorpayKeyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: orderData.name,
-        description: orderData.description,
-        order_id: orderData.razorpayOrderId,
-        handler: async (razorpayResponse: any) => {
-          const verifyResponse = await fetch('/.netlify/functions/payment-handoff/verify', {
-            method: 'POST',
-            body: JSON.stringify({
-              proposalId: proposal.id,
-              token,
-              paymentId: orderData.id,
-              razorpayOrderId: razorpayResponse.razorpay_order_id,
-              razorpayPaymentId: razorpayResponse.razorpay_payment_id,
-              razorpaySignature: razorpayResponse.razorpay_signature,
-            }),
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-          });
-
-          if (!verifyResponse.ok) {
-            throw new Error('Payment verification failed');
-          }
-
-          const verifyData = await verifyResponse.json().catch(() => ({}));
-          const activation = verifyData.activation || {};
-          setActivatedProjectId(activation.projectId || verifyData.project_id || verifyData.projectId || null);
-          setProcessing(false);
-        },
-        prefill: {
-          name: inquiry.contactName,
-          email: inquiry.contactEmail,
-          contact: inquiry.contactPhone || '',
-        },
-        notes: {
-          address: 'Motionify Studio',
-        },
-        theme: {
-          color: '#c2870a',
-        },
-      };
-
-      const checkout = new window.Razorpay(options);
-      checkout.on('payment.failed', (failure: any) => {
-        toast.error(failure.error?.description || 'Payment failed. Please try again.');
-        setProcessing(false);
-      });
-      checkout.open();
-    } catch (error) {
-      console.error('Payment initiation failed', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
-      setProcessing(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -160,7 +74,8 @@ export function PublicPaymentPage() {
           <h1 className="text-2xl font-bold text-gray-950 mb-2">Payment Successful</h1>
           <p className="text-gray-600 mb-6">Your project is ready to open.</p>
           <button
-            onClick={() => navigate(projectAccessPath({ projectId: activatedProjectId, email: inquiry.contactEmail }))}
+            onClick={() => navigate(projectAccessPath({ projectId: activatedProjectId,
+              email: checkout.state.status === 'complete' ? checkout.state.clientEmail || inquiry.contactEmail : inquiry.contactEmail }))}
             className="w-full py-3 px-4 bg-amber-700 text-white rounded-lg font-medium hover:bg-amber-800"
           >
             Open Project
@@ -221,7 +136,7 @@ export function PublicPaymentPage() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 sticky top-6">
               <h3 className="font-semibold text-gray-950 mb-4">Pay Securely</h3>
               <button
-                onClick={handlePayment}
+                onClick={checkout.start}
                 disabled={processing}
                 className="w-full flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-white bg-amber-700 hover:bg-amber-800 disabled:opacity-50"
               >
@@ -233,10 +148,11 @@ export function PublicPaymentPage() {
                 ) : (
                   <>
                     <Lock className="w-4 h-4 mr-2" />
-                    Pay {formatCurrency(proposal.advanceAmount, proposal.currency)}
+                    {checkout.state.status === 'unconfirmed' ? 'Retry payment confirmation' : `Pay ${formatCurrency(proposal.advanceAmount, proposal.currency)}`}
                   </>
                 )}
               </button>
+              {checkout.error && <p role="alert" className="mt-3 text-sm text-red-700">{checkout.error}</p>}
               <p className="text-xs text-center text-gray-500 mt-3 flex items-center justify-center gap-1">
                 <CreditCard className="w-3.5 h-3.5" />
                 Razorpay secure checkout

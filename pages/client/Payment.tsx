@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { getProposalById, type Proposal } from '../../lib/proposals';
-import { getInquiryById, updateInquiryStatus } from '../../lib/inquiries';
+import { getInquiryById } from '../../lib/inquiries';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { ArrowLeft, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
 
-import type { RazorpayOptions } from '../../types/razorpay';
+import { usePaymentCheckout } from '../../hooks/usePaymentCheckout';
 
 export function Payment() {
     const { proposalId } = useParams<{ proposalId: string }>();
@@ -15,20 +14,13 @@ export function Payment() {
 
     const [proposal, setProposal] = useState<Proposal | null>(null);
     const [inquiryNumber, setInquiryNumber] = useState<string>('');
-    const [clientEmail, setClientEmail] = useState<string>('');
-    const [activatedProjectId, setActivatedProjectId] = useState<string | null>(null);
+    const [inquiryEmail, setInquiryEmail] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [paymentComplete, setPaymentComplete] = useState(false);
-
-    // Load Razorpay checkout script dynamically (removed from index.html for performance)
-    useEffect(() => {
-        if (document.querySelector('script[src*="checkout.razorpay.com"]')) return;
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.async = true;
-        document.body.appendChild(script);
-    }, []);
+    const checkout = usePaymentCheckout({ proposalId: proposalId || '' }, { name: user?.name || '', email: user?.email || '', contact: '' });
+    const isProcessing = checkout.processing;
+    const paymentComplete = checkout.state.status === 'complete';
+    const activatedProjectId = checkout.state.status === 'complete' ? checkout.state.projectId : null;
+    const clientEmail = checkout.state.status === 'complete' ? checkout.state.clientEmail || inquiryEmail : inquiryEmail;
 
     useEffect(() => {
         async function fetchData() {
@@ -42,7 +34,7 @@ export function Payment() {
                     const fetchedInquiry = await getInquiryById(fetchedProposal.inquiryId);
                     if (fetchedInquiry) {
                         setInquiryNumber(fetchedInquiry.inquiryNumber);
-                        setClientEmail(fetchedInquiry.contactEmail);
+                        setInquiryEmail(fetchedInquiry.contactEmail);
                     }
                 }
             } catch (error) {
@@ -53,106 +45,6 @@ export function Payment() {
         }
         fetchData();
     }, [proposalId]);
-
-    const handlePayment = async () => {
-        setIsProcessing(true);
-
-        if (!proposal || !proposal.inquiryId) return;
-
-        try {
-            // 1. Create Order
-            const response = await fetch('/.netlify/functions/payments/create-order', {
-                method: 'POST',
-                body: JSON.stringify({
-                    proposalId: proposal.id,
-                    paymentType: 'advance' // Hardcoded for now based on UI
-                }),
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
-            });
-
-            const orderData = await response.json();
-
-            if (!response.ok) {
-                const errorMsg = orderData.details
-                    ? `${orderData.error}: ${orderData.details}`
-                    : orderData.error || 'Failed to create order';
-                throw new Error(errorMsg);
-            }
-
-            // 2. Initialize Razorpay
-            const options: RazorpayOptions = {
-                key: orderData.razorpayKeyId,
-                amount: orderData.amount,
-                currency: orderData.currency,
-                name: orderData.name,
-                description: orderData.description,
-                order_id: orderData.razorpayOrderId,
-                handler: async function (response: any) {
-                    try {
-                        console.log('Razorpay response:', response);
-                        const verifyPayload = {
-                            paymentId: orderData.id,
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature
-                        };
-                        console.log('Verify payload:', verifyPayload);
-                        const verifyResponse = await fetch('/.netlify/functions/payments/verify', {
-                            method: 'POST',
-                            body: JSON.stringify(verifyPayload),
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include'
-                        });
-
-                        if (verifyResponse.ok) {
-                            const verifyData = await verifyResponse.json().catch(() => ({}));
-                            const activation = verifyData.activation || {};
-                            setActivatedProjectId(activation.projectId || verifyData.project_id || verifyData.projectId || null);
-                            setClientEmail(activation.clientEmail || clientEmail);
-                            setPaymentComplete(true);
-                        } else {
-                            const errorData = await verifyResponse.json().catch(() => ({}));
-                            console.error('Verification failed:', errorData);
-                            const errorDetails = errorData.error?.details?.map((d: any) => d.message).join(', ')
-                                || errorData.error?.message
-                                || errorData.error
-                                || 'Unknown error';
-                            toast.error(`Payment verification failed: ${errorDetails}`);
-                            setIsProcessing(false);
-                        }
-                    } catch (error) {
-                        console.error('Verification error:', error);
-                        toast.error('Payment verification failed.');
-                        setIsProcessing(false);
-                    }
-                },
-                prefill: {
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    contact: ''
-                },
-                notes: {
-                    address: 'Razorpay Corporate Office'
-                },
-                theme: {
-                    color: '#7C3AED' // Violet-600
-                }
-            };
-
-            const rzp1 = new window.Razorpay(options);
-            rzp1.on('payment.failed', function (response: any) {
-                toast.error(response.error.description);
-                setIsProcessing(false);
-            });
-            rzp1.open();
-
-        } catch (error) {
-            console.error("Payment initiation failed", error);
-            toast.error("Failed to initiate payment. Please try again.");
-            setIsProcessing(false);
-        }
-    };
 
     if (authLoading || isLoading) {
         return (
@@ -165,9 +57,6 @@ export function Payment() {
     if (!proposal) {
         return <Navigate to="/" replace />;
     }
-
-    // Security check - ensure user owns this (though API should handle this, frontend check is good UX)
-    // We're skipping complex checks here relying on Previous page checks, but added basic existence check.
 
     if (paymentComplete) {
         return (
@@ -245,7 +134,7 @@ export function Payment() {
 
                         <div className="flex items-center gap-3 text-sm text-muted-foreground bg-blue-50 p-4 rounded-xl border border-blue-100">
                             <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                            <p>Your payment is secure. We use 256-bit encryption to protect your financial information.</p>
+                            <p>Your payment is secure. We use Razorpay checkout to protect your financial information.</p>
                         </div>
                     </div>
 
@@ -257,7 +146,7 @@ export function Payment() {
                             <div className="space-y-4">
                                 <div>
                                     <button
-                                        onClick={handlePayment}
+                                        onClick={checkout.start}
                                         disabled={isProcessing}
                                         className="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                     >
@@ -269,10 +158,11 @@ export function Payment() {
                                         ) : (
                                             <>
                                                 <Lock className="w-4 h-4 mr-2" />
-                                                Pay {formatCurrency(proposal.advanceAmount, proposal.currency)}
+                                                {checkout.state.status === 'unconfirmed' ? 'Retry payment confirmation' : `Pay ${formatCurrency(proposal.advanceAmount, proposal.currency)}`}
                                             </>
                                         )}
                                     </button>
+                                    {checkout.error && <p role="alert" className="mt-3 text-sm text-destructive">{checkout.error}</p>}
                                     <p className="text-xs text-center text-muted-foreground mt-3">
                                         Razorpay secure checkout
                                     </p>

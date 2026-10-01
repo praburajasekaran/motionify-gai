@@ -7,7 +7,7 @@
  * - extractTokenFromCookie: Parse auth token from cookie header
  */
 
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { createLogger } from './logger';
 import { normalizeRole, type CanonicalUserRole } from './roles';
 

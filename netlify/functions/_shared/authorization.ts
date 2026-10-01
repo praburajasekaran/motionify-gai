@@ -187,7 +187,6 @@ export async function requireProposalAccess<T = any>(
   const result = await runner.query<T>(
     `SELECT p.*,
             i.contact_email,
-            i.client_user_id AS inquiry_client_user_id,
             pr.id AS project_id,
             pr.client_user_id AS project_client_user_id
      FROM proposals p
@@ -208,9 +207,7 @@ export async function requireProposalAccess<T = any>(
 
   if (
     isClientLike(role) &&
-    (proposal.client_user_id === userId ||
-      proposal.inquiry_client_user_id === userId ||
-      proposal.project_client_user_id === userId ||
+    (proposal.project_client_user_id === userId ||
       (email && proposal.contact_email?.toLowerCase() === email))
   ) {
     return proposal;
@@ -235,7 +232,6 @@ export async function requireInquiryAccess<T = any>(
   const lookupColumn = inquiryIdOrNumber.startsWith('INQ-') ? 'inquiry_number' : 'id';
   const result = await runner.query<T>(
     `SELECT i.*,
-            p.client_user_id AS proposal_client_user_id,
             pr.id AS project_id,
             pr.client_user_id AS project_client_user_id
      FROM inquiries i
@@ -257,9 +253,7 @@ export async function requireInquiryAccess<T = any>(
 
   if (
     isClientLike(role) &&
-    (inquiry.client_user_id === userId ||
-      inquiry.proposal_client_user_id === userId ||
-      inquiry.project_client_user_id === userId ||
+    (inquiry.project_client_user_id === userId ||
       (email && inquiry.contact_email?.toLowerCase() === email))
   ) {
     return inquiry;
@@ -352,7 +346,6 @@ export async function requirePaymentAccess<T = any>(
   const runner = runnerFrom(options);
   const result = await runner.query<T>(
     `SELECT pay.*,
-            p.client_user_id AS proposal_client_user_id,
             i.contact_email,
             pr.id AS resolved_project_id,
             pr.client_user_id AS project_client_user_id
@@ -376,8 +369,7 @@ export async function requirePaymentAccess<T = any>(
 
   if (
     isClientLike(role) &&
-    (payment.proposal_client_user_id === userId ||
-      payment.project_client_user_id === userId ||
+    (payment.project_client_user_id === userId ||
       (email && payment.contact_email?.toLowerCase() === email))
   ) {
     return payment;

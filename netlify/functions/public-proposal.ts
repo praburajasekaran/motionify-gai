@@ -53,10 +53,16 @@ export const handler = compose(
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Proposal not found' }) };
     }
 
+    const contact = access.status === 'valid'
+      ? await dbQuery(`SELECT inquiry_number AS "inquiryNumber", contact_name AS "contactName",
+          contact_email AS "contactEmail", contact_phone AS "contactPhone", company_name AS "companyName"
+          FROM inquiries WHERE id = $1`, [result.rows[0].inquiry_id])
+      : null;
+
     return {
       statusCode: 200,
       headers: { ...headers, 'Cache-Control': 'private, max-age=300' },
-      body: JSON.stringify({ proposal: result.rows[0], accessStatus: access.status }),
+      body: JSON.stringify({ proposal: result.rows[0], accessStatus: access.status, paymentContact: contact?.rows[0] ?? null }),
     };
   }
 

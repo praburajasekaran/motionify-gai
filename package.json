@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": { "node": ">=22.18.0" },
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "vite",
     "dev:portal": "vite",
     "dev:functions": "netlify functions:serve -p 8888",
@@ -11,6 +13,9 @@
     "dev:all": "concurrently -n \"app,functions\" -c \"cyan,green\" \"npm run dev:portal\" \"npm run dev:functions\"",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "verify:development-tooling": "node scripts/verify-development-tooling.mjs",
+    "test:payment:integration": "node --import tsx scripts/payment-sandbox.ts",
+    "dev:payment:sandbox": "node --import tsx scripts/payment-sandbox.ts --serve",
     "test:production": "npm run build && playwright test e2e/production-polish.spec.ts e2e/auth-resilience.spec.ts e2e/public-work.spec.ts e2e/admin-smoke.spec.ts --project=chromium",
     "verify:netlify-redirects": "npm run build && node scripts/verify-netlify-redirects.mjs",
     "verify:production-flip": "node scripts/verify-production-flip.mjs",
@@ -92,12 +97,15 @@
     "@types/dompurify": "^3.0.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "artillery": "^2.0.28",
+    "artillery": "2.0.34",
     "artillery-engine-playwright": "^1.25.0",
     "autoprefixer": "^10.4.22",
     "concurrently": "^9.2.1",
-    "netlify-cli": "^23.13.0",
+    "netlify-cli": "^27.10.2",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",
     "tsx": "^4.19.2",
@@ -109,6 +117,15 @@
     "@rollup/rollup-darwin-arm64": "^4.59.0"
   },
   "overrides": {
+    "tsx": {
+      "esbuild": "^0.28.2"
+    },
+    "artillery": {
+      "csv-parse": "^7.0.2"
+    },
+    "ipx": {
+      "sharp": "^0.35.5"
+    },
     "@axe-core/playwright": {
       "playwright-core": "1.58.2"
     }
