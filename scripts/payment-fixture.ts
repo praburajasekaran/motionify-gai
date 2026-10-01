@@ -21,6 +21,8 @@ export async function initializePaymentDatabase(pool: pg.Pool) {
     const sql = (await readFile(file, 'utf8')).replace(/CREATE INDEX (?!IF NOT EXISTS)/g, 'CREATE INDEX IF NOT EXISTS ');
     await pool.query(sql);
   }
+  const receipts = await readFile('database/migrations/030_payment_receipts.sql', 'utf8');
+  await pool.query(receipts.split('-- DOWN')[0].replace('-- UP', ''));
 }
 
 export async function seedPaymentProposal(pool: pg.Pool) {

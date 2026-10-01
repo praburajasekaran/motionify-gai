@@ -101,20 +101,24 @@ describe('Razorpay webhook validation', () => {
 });
 
 describe('Razorpay webhook acknowledgements', () => {
-  it('acknowledges an already-processed event without opening a transaction', async () => {
+  it('resumes receipt delivery before acknowledging an already-processed event', async () => {
     const body = JSON.stringify(payload('payment.captured'));
-    let transactionOpened = false;
+    let delivered = false;
     const response = await invoke(body, sign(body), {
       isEventProcessed: async () => true,
-      transaction: async () => {
-        transactionOpened = true;
-        throw new Error('transaction should not run');
+      query: async () => ({ rows: [{ payment_id: 'payment-row-1' }] }),
+      transaction: async (callback: (client: any) => Promise<unknown>) => callback({
+        query: async () => ({ rows: [{ payment_id: 'payment-row-1' }] }),
+      }),
+      deliverPaymentReceipt: async (paymentId: string) => {
+        assert.equal(paymentId, 'payment-row-1');
+        delivered = true;
       },
     } as any);
 
     assert.equal(response.statusCode, 200);
     assert.deepEqual(JSON.parse(response.body), { status: 'already_processed' });
-    assert.equal(transactionOpened, false);
+    assert.equal(delivered, true);
   });
 
   it('acknowledges a supported event after processing it', async () => {
@@ -128,6 +132,7 @@ describe('Razorpay webhook acknowledgements', () => {
         return { success: true, paymentId: 'payment-row-1' };
       },
       logWebhook: async () => 'webhook-log-1',
+      deliverPaymentReceipt: async () => {},
     } as any);
 
     assert.equal(response.statusCode, 200);

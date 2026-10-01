@@ -12,19 +12,12 @@
 import type { Handler } from '@netlify/functions';
 import crypto from 'crypto';
 import { query, transaction, type PoolClient } from './_shared/db';
-import {
-  sendPaymentSuccessEmail,
-  sendPaymentFailureNotificationEmail,
-} from './send-email';
+import { sendPaymentFailureNotificationEmail } from './send-email';
 import { acceptProposalAndCreateProject } from './_shared/proposal-payment-helpers';
 import { razorpayWebhookSchema, type RazorpayWebhookPayload } from './_shared/schemas';
-import { absoluteProjectAccessUrl, absoluteUrl, appOriginFromEnv, portalPath } from '../../shared/canonical-links';
+import { queuePaymentReceipt, deliverPaymentReceipt } from './_shared/payment-receipts';
 
 const PAYMENT_EVENTS = new Set(['payment.captured', 'order.paid', 'payment.failed']);
-
-function buildProjectAccessUrl(projectId: string, email: string): string {
-  return absoluteProjectAccessUrl({ projectId, email }, appOriginFromEnv(process.env));
-}
 
 /**
  * Verify Razorpay webhook signature using HMAC SHA256
@@ -178,7 +171,7 @@ async function handlePaymentCaptured(
     if (storedPayment.razorpay_payment_id && storedPayment.razorpay_payment_id !== razorpayPaymentId) {
       return { success: false, error: `Order ${razorpayOrderId} was completed by a different provider payment` };
     }
-    console.log('[Webhook] Payment already completed, sending email anyway:', storedPayment.id);
+    console.log('[Webhook] Payment already completed:', storedPayment.id);
   } else {
     const duplicateProviderPayment = await client.query(
       `SELECT id FROM payments
@@ -207,47 +200,7 @@ async function handlePaymentCaptured(
     throw new Error('Project activation failed after advance payment');
   }
 
-  // Send success email (non-blocking)
-  try {
-    // Fetch client and project info for email
-      const paymentInfo = await client.query(
-        `SELECT
-          p.payment_type, p.amount, p.currency,
-          proj.id as project_id,
-          proj.project_number,
-          u.email as client_email, u.full_name as client_name
-      FROM payments p
-      LEFT JOIN projects proj ON p.project_id = proj.id
-      LEFT JOIN users u ON proj.client_user_id = u.id
-      WHERE p.id = $1`,
-      [paymentId]
-    );
-
-    if (paymentInfo.rows.length > 0 && paymentInfo.rows[0].client_email) {
-      const info = paymentInfo.rows[0];
-      const projectUrl = info.project_id && info.client_email
-        ? buildProjectAccessUrl(info.project_id, info.client_email)
-        : absoluteUrl(portalPath('/projects'), appOriginFromEnv(process.env));
-
-      console.log('[Webhook] Sending payment success email for payment:', paymentId);
-
-      // Call email function directly (non-blocking)
-      sendPaymentSuccessEmail({
-        to: info.client_email,
-        clientName: info.client_name || 'Client',
-        projectNumber: info.project_number || 'Your Project',
-        amount: (Number(info.amount) / 100).toFixed(2),
-        currency: info.currency,
-        paymentType: info.payment_type,
-        projectUrl,
-      }).catch((e) => console.error('[Webhook] Success email error:', e));
-    } else {
-      console.log('[Webhook] No client email found for payment:', paymentId, paymentInfo.rows[0]);
-    }
-  } catch (emailError) {
-    console.error('[Webhook] Error fetching payment info for email:', emailError);
-    // Don't fail the webhook - email is non-critical
-  }
+  await queuePaymentReceipt(client, paymentId);
 
   return { success: true, paymentId };
 }
@@ -322,6 +275,7 @@ export interface RazorpayWebhookDependencies {
   logWebhook: typeof logWebhook;
   handlePaymentCaptured: typeof handlePaymentCaptured;
   handlePaymentFailed: typeof handlePaymentFailed;
+  deliverPaymentReceipt: typeof deliverPaymentReceipt;
 }
 
 const defaultWebhookDependencies: RazorpayWebhookDependencies = {
@@ -331,6 +285,7 @@ const defaultWebhookDependencies: RazorpayWebhookDependencies = {
   logWebhook,
   handlePaymentCaptured,
   handlePaymentFailed,
+  deliverPaymentReceipt,
 };
 
 export function createRazorpayWebhookHandler(
@@ -406,6 +361,16 @@ export function createRazorpayWebhookHandler(
     try {
       const alreadyProcessed = await dependencies.isEventProcessed(eventId);
       if (alreadyProcessed) {
+        if (webhookEvent === 'payment.captured' || webhookEvent === 'order.paid') {
+          const receipt = await dependencies.query(
+            `SELECT payment_id FROM payment_webhook_logs
+             WHERE razorpay_event_id = $1 AND status = 'PROCESSED' AND signature_verified = true`, [eventId]);
+          if (receipt.rows[0]?.payment_id) {
+            const paymentId = receipt.rows[0].payment_id;
+            await dependencies.transaction(client => queuePaymentReceipt(client, paymentId));
+            await dependencies.deliverPaymentReceipt(paymentId);
+          }
+        }
         console.log('[Webhook] Event already processed:', eventId);
         return {
           statusCode: 200,
@@ -413,8 +378,8 @@ export function createRazorpayWebhookHandler(
         };
       }
     } catch (checkError) {
-      console.error('[Webhook] Error checking idempotency:', checkError);
-      // Continue processing - better to risk duplicate than miss payment
+      console.error('[Webhook] Error resuming processed event:', checkError);
+      return { statusCode: 503, body: JSON.stringify({ error: 'Webhook retry failed' }) };
     }
   }
 
@@ -458,6 +423,16 @@ export function createRazorpayWebhookHandler(
 
       return processResult;
     });
+
+    if (result.success && result.paymentId && (webhookEvent === 'payment.captured' || webhookEvent === 'order.paid')) {
+      try {
+        await dependencies.deliverPaymentReceipt(result.paymentId);
+      } catch (error) {
+        console.error('[Webhook] Receipt delivery pending', { paymentId: result.paymentId,
+          error: error instanceof Error ? error.message : 'Unknown delivery error' });
+        return { statusCode: 503, body: JSON.stringify({ status: 'receipt_pending' }) };
+      }
+    }
 
     const duration = Date.now() - startTime;
     console.log('[Webhook] Processed:', { event: webhookEvent, eventId, duration: `${duration}ms`, result });

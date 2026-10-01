@@ -6,7 +6,7 @@ type PaymentAccess = { proposalId: string; token: string } | { proposalId: strin
 type PaymentProof = { paymentId: string; response: RazorpayResponse };
 type CheckoutState =
   | { status: 'idle'; error?: string }
-  | { status: 'opening' }
+  | { status: 'opening'; phase: 'loading' | 'order' | 'checkout' }
   | { status: 'verifying' }
   | { status: 'unconfirmed'; proof: PaymentProof; error: string }
   | { status: 'complete'; projectId: string; clientEmail?: string };
@@ -20,16 +20,25 @@ const confirmationSchema = z.object({
 });
 
 async function paymentRequest(endpoint: string, body: object) {
-  const response = await fetch(`/.netlify/functions/${endpoint}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-    credentials: 'include', body: JSON.stringify(body),
-  });
-  const data = await response.json().catch(() => null);
-  if (!response.ok || !data) {
-    const error = typeof data?.error === 'string' ? data.error : data?.error?.message;
-    throw new Error(error || 'Payment service is temporarily unavailable. Please try again.');
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(`/.netlify/functions/${endpoint}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+      credentials: 'include', body: JSON.stringify(body), signal: controller.signal,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+      const error = typeof data?.error === 'string' ? data.error : data?.error?.message;
+      throw new Error(error || 'Payment service is temporarily unavailable. Please try again.');
+    }
+    return data;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('Payment service took too long to respond. Please try again.');
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-  return data;
 }
 
 async function loadCheckout() {
@@ -72,9 +81,10 @@ export function usePaymentCheckout(access: PaymentAccess, prefill: RazorpayOptio
   async function start() {
     if (state.status === 'opening' || state.status === 'verifying' || state.status === 'complete') return;
     if (state.status === 'unconfirmed') { await confirm(state.proof); return; }
-    setState({ status: 'opening' });
+    setState({ status: 'opening', phase: 'loading' });
     try {
       await loadCheckout();
+      setState({ status: 'opening', phase: 'order' });
       const data = await paymentRequest(`${endpoint}/create-order`, access.token ? access : { proposalId: access.proposalId, paymentType: 'advance' });
       const order = orderSchema.safeParse(data);
       if (!order.success) throw new Error('Payment service is temporarily unavailable. Please try again.');
@@ -87,12 +97,16 @@ export function usePaymentCheckout(access: PaymentAccess, prefill: RazorpayOptio
       });
       checkout.on('payment.failed', () => setState(current => current.status === 'opening'
         ? { status: 'idle', error: 'Payment failed. Please try again.' } : current));
+      setState({ status: 'opening', phase: 'checkout' });
       checkout.open();
     } catch (error) {
       setState({ status: 'idle', error: error instanceof Error ? error.message : 'We could not open checkout. Please try again.' });
     }
   }
 
-  return { state, start, processing: state.status === 'opening' || state.status === 'verifying',
+  const progress = state.status === 'verifying' ? 'Confirming payment…' : state.status === 'opening'
+    ? { loading: 'Loading secure checkout…', order: 'Preparing payment…', checkout: 'Complete payment in Razorpay' }[state.phase]
+    : null;
+  return { state, start, progress, processing: state.status === 'opening' || state.status === 'verifying',
     error: state.status === 'idle' || state.status === 'unconfirmed' ? state.error : undefined };
 }

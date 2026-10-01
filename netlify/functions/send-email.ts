@@ -74,6 +74,7 @@ export interface EmailOptions {
   subject: string;
   html: string;
   correlationId?: string;
+  idempotencyKey?: string;
 }
 
 export type EmailDeliveryResult =
@@ -99,7 +100,7 @@ export interface EmailSenderClient {
       to: string[];
       subject: string;
       html: string;
-    }): Promise<{
+    }, options?: { idempotencyKey: string }): Promise<{
       data: { id?: string } | null;
       error: EmailProviderError | null;
     }>;
@@ -195,7 +196,7 @@ export async function sendEmail(
       to: [options.to],
       subject: options.subject,
       html: options.html,
-    });
+    }, options.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : undefined);
 
     if (error) {
       const code = providerCode(error);
@@ -659,7 +660,8 @@ export async function sendPaymentSuccessEmail(data: {
   currency: string;
   paymentType: 'advance' | 'balance';
   projectUrl: string;
-}) {
+  idempotencyKey?: string;
+}, dependencies: SendEmailDependencies = {}) {
   const paymentTypeLabel = data.paymentType === 'advance' ? 'Advance Payment' : 'Balance Payment';
 
   const content = `
@@ -697,7 +699,8 @@ export async function sendPaymentSuccessEmail(data: {
     to: data.to,
     subject: `Payment Confirmed - ${data.projectNumber} (${data.currency} ${data.amount})`,
     html: emailWrapper(content),
-  });
+    idempotencyKey: data.idempotencyKey,
+  }, dependencies);
 }
 
 export async function sendProjectInvitationEmail(data: {
