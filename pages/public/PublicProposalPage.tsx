@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, FileText, Loader2, MessageSquare, X } from 'lucide-react';
 import { PublicProposalReview } from '../../components/proposal/PublicProposalReview';
-import { getInquiryById, mapInquiryFromApi, updateInquiryStatus, type Inquiry } from '../../lib/inquiries';
-import { getPublicProposalById, updatePublicProposalStatus, type Proposal } from '../../lib/proposals';
+import { mapInquiryFromApi, type Inquiry } from '../../lib/inquiries';
+import { getPublicProposalById, updatePublicProposalStatus, type Proposal, type ProposalPaymentContact } from '../../lib/proposals';
 import { advancePaymentPath } from '../../lib/canonical-links';
 import { decodeBase64 } from '../../utils/encoding';
 
@@ -26,7 +26,7 @@ export function PublicProposalPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [contact, setContact] = useState<ProposalPaymentContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
@@ -53,7 +53,14 @@ export function PublicProposalPage() {
               advanceAmount: Number(decoded.proposal.advanceAmount),
               balanceAmount: Number(decoded.proposal.balanceAmount),
             });
-            setInquiry(mapInquiryFromApi(decoded.inquiry));
+            const sharedInquiry = mapInquiryFromApi(decoded.inquiry);
+            setContact({
+              inquiryNumber: sharedInquiry.inquiryNumber,
+              contactName: sharedInquiry.contactName,
+              contactEmail: sharedInquiry.contactEmail,
+              contactPhone: sharedInquiry.contactPhone ?? null,
+              companyName: sharedInquiry.companyName ?? null,
+            });
             setLoading(false);
           }
           return;
@@ -61,7 +68,7 @@ export function PublicProposalPage() {
       }
 
       const token = searchParams.get('token');
-      const { proposal: fetchedProposal, error } = await getPublicProposalById(proposalId, token);
+      const { proposal: fetchedProposal, paymentContact, error } = await getPublicProposalById(proposalId, token);
       if (!fetchedProposal) {
         if (!cancelled) {
           setAccessError(error || null);
@@ -70,10 +77,9 @@ export function PublicProposalPage() {
         return;
       }
 
-      const fetchedInquiry = await getInquiryById(fetchedProposal.inquiryId);
       if (!cancelled) {
         setProposal(fetchedProposal);
-        setInquiry(fetchedInquiry);
+        setContact(paymentContact ?? null);
         setLoading(false);
       }
     }
@@ -91,13 +97,12 @@ export function PublicProposalPage() {
   }
 
   async function submitStatus(status: 'changes_requested' | 'rejected') {
-    if (!proposal || !inquiry) return;
+    if (!proposal || !contact) return;
     setSubmitting(true);
     try {
       const token = searchParams.get('token');
       if (!token) throw new Error('This action requires a valid proposal review token.');
       await updatePublicProposalStatus(proposal.id, token, status, { feedback: feedback.trim() || undefined });
-      await updateInquiryStatus(inquiry.id, status === 'changes_requested' ? 'negotiating' : 'rejected');
       setShowFeedback(false);
       setFeedback('');
       await refreshProposal();
@@ -117,7 +122,7 @@ export function PublicProposalPage() {
     );
   }
 
-  if (!proposal || !inquiry) {
+  if (!proposal || !contact) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl p-8 text-center">
@@ -146,7 +151,7 @@ export function PublicProposalPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PublicProposalReview proposal={proposal} inquiry={inquiry} />
+        <PublicProposalReview proposal={proposal} contact={contact} />
 
         <div className="bg-gray-50 rounded-b-2xl border-t border-gray-200 p-6">
           {hasResponded ? (

@@ -1,16 +1,15 @@
-import type { Inquiry } from '../../lib/inquiries';
-import type { Proposal } from '../../lib/proposals';
+import type { Proposal, ProposalPaymentContact } from '../../lib/proposals';
 import { formatCurrency } from '../../utils/format';
 import { getStatusConfig } from '../../lib/status-config';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { Calendar, Clock, FileText, RotateCcw, User } from 'lucide-react';
 
 interface PublicProposalReviewProps {
-  inquiry: Inquiry;
+  contact: Pick<ProposalPaymentContact, 'inquiryNumber' | 'contactName' | 'companyName'>;
   proposal: Proposal;
 }
 
-export function PublicProposalReview({ inquiry, proposal }: PublicProposalReviewProps) {
+export function PublicProposalReview({ contact, proposal }: PublicProposalReviewProps) {
   const status = getStatusConfig(proposal.status);
   const StatusIcon = status.icon;
 
@@ -25,7 +24,7 @@ export function PublicProposalReview({ inquiry, proposal }: PublicProposalReview
                 v{proposal.version || 1}
               </span>
             </div>
-            <p className="text-gray-600">For {inquiry.companyName || inquiry.contactName}</p>
+            <p className="text-gray-600">For {contact.companyName || contact.contactName}</p>
           </div>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${status.colorClass}`}>
             <StatusIcon className={`w-4 h-4 ${status.iconColorClass}`} />
@@ -36,7 +35,7 @@ export function PublicProposalReview({ inquiry, proposal }: PublicProposalReview
         <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-5">
           <div className="flex items-center gap-1.5">
             <FileText className="w-4 h-4" />
-            <span>Inquiry: <code className="font-mono text-amber-700">{inquiry.inquiryNumber}</code></span>
+            <span>Inquiry: <code className="font-mono text-amber-700">{contact.inquiryNumber}</code></span>
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4" />
@@ -52,7 +51,7 @@ export function PublicProposalReview({ inquiry, proposal }: PublicProposalReview
             <User className="w-5 h-5 text-gray-500" />
             <div>
               <p className="text-sm text-gray-600">Contact Person</p>
-              <p className="text-gray-950 font-medium">{inquiry.contactName}</p>
+              <p className="text-gray-950 font-medium">{contact.contactName}</p>
             </div>
           </div>
         </section>

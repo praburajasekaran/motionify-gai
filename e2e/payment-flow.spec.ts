@@ -103,6 +103,66 @@ test('public checkout does not depend on authenticated inquiry data', async ({ p
   expect(inquiryRequests).toBe(0);
 });
 
+test('a signed-out client can review a token-protected proposal and proceed to checkout', async ({ page }) => {
+  await setup(page);
+  let inquiryRequests = 0;
+  await page.route('**/.netlify/functions/inquiry-detail/**', route => {
+    inquiryRequests++;
+    return route.fulfill({ status: 401, json: { error: 'Authentication required' } });
+  });
+  await page.goto(`/proposal/${proposalId}?token=fixture-token`);
+  await expect(page.getByRole('heading', { name: 'Proposal', exact: true })).toBeVisible();
+  await expect(page.getByText(contact.inquiryNumber, { exact: true })).toBeVisible();
+  await expect(page.getByText(contact.contactName, { exact: true })).toBeVisible();
+  await expect(page.getByText('₹1.00', { exact: true })).toHaveCount(2);
+  expect(inquiryRequests).toBe(0);
+  await page.getByRole('button', { name: 'Accept & Pay', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/payment/${proposalId}\\?token=fixture-token`));
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+});
+
+test('an invalid proposal token does not expose proposal or contact information', async ({ page }) => {
+  await setup(page);
+  await page.route('**/.netlify/functions/public-proposal/**', route => route.fulfill({
+    status: 403,
+    json: { accessStatus: 'invalid', message: 'Please request a fresh link.' },
+  }));
+  await page.goto(`/proposal/${proposalId}?token=invalid-token`);
+  await expect(page.getByRole('heading', { name: 'Proposal Not Found' })).toBeVisible();
+  await expect(page.getByText('Please request a fresh link.')).toBeVisible();
+  await expect(page.getByText(contact.contactName, { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Accept & Pay' })).toHaveCount(0);
+});
+
+test('a signed-out change request uses only the token-protected proposal endpoint', async ({ page }) => {
+  await setup(page);
+  let privateRequests = 0;
+  let currentProposal = proposal;
+  await page.route('**/.netlify/functions/inquiry-detail/**', route => {
+    privateRequests++;
+    return route.fulfill({ status: 401, json: { error: 'Authentication required' } });
+  });
+  await page.route('**/.netlify/functions/inquiries/**', route => {
+    privateRequests++;
+    return route.fulfill({ status: 401, json: { error: 'Authentication required' } });
+  });
+  await page.route('**/.netlify/functions/public-proposal/**', route => {
+    if (route.request().method() === 'PATCH') {
+      expect(route.request().postDataJSON()).toEqual({ status: 'changes_requested', feedback: 'Please update the delivery timeline.' });
+      expect(new URL(route.request().url()).searchParams.get('token')).toBe('fixture-token');
+      currentProposal = { ...proposal, status: 'changes_requested' };
+      return route.fulfill({ json: currentProposal });
+    }
+    return route.fulfill({ json: { proposal: currentProposal, paymentContact: contact, accessStatus: 'valid' } });
+  });
+  await page.goto(`/proposal/${proposalId}?token=fixture-token`);
+  await page.getByRole('button', { name: 'Request Changes', exact: true }).click();
+  await page.getByPlaceholder('Describe the changes you would like...').fill('Please update the delivery timeline.');
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  await expect(page.getByText('You have already responded to this proposal.')).toBeVisible();
+  expect(privateRequests).toBe(0);
+});
+
 test('provider failure restores checkout without claiming payment success', async ({ page }) => {
   await setup(page);
   await openPayment(page);
