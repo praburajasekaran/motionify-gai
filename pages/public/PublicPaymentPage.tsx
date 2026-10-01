@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { getPublicProposalById, type Proposal, type ProposalPaymentContact } from '../../lib/proposals';
 import { formatCurrency } from '../../utils/format';
@@ -9,7 +9,6 @@ import { usePaymentCheckout } from '../../hooks/usePaymentCheckout';
 export function PublicPaymentPage() {
   const { proposalId } = useParams<{ proposalId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [inquiry, setInquiry] = useState<ProposalPaymentContact | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +73,7 @@ export function PublicPaymentPage() {
           <h1 className="text-2xl font-bold text-gray-950 mb-2">Payment Successful</h1>
           <p className="text-gray-600 mb-6">Your project is ready to open.</p>
           <button
-            onClick={() => navigate(projectAccessPath({ projectId: activatedProjectId,
+            onClick={() => window.location.assign(projectAccessPath({ projectId: activatedProjectId,
               email: checkout.state.status === 'complete' ? checkout.state.clientEmail || inquiry.contactEmail : inquiry.contactEmail }))}
             className="w-full py-3 px-4 bg-amber-700 text-white rounded-lg font-medium hover:bg-amber-800"
           >
