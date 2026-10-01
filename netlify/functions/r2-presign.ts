@@ -1,10 +1,10 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { compose, withCORS, withAuth, withRateLimit, withValidation, type NetlifyEvent, type AuthResult } from './_shared/middleware';
-import { RATE_LIMITS } from './_shared/rateLimit';
+import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
 import { SCHEMAS } from './_shared/schemas';
 import { getCorsHeaders } from "./_shared/cors";
 import { query as dbQuery } from './_shared/db';
+import { getR2Client, getR2Config } from './_shared/r2';
 import {
     AuthorizationError,
     createAuthorizationResponse,
@@ -12,27 +12,82 @@ import {
     requireDeliverableAccess,
     requireProjectAccess,
     requireProposalAccess,
+    type AuthorizationUser,
 } from './_shared/authorization';
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
+type QueryFunction = (text: string, params?: any[]) => Promise<{ rows: any[] }>;
+type AccessGuard = (
+    user: AuthorizationUser | undefined | null,
+    objectId: string,
+    options?: { operation?: string }
+) => Promise<unknown>;
 
-// Be resilient: handle if R2_ACCOUNT_ID is the full endpoint URL
-const endpoint = R2_ACCOUNT_ID?.startsWith('http')
-    ? R2_ACCOUNT_ID
-    : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+export interface R2DownloadAuthorizationDependencies {
+    query: QueryFunction;
+    requireDeliverable: AccessGuard;
+    requireProposal: AccessGuard;
+    requireProject: AccessGuard;
+}
 
-const R2 = new S3Client({
-    region: "auto",
-    endpoint: endpoint,
-    credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID || "",
-        secretAccessKey: R2_SECRET_ACCESS_KEY || "",
-    },
-    forcePathStyle: true,
-});
+const defaultDownloadAuthorizationDependencies: R2DownloadAuthorizationDependencies = {
+    query: dbQuery,
+    requireDeliverable: requireDeliverableAccess,
+    requireProposal: requireProposalAccess,
+    requireProject: requireProjectAccess,
+};
+
+/**
+ * Resolve a stored R2 key to its owning object and enforce that object's
+ * authorization guard. Returns false only for an unrecognized key.
+ */
+export async function authorizeR2DownloadKey(
+    key: string,
+    user: AuthorizationUser | undefined | null,
+    dependencies: R2DownloadAuthorizationDependencies = defaultDownloadAuthorizationDependencies
+): Promise<boolean> {
+    const deliverableResult = await dependencies.query(`
+        SELECT d.id, d.project_id, d.status, p.client_user_id
+        FROM deliverables d
+        JOIN projects p ON d.project_id = p.id
+        WHERE d.beta_file_key = $1 OR d.final_file_key = $1
+    `, [key]);
+
+    if (deliverableResult.rows.length > 0) {
+        await dependencies.requireDeliverable(user, deliverableResult.rows[0].id, {
+            operation: 'r2.downloadDeliverable',
+        });
+        return true;
+    }
+
+    const attachmentResult = await dependencies.query(`
+        SELECT ca.id, pc.proposal_id
+        FROM comment_attachments ca
+        JOIN proposal_comments pc ON ca.comment_id = pc.id
+        WHERE ca.r2_key = $1
+    `, [key]);
+
+    if (attachmentResult.rows.length > 0) {
+        await dependencies.requireProposal(user, attachmentResult.rows[0].proposal_id, {
+            operation: 'r2.downloadCommentAttachment',
+        });
+        return true;
+    }
+
+    const projectFileResult = await dependencies.query(`
+        SELECT id, project_id
+        FROM project_files
+        WHERE r2_key = $1
+    `, [key]);
+
+    if (projectFileResult.rows.length > 0) {
+        await dependencies.requireProject(user, projectFileResult.rows[0].project_id, {
+            operation: 'r2.downloadProjectFile',
+        });
+        return true;
+    }
+
+    return Boolean(user?.userId && key.startsWith(`uploads/${user.userId}/`));
+}
 
 export const handler = compose(
     withCORS(['GET', 'POST']),
@@ -42,7 +97,8 @@ export const handler = compose(
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
-    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET_NAME) {
+    const r2Config = getR2Config();
+    if (!r2Config) {
         console.error("Missing R2 environment variables");
         return {
             statusCode: 500,
@@ -87,58 +143,28 @@ export const handler = compose(
                 };
             }
 
-            // Security: Resolve key ownership before generating presigned URL
-            const keyOwnershipResult = await dbQuery(`
-                SELECT d.id, d.project_id, d.status, p.client_user_id
-                FROM deliverables d
-                JOIN projects p ON d.project_id = p.id
-                WHERE d.beta_file_key = $1 OR d.final_file_key = $1
-            `, [key]);
-
-            // If key not found in deliverables, check comment_attachments
-            if (keyOwnershipResult.rows.length === 0) {
-                const attachmentResult = await dbQuery(`
-                    SELECT ca.id, pc.proposal_id
-                    FROM comment_attachments ca
-                    JOIN proposal_comments pc ON ca.comment_id = pc.id
-                    WHERE ca.r2_key = $1
-                `, [key]);
-
-                if (attachmentResult.rows.length > 0) {
-                    await requireProposalAccess(auth?.user, attachmentResult.rows[0].proposal_id, {
-                        operation: 'r2.downloadCommentAttachment',
-                    });
-                } else {
-                    // Key not found in deliverables OR attachments
-                    if (key.startsWith(`uploads/${auth?.user?.userId}/`)) {
-                        // Allow - user's own upload
-                    } else {
-                        console.warn(`R2 presign denied: unrecognized key pattern "${key}" for user ${auth?.user?.userId}`);
-                        return {
-                            statusCode: 403,
-                            headers,
-                            body: JSON.stringify({
-                                error: {
-                                    code: 'ACCESS_DENIED',
-                                    message: 'You do not have permission to access this file',
-                                },
-                            }),
-                        };
-                    }
-                }
-            } else {
-                const deliverable = keyOwnershipResult.rows[0];
-                await requireDeliverableAccess(auth?.user, deliverable.id, {
-                    operation: 'r2.downloadDeliverable',
-                });
+            // Security: Resolve key ownership before generating presigned URL.
+            const authorized = await authorizeR2DownloadKey(key, auth?.user);
+            if (!authorized) {
+                console.warn(`R2 presign denied: unrecognized key pattern "${key}" for user ${auth?.user?.userId}`);
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({
+                        error: {
+                            code: 'ACCESS_DENIED',
+                            message: 'You do not have permission to access this file',
+                        },
+                    }),
+                };
             }
 
             const command = new GetObjectCommand({
-                Bucket: R2_BUCKET_NAME,
+                Bucket: r2Config.bucketName,
                 Key: key,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
+            const signedUrl = await getSignedUrl(getR2Client(r2Config), command, { expiresIn: 3600 });
             return {
                 statusCode: 200,
                 headers,
@@ -200,13 +226,13 @@ export const handler = compose(
             }
 
             const command = new PutObjectCommand({
-                Bucket: R2_BUCKET_NAME,
+                Bucket: r2Config.bucketName,
                 Key: key,
                 ContentType: fileType,
                 ContentLength: fileSize,
             });
 
-            const signedUrl = await getSignedUrl(R2, command, { expiresIn: 3600 });
+            const signedUrl = await getSignedUrl(getR2Client(r2Config), command, { expiresIn: 3600 });
 
             console.log(`[R2] Presign upload for ${auth!.user!.email}: ${key} (${fileSize} bytes)`);
 

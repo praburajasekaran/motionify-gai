@@ -12,6 +12,7 @@ import {
   requireProjectManagerAccess,
 } from './_shared/authorization';
 import { normalizeProjectInvitationRole } from './_shared/roles';
+import { createLogger, getCorrelationId } from './_shared/logger';
 
 /**
  * Create a project-level invitation.
@@ -27,6 +28,8 @@ export const handler = compose(
   withAuth(),
   withRateLimit(RATE_LIMITS.apiStrict, 'project_invitation_create')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
+  const correlationId = getCorrelationId(event.headers);
+  const logger = createLogger('project-invitations-create', correlationId);
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
@@ -77,8 +80,9 @@ export const handler = compose(
   const currentUserId = auth?.user?.userId;
   const currentUserRole = getAuthRole(auth?.user);
 
+  let project: { name?: string | null; project_number?: string | null };
   try {
-    await requireProjectManagerAccess(auth?.user, projectId, {
+    project = await requireProjectManagerAccess(auth?.user, projectId, {
       allowClientPrimary: true,
       operation: 'project-invitations.create',
     });
@@ -195,32 +199,23 @@ export const handler = compose(
     // Send invitation email
     const inviteLink = absoluteProjectAccessUrl({ token }, appOriginFromEnv(process.env));
 
-    // Fetch project name for the email
-    let projectName = projectId;
-    try {
-      const projectResult = await query(
-        `SELECT name, project_number FROM projects WHERE id = $1`,
-        [projectId]
-      );
-      if (projectResult.rows.length > 0) {
-        const p = projectResult.rows[0];
-        projectName = p.name || p.project_number || projectId;
-      }
-    } catch (e) {
-      console.error('Failed to fetch project name for invitation email:', e);
-    }
+    const projectName = project.name || project.project_number || projectId;
 
-    try {
-      await sendProjectInvitationEmail({
-        to: email,
-        inviteLink,
-        projectName,
-        role: normalizedRole,
-        invitedByName: auth?.user?.fullName || 'A team member',
+    const emailResult = await sendProjectInvitationEmail({
+      to: email,
+      inviteLink,
+      projectName,
+      role: normalizedRole,
+      invitedByName: auth?.user?.fullName || 'A team member',
+      correlationId,
+    });
+
+    if (emailResult.status === 'failed') {
+      logger.warn('Project invitation created without email delivery', {
+        invitationId: invitation.id,
+        providerCode: emailResult.code,
+        retryable: emailResult.retryable,
       });
-    } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
-      // Don't block the invitation creation if email fails
     }
 
     return {
@@ -236,6 +231,7 @@ export const handler = compose(
           createdAt: invitation.created_at,
           expiresAt: invitation.expires_at,
         },
+        emailDelivery: { status: emailResult.status },
       }),
     };
   } catch (error) {

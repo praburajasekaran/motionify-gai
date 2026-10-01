@@ -6,13 +6,14 @@ interface TransitionResult {
 }
 
 const VALID_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
-    'Draft': ['Active'],
-    'Active': ['On Hold', 'Completed', 'Awaiting Payment'],
-    'On Hold': ['Active'],
-    'Awaiting Payment': ['Active', 'Completed'],
+    'Draft': ['Active', 'Cancelled'],
+    'Active': ['On Hold', 'Completed', 'Awaiting Payment', 'In Review', 'Cancelled'],
+    'On Hold': ['Active', 'Cancelled'],
+    'Awaiting Payment': ['Active', 'Completed', 'Cancelled'],
     'Completed': ['Active', 'Archived'],
     'Archived': [], // Terminal state, requires special un-archive flow if we ever implement it
-    'In Review': ['Active', 'Completed'] // Handling 'In Review' as it was present in ProjectSettings dropdown, mapping to logical next steps
+    'In Review': ['Active', 'Completed', 'Cancelled'],
+    'Cancelled': [],
 };
 
 /**

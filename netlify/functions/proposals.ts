@@ -70,8 +70,10 @@ async function notifyStatusChange(
   newStatus: 'sent' | 'accepted' | 'rejected' | 'changes_requested',
   changedByUserId: string,
   feedback?: string
-) {
+): Promise<'sent' | 'failed'> {
   try {
+    let attemptedDelivery = false;
+    let deliveryFailed = false;
     // Fetch proposal with inquiry details and client info
     const proposalResult = await dbQuery(
       `SELECT
@@ -92,7 +94,7 @@ async function notifyStatusChange(
 
     if (proposalResult.rows.length === 0) {
       console.warn(`⚠️ Proposal ${proposalId} not found for notification`);
-      return;
+      return 'failed';
     }
 
     const proposal = proposalResult.rows[0];
@@ -105,8 +107,7 @@ async function notifyStatusChange(
     // Determine who to notify
     if (isAdminChange) {
       // Admin changed status → notify client
-      try {
-        await sendProposalStatusChangeEmail({
+      const emailResult = await sendProposalStatusChangeEmail({
           to: proposal.client_email,
           recipientName: proposal.client_name,
           proposalId,
@@ -117,9 +118,10 @@ async function notifyStatusChange(
           feedback,
           proposalUrl,
         });
+      attemptedDelivery = true;
+      deliveryFailed = emailResult.status === 'failed';
+      if (emailResult.status === 'sent') {
         console.log(`✅ Status change email sent to client: ${proposal.client_email}`);
-      } catch (emailError) {
-        console.error('❌ Failed to send status change email to client:', emailError);
       }
 
       // Create in-app notification for client
@@ -154,8 +156,7 @@ async function notifyStatusChange(
 
       for (const admin of adminsResult.rows) {
         // Send email to each admin
-        try {
-          await sendProposalStatusChangeEmail({
+        const emailResult = await sendProposalStatusChangeEmail({
             to: admin.email,
             recipientName: admin.full_name,
             proposalId,
@@ -165,9 +166,10 @@ async function notifyStatusChange(
             changedBy: proposal.client_name,
             feedback,
           });
+        attemptedDelivery = true;
+        deliveryFailed ||= emailResult.status === 'failed';
+        if (emailResult.status === 'sent') {
           console.log(`✅ Status change email sent to admin: ${admin.email}`);
-        } catch (emailError) {
-          console.error(`❌ Failed to send status change email to admin ${admin.email}:`, emailError);
         }
 
         // Create in-app notification for each admin
@@ -192,9 +194,11 @@ async function notifyStatusChange(
         }
       }
     }
+    return attemptedDelivery && !deliveryFailed ? 'sent' : 'failed';
   } catch (error) {
     // Log error but don't throw - notifications should not fail the request
     console.error('❌ Error in notifyStatusChange:', error);
+    return 'failed';
   }
 }
 
@@ -329,9 +333,10 @@ export const handler = compose(
         );
       }
 
+      let emailDeliveryStatus: 'sent' | 'failed' | undefined;
       // Send notifications if status changed
       if (updates.status && auth?.user?.userId) {
-        await notifyStatusChange(
+        emailDeliveryStatus = await notifyStatusChange(
           proposalId,
           updates.status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
           auth.user.userId,
@@ -360,7 +365,10 @@ export const handler = compose(
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(result.rows[0]),
+        body: JSON.stringify({
+          ...result.rows[0],
+          ...(updates.status && { emailDelivery: { status: emailDeliveryStatus || 'failed' } }),
+        }),
       };
     }
 
@@ -434,9 +442,10 @@ export const handler = compose(
         );
       }
 
+      let emailDeliveryStatus: 'sent' | 'failed' | undefined;
       // Send notifications on status change
       if (status && auth?.user?.userId) {
-        await notifyStatusChange(
+        emailDeliveryStatus = await notifyStatusChange(
           proposalId,
           status as 'sent' | 'accepted' | 'rejected' | 'changes_requested',
           auth.user.userId,
@@ -465,7 +474,10 @@ export const handler = compose(
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(result.rows[0]),
+        body: JSON.stringify({
+          ...result.rows[0],
+          ...(status && { emailDelivery: { status: emailDeliveryStatus || 'failed' } }),
+        }),
       };
     }
 
@@ -639,8 +651,7 @@ export const handler = compose(
       // Format price for email (convert from smallest unit if needed)
       const formattedPrice = (payload.totalPrice / 100).toLocaleString('en-IN');
 
-      try {
-        await sendProposalNotificationEmail({
+      const emailResult = await sendProposalNotificationEmail({
           to: contact_email,
           clientName: contact_name,
           inquiryNumber: inquiry.inquiry_number,
@@ -649,10 +660,8 @@ export const handler = compose(
           currency: payload.currency === 'INR' ? '₹' : '$',
           deliverableCount: payload.deliverables.length,
         });
+      if (emailResult.status === 'sent') {
         console.log(`✅ Proposal notification email sent to ${contact_email}`);
-      } catch (emailError) {
-        console.error('❌ Failed to send proposal notification email:', emailError);
-        // Don't fail the request if email fails
       }
 
       // Log activity
@@ -674,6 +683,7 @@ export const handler = compose(
           ...result.rows[0],
           proposalReviewToken: reviewToken.token,
           proposalReviewUrl: proposalUrl,
+          emailDelivery: { status: emailResult.status },
         }),
       };
     }

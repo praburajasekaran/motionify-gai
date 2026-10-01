@@ -1,6 +1,12 @@
 import { query as dbQuery } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
-import { sendMentionNotification, sendTaskAssignmentEmail, sendRevisionRequestEmail } from './send-email';
+import {
+  sendMentionNotification,
+  sendTaskAssignmentEmail,
+  sendRevisionRequestEmail,
+  summarizeEmailDelivery,
+  type EmailDeliveryResult,
+} from './send-email';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -22,6 +28,31 @@ const isValidUUID = (id: string): boolean => {
   const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return regex.test(id);
 };
+
+type TaskCreationAssigneeResolution =
+  | { ok: true; assignedTo: string | null }
+  | { ok: false; error: string };
+
+export function resolveTaskCreationAssignee({
+  authenticatedUserId,
+  isClientUser,
+  requestedAssigneeId,
+}: {
+  authenticatedUserId: string;
+  isClientUser: boolean;
+  requestedAssigneeId?: string | null;
+}): TaskCreationAssigneeResolution {
+  const assignedTo = requestedAssigneeId || null;
+
+  if (isClientUser && assignedTo && assignedTo !== authenticatedUserId) {
+    return {
+      ok: false,
+      error: 'Clients may only assign tasks to themselves',
+    };
+  }
+
+  return { ok: true, assignedTo };
+}
 
 const isValidTransition = (oldStatus: string, newStatus: string): boolean => {
   const validTransitions: Record<string, string[]> = {
@@ -226,6 +257,7 @@ export const handler = compose(
         const newComment = mapCommentFromDB(result.rows[0]);
 
         // Log comment activity
+        const emailResults: EmailDeliveryResult[] = [];
         try {
           const taskForComment = await dbQuery(
             'SELECT title, project_id FROM tasks WHERE id = $1',
@@ -277,29 +309,36 @@ export const handler = compose(
             const taskUrl = absolutePortalProjectUrl(taskProjectId, { task: taskId }, appOriginFromEnv(process.env));
 
             // Send mention emails for every matched user.
-            await Promise.all(usersResult.rows.map(async (user: any) => {
+            const mentionResults = await Promise.all(usersResult.rows.map(async (user: any) => {
               // Don't notify the person who wrote the comment
               if (user.id === auth?.user?.userId) return;
 
-              await sendMentionNotification({
+              const emailResult = await sendMentionNotification({
                 to: user.email,
                 mentionedByName: auth!.user!.fullName,
                 taskTitle: taskTitle,
                 commentContent: content,
                 taskUrl: taskUrl
               });
-              console.log(`Sent mention notification to ${user.email}`);
+              if (emailResult.status === 'sent') {
+                console.log(`Sent mention notification to ${user.email}`);
+              }
+              return emailResult;
             }));
+            emailResults.push(...mentionResults.filter((result): result is EmailDeliveryResult => Boolean(result)));
           }
         } catch (error) {
           console.error('Failed to process mentions:', error);
+          emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
           // Continue execution - don't fail the request just because notification failed
         }
+
+        const emailDelivery = summarizeEmailDelivery(emailResults);
 
         return {
           statusCode: 201,
           headers,
-          body: JSON.stringify(newComment),
+          body: JSON.stringify(emailDelivery ? { ...newComment, emailDelivery } : newComment),
         };
       }
 
@@ -428,28 +467,38 @@ export const handler = compose(
       const clientRoles = ['client', 'client_primary', 'client_team'];
       const isClientUser = userRole && clientRoles.includes(userRole);
 
-      // For client users: strip restricted fields and force visible_to_client = true
-      // Clients can only assign tasks to themselves (self-assignment)
+      // Use the authenticated user as the task creator.
+      const createdBy = auth!.user!.userId;
+
+      // For client users: strip restricted fields and force visible_to_client = true.
       if (isClientUser) {
-        if (taskData.assignedTo && taskData.assignedTo !== auth?.user?.userId) {
-          taskData.assignedTo = undefined;
-        }
         taskData.priority = undefined;
       }
 
+      const assigneeResolution = resolveTaskCreationAssignee({
+        authenticatedUserId: createdBy,
+        isClientUser: Boolean(isClientUser),
+        requestedAssigneeId: taskData.assignedTo,
+      });
+      if (assigneeResolution.ok === false) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: assigneeResolution.error }),
+        };
+      }
+      const assignedTo = assigneeResolution.assignedTo;
+
       const rawBody = JSON.parse(event.body || '{}');
 
-      // Use the authenticated user as the task creator, fall back to request body or first DB user
-      const createdBy = auth!.user!.userId;
-
-      if (!isClientUser && taskData.assignedTo) {
+      if (!isClientUser && assignedTo) {
         const assigneeMembership = await dbQuery(
           `SELECT 1 FROM project_team
            WHERE project_id = $1 AND user_id = $2 AND removed_at IS NULL
            LIMIT 1`,
-          [taskData.projectId, taskData.assignedTo]
+          [taskData.projectId, assignedTo]
         );
-        if (assigneeMembership.rows.length === 0 && taskData.assignedTo !== createdBy) {
+        if (assigneeMembership.rows.length === 0 && assignedTo !== createdBy) {
           return {
             statusCode: 400,
             headers,
@@ -476,7 +525,7 @@ export const handler = compose(
           taskData.description,
           taskData.status || 'pending',
           visibleToClient,
-          isClientUser ? null : (taskData.assignedTo || null),
+          assignedTo,
           taskData.dueDate || null,
           0, // position - default to 0
           createdBy
@@ -495,18 +544,20 @@ export const handler = compose(
         details: { taskId: newTask.id, taskTitle: newTask.title },
       });
 
+      const emailResults: EmailDeliveryResult[] = [];
+
       // Send email notification if assigned
-      if (taskData.assignedTo) {
+      if (assignedTo) {
         try {
           const projectResult = await dbQuery('SELECT project_number FROM projects WHERE id = $1', [taskData.projectId]);
-          const assigneeResult = await dbQuery('SELECT email, full_name FROM users WHERE id = $1', [taskData.assignedTo]);
+          const assigneeResult = await dbQuery('SELECT email, full_name FROM users WHERE id = $1', [assignedTo]);
 
           if (projectResult.rows.length > 0 && assigneeResult.rows.length > 0) {
             const projectNumber = projectResult.rows[0].project_number;
             const assignee = assigneeResult.rows[0];
             const taskUrl = absolutePortalProjectUrl(taskData.projectId, { task: newTask.id }, appOriginFromEnv(process.env));
 
-            await sendTaskAssignmentEmail({
+            const emailResult = await sendTaskAssignmentEmail({
               to: assignee.email,
               assigneeName: assignee.full_name,
               taskTitle: newTask.title,
@@ -514,18 +565,24 @@ export const handler = compose(
               dueDate: newTask.deadline,
               taskUrl: taskUrl
             });
-            console.log(`Sent assignment email to ${assignee.email}`);
+            if (emailResult.status === 'sent') {
+              console.log(`Sent assignment email to ${assignee.email}`);
+            }
+            emailResults.push(emailResult);
           }
         } catch (error) {
           console.error('Failed to send assignment email:', error);
+          emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
           // Don't fail the request
         }
       }
 
+      const emailDelivery = summarizeEmailDelivery(emailResults);
+
       return {
         statusCode: 201,
         headers,
-        body: JSON.stringify(newTask),
+        body: JSON.stringify(emailDelivery ? { ...newTask, emailDelivery } : newTask),
       };
     }
 
@@ -570,6 +627,7 @@ export const handler = compose(
       const validation = validateRequest(event.body, SCHEMAS.task.update, origin);
       if (!validation.success) return validation.response;
       const updates = validation.data;
+      const emailResults: EmailDeliveryResult[] = [];
 
       // Clients can only update a subset of fields on their own tasks
       const clientAllowedFields = ['title', 'description', 'status', 'dueDate'];
@@ -666,11 +724,16 @@ export const handler = compose(
               requestedBy: requestedBy
             }));
 
-            await Promise.all(emailPromises);
-            console.log(`Sent revision request emails to ${teamRes.rows.length} team members`);
+            const revisionEmailResults = await Promise.all(emailPromises);
+            emailResults.push(...revisionEmailResults);
+            const sentCount = revisionEmailResults.filter((result) => result.status === 'sent').length;
+            if (sentCount > 0) {
+              console.log(`Sent revision request emails to ${sentCount} team members`);
+            }
 
           } catch (emailError) {
             console.error('Failed to send revision request email:', emailError);
+            emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
             // Don't block the status update
           }
         }
@@ -792,7 +855,7 @@ export const handler = compose(
             const assignee = assigneeResult.rows[0];
             const taskUrl = absolutePortalProjectUrl(projectId, { task: taskId }, appOriginFromEnv(process.env));
 
-            await sendTaskAssignmentEmail({
+            const emailResult = await sendTaskAssignmentEmail({
               to: assignee.email,
               assigneeName: assignee.full_name,
               taskTitle: updatedTask.title,
@@ -800,17 +863,23 @@ export const handler = compose(
               dueDate: updatedTask.deadline,
               taskUrl: taskUrl
             });
-            console.log(`Sent assignment email to ${assignee.email}`);
+            if (emailResult.status === 'sent') {
+              console.log(`Sent assignment email to ${assignee.email}`);
+            }
+            emailResults.push(emailResult);
           }
         } catch (error) {
           console.error('Failed to send assignment update email:', error);
+          emailResults.push({ status: 'failed', code: 'EMAIL_SEND_EXCEPTION', retryable: true });
         }
       }
+
+      const emailDelivery = summarizeEmailDelivery(emailResults);
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(updatedTask),
+        body: JSON.stringify(emailDelivery ? { ...updatedTask, emailDelivery } : updatedTask),
       };
     }
 

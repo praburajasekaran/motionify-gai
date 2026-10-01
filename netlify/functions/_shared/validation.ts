@@ -91,7 +91,10 @@ export const projectSchema = z.object({
     name: z.string().min(1).max(255),
     client_user_id: uuidSchema,
     description: z.string().max(5000).optional(),
-    status: z.enum(['draft', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']).optional(),
+    status: z.enum([
+        'draft', 'active', 'in_review', 'awaiting_payment',
+        'on_hold', 'completed', 'archived', 'cancelled',
+    ]).optional(),
 });
 
 export const taskSchema = z.object({

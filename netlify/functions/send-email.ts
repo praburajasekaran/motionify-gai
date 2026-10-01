@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
 import type { Handler } from '@netlify/functions';
+import { captureError } from './_shared/sentry';
+import { createLogger } from './_shared/logger';
 import {
   absolutePortalAdminProposalUrl,
   absolutePortalProposalUrl,
@@ -71,12 +73,122 @@ export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  correlationId?: string;
 }
 
-export async function sendEmail(options: EmailOptions) {
+export type EmailDeliveryResult =
+  | { status: 'sent'; messageId: string }
+  | { status: 'failed'; code: string; retryable: boolean };
+
+interface EmailProviderError {
+  name?: string;
+  code?: string;
+  statusCode?: number;
+  status?: number;
+  requestId?: string;
+  request_id?: string;
+  id?: string;
+  messageId?: string;
+  message_id?: string;
+}
+
+export interface EmailSenderClient {
+  emails: {
+    send(payload: {
+      from: string;
+      to: string[];
+      subject: string;
+      html: string;
+    }): Promise<{
+      data: { id?: string } | null;
+      error: EmailProviderError | null;
+    }>;
+  };
+}
+
+interface SendEmailDependencies {
+  client?: EmailSenderClient | null;
+}
+
+function providerCode(error: EmailProviderError | null | undefined): string {
+  const rawCode = error?.name || error?.code || 'EMAIL_PROVIDER_ERROR';
+  const sanitized = rawCode
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+  return sanitized || 'EMAIL_PROVIDER_ERROR';
+}
+
+function providerStatus(error: EmailProviderError | null | undefined): number | undefined {
+  const value = error?.statusCode ?? error?.status;
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function sanitizedDiagnosticToken(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const sanitized = value
+    .replace(/[^A-Za-z0-9_.:-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 128);
+  return sanitized || undefined;
+}
+
+function isRetryableEmailFailure(error: EmailProviderError | null | undefined): boolean {
+  const status = providerStatus(error);
+  if (status === 408 || status === 409 || status === 425 || status === 429 || (status !== undefined && status >= 500)) {
+    return true;
+  }
+
+  return /RATE_LIMIT|TIMEOUT|TEMPORARY|UNAVAILABLE|INTERNAL|CONNECTION/i.test(providerCode(error));
+}
+
+function recordDeliveryFailure(
+  options: EmailOptions,
+  error: EmailProviderError | null | undefined,
+  fallbackCode?: string
+) {
+  const code = fallbackCode || providerCode(error);
+  const status = providerStatus(error);
+  const providerCorrelationId = sanitizedDiagnosticToken(error?.requestId || error?.request_id || error?.id);
+  const providerMessageId = sanitizedDiagnosticToken(error?.messageId || error?.message_id);
+  const diagnostics = {
+    provider: 'resend',
+    providerCode: code,
+    providerErrorName: sanitizedDiagnosticToken(error?.name),
+    providerStatus: status,
+    providerCorrelationId,
+    providerMessageId,
+  };
+  const sanitizedError = new Error(`Email delivery failed: ${code}`);
+  createLogger('email-delivery', options.correlationId).error('Email delivery failed', sanitizedError, diagnostics);
+  captureError(sanitizedError, {
+    correlationId: options.correlationId,
+    ...diagnostics,
+  });
+}
+
+export function summarizeEmailDelivery(
+  results: EmailDeliveryResult[]
+): { status: EmailDeliveryResult['status'] } | undefined {
+  if (results.length === 0) return undefined;
+  return {
+    status: results.some((result) => result.status === 'failed') ? 'failed' : 'sent',
+  };
+}
+
+export async function sendEmail(
+  options: EmailOptions,
+  dependencies: SendEmailDependencies = {}
+): Promise<EmailDeliveryResult> {
   try {
-    const resend = getResendClient();
-    if (!resend) return null;
+    const resend = Object.prototype.hasOwnProperty.call(dependencies, 'client')
+      ? dependencies.client
+      : getResendClient() as unknown as EmailSenderClient | null;
+    if (!resend) {
+      recordDeliveryFailure(options, null, 'EMAIL_NOT_CONFIGURED');
+      return { status: 'failed', code: 'EMAIL_NOT_CONFIGURED', retryable: false };
+    }
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -86,16 +198,25 @@ export async function sendEmail(options: EmailOptions) {
     });
 
     if (error) {
-      console.error('❌ Resend error:', error);
-      return null;
+      const code = providerCode(error);
+      recordDeliveryFailure(options, error, code);
+      return { status: 'failed', code, retryable: isRetryableEmailFailure(error) };
     }
 
-    console.log('✅ Email sent via Resend:', data?.id);
-    return data;
+    if (!data?.id) {
+      recordDeliveryFailure(options, null, 'MISSING_MESSAGE_ID');
+      return { status: 'failed', code: 'MISSING_MESSAGE_ID', retryable: true };
+    }
+
+    createLogger('email-delivery', options.correlationId).info('Email sent', {
+      provider: 'resend',
+      messageId: data.id,
+    });
+    return { status: 'sent', messageId: data.id };
   } catch (error) {
-    console.error('❌ Error sending email:', error);
-    // Don't throw to prevent blocking the main request
-    return null;
+    const providerError = error && typeof error === 'object' ? error as EmailProviderError : null;
+    recordDeliveryFailure(options, providerError, 'PROVIDER_EXCEPTION');
+    return { status: 'failed', code: 'PROVIDER_EXCEPTION', retryable: true };
   }
 }
 
@@ -293,6 +414,7 @@ export async function sendInquiryVerificationEmail(data: {
   contactName: string;
   magicLink: string;
   recommendedVideoType: string;
+  correlationId?: string;
 }) {
   const content = `
     <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">Verify Your Email</h2>
@@ -323,6 +445,7 @@ export async function sendInquiryVerificationEmail(data: {
     to: data.to,
     subject: `Verify your email to complete your video project inquiry`,
     html: emailWrapper(content),
+    correlationId: data.correlationId,
   });
 }
 
@@ -584,6 +707,7 @@ export async function sendProjectInvitationEmail(data: {
   role: string;
   invitedByName: string;
   expiresInDays?: number;
+  correlationId?: string;
 }) {
   const roleLabels: Record<string, string> = {
     client: 'Client',
@@ -612,6 +736,43 @@ export async function sendProjectInvitationEmail(data: {
     to: data.to,
     subject: `You're invited to ${data.projectName} on Motionify Studio`,
     html: emailWrapper(content),
+    correlationId: data.correlationId,
+  });
+}
+
+export async function sendUserInvitationEmail(data: {
+  to: string;
+  inviteLink: string;
+  fullName?: string | null;
+  role: string;
+  invitedByName: string;
+  expiresInDays?: number;
+  correlationId?: string;
+}) {
+  const roleLabels: Record<string, string> = {
+    super_admin: 'Super Admin',
+    support: 'Support',
+    team_member: 'Team Member',
+    client: 'Client',
+  };
+  const name = data.fullName?.trim() || 'there';
+  const roleLabel = roleLabels[data.role] || data.role;
+  const expiryDays = data.expiresInDays || 7;
+  const content = `
+    <h2 style="color: #7c3aed; text-align: center; margin: 0 0 16px;">You're Invited to Motionify Studio</h2>
+    <p style="margin: 0 0 8px; color: #1a1a1a;">Hi <strong>${escapeHtml(name)}</strong>,</p>
+    <p style="margin: 0 0 16px; color: #1a1a1a;"><strong>${escapeHtml(data.invitedByName)}</strong> invited you to create a Motionify Studio account as <strong>${escapeHtml(roleLabel)}</strong>.</p>
+    <div style="background: linear-gradient(135deg, rgba(217,70,239,0.1), rgba(139,92,246,0.1), rgba(59,130,246,0.1)); padding: 24px; border-radius: 12px; margin: 30px 0; text-align: center;">
+      <a href="${data.inviteLink}" style="background: linear-gradient(135deg, #D946EF, #8B5CF6, #3B82F6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Accept Invitation</a>
+    </div>
+    <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">This invitation expires in ${expiryDays} days and can only be used once.</p>
+  `;
+
+  return sendEmail({
+    to: data.to,
+    subject: "You're invited to Motionify Studio",
+    html: emailWrapper(content),
+    correlationId: data.correlationId,
   });
 }
 
@@ -752,8 +913,10 @@ export const handler: Handler = async (event) => {
     }
 
     return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, emailId: result?.id }),
+      statusCode: result.status === 'sent' ? 200 : 502,
+      body: JSON.stringify(result.status === 'sent'
+        ? { success: true, emailId: result.messageId }
+        : { success: false, error: { code: 'EMAIL_DELIVERY_FAILED', retryable: result.retryable } }),
     };
   } catch (error) {
     console.error('Send email handler error:', error);

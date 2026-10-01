@@ -56,6 +56,7 @@ export const ProjectList = () => {
             case 'In Review': return 'warning';
             case 'On Hold': return 'destructive';
             case 'Archived': return 'outline';
+            case 'Cancelled': return 'outline';
             default: return 'outline';
         }
     };
@@ -63,9 +64,9 @@ export const ProjectList = () => {
     const filteredProjects = allProjects.filter(p => {
         const matchesSearch = p.title.toLowerCase().includes(filter.toLowerCase()) ||
             p.client.toLowerCase().includes(filter.toLowerCase());
-        // Hide archived from "all" filter, only show when explicitly selected
+        // Hide terminal archived/cancelled projects unless explicitly selected.
         const matchesStatus = statusFilter === 'all'
-            ? p.status !== 'Archived'
+            ? p.status !== 'Archived' && p.status !== 'Cancelled'
             : p.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -157,11 +158,14 @@ export const ProjectList = () => {
                             placeholder="Status"
                             options={[
                                 { label: 'All Statuses', value: 'all' },
+                                { label: 'Draft', value: 'Draft' },
                                 { label: 'Active', value: 'Active' },
                                 { label: 'In Review', value: 'In Review' },
+                                { label: 'Awaiting Payment', value: 'Awaiting Payment' },
                                 { label: 'Completed', value: 'Completed' },
                                 { label: 'On Hold', value: 'On Hold' },
                                 { label: 'Archived', value: 'Archived' },
+                                { label: 'Cancelled', value: 'Cancelled' },
                             ]}
                             value={statusFilter}
                             onValueChange={setStatusFilter}
@@ -331,6 +335,7 @@ const getStatusColor = (status: ProjectStatus) => {
         case 'In Review': return 'bg-amber-500';
         case 'On Hold': return 'bg-red-400';
         case 'Archived': return 'bg-stone-300';
+        case 'Cancelled': return 'bg-stone-400';
         default: return 'bg-stone-300';
     }
 };

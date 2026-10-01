@@ -39,6 +39,7 @@ export interface AuthResult {
         email: string;
         role: string;
         fullName: string;
+        sessionId: string;
     };
     error?: string;
     statusCode?: number;

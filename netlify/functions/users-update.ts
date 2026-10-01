@@ -9,7 +9,7 @@
  */
 
 import {
-    query,
+    transaction,
     getCorsHeaders,
     validateRequest,
     updateUserSchema,
@@ -75,45 +75,49 @@ export const handler = compose(
     }
 
     try {
-        // Check if user exists
-        const existingUser = await query('SELECT id FROM users WHERE id = $1', [userId]);
+        const updatedUser = await transaction(async (client) => {
+            const existingUser = await client.query(
+                'SELECT id, role FROM users WHERE id = $1 FOR UPDATE',
+                [userId]
+            );
 
-        if (existingUser.rows.length === 0) {
-            return {
-                statusCode: 404,
-                headers,
-                body: JSON.stringify({ success: false, error: 'User not found' }),
-            };
-        }
+            if (existingUser.rows.length === 0) {
+                throw { statusCode: 404, error: 'User not found' };
+            }
 
-        // Build update query dynamically
-        const updates: string[] = [];
-        const values: any[] = [];
-        let paramIndex = 1;
+            // Build update query dynamically
+            const updates: string[] = [];
+            const values: any[] = [];
+            let paramIndex = 1;
 
-        if (full_name) {
-            updates.push(`full_name = $${paramIndex++}`);
-            values.push(full_name);
-        }
-        if (role) {
-            updates.push(`role = $${paramIndex++}`);
-            values.push(role);
-        }
-        if (profile_picture_url !== undefined) {
-            updates.push(`profile_picture_url = $${paramIndex++}`);
-            values.push(profile_picture_url);
-        }
+            if (full_name) {
+                updates.push(`full_name = $${paramIndex++}`);
+                values.push(full_name);
+            }
+            if (role) {
+                updates.push(`role = $${paramIndex++}`);
+                values.push(role);
+            }
+            if (profile_picture_url !== undefined) {
+                updates.push(`profile_picture_url = $${paramIndex++}`);
+                values.push(profile_picture_url);
+            }
 
-        values.push(userId);
+            values.push(userId);
 
-        const updateQuery = `
-            UPDATE users
-            SET ${updates.join(', ')}, updated_at = NOW()
-            WHERE id = $${paramIndex}
-            RETURNING id, email, full_name, role, is_active, created_at, updated_at
-        `;
+            const result = await client.query(`
+                UPDATE users
+                SET ${updates.join(', ')}, updated_at = NOW()
+                WHERE id = $${paramIndex}
+                RETURNING id, email, full_name, role, is_active, created_at, updated_at
+            `, values);
 
-        const result = await query(updateQuery, values);
+            if (role && role !== existingUser.rows[0].role) {
+                await client.query('DELETE FROM sessions WHERE user_id = $1', [userId]);
+            }
+
+            return result.rows[0];
+        });
 
         logger.info('User updated', {
             userId,
@@ -125,10 +129,17 @@ export const handler = compose(
             headers,
             body: JSON.stringify({
                 success: true,
-                user: result.rows[0],
+                user: updatedUser,
             }),
         };
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.statusCode) {
+            return {
+                statusCode: error.statusCode,
+                headers,
+                body: JSON.stringify({ success: false, error: error.error }),
+            };
+        }
         logger.error('Failed to update user', error);
         return {
             statusCode: 500,

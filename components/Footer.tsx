@@ -30,7 +30,7 @@ export default function Footer() {
           <div className="lg:col-span-3 flex flex-col gap-8">
             <div className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Contact Us</h3>
-              <a href="/contact" className={landingButtonVariants({ variant: "primaryOrange", size: "lg", className: "font-semibold" })}>
+              <a href="/#video-style-quiz" className={landingButtonVariants({ variant: "primaryOrange", size: "lg", className: "font-semibold" })}>
                 <span>Contact Us</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
               </a>
@@ -70,4 +70,3 @@ export default function Footer() {
     </footer>
   );
 }
-

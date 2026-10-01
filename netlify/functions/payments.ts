@@ -866,11 +866,14 @@ export const handler = compose(
           daysOverdue,
         });
 
-        if (!emailResult) {
+        if (emailResult.status === 'failed') {
           return {
-            statusCode: 500,
+            statusCode: 502,
             headers,
-            body: JSON.stringify({ error: 'Failed to send reminder email' }),
+            body: JSON.stringify({
+              error: 'Failed to send reminder email',
+              retryable: emailResult.retryable,
+            }),
           };
         }
 

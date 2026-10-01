@@ -8,7 +8,7 @@ import { handler as webhook } from '../razorpay-webhook';
 import { handler as handoff } from '../payment-handoff';
 import { handler as publicProposal } from '../public-proposal';
 import { handler as authenticatedPayments } from '../payments';
-import { generateJWT } from '../_shared/jwt';
+import { generateJWT, hashJWT } from '../_shared/jwt';
 import { requireProposalAccess, requireInquiryAccess } from '../_shared/authorization';
 
 const pool = paymentTestPool();
@@ -28,6 +28,16 @@ async function runWebhook(event: ReturnType<typeof webhookEvent>) {
   const result = await webhook(event as never, {} as never, () => {});
   assert(result);
   return { status: result.statusCode, body: JSON.parse(result.body) };
+}
+
+async function authenticatedCookie(userId: string, email: string): Promise<string> {
+  const token = generateJWT({ id: userId, email, role: 'client' });
+  await pool.query(
+    `INSERT INTO sessions (user_id, jwt_token_hash, expires_at, token)
+     VALUES ($1, $2, NOW() + INTERVAL '1 hour', $3)`,
+    [userId, hashJWT(token), crypto.randomUUID()],
+  );
+  return `auth_token=${token}`;
 }
 
 test('checkout signatures reject malformed suffixes even after a valid digest', () => {
@@ -184,9 +194,9 @@ test('authenticated client verification and subsequent webhook activate one proj
   const payment = await seedPendingPayment(pool);
   const providerPaymentId = `pay_${payment.orderId}`;
   const signature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!).update(`${payment.orderId}|${providerPaymentId}`).digest('hex');
-  const token = generateJWT({ id: payment.userId, email: payment.email, role: 'client' });
+  const cookie = await authenticatedCookie(payment.userId, payment.email);
   const event = { httpMethod: 'POST', path: '/.netlify/functions/payments/verify',
-    headers: { cookie: `auth_token=${token}`, 'x-requested-with': 'fetch' },
+    headers: { cookie, 'x-requested-with': 'fetch' },
     body: JSON.stringify({ paymentId: payment.paymentId, razorpayOrderId: payment.orderId,
       razorpayPaymentId: providerPaymentId, razorpaySignature: signature }) };
   const first = await authenticatedPayments(event);
@@ -204,9 +214,9 @@ test('authenticated client verification and subsequent webhook activate one proj
 test('another authenticated client cannot verify a payment they do not own', async () => {
   const payment = await seedPendingPayment(pool);
   const otherClient = await seedPendingPayment(pool);
-  const token = generateJWT({ id: otherClient.userId, email: otherClient.email, role: 'client' });
+  const cookie = await authenticatedCookie(otherClient.userId, otherClient.email);
   const response = await authenticatedPayments({ httpMethod: 'POST', path: '/.netlify/functions/payments/verify',
-    headers: { cookie: `auth_token=${token}`, 'x-requested-with': 'fetch' },
+    headers: { cookie, 'x-requested-with': 'fetch' },
     body: JSON.stringify({ paymentId: payment.paymentId, razorpayOrderId: payment.orderId,
       razorpayPaymentId: 'pay_other_client', razorpaySignature: '0'.repeat(64) }) });
   assert.equal(response.statusCode, 403, response.body);

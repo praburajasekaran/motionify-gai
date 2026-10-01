@@ -353,7 +353,10 @@ export const handler = compose(
         });
       }
 
+      let emailDeliveryStatus: 'sent' | 'failed' | undefined;
+
       if (updates.status === 'awaiting_approval') {
+        emailDeliveryStatus = 'failed';
         try {
           const projectResult = await dbQuery(
             `SELECT p.project_number, u.email, u.full_name
@@ -365,7 +368,7 @@ export const handler = compose(
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            await sendDeliverableReadyEmail({
+            const emailResult = await sendDeliverableReadyEmail({
               to: email,
               clientName: full_name,
               projectNumber: project_number,
@@ -373,7 +376,10 @@ export const handler = compose(
               deliverableUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
               deliveryNotes: updatedDeliverable.description
             });
-            console.log('✅ Deliverable ready email sent to:', email);
+            emailDeliveryStatus = emailResult.status;
+            if (emailResult.status === 'sent') {
+              console.log('✅ Deliverable ready email sent to:', email);
+            }
           }
         } catch (emailError) {
           console.error('❌ Failed to send deliverable ready email:', emailError);
@@ -381,6 +387,7 @@ export const handler = compose(
       }
 
       if (updates.status === 'final_delivered') {
+        emailDeliveryStatus = 'failed';
         try {
           const projectResult = await dbQuery(
             `SELECT p.project_number, u.email, u.full_name
@@ -392,7 +399,7 @@ export const handler = compose(
 
           if (projectResult.rows.length > 0) {
             const { project_number, email, full_name } = projectResult.rows[0];
-            await sendFinalDeliverablesEmail({
+            const emailResult = await sendFinalDeliverablesEmail({
               to: email,
               clientName: full_name,
               projectNumber: project_number,
@@ -400,7 +407,10 @@ export const handler = compose(
               downloadUrl: absolutePortalProjectUrl(updatedDeliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env)),
               expiryDays: 365
             });
-            console.log('✅ Final deliverables email sent to:', email);
+            emailDeliveryStatus = emailResult.status;
+            if (emailResult.status === 'sent') {
+              console.log('✅ Final deliverables email sent to:', email);
+            }
           }
         } catch (emailError) {
           console.error('❌ Failed to send final deliverables email:', emailError);
@@ -410,7 +420,10 @@ export const handler = compose(
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(updatedDeliverable),
+        body: JSON.stringify({
+          ...updatedDeliverable,
+          ...(emailDeliveryStatus && { emailDelivery: { status: emailDeliveryStatus } }),
+        }),
       };
     }
 

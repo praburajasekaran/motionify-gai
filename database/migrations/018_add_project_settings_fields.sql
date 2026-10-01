@@ -9,6 +9,10 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date DATE;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS due_date DATE;
 
 -- 2. Convert status column from enum to VARCHAR if it's currently an enum type
+-- PostgreSQL keeps enum-typed defaults as separate dependencies, so remove the
+-- default before changing the column type and restore it afterward.
+ALTER TABLE projects ALTER COLUMN status DROP DEFAULT;
+
 DO $$
 DECLARE
   col_type text;
@@ -24,6 +28,8 @@ BEGIN
     DROP TYPE IF EXISTS project_status;
   END IF;
 END $$;
+
+ALTER TABLE projects ALTER COLUMN status SET DEFAULT 'active';
 
 -- 3. Drop existing status CHECK constraint(s) and replace with expanded one
 DO $$

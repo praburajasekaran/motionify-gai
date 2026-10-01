@@ -475,10 +475,13 @@ export const ProjectSettings = () => {
                                             <Select
                                                 value={project.status}
                                                 options={[
+                                                    { label: 'Draft', value: 'Draft' },
                                                     { label: 'Active', value: 'Active' },
                                                     { label: 'In Review', value: 'In Review' },
+                                                    { label: 'Awaiting Payment', value: 'Awaiting Payment' },
                                                     { label: 'Completed', value: 'Completed' },
                                                     { label: 'On Hold', value: 'On Hold' },
+                                                    { label: 'Cancelled', value: 'Cancelled' },
                                                 ]}
                                                 onValueChange={(v) => handleStatusChange(v as ProjectStatus)}
                                                 className="w-full"

@@ -7,9 +7,10 @@
  */
 
 import { getCorsHeaders } from './cors';
-import { verifyJWT as verifyJWTFromLib, extractTokenFromCookie } from './jwt';
+import { verifyJWT as verifyJWTFromLib, extractTokenFromCookie, hashJWT } from './jwt';
 import { createLogger } from './logger';
 import { normalizeRole, type CanonicalUserRole } from './roles';
+import { query } from './db';
 
 const logger = createLogger('auth-middleware');
 
@@ -32,6 +33,7 @@ export interface AuthenticatedUser {
     email: string;
     role: UserRole;
     fullName: string;
+    sessionId: string;
 }
 
 // Auth result
@@ -55,6 +57,7 @@ export interface CookieAuthResult {
         email: string;
         role: UserRole;
         fullName: string;
+        sessionId: string;
     };
     error?: string;
     statusCode?: number;
@@ -65,10 +68,17 @@ export interface NetlifyEvent {
     [key: string]: any;
 }
 
+export interface SessionQueryRunner {
+    query<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }>;
+}
+
 /**
  * Extract and verify JWT from request cookies (httpOnly cookie-based auth)
  */
-export async function requireAuthFromCookie(event: NetlifyEvent): Promise<CookieAuthResult> {
+export async function requireAuthFromCookie(
+    event: NetlifyEvent,
+    runner: SessionQueryRunner = { query }
+): Promise<CookieAuthResult> {
     const cookieHeader = event.headers.cookie || event.headers.Cookie;
     const token = extractTokenFromCookie(cookieHeader);
 
@@ -90,7 +100,42 @@ export async function requireAuthFromCookie(event: NetlifyEvent): Promise<Cookie
         };
     }
 
-    const normalizedRole = normalizeRole(result.payload!.role);
+    let sessionResult: { rows: any[] };
+    try {
+        sessionResult = await runner.query(
+            `SELECT
+                s.id AS session_id,
+                u.id,
+                u.email,
+                u.full_name,
+                u.role,
+                u.is_active
+             FROM sessions s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.jwt_token_hash = $1
+               AND s.expires_at > NOW()
+             LIMIT 1`,
+            [hashJWT(token)]
+        );
+    } catch (error) {
+        logger.error('Session lookup failed', error);
+        return {
+            authorized: false,
+            error: 'Authentication service unavailable',
+            statusCode: 503,
+        };
+    }
+
+    const currentUser = sessionResult.rows[0];
+    if (!currentUser || currentUser.is_active !== true) {
+        return {
+            authorized: false,
+            error: 'Authentication session is invalid or expired',
+            statusCode: 401,
+        };
+    }
+
+    const normalizedRole = normalizeRole(currentUser.role);
     if (normalizedRole === 'unknown') {
         return {
             authorized: false,
@@ -102,10 +147,11 @@ export async function requireAuthFromCookie(event: NetlifyEvent): Promise<Cookie
     return {
         authorized: true,
         user: {
-            userId: result.payload!.userId,
-            email: result.payload!.email,
+            userId: currentUser.id,
+            email: currentUser.email,
             role: normalizedRole,
-            fullName: result.payload!.fullName,
+            fullName: currentUser.full_name,
+            sessionId: currentUser.session_id,
         },
     };
 }

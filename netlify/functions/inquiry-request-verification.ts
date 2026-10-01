@@ -5,6 +5,8 @@ import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyRespon
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { absoluteInquiryVerificationUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { getAppEnvironment } from './_shared/app-env';
+import { createLogger, getCorrelationId } from './_shared/logger';
 
 interface QuizSelections {
     niche?: string | null;
@@ -28,6 +30,8 @@ export const handler = compose(
     withCORS(['POST', 'OPTIONS']),
     withRateLimit(RATE_LIMITS.authAction, 'inquiry_verification')
 )(async (event: NetlifyEvent) => {
+    const correlationId = getCorrelationId(event.headers);
+    const logger = createLogger('inquiry-request-verification', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
     const headers = getCorsHeaders(origin);
 
@@ -71,27 +75,42 @@ export const handler = compose(
         // Generate public inquiry verification link
         const magicLink = absoluteInquiryVerificationUrl({ token }, appOriginFromEnv(process.env));
 
-        // Log for dev (keep for debugging)
-        console.log(`✨ Inquiry Verification Magic Link for ${contactEmail}:`);
-        console.log(magicLink);
-
-        // Send the actual verification email
-        try {
-            await sendInquiryVerificationEmail({
-                to: contactEmail,
-                contactName: contactName,
-                magicLink: magicLink,
-                recommendedVideoType: recommendedVideoType || 'Video',
-            });
-            console.log(`✅ Verification email sent to ${contactEmail}`);
-        } catch (emailError) {
-            console.error('❌ Failed to send verification email:', emailError);
-            // Don't fail the request if email fails - token is already created
-            // and link is logged to console for dev testing
+        if (getAppEnvironment(process.env) === 'development') {
+            logger.debug('Inquiry verification link generated for local development', { magicLink });
         }
 
-        // Include magic link in dev mode so the UI can display it
-        const isDev = process.env.NODE_ENV !== 'production';
+        // Send the actual verification email
+        const emailResult = await sendInquiryVerificationEmail({
+            to: contactEmail,
+            contactName: contactName,
+            magicLink: magicLink,
+            recommendedVideoType: recommendedVideoType || 'Video',
+            correlationId,
+        });
+
+        if (emailResult.status === 'failed') {
+            await dbQuery(
+                'DELETE FROM pending_inquiry_verifications WHERE token = $1',
+                [token]
+            );
+            logger.error('Inquiry verification email delivery failed', undefined, {
+                providerCode: emailResult.code,
+                retryable: emailResult.retryable,
+            });
+            return {
+                statusCode: 503,
+                headers,
+                body: JSON.stringify({
+                    success: false,
+                    error: {
+                        code: 'EMAIL_DELIVERY_FAILED',
+                        message: 'We could not send the verification email. Please try again.',
+                    },
+                }),
+            };
+        }
+
+        const isDev = getAppEnvironment(process.env) === 'development';
 
         return {
             statusCode: 200,
@@ -104,13 +123,12 @@ export const handler = compose(
         };
 
     } catch (error) {
-        console.error('Inquiry verification request error:', error);
+        logger.error('Inquiry verification request failed', error);
         return {
             statusCode: 500,
             headers,
             body: JSON.stringify({
                 error: 'Internal server error',
-                message: error instanceof Error ? error.message : 'Unknown error',
             }),
         };
     }

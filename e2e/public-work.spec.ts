@@ -73,6 +73,17 @@ test.describe('Public Work page', () => {
     await expect(desktopPortal).toHaveAttribute('rel', /noreferrer/);
     await expect(page.getByRole('link', { name: 'Login' })).toHaveCount(0);
   });
+
+  test('footer CTA targets the home-page video style quiz from every public route', async ({ page }) => {
+    for (const route of ['/', '/about', '/work', '/contact']) {
+      await page.goto(route);
+
+      await expect(page.locator('footer').getByRole('link', { name: 'Contact Us' })).toHaveAttribute(
+        'href',
+        '/#video-style-quiz',
+      );
+    }
+  });
 });
 
 test.describe('Landing process video', () => {

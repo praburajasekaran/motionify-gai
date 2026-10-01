@@ -122,9 +122,16 @@ const DeliverableReviewContent: React.FC = () => {
 
     setIsSendingForReview(true);
     try {
-      await sendForReview(deliverable.id);
+      const emailDelivery = await sendForReview(deliverable.id);
       setShowSendForReviewDialog(false);
-      showSuccess('Deliverable sent for client review! The client will receive an email notification.');
+      if (emailDelivery === 'failed') {
+        showError(
+          new Error('Deliverable sent for review, but the email could not be delivered. Please notify the client manually.'),
+          'Email delivery failed'
+        );
+      } else {
+        showSuccess('Deliverable sent for client review! The client will receive an email notification.');
+      }
       await refreshCurrentDeliverable();
     } catch (error) {
       setShowSendForReviewDialog(false);

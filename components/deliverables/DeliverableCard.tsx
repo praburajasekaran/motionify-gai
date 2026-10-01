@@ -350,7 +350,12 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         throw new Error('Payment processing failed');
       }
 
-      toast.success('Payment successful! Final files are now available for download.');
+      const result = await response.json().catch(() => ({}));
+      if (result.emailDelivery?.status === 'failed') {
+        toast.warning('Payment succeeded and final files are available, but the delivery email could not be sent.');
+      } else {
+        toast.success('Payment successful! Final files are now available for download.');
+      }
       // Ideally trigger a refresh, but strict React might require context update or key change
       window.location.reload();
 

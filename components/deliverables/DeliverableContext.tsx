@@ -434,7 +434,7 @@ interface DeliverableContextType {
   approveDeliverable: (deliverableId: string) => Promise<void>;
   rejectDeliverable: (deliverableId: string, approval: DeliverableApproval) => Promise<void>;
   deleteDeliverable: (deliverableId: string) => Promise<void>;
-  sendForReview: (deliverableId: string) => Promise<void>;
+  sendForReview: (deliverableId: string) => Promise<'sent' | 'failed' | undefined>;
 
   // Loading state
   isLoading: boolean;
@@ -540,7 +540,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
     // Call backend API to persist the status change
     const response = await fetch(`/api/deliverables/${deliverableId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       credentials: 'include',
       body: JSON.stringify({
         status: 'approved',
@@ -737,6 +739,9 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error?.message || errorData.message || 'Failed to send for review');
     }
+
+    const result = await response.json().catch(() => ({}));
+    return result.emailDelivery?.status;
   };
 
   // Refresh function to reload deliverables

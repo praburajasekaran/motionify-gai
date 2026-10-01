@@ -18,9 +18,11 @@ import {
     createLogger,
     getCorrelationId,
 } from './_shared';
-import { compose, withCORS, withSuperAdmin, withRateLimit, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withSuperAdmin, withRateLimit, type AuthResult, type NetlifyEvent as MWNetlifyEvent, type NetlifyResponse as MWNetlifyResponse } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { absolutePortalLoginUrl, appOriginFromEnv } from '../../shared/canonical-links';
+import { sendUserInvitationEmail } from './send-email';
+import { getAppEnvironment } from './_shared/app-env';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -38,7 +40,7 @@ export const handler = compose(
     withCORS(['POST']),
     withSuperAdmin(),
     withRateLimit(RATE_LIMITS.apiStrict, 'users_create')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth?: AuthResult) => {
     const correlationId = getCorrelationId(event.headers);
     const logger = createLogger('users-create', correlationId);
     const origin = event.headers.origin || event.headers.Origin;
@@ -111,8 +113,17 @@ export const handler = compose(
             role,
         });
 
+        const emailResult = await sendUserInvitationEmail({
+            to: email,
+            inviteLink: magicLink,
+            fullName: full_name,
+            role,
+            invitedByName: auth?.user?.fullName || 'Motionify Studio',
+            correlationId,
+        });
+
         // In development, log the magic link prominently
-        if (appUrl.includes('localhost')) {
+        if (getAppEnvironment(process.env) === 'development') {
             logger.info('Magic link generated for new user', { magicLink });
             console.log('\n========================================');
             console.log(`🔗 MAGIC LINK for ${email}:`);
@@ -126,7 +137,10 @@ export const handler = compose(
             body: JSON.stringify({
                 success: true,
                 user: newUser,
-                message: 'User created and invitation sent',
+                message: emailResult.status === 'sent'
+                    ? 'User created and invitation sent'
+                    : 'User created, but the invitation email could not be sent',
+                emailDelivery: { status: emailResult.status },
             }),
         };
     } catch (error) {

@@ -8,13 +8,25 @@
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
 
+[context.production]
+  command = "npm run db:verify-contract && npm run build"
+
+[context.production.environment]
+  APP_ENV = "production"
+
 # Staging branch deploys
 [context.staging]
-  command = "npm run build"
+  command = "npm run db:verify-contract && npm run build"
 
 [context.staging.environment]
-  CONTEXT = "staging"
+  APP_ENV = "staging"
   NPM_FLAGS = "--legacy-peer-deps --include=dev"
+
+[context.deploy-preview.environment]
+  APP_ENV = "preview"
+
+[context.branch-deploy.environment]
+  APP_ENV = "preview"
 
 [dev]
   command = "vite"

@@ -51,7 +51,9 @@ export function ProjectSectionHeader({ actions }: ProjectSectionHeaderProps) {
   const projectsQuery = useProjects(projectListUserId);
   const projects = projectsQuery.data ?? [];
 
-  const visibleProjects = projects.filter(project => project.status !== 'Archived');
+  const visibleProjects = projects.filter(project =>
+    project.status !== 'Archived' && project.status !== 'Cancelled'
+  );
 
   return (
     <div className="space-y-6">
