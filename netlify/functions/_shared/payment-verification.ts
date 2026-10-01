@@ -14,6 +14,7 @@ export function verifyRazorpayCheckoutSignature(params: {
   signature: string;
   secret?: string;
 }): boolean {
+  if (!/^[a-f0-9]{64}$/i.test(params.signature)) return false;
   const secret = params.secret || getRazorpayKeySecret();
   const expectedHex = crypto
     .createHmac('sha256', secret)

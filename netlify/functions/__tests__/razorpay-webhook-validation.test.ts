@@ -167,7 +167,7 @@ describe('Razorpay webhook acknowledgements', () => {
     assert.deepEqual(loggedPayload, ignoredPayload);
   });
 
-  it('does not expose internal errors in processing responses', async () => {
+  it('returns a retriable sanitized response for internal processing errors', async () => {
     const body = JSON.stringify(payload('payment.captured'));
     const response = await invoke(body, sign(body), {
       isEventProcessed: async () => false,
@@ -177,7 +177,7 @@ describe('Razorpay webhook acknowledgements', () => {
       query: async () => ({ rows: [], rowCount: 0 }),
     } as any);
 
-    assert.equal(response.statusCode, 200);
+    assert.equal(response.statusCode, 503);
     assert.deepEqual(JSON.parse(response.body), {
       status: 'error',
       error: 'Webhook processing failed',

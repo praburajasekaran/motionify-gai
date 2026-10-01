@@ -191,7 +191,15 @@ export async function createProposal(data: {
   return mapProposalFromApi(result);
 }
 
-export async function getPublicProposalById(id: string, token?: string | null): Promise<{ proposal: Proposal | null; accessStatus?: string; error?: string }> {
+export interface ProposalPaymentContact {
+  inquiryNumber: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  companyName: string | null;
+}
+
+export async function getPublicProposalById(id: string, token?: string | null): Promise<{ proposal: Proposal | null; paymentContact?: ProposalPaymentContact | null; accessStatus?: string; error?: string }> {
   const params = new URLSearchParams();
   if (token) params.set('token', token);
 
@@ -202,7 +210,7 @@ export async function getPublicProposalById(id: string, token?: string | null): 
     return { proposal: null, accessStatus: data.accessStatus, error: data.message || data.error || 'Proposal link unavailable' };
   }
 
-  return { proposal: mapProposalFromApi(data.proposal), accessStatus: data.accessStatus };
+  return { proposal: mapProposalFromApi(data.proposal), paymentContact: data.paymentContact, accessStatus: data.accessStatus };
 }
 
 export async function updateProposal(id: string, updates: Partial<Proposal>): Promise<Proposal> {

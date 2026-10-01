@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PrefetchLink } from '../shared/components/PrefetchLink';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, Command, ChevronUp, Home, Sun, Moon, Monitor, CheckSquare, Package, Folder, Users, Activity, Zap, Mail, CreditCard, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Settings, Menu, Search, Plus, User as UserIcon, LogOut, ChevronUp, Sun, Moon, Monitor, Mail, CreditCard, X } from 'lucide-react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn, Button, Avatar, ToastProvider, CommandPalette } from './ui/design-system';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
-import { TAB_INDEX_MAP } from '../constants';
-import { MotionifyLogo } from './brand/MotionifyLogo';
 import { useKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useAuthContext } from '../contexts/AuthContext';
 import { isSuperAdmin, isClient, getRoleLabel } from '../lib/permissions';
 import { NotificationBell } from './notifications';
 
-const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, label, path: string, active: boolean, count?: number }) => (
-  <PrefetchLink to={path}>
+const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: React.ElementType, label: string, path: string, active: boolean, count?: number }) => (
+  <PrefetchLink to={path} aria-current={active ? 'page' : undefined}>
     <div
       className={cn(
         "group flex items-center justify-between w-full px-3 py-2 text-[14px] font-medium rounded-md transition-colors duration-150",
@@ -36,54 +35,6 @@ const SidebarItem = ({ icon: Icon, label, path, active, count }: { icon: any, la
   </PrefetchLink>
 );
 
-// Simplified RevisionBattery Component (no line graph)
-const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max }) => {
-  const remaining = Math.max(0, max - used);
-  const percentage = Math.round((remaining / max) * 100);
-
-  // Determine color based on remaining percentage
-  let colorClass = "bg-[var(--studio-teal)]";
-  let textColor = "text-[var(--studio-teal)]";
-  if (percentage <= 20) {
-    colorClass = "bg-destructive";
-    textColor = "text-destructive";
-  } else if (percentage <= 50) {
-    colorClass = "bg-primary";
-    textColor = "text-primary";
-  }
-
-  return (
-    <div className="flex items-center gap-3 bg-card border border-border px-3 py-1.5 rounded-lg">
-      {/* Label */}
-      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-        Revisions
-      </span>
-
-      {/* Count */}
-      <span className={cn("text-xs font-bold leading-none", textColor)}>
-        {remaining} of {max}
-      </span>
-
-      {/* Battery Icon */}
-      <div className="relative flex items-center">
-        <div className="h-4 w-7 rounded-[3px] border-2 border-border p-0.5 relative flex items-center bg-card">
-          <div
-            className={cn("h-full rounded-[1px] transition-all duration-500", colorClass)}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        {/* Battery Nub */}
-        <div className="h-1.5 w-0.5 bg-border rounded-r-[1px] absolute -right-0.5" />
-
-        {/* Charging Bolt */}
-        {percentage > 0 && (
-          <Zap className={cn("absolute -top-0.5 -right-1 h-2.5 w-2.5 fill-current stroke-white", colorClass.replace('bg-', 'text-'))} />
-        )}
-      </div>
-    </div>
-  );
-};
-
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -94,13 +45,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [commandOpen, setCommandOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => setSidebarOpen(false), [location.pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => { if (desktop.matches) setSidebarOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   const commandItems = [
-    ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: Home, action: () => navigate('/'), group: 'Navigation' }] : []),
+    ...(!isClient(user) ? [{ label: 'Go to Dashboard', icon: LayoutDashboard, action: () => navigate('/'), group: 'Navigation' }] : []),
     { label: 'Go to Projects', icon: FolderKanban, action: () => navigate('/projects'), group: 'Navigation' },
+    { label: 'Go to Inquiries', icon: Mail, action: () => navigate(isClient(user) ? '/inquiries' : '/admin/inquiries'), group: 'Navigation' },
+    ...(!isClient(user) ? [{ label: 'Go to Payments', icon: CreditCard, action: () => navigate('/admin/payments'), group: 'Navigation' }] : []),
+    ...(isSuperAdmin(user) ? [{ label: 'Go to Team', icon: UserIcon, action: () => navigate('/admin/users'), group: 'Navigation' }] : []),
     { label: 'Go to Settings', icon: Settings, action: () => navigate('/settings'), group: 'Navigation' },
     { label: 'Start a Project', icon: Plus, action: () => navigate('/projects/new'), group: 'Actions' },
-    { label: 'Toggle Sidebar', icon: Menu, action: () => setSidebarOpen(!sidebarOpen), group: 'View' },
     { label: 'Logout', icon: LogOut, action: () => logout(), group: 'Account' },
   ];
 
@@ -163,17 +123,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     {
       key: 'b',
       modifiers: ['cmd'],
-      description: 'Toggle sidebar',
-      action: () => setSidebarOpen(open => !open),
+      description: 'Open navigation',
+      action: () => { if (window.matchMedia('(max-width: 1023px)').matches) setSidebarOpen(open => !open); },
       category: 'ui',
     },
     {
       key: '/',
-      description: 'Focus search',
-      action: () => {
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        searchInput?.focus();
-      },
+      description: 'Open command menu',
+      action: () => setCommandOpen(true),
       category: 'ui',
     },
     // Logout
@@ -190,44 +147,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 
 
-  // Detect if on project detail page
-  const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
-  const isProjectPage = !!projectMatch;
-
-  // Get current tab from URL
-  const currentTabIndex = location.pathname.split('/')[3];
-  const activeTab = currentTabIndex ? parseInt(currentTabIndex) : 1;
   const userIsClient = isClient(user);
   const canSeeSystemSection = isSuperAdmin(user);
   const inquiriesPath = userIsClient ? '/inquiries' : '/admin/inquiries';
 
-  return (
-    <ToastProvider>
-      {/* Accessibility: Skip to content link */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:ring-2 focus:ring-primary transition-all"
-      >
-        Skip to content
-      </a>
-
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
-      <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
-
-      <div className="h-screen w-full flex overflow-hidden bg-background font-sans text-foreground">
-        {/* Mobile Sidebar Overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed top-14 inset-x-0 bottom-0 bg-black/30 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar — same bg as canvas, border-only separation */}
-        <aside className={cn(
-          "fixed lg:static top-14 lg:top-0 bottom-0 lg:bottom-auto lg:inset-y-0 left-0 z-50 w-56 bg-background border-r border-border transform transition-transform duration-200 ease-out lg:transform-none flex flex-col",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
+  const sidebar = (
+        <>
           {/* Logo — desktop only; on mobile the header is always visible above the sidebar */}
           <div className="h-14 hidden lg:flex items-center px-4 shrink-0 border-b border-border">
             <PrefetchLink to="/" className="flex items-center cursor-pointer">
@@ -242,7 +167,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
 
           {/* Nav sections */}
-          <div className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+          <nav aria-label="Workspace" className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
             <div>
               <div className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Workspace
@@ -294,7 +219,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             </div>
             )}
-          </div>
+          </nav>
 
           {/* User footer */}
           <div className="p-3 border-t border-border shrink-0">
@@ -336,7 +261,31 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </aside>
+        </>
+  );
+
+  return (
+    <ToastProvider>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-card focus:text-primary focus:font-bold focus:rounded-md focus:ring-2 focus:ring-primary">
+        Skip to content
+      </a>
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} items={commandItems} />
+      <KeyboardShortcutsHelp shortcuts={globalShortcuts} />
+      <DialogPrimitive.Root open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[70] bg-black/40 lg:hidden" />
+        <DialogPrimitive.Content aria-describedby={undefined} className="portal-shell fixed inset-y-0 left-0 z-[80] w-72 max-w-[85vw] flex flex-col bg-background border-r border-border lg:hidden">
+          <div className="h-14 px-5 border-b border-border flex items-center justify-between shrink-0">
+            <DialogPrimitive.Title className="text-sm font-semibold">Workspace navigation</DialogPrimitive.Title>
+            <DialogPrimitive.Close asChild>
+              <Button variant="ghost" size="icon" aria-label="Close navigation"><X className="h-4 w-4" /></Button>
+            </DialogPrimitive.Close>
+          </div>
+          {sidebar}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+      <div className="portal-shell h-dvh w-full flex overflow-hidden bg-background font-sans text-foreground">
+        <aside className="hidden lg:flex w-56 shrink-0 bg-background border-r border-border flex-col">{sidebar}</aside>
 
         {/* Main Content */}
         <main
@@ -346,11 +295,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         >
           {/* Top bar — minimal, functional */}
           <header className="h-14 border-b border-border z-[60] shrink-0 sticky top-0 bg-background">
-            <div className="h-full max-w-6xl mx-auto px-6 flex items-center justify-between">
+            <div className="h-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-2">
               <div className="flex items-center flex-1 min-w-0">
-                <Button variant="ghost" size="icon" className="lg:hidden mr-3 h-8 w-8" onClick={() => setSidebarOpen(prev => !prev)} id="mobile-menu-btn">
+                <DialogPrimitive.Trigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden mr-2 h-10 w-10 shrink-0" aria-label="Open navigation" id="mobile-menu-btn">
                   <Menu className="h-4 w-4" />
                 </Button>
+                </DialogPrimitive.Trigger>
 
                 {/* Logo — mobile only (sidebar logo is hidden on mobile) */}
                 <PrefetchLink to="/" className="lg:hidden mr-3">
@@ -364,11 +315,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </PrefetchLink>
 
                 <button
+                  aria-label="Open command menu"
                   onClick={() => setCommandOpen(true)}
                   className="hidden md:flex items-center gap-2 h-9 w-full max-w-xl px-3 rounded-lg border border-border bg-card text-[14px] text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors text-left"
                 >
                   <Search className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 truncate">Search projects, inquiries, tasks, files...</span>
+                  <span className="flex-1 truncate">Go to a page or run a command...</span>
                   <div className="flex items-center gap-0.5">
                     <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">⌘</kbd>
                     <kbd className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground">K</kbd>
@@ -377,6 +329,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
 
               <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" aria-label="Open command menu" onClick={() => setCommandOpen(true)}>
+                  <Search className="h-4 w-4" />
+                </Button>
                 <NotificationBell />
 
                 {mounted && (
@@ -386,6 +341,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     className="h-8 w-8"
                     onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
                     title={`Theme: ${theme} (click to change)`}
+                    aria-label={`Change theme, current theme is ${theme}`}
                   >
                     {theme === 'dark' ? (
                       <Moon className="h-4 w-4" />
@@ -402,12 +358,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           {/* Page Content */}
           <div key={location.pathname} className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl mx-auto px-6 py-6">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
               {children}
             </div>
           </div>
         </main>
       </div>
+      </DialogPrimitive.Root>
     </ToastProvider>
   );
 };

@@ -5,7 +5,7 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
 
 [context.production]
@@ -127,6 +127,26 @@
 
 [[redirects]]
   from = "/login"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/shipping"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/cancellation-refund"
   to = "/index.html"
   status = 200
 

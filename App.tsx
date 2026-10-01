@@ -18,13 +18,13 @@ import { classifyRoute } from './lib/route-classification';
 import { resolveRouteAlias } from './shared/route-aliases';
 import TawkChat from './components/TawkChat';
 import { Toaster } from './components/ui/sonner';
+import { NotFound } from './pages/NotFound';
 
 // Lazy-loaded page components for route-based code splitting
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const ProjectList = React.lazy(() => import('./pages/ProjectList').then(m => ({ default: m.ProjectList })));
 const ProjectDetail = React.lazy(() => import('./pages/ProjectDetail').then(m => ({ default: m.ProjectDetail })));
 const ProjectSettings = React.lazy(() => import('./pages/ProjectSettings').then(m => ({ default: m.ProjectSettings })));
-const CreateProject = React.lazy(() => import('./pages/CreateProject').then(m => ({ default: m.CreateProject })));
 const NewProjectRouter = React.lazy(() => import('./pages/NewProjectRouter').then(m => ({ default: m.NewProjectRouter })));
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const ProjectAccess = React.lazy(() => import('./pages/ProjectAccess').then(m => ({ default: m.ProjectAccess })));
@@ -32,8 +32,12 @@ const LandingPage = React.lazy(() => import('./pages/LandingPage').then(m => ({ 
 const ContactPage = React.lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const AboutPage = React.lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const WorkPage = React.lazy(() => import('./pages/WorkPage').then(m => ({ default: m.WorkPage })));
+const TermsPage = React.lazy(() => import('./pages/policies/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/policies/PrivacyPage'));
+const ShippingPage = React.lazy(() => import('./pages/policies/ShippingPage'));
+const CancellationRefundPage = React.lazy(() => import('./pages/policies/CancellationRefundPage'));
 const InquiryTracking = React.lazy(() => import('./pages/InquiryTracking').then(m => ({ default: m.InquiryTracking })));
-const PermissionTest = React.lazy(() => import('./pages/PermissionTest'));
+const PermissionTest = import.meta.env.DEV ? React.lazy(() => import('./pages/PermissionTest')) : null;
 const DeliverableReview = React.lazy(() => import('./pages/DeliverableReview').then(m => ({ default: m.DeliverableReview })));
 const InquiryDashboard = React.lazy(() => import('./pages/admin/InquiryDashboard').then(m => ({ default: m.InquiryDashboard })));
 const InquiryDetail = React.lazy(() => import('./pages/admin/InquiryDetail').then(m => ({ default: m.InquiryDetail })));
@@ -143,10 +147,10 @@ function App() {
                         <Route path="/payment/:proposalId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
 
                         {/* Permission Testing - Development Only */}
-                        <Route path="/test/permissions" element={<ProtectedRoute><PermissionTest /></ProtectedRoute>} />
+                        {PermissionTest && <Route path="/test/permissions" element={<ProtectedRoute><PermissionTest /></ProtectedRoute>} />}
 
                         {/* Catch-all redirect */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                        <Route path="*" element={<NotFound portal />} />
                       </Routes>
                     </React.Suspense>
                   </NotificationProvider>
@@ -166,6 +170,10 @@ function App() {
                       <Route path="/about" element={<AboutPage />} />
                       <Route path="/contact" element={<ContactPage />} />
                       <Route path="/work" element={<WorkPage />} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      <Route path="/privacy" element={<PrivacyPage />} />
+                      <Route path="/shipping" element={<ShippingPage />} />
+                      <Route path="/cancellation-refund" element={<CancellationRefundPage />} />
                       <Route path="/proposal/:proposalId" element={<PublicProposalPage />} />
                       <Route path="/payment/:proposalId" element={<PublicPaymentPage />} />
                       <Route path="/verify-inquiry" element={<InquiryVerification />} />
@@ -174,7 +182,7 @@ function App() {
                       <Route path="/inquiry-status/:inquiryNumber" element={<InquiryTracking />} />
                       <Route path="/login" element={<Navigate to="/portal/login" replace />} />
                       <Route path="/project-access" element={<Navigate to={`/portal/project-access${window.location.search}`} replace />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
                   </React.Suspense>
                 </BrowserRouter>

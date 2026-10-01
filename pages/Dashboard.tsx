@@ -155,7 +155,7 @@ export const Dashboard = () => {
         description={
           <>
             {user?.name ? `Welcome back, ${user.name}` : 'Production overview'}
-            {user?.role && <span className="text-muted-foreground/60"> · {user.role === 'superadmin' ? 'Super Admin' : user.role}</span>}
+            {user?.role && <span className="text-muted-foreground"> · {user.role === 'super_admin' ? 'Super Admin' : user.role.replaceAll('_', ' ')}</span>}
           </>
         }
       />

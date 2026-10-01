@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
@@ -68,13 +68,14 @@ function ReadOnlyField({
     label: string;
     value: string;
 }) {
+    const id = useId();
     return (
         <div className="space-y-2">
-            <Label className="font-medium text-base flex items-center gap-2">
+            <Label htmlFor={id} className="font-medium text-base flex items-center gap-2">
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 {label}
             </Label>
-            <Input value={value} readOnly className="bg-muted text-muted-foreground" />
+            <Input id={id} value={value} readOnly className="bg-muted text-muted-foreground" />
         </div>
     );
 }
@@ -124,7 +125,6 @@ export function Settings() {
             setUserTimezone(nextTimezone);
         } catch (error) {
             console.error('Error fetching settings:', error);
-            toast.error('Failed to load settings');
         } finally {
             setIsLoading(false);
         }
@@ -204,7 +204,8 @@ export function Settings() {
                 />
                 <Card>
                     <CardContent className="pt-6 text-sm text-muted-foreground">
-                        Account settings are unavailable right now.
+                        <p role="alert">Account settings are unavailable right now.</p>
+                        <Button type="button" variant="outline" onClick={fetchSettings} className="mt-4">Try again</Button>
                     </CardContent>
                 </Card>
             </div>

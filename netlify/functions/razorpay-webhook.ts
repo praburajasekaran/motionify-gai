@@ -2,14 +2,11 @@
  * Razorpay Webhook Handler
  *
  * Receives and processes asynchronous payment events from Razorpay.
- * This is the source of truth for payment confirmation - the client-side
- * callback is optimistic UI.
  *
  * Key features:
  * - Uses raw body text for signature verification (critical for signature match)
  * - Idempotent processing via x-razorpay-event-id header
  * - Logs all webhooks to payment_webhook_logs for audit trail
- * - Returns 200 quickly to acknowledge receipt (Razorpay expects <5 seconds)
  */
 
 import type { Handler } from '@netlify/functions';
@@ -33,6 +30,7 @@ function buildProjectAccessUrl(projectId: string, email: string): string {
  * Verify Razorpay webhook signature using HMAC SHA256
  */
 function verifySignature(rawBody: string, signature: string, secret: string): boolean {
+  if (!/^[a-f0-9]{64}$/i.test(signature)) return false;
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(rawBody);
   const expected = Buffer.from(hmac.digest('hex'), 'hex');
@@ -84,7 +82,8 @@ function validateWebhookRequest(
  */
 async function isEventProcessed(eventId: string): Promise<boolean> {
   const result = await query(
-    `SELECT id FROM payment_webhook_logs WHERE razorpay_event_id = $1`,
+    `SELECT id FROM payment_webhook_logs
+     WHERE razorpay_event_id = $1 AND status = 'PROCESSED' AND signature_verified = true`,
     [eventId]
   );
   return result.rows.length > 0;
@@ -108,17 +107,28 @@ async function logWebhook(
     ipAddress?: string;
     resolvedPaymentId?: string;
   }
-): Promise<string> {
-  const result = await client.query(
+): Promise<void> {
+  await client.query(
     `INSERT INTO payment_webhook_logs (
       event, razorpay_event_id, razorpay_order_id, razorpay_payment_id,
       payload, signature, signature_verified, status, error, ip_address,
       payment_id, processed_at
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-    RETURNING id`,
+    ON CONFLICT (razorpay_event_id) DO UPDATE SET
+      event = EXCLUDED.event,
+      razorpay_order_id = EXCLUDED.razorpay_order_id,
+      razorpay_payment_id = EXCLUDED.razorpay_payment_id,
+      payment_id = EXCLUDED.payment_id,
+      payload = EXCLUDED.payload,
+      signature = EXCLUDED.signature,
+      signature_verified = EXCLUDED.signature_verified,
+      status = EXCLUDED.status,
+      error = EXCLUDED.error,
+      processed_at = EXCLUDED.processed_at
+    WHERE payment_webhook_logs.status != 'PROCESSED'`,
     [
       params.event,
-      params.eventId,
+      params.eventId || null,
       params.orderId,
       params.paymentId,
       JSON.stringify(params.payload),
@@ -131,7 +141,6 @@ async function logWebhook(
       params.status === 'PROCESSED' ? new Date() : null,
     ]
   );
-  return result.rows[0].id;
 }
 
 /**
@@ -149,7 +158,7 @@ async function handlePaymentCaptured(
   const { id: razorpayPaymentId, order_id: razorpayOrderId } = payment;
 
   const paymentRowResult = await client.query(
-    `SELECT id, amount, currency, status, razorpay_payment_id
+    `SELECT id, amount, currency, status, razorpay_payment_id, payment_type
      FROM payments
      WHERE razorpay_order_id = $1
      FOR UPDATE`,
@@ -193,12 +202,9 @@ async function handlePaymentCaptured(
 
   const paymentId = storedPayment.id;
 
-  // Accept proposal and create project (idempotent — safe if verify already ran)
-  try {
-    await acceptProposalAndCreateProject(client, paymentId);
-  } catch (projectError) {
-    console.error('[Webhook] Failed to accept proposal/create project:', projectError);
-    // Non-fatal: payment is already marked completed; log and continue
+  const activation = await acceptProposalAndCreateProject(client, paymentId);
+  if (storedPayment.payment_type === 'advance' && !activation.projectId) {
+    throw new Error('Project activation failed after advance payment');
   }
 
   // Send success email (non-blocking)
@@ -259,18 +265,15 @@ async function handlePaymentFailed(
   }
 
   const { order_id: razorpayOrderId, error_code, error_description } = payment;
-  const failureReason = error_description || error_code || 'Payment failed';
 
   // Only update to failed if not already completed (UPI retry behavior)
   const result = await client.query(
     `UPDATE payments
-     SET status = 'failed',
-         failure_reason = $1,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE razorpay_order_id = $2
+     SET status = 'failed'
+     WHERE razorpay_order_id = $1
        AND status NOT IN ('completed', 'refunded')
      RETURNING id`,
-    [failureReason, razorpayOrderId]
+    [razorpayOrderId]
   );
 
   if (result.rows.length === 0) {
@@ -459,9 +462,8 @@ export function createRazorpayWebhookHandler(
     const duration = Date.now() - startTime;
     console.log('[Webhook] Processed:', { event: webhookEvent, eventId, duration: `${duration}ms`, result });
 
-    // Always return 200 to acknowledge receipt
     return {
-      statusCode: 200,
+      statusCode: result.success ? 200 : 503,
       body: JSON.stringify({
         status: 'ok',
         event: webhookEvent,
@@ -496,10 +498,8 @@ export function createRazorpayWebhookHandler(
       console.error('[Webhook] Failed to log error:', logError);
     }
 
-    // Still return 200 to prevent Razorpay from retrying indefinitely
-    // The error is logged and can be reviewed in admin dashboard
     return {
-      statusCode: 200,
+      statusCode: 503,
       body: JSON.stringify({
         status: 'error',
         error: 'Webhook processing failed',

@@ -35,7 +35,7 @@ export const useKeyboardShortcuts = ({
   enabled = true,
 }: UseKeyboardShortcutsOptions) => {
   const sequenceRef = useRef<string>('');
-  const sequenceTimeoutRef = useRef<NodeJS.Timeout>();
+  const sequenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!enabled) return;
@@ -44,7 +44,7 @@ export const useKeyboardShortcuts = ({
       // Ignore if user is typing in an input/textarea
       const target = e.target as HTMLElement;
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
-      const isContentEditable = target.contentEditable === 'true';
+      const isContentEditable = target.isContentEditable;
 
       if (isInput || isContentEditable) {
         // Allow Escape to blur input
@@ -181,15 +181,6 @@ export const useGlobalShortcuts = () => {
     },
 
     // UI shortcuts
-    {
-      key: 'Escape',
-      description: 'Close modal or cancel',
-      action: () => {
-        // Trigger escape event for modals to handle
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      },
-      category: 'ui',
-    },
   ];
 
   useKeyboardShortcuts({ shortcuts });
