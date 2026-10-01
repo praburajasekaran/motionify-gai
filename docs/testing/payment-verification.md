@@ -42,6 +42,19 @@ reported `captured: true`. The local database recorded a completed payment,
 exactly one project, and one primary client contact. Two additional verification
 requests with the original proof returned the same project.
 
+## Verified hosted preview receipt
+
+On 2026-10-01, manual Razorpay Test Mode checkout in PR #118's Netlify preview
+completed order `order_TiW5Jea9SVczz8` with payment `pay_TiWaWujgj4nklv`.
+The preview displayed Payment Successful. Its isolated Neon database recorded
+100 paise INR as completed, exactly one project, and one primary client contact.
+The activated project is `d6ff8b4b-b12a-48ae-a0e4-97de3882bbf3`.
+
+The preview uses separate JWT, database, and Razorpay Test Mode settings.
+This hosted check verified checkout confirmation and project activation.
+Provider capture status was not independently fetched for this receipt.
+Live funds and Razorpay's external webhook delivery remain untested.
+
 ## Verify development dependencies
 
 Run `npm audit` and `npm run verify:development-tooling` after a clean install.
