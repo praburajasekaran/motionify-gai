@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { before, after, test } from 'node:test';
 import crypto from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { initializePaymentDatabase, paymentTestPool, seedPendingPayment } from '../../../scripts/payment-fixture';
 import { closePool } from '../_shared/db';
 import { verifyRazorpayCheckoutSignature } from '../_shared/payment-verification';
-import { handler as webhook } from '../razorpay-webhook';
+import { createRazorpayWebhookHandler } from '../razorpay-webhook';
+import { createPaymentReceiptDelivery } from '../_shared/payment-receipts';
+import { sendEmail, type EmailSenderClient } from '../send-email';
 import { handler as handoff } from '../payment-handoff';
 import { handler as publicProposal } from '../public-proposal';
 import { handler as authenticatedPayments } from '../payments';
@@ -14,6 +17,9 @@ import { generateJWT, hashJWT } from '../_shared/jwt';
 import { requireProposalAccess, requireInquiryAccess } from '../_shared/authorization';
 
 const pool = paymentTestPool();
+const webhook = createRazorpayWebhookHandler({
+  deliverPaymentReceipt: createPaymentReceiptDelivery(async () => ({ status: 'sent', messageId: 'isolated-receipt' })),
+});
 before(async () => {
   await initializePaymentDatabase(pool);
   await pool.query(`CREATE TABLE IF NOT EXISTS magic_link_tokens (
@@ -37,8 +43,8 @@ function webhookEvent(orderId: string, overrides: { event?: string; amount?: num
       'x-razorpay-signature': crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!).update(body).digest('hex') } };
 }
 
-async function runWebhook(event: ReturnType<typeof webhookEvent>) {
-  const result = await webhook(event as never, {} as never, () => {});
+async function runWebhook(event: ReturnType<typeof webhookEvent>, handler = webhook) {
+  const result = await handler(event as never, {} as never, () => {});
   assert(result);
   return { status: result.statusCode, body: JSON.parse(result.body) };
 }
@@ -335,6 +341,8 @@ test('authenticated client verification and subsequent webhook activate one proj
   assert.equal(replay.statusCode, 200, replay.body);
   assert.equal(JSON.parse(replay.body).activation.projectId, projectId);
   assert.equal((await runWebhook(webhookEvent(payment.orderId))).status, 200);
+  assert.equal((await runWebhook(webhookEvent(payment.orderId, { event: 'order.paid' }))).status, 200);
+  assert.equal((await pool.query('SELECT status FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0].status, 'sent');
   const { rows } = await pool.query('SELECT count(*) AS count FROM projects WHERE proposal_id = $1', [payment.proposalId]);
   assert.equal(rows[0].count, '1');
 });
@@ -360,4 +368,113 @@ test('checkout proposal and inquiry access resolve the canonical client relation
   const otherClient = { userId: crypto.randomUUID(), email: 'other@example.test', role: 'client' };
   await assert.rejects(requireProposalAccess(otherClient, payment.proposalId), { statusCode: 403 });
   await assert.rejects(requireInquiryAccess(otherClient, payment.inquiryId), { statusCode: 403 });
+});
+
+function receiptProvider() {
+  const messages = new Map<string, { id: string; payload: string }>();
+  let requests = 0;
+  const client: EmailSenderClient = { emails: { async send(payload, options) {
+    requests++;
+    assert(options?.idempotencyKey);
+    const existing = messages.get(options.idempotencyKey);
+    if (existing) {
+      assert.equal(JSON.stringify(payload), existing.payload);
+      return { data: { id: existing.id }, error: null };
+    }
+    const id = crypto.randomUUID();
+    messages.set(options.idempotencyKey, { id, payload: JSON.stringify(payload) });
+    return { data: { id }, error: null };
+  } } };
+  return { client, messages, requests: () => requests };
+}
+
+test('concurrent captured and paid events deliver one receipt across retries', async () => {
+  const payment = await seedPendingPayment(pool);
+  const provider = receiptProvider();
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  const events = [webhookEvent(payment.orderId), webhookEvent(payment.orderId, { event: 'order.paid' })];
+  const responses = await Promise.all(events.map(event => runWebhook(event, handler)));
+  assert.deepEqual(responses.map(r => r.status), [200, 200]);
+  await Promise.all(events.map(event => runWebhook(event, handler)));
+  assert.equal(provider.requests(), 1);
+  assert.equal(provider.messages.size, 1);
+  const { rows } = await pool.query('SELECT status, message_id FROM payment_receipts WHERE payment_id = $1', [payment.paymentId]);
+  assert.equal(rows[0].status, 'sent');
+  assert.equal(rows[0].message_id, [...provider.messages.values()][0].id);
+  assert.equal((await pool.query('SELECT count(*) FROM projects WHERE proposal_id = $1', [payment.proposalId])).rows[0].count, '1');
+});
+
+test('failed receipt delivery preserves activation and retries even after the event was processed', async () => {
+  const payment = await seedPendingPayment(pool);
+  let calls = 0;
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt: createPaymentReceiptDelivery(async () => {
+    calls++;
+    return calls === 1 ? { status: 'failed', code: 'TEMPORARY', retryable: true } : { status: 'sent', messageId: 'receipt-after-retry' };
+  }) });
+  const event = webhookEvent(payment.orderId);
+  assert.equal((await runWebhook(event, handler)).status, 503);
+  const saved = (await pool.query('SELECT status, project_id FROM payments WHERE id = $1', [payment.paymentId])).rows[0];
+  assert.equal(saved.status, 'completed');
+  assert(saved.project_id);
+  assert.equal((await pool.query('SELECT status FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0].status, 'pending');
+  assert.equal((await runWebhook(event, handler)).status, 200);
+  assert.equal(calls, 2);
+});
+
+test('provider acceptance followed by database rollback retries the same payload and key', async () => {
+  const payment = await seedPendingPayment(pool);
+  const provider = receiptProvider();
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  await pool.query(`CREATE FUNCTION reject_test_receipt() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'Simulated receipt persistence failure'; END $$`);
+  await pool.query(`CREATE TRIGGER reject_test_receipt BEFORE UPDATE ON payment_receipts
+    FOR EACH ROW EXECUTE FUNCTION reject_test_receipt()`);
+  const event = webhookEvent(payment.orderId);
+  try {
+    assert.equal((await runWebhook(event, handler)).status, 503);
+  } finally {
+    await pool.query('DROP TRIGGER reject_test_receipt ON payment_receipts');
+    await pool.query('DROP FUNCTION reject_test_receipt()');
+  }
+  assert.equal((await runWebhook(event, handler)).status, 200);
+  assert.equal(provider.requests(), 2);
+  assert.equal(provider.messages.size, 1);
+});
+
+test('a receipt beyond the safe provider retry window requires reconciliation', async () => {
+  const payment = await seedPendingPayment(pool);
+  const event = webhookEvent(payment.orderId);
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt: async () => { throw new Error('Delivery interrupted'); } });
+  assert.equal((await runWebhook(event, handler)).status, 503);
+  await pool.query("UPDATE payment_receipts SET created_at = NOW() - INTERVAL '24 hours' WHERE payment_id = $1", [payment.paymentId]);
+  const provider = receiptProvider();
+  const retry = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  assert.equal((await runWebhook(event, retry)).status, 503);
+  assert.equal(provider.requests(), 0);
+});
+
+test('migration excludes historical webhook receipts but preserves browser-first notification', async () => {
+  const old = await seedPendingPayment(pool);
+  const oldEvent = webhookEvent(old.orderId);
+  assert.equal((await runWebhook(oldEvent)).status, 200);
+  await pool.query('DELETE FROM payment_receipts WHERE payment_id = $1', [old.paymentId]);
+  await pool.query('UPDATE payment_webhook_logs SET payment_id = NULL WHERE razorpay_order_id = $1', [old.orderId]);
+  const browserFirst = await seedPendingPayment(pool);
+  await pool.query("UPDATE payments SET status = 'completed', razorpay_payment_id = $2, paid_at = NOW() WHERE id = $1",
+    [browserFirst.paymentId, `pay_${browserFirst.orderId}`]);
+  const sql = (await readFile('database/migrations/030_payment_receipts.sql', 'utf8')).split('-- DOWN')[0];
+  await pool.query(sql);
+  await pool.query(sql);
+  assert.equal((await pool.query('SELECT status FROM payment_receipts WHERE payment_id = $1', [old.paymentId])).rows[0].status, 'legacy');
+  const provider = receiptProvider();
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  assert.equal((await runWebhook(oldEvent, handler)).status, 200);
+  assert.equal(provider.requests(), 0);
+  assert.equal((await runWebhook(webhookEvent(browserFirst.orderId), handler)).status, 200);
+  assert.equal(provider.requests(), 1);
+  assert.equal(provider.messages.size, 1);
 });

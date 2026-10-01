@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '029',
-  name: 'reconcile_membership_nullability',
+  version: '030',
+  name: 'payment_receipts',
 } as const;
 
 export interface DatabaseContractQueryRunner {
@@ -64,6 +64,14 @@ interface ColumnRequirement {
 }
 
 const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
+  payment_receipts: {
+    payment_id: { type: 'uuid', nullable: false },
+    payload: { type: 'jsonb', nullable: false },
+    status: { type: 'text', nullable: false, defaultPattern: /'pending'/i },
+    created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)/i },
+    sent_at: { type: 'timestamp with time zone' },
+    message_id: { type: 'text' },
+  },
   users: {
     id: { type: 'uuid', nullable: false },
   },
@@ -216,6 +224,14 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
     && constraint.constraint_type === type
     && normalizeSql(constraint.definition).includes(fragment)
   );
+
+  if (!find('payment_receipts', 'p', 'primary key (payment_id)')) {
+    issues.push({ code: 'missing_constraint', object: 'payment_receipts.primary_key' });
+  }
+  const receiptForeignKey = find('payment_receipts', 'f', 'foreign key (payment_id)');
+  if (!receiptForeignKey || !normalizeSql(receiptForeignKey.definition).includes('references payments(id)')) {
+    issues.push({ code: 'missing_constraint', object: 'payment_receipts.payment_id_fkey' });
+  }
 
   if (!find('project_requests', 'p', 'primary key (id)')) {
     issues.push({ code: 'missing_constraint', object: 'project_requests.primary_key' });

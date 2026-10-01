@@ -1,4 +1,10 @@
 export const canonicalColumns = [
+  ['payment_receipts', 'payment_id', 'uuid', 'uuid', null, 'NO'],
+  ['payment_receipts', 'payload', 'jsonb', 'jsonb', null, 'NO'],
+  ['payment_receipts', 'status', 'text', 'text', "'pending'::text", 'NO'],
+  ['payment_receipts', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
+  ['payment_receipts', 'sent_at', 'timestamp with time zone', 'timestamptz', null, 'YES'],
+  ['payment_receipts', 'message_id', 'text', 'text', null, 'YES'],
   ['users', 'id', 'uuid', 'uuid', null, 'NO'],
   ['project_requests', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
   ['project_requests', 'request_number', 'character varying', 'varchar', null, 'NO'],
@@ -58,6 +64,8 @@ export const canonicalColumns = [
 }));
 
 export const canonicalConstraints = [
+  { table_name: 'payment_receipts', constraint_name: 'payment_receipts_pkey', constraint_type: 'p', definition: 'PRIMARY KEY (payment_id)' },
+  { table_name: 'payment_receipts', constraint_name: 'payment_receipts_payment_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (payment_id) REFERENCES payments(id)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_pkey', constraint_type: 'p', definition: 'PRIMARY KEY (id)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_request_number_key', constraint_type: 'u', definition: 'UNIQUE (request_number)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_client_user_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (client_user_id) REFERENCES users(id) ON DELETE CASCADE' },
@@ -75,7 +83,7 @@ export const canonicalIndexes = [
 ];
 
 export const canonicalMigrations = [
-  { version: '029', name: 'reconcile_membership_nullability' },
+  { version: '030', name: 'payment_receipts' },
 ];
 
 export function createContractRunner(overrides: {

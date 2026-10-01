@@ -82,6 +82,30 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
     );
   }
 
+  it('prepares only receipt migration 030 and safely repeats preparation', async () => {
+    const pool = await createDatabase('contract_receipt_preparation');
+    try {
+      await pool.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
+      await pool.query(await readFile(new URL('../migrations/009_payment_webhook_logs.sql', import.meta.url), 'utf8'));
+      await pool.query(`CREATE TABLE migrations (version VARCHAR(20) PRIMARY KEY, name VARCHAR(255) NOT NULL);
+        INSERT INTO migrations VALUES ('029', 'reconcile_membership_nullability')`);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        execFileSync(process.execPath, ['--import', 'tsx', 'database/prepare-payment-receipts.ts'], {
+          env: { ...process.env, DATABASE_URL: pool.options.connectionString, DATABASE_SSL: 'false' },
+          stdio: 'pipe',
+        });
+      }
+      const versions = await pool.query('SELECT version, name FROM migrations ORDER BY version');
+      assert.deepEqual(versions.rows, [
+        { version: '029', name: 'reconcile_membership_nullability' },
+        { version: '030', name: 'payment_receipts' },
+      ]);
+      assert.equal((await pool.query('SELECT count(*) FROM payment_receipts')).rows[0].count, '0');
+    } finally {
+      await pool.end();
+    }
+  });
+
   it('converts the legacy project status enum while preserving its default', async () => {
     const migrationSql = await readFile(fileURLToPath(new URL(
       '../migrations/018_add_project_settings_fields.sql',
@@ -235,6 +259,10 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
         await pool.query(setupSql);
         await pool.query(reconciliationSql);
         await pool.query(nullabilitySql);
+        await pool.query("CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), status VARCHAR(50) NOT NULL DEFAULT 'pending', razorpay_order_id VARCHAR(255) UNIQUE)");
+        await pool.query(await readFile(new URL('../migrations/009_payment_webhook_logs.sql', import.meta.url), 'utf8'));
+        const receipts = await readFile(new URL('../migrations/030_payment_receipts.sql', import.meta.url), 'utf8');
+        await pool.query(receipts.split('-- DOWN')[0]);
         await recordMigration(pool);
 
         const result = await verifyDatabaseContract(pool);

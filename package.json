@@ -35,6 +35,7 @@
     "db:migrate:status": "tsx database/migrate.ts status",
     "db:migrate:create": "tsx database/migrate.ts create",
     "db:verify-contract": "tsx database/verify-contract.ts",
+    "db:prepare-payment-receipts": "tsx database/prepare-payment-receipts.ts",
     "test:load:api": "artillery run load-tests/api-load.yml",
     "test:load:frontend": "artillery run load-tests/frontend-load.yml",
     "test:load": "npm run test:load:api"

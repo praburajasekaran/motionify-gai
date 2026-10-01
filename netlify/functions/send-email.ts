@@ -70,10 +70,12 @@ export function emailWrapper(content: string): string {
 }
 
 export interface EmailOptions {
+  from?: string;
   to: string;
   subject: string;
   html: string;
   correlationId?: string;
+  idempotencyKey?: string;
 }
 
 export type EmailDeliveryResult =
@@ -99,7 +101,7 @@ export interface EmailSenderClient {
       to: string[];
       subject: string;
       html: string;
-    }): Promise<{
+    }, options?: { idempotencyKey: string }): Promise<{
       data: { id?: string } | null;
       error: EmailProviderError | null;
     }>;
@@ -191,11 +193,11 @@ export async function sendEmail(
     }
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: options.from || FROM_EMAIL,
       to: [options.to],
       subject: options.subject,
       html: options.html,
-    });
+    }, options.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : undefined);
 
     if (error) {
       const code = providerCode(error);
@@ -651,7 +653,7 @@ export async function sendPaymentFailureNotificationEmail(data: {
   });
 }
 
-export async function sendPaymentSuccessEmail(data: {
+export function buildPaymentSuccessEmail(data: {
   to: string;
   clientName: string;
   projectNumber: string;
@@ -659,7 +661,8 @@ export async function sendPaymentSuccessEmail(data: {
   currency: string;
   paymentType: 'advance' | 'balance';
   projectUrl: string;
-}) {
+  idempotencyKey?: string;
+}): EmailOptions {
   const paymentTypeLabel = data.paymentType === 'advance' ? 'Advance Payment' : 'Balance Payment';
 
   const content = `
@@ -693,11 +696,20 @@ export async function sendPaymentSuccessEmail(data: {
     </p>
   `;
 
-  return sendEmail({
+  return {
+    from: FROM_EMAIL,
     to: data.to,
     subject: `Payment Confirmed - ${data.projectNumber} (${data.currency} ${data.amount})`,
     html: emailWrapper(content),
-  });
+    idempotencyKey: data.idempotencyKey,
+  };
+}
+
+export async function sendPaymentSuccessEmail(
+  data: Parameters<typeof buildPaymentSuccessEmail>[0],
+  dependencies: SendEmailDependencies = {},
+) {
+  return sendEmail(buildPaymentSuccessEmail(data), dependencies);
 }
 
 export async function sendProjectInvitationEmail(data: {

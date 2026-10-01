@@ -53,6 +53,50 @@ async function openPayment(page: Page, authenticated = false) {
 
 for (const authenticated of [false, true]) {
   const surface = authenticated ? 'authenticated' : 'public';
+  test(`${surface} stalled order creation restores checkout with a timeout message`, async ({ page }) => {
+    const endpoint = await setup(page, authenticated);
+    await page.clock.install();
+    await page.route(`**/.netlify/functions/${endpoint}/create-order`, () => {});
+    await openPayment(page, authenticated);
+    const request = page.waitForRequest(`**/.netlify/functions/${endpoint}/create-order`);
+    await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+    await request;
+    await expect(page.getByRole('button', { name: 'Preparing payment…', exact: true })).toBeDisabled();
+    await page.clock.fastForward(20_001);
+    await expect(page.getByRole('alert')).toHaveText('Payment service took too long to respond. Please try again.');
+    await expect(page.getByRole('button', { name: /Pay .*1[.,]00/ })).toBeEnabled();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test(`${surface} confirmation timeout retains proof and retries without another order`, async ({ page }) => {
+    const endpoint = await setup(page, authenticated);
+    await page.clock.install();
+    let orders = 0;
+    const proofs: object[] = [];
+    await page.route(`**/.netlify/functions/${endpoint}/create-order`, route => {
+      orders++;
+      return route.fulfill({ json: order });
+    });
+    await page.route(`**/.netlify/functions/${endpoint}/verify`, route => {
+      proofs.push(route.request().postDataJSON());
+      if (proofs.length > 1) return route.fulfill({ json: success });
+    });
+    await openPayment(page, authenticated);
+    await page.getByRole('button', { name: /Pay .*1[.,]00/ }).click();
+    await expect(page.getByRole('button', { name: 'Complete payment in Razorpay', exact: true })).toBeDisabled();
+    const request = page.waitForRequest(`**/.netlify/functions/${endpoint}/verify`);
+    await page.getByRole('button', { name: 'Complete test payment', exact: true }).click();
+    await request;
+    await expect(page.getByRole('button', { name: 'Confirming payment…', exact: true })).toBeDisabled();
+    await page.clock.fastForward(20_001);
+    await expect(page.getByRole('alert')).toContainText('without paying again');
+    await page.getByRole('button', { name: 'Retry payment confirmation', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /Payment Successful/ })).toBeVisible();
+    expect(orders).toBe(1);
+    expect(proofs).toHaveLength(2);
+    expect(proofs[1]).toEqual(proofs[0]);
+  });
+
   test(`${surface} checkout verifies provider proof and opens exactly the activated project`, async ({ page }) => {
     const endpoint = await setup(page, authenticated);
     await openPayment(page, authenticated);
