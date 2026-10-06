@@ -29,6 +29,6 @@ Preconditions: the owned baseline instance passes doctor; the browser is signed 
 ## Gotchas
 
 - Header and mobile links are duplicated in source; role queries exclude hidden entries. Scope to `header` or `footer` and assert the correct viewport.
-- The footer's prominent `Contact Us` button targets `#video-style-quiz`, while the footer navigation's `Contact` link targets `/contact`. Cover each intended path separately.
+- The footer's prominent `Contact Us` button targets `/#video-style-quiz`, while the footer navigation's `Contact` link targets `/contact`. Cover each intended path separately.
 - YouTube and Tawk are production external boundaries. Aborting them stabilizes local UI proof; it does not prove playback or chat delivery.
 - The portfolio count is grounded in `data/workVideos.ts` and the existing `e2e/public-work.spec.ts`; update the assertion when the catalog changes.

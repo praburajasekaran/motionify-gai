@@ -14,13 +14,13 @@ Read [features/README.md](features/README.md) first. It is the maintained verifi
 Run from the repository root. Node 22, npm, `rtk`, and the repository's locked dependencies are required:
 
 ```sh
-rtk npm ci --no-audit --no-fund
+rtk npm ci --legacy-peer-deps --no-audit --no-fund
 rtk npx --no-install playwright install chromium
 VERIFY_RUN=".scratch/verify-motionify/runs/$(rtk date +%Y%m%d-%H%M%S)-$$"
 rtk node .cursor/skills/verify-motionify/scripts/control.mjs launch "$VERIFY_RUN"
 ```
 
-Reuse an installed Chromium if present; do not download it again unnecessarily. If dependency installation fails, record the actual error and stop before driving. A previous Mac install can lack `@rollup/rollup-darwin-arm64`; use a clean install from the checked-in lockfile, never delete or rewrite that lockfile as a workaround.
+Reuse an installed Chromium if present; do not download it again unnecessarily. The current lockfile installs with `--legacy-peer-deps`; standard `npm ci` fails its peer-dependency consistency check. Keep the lockfile unchanged. If dependency installation fails, record the actual error and stop before driving. A previous Mac install can lack `@rollup/rollup-darwin-arm64`; use a clean install from the checked-in lockfile, never delete or rewrite that lockfile as a workaround.
 
 The launch helper runs the documented `npm run build` with `--outDir <run>/runtime/dist --emptyOutDir`, then starts Vite's preview API, equivalent to `npm run preview -- --host 127.0.0.1 --port <allocated-port> --strictPort --outDir <run>/runtime/dist`. It sets `preview.proxy` to an empty map. Read the actual URL from the printed JSON or `<run>/instance.json`; do not assume 4173 or 5173. Readiness requires the owned process to serve the exact SHA-256 of this run's `index.html`. Build and server logs are retained in `<run>/evidence/`.
 
