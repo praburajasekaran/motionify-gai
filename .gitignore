@@ -31,3 +31,13 @@ graphify-out/
 # Git worktrees
 worktrees/
 .worktrees/
+
+# Verification instances and retained local proof
+.scratch/verify-motionify/
+
+# Keep the project verification skill even when local editor state is excluded
+!.cursor/
+.cursor/*
+!.cursor/skills/
+.cursor/skills/*
+!.cursor/skills/verify-motionify/
