@@ -114,7 +114,7 @@ export const handler = compose(
 
         return {
           statusCode: 200,
-          headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
+          headers: { ...headers, 'Cache-Control': 'private, no-store' },
           body: JSON.stringify(project),
         };
       }

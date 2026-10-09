@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { query as dbQuery } from './_shared/db';
+import { query as dbQuery, transaction } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
@@ -10,11 +10,14 @@ import {
   requireDeliverableAccess,
 } from './_shared/authorization';
 import { isAdminLike } from './_shared/roles';
+import { getDeliverableFileAccess } from './_shared/deliverable-file-access';
+import { requireDeliverableUpload } from './_shared/deliverable-upload';
 
 // Validation schema for creating a deliverable file
 const createFileSchema = z.object({
   deliverable_id: z.string().uuid(),
   file_key: z.string().min(1),
+  thumbnail_key: z.string().min(1).max(1000).optional(),
   file_name: z.string().min(1).max(255),
   file_size: z.number().optional(),
   mime_type: z.string().max(100).optional(),
@@ -46,7 +49,8 @@ export const handler = compose(
         };
       }
 
-      await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'deliverable-files.list' });
+      const deliverable = await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'deliverable-files.list' });
+      const access = await getDeliverableFileAccess(auth?.user, deliverable);
 
       // First validate user can access this deliverable
       const deliverableResult = await dbQuery(
@@ -70,7 +74,7 @@ export const handler = compose(
       // Fetch files for this deliverable
       const filesResult = await dbQuery(
         `SELECT id, deliverable_id, file_key, file_name, file_size, mime_type,
-                file_category, is_final, label, sort_order, uploaded_at, uploaded_by
+                file_category, is_final, label, sort_order, uploaded_at, uploaded_by, thumbnail_key
          FROM deliverable_files
          WHERE deliverable_id = $1
          ORDER BY sort_order, uploaded_at`,
@@ -80,20 +84,11 @@ export const handler = compose(
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(filesResult.rows),
+        body: JSON.stringify(filesResult.rows.filter(file => file.is_final ? access.final : access.beta)),
       };
     }
 
     if (event.httpMethod === 'POST') {
-      // Only admins and PMs can add files
-      if (!isAdminLike(userRole)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({ error: 'Only admins can add files to deliverables' }),
-        };
-      }
-
       let body;
       try {
         body = JSON.parse(event.body || '{}');
@@ -132,50 +127,63 @@ export const handler = compose(
           body: JSON.stringify({ error: 'Deliverable not found' }),
         };
       }
-      await requireDeliverableAccess(auth?.user, data.deliverable_id, { operation: 'deliverable-files.create' });
-      if (!data.file_key.startsWith(`projects/${deliverableResult.rows[0].project_id}/`)) {
+      return await transaction(async tx => {
+        await tx.query('SELECT id FROM projects WHERE id = $1 FOR SHARE', [deliverableResult.rows[0].project_id]);
+        await tx.query('SELECT id FROM deliverables WHERE id = $1 FOR UPDATE', [data.deliverable_id]);
+        await requireDeliverableUpload(auth?.user, data.deliverable_id, data.is_final, tx);
+        if (!isAdminLike(userRole) && !data.file_key.startsWith(`projects/${deliverableResult.rows[0].project_id}/deliverables/${data.deliverable_id}/beta/`)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'File key does not match the assigned deliverable' }) };
+        }
+        if (!data.file_key.startsWith(`projects/${deliverableResult.rows[0].project_id}/`)) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'File key does not match the authorized deliverable project' }),
+          };
+        }
+
+        if (data.thumbnail_key && (!data.thumbnail_key.startsWith(`projects/${deliverableResult.rows[0].project_id}/deliverables/${data.deliverable_id}/${data.is_final ? 'final' : 'beta'}/`)
+            || data.thumbnail_key.includes('..'))) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'Thumbnail key does not match this deliverable' }) };
+        }
+
+        // Get current max sort_order
+        const sortResult = await tx.query(
+          `SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order
+           FROM deliverable_files WHERE deliverable_id = $1`,
+          [data.deliverable_id]
+        );
+        const nextOrder = sortResult.rows[0].next_order;
+
+        // Insert the file
+        const fileId = randomUUID();
+        const result = await tx.query(
+          `INSERT INTO deliverable_files
+           (id, deliverable_id, file_key, file_name, file_size, mime_type, file_category, is_final, label, sort_order, uploaded_by, thumbnail_key)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           RETURNING *`,
+          [
+            fileId,
+            data.deliverable_id,
+            data.file_key,
+            data.file_name,
+            data.file_size || null,
+            data.mime_type || null,
+            data.file_category,
+            data.is_final,
+            data.label || null,
+            nextOrder,
+            userId,
+            data.thumbnail_key || null,
+          ]
+        );
+
         return {
-          statusCode: 400,
+          statusCode: 201,
           headers,
-          body: JSON.stringify({ error: 'File key does not match the authorized deliverable project' }),
+          body: JSON.stringify(result.rows[0]),
         };
-      }
-
-      // Get current max sort_order
-      const sortResult = await dbQuery(
-        `SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order
-         FROM deliverable_files WHERE deliverable_id = $1`,
-        [data.deliverable_id]
-      );
-      const nextOrder = sortResult.rows[0].next_order;
-
-      // Insert the file
-      const fileId = randomUUID();
-      const result = await dbQuery(
-        `INSERT INTO deliverable_files
-         (id, deliverable_id, file_key, file_name, file_size, mime_type, file_category, is_final, label, sort_order, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING *`,
-        [
-          fileId,
-          data.deliverable_id,
-          data.file_key,
-          data.file_name,
-          data.file_size || null,
-          data.mime_type || null,
-          data.file_category,
-          data.is_final,
-          data.label || null,
-          nextOrder,
-          userId,
-        ]
-      );
-
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify(result.rows[0]),
-      };
+      });
     }
 
     if (event.httpMethod === 'DELETE') {
@@ -234,6 +242,9 @@ export const handler = compose(
     };
 
   } catch (error) {
+    if ((error as { code?: string })?.code === '23503') {
+      return { statusCode: 409, headers, body: JSON.stringify({ error: 'This file has review feedback and must be retained for its review history.' }) };
+    }
     if (error instanceof AuthorizationError) {
       return createAuthorizationResponse(error, origin);
     }

@@ -76,6 +76,7 @@ export const handler = compose(
            rr.project_id,
            rr.requested_by,
            rr.feedback_text,
+           rr.reviewed_file_id,
            rr.timestamped_comments,
            rr.issue_categories,
            rr.status,
@@ -129,7 +130,7 @@ export const handler = compose(
       const validation = validateRequest(event.body, SCHEMAS.revisionRequest.create, origin);
       if (!validation.success) return validation.response;
 
-      const { deliverableId, feedbackText, timestampedComments, issueCategories, attachments } = validation.data;
+      const { deliverableId, reviewedFileId, reviewedLatestFileId, feedbackText, timestampedComments, issueCategories, attachments } = validation.data;
       const userId = auth?.user?.userId;
       const userRole = getAuthRole(auth?.user);
 
@@ -163,73 +164,72 @@ export const handler = compose(
         };
       }
 
-      // Validate status
-      if (deliverable.status !== 'awaiting_approval') {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'Invalid deliverable status',
-            message: `Cannot request revision: deliverable is "${deliverable.status}", expected "awaiting_approval"`,
-          }),
-        };
-      }
-
       await requireClientPrimaryContact(auth?.user, deliverable.project_id, { operation: 'revision-requests.create' });
-
-      if (!deliverable.terms_accepted_at) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Terms not accepted',
-            message: 'Project terms must be accepted before requesting revisions',
-          }),
-        };
-      }
-
-      if (['on_hold', 'archived', 'cancelled'].includes(deliverable.project_status)) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            error: 'Project is not active',
-            message: `Cannot request revisions while project status is "${deliverable.project_status}"`,
-          }),
-        };
-      }
-
-      // Check revision quota
-      if (deliverable.revisions_used >= deliverable.total_revisions_allowed) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            error: 'Revision quota exceeded',
-            message: `You have used all ${deliverable.total_revisions_allowed} revisions. Contact support to request additional revisions.`,
-            code: 'QUOTA_EXCEEDED',
-          }),
-        };
-      }
 
       const projectUrl = absolutePortalProjectUrl(deliverable.project_id, { tab: 'deliverables' }, appOriginFromEnv(process.env));
       const userName = auth?.user?.fullName || auth?.user?.email || 'Client';
 
-      // Execute all DB writes in a transaction
-      const { revisionRequestId, revisionCreatedAt, adminsRows } = await transaction(async (txClient) => {
-        // 1. Create revision request
+      const outcome = await transaction(async (txClient) => {
+        const projectResult = await txClient.query(
+          'SELECT * FROM projects WHERE id = $1 FOR UPDATE', [deliverable.project_id]
+        );
+        const currentResult = await txClient.query(
+          'SELECT status FROM deliverables WHERE id = $1 FOR UPDATE', [deliverableId]
+        );
+        const project = projectResult.rows[0];
+        const current = currentResult.rows[0];
+        if (!project || !current) return { conflict: { statusCode: 404, body: { error: 'Deliverable not found' } } };
+        await requireClientPrimaryContact(auth?.user, deliverable.project_id, {
+          operation: 'revision-requests.create', runner: txClient,
+        });
+        if (current.status !== 'awaiting_approval') {
+          return { conflict: { statusCode: 400, body: {
+            error: 'Invalid deliverable status',
+            message: `Cannot request revision: deliverable is "${current.status}", expected "awaiting_approval"`,
+          } } };
+        }
+        const betaFiles = await txClient.query(
+          'SELECT id FROM deliverable_files WHERE deliverable_id = $1 AND is_final = false ORDER BY uploaded_at DESC, id DESC', [deliverableId]
+        );
+        const latestFile = betaFiles.rows[0]?.id;
+        if ((latestFile && (!reviewedFileId || reviewedLatestFileId !== latestFile)) ||
+            (reviewedFileId && !betaFiles.rows.some(file => file.id === reviewedFileId))) {
+          return { conflict: { statusCode: 409, body: {
+            error: 'The reviewed files have changed. Reload the deliverable before requesting a revision.', code: 'STALE_REVIEW',
+          } } };
+        }
+        if (!project.terms_accepted_at) {
+          return { conflict: { statusCode: 403, body: {
+            error: 'Terms not accepted', message: 'Project terms must be accepted before requesting revisions',
+          } } };
+        }
+        if (['on_hold', 'archived', 'cancelled'].includes(project.status)) {
+          return { conflict: { statusCode: 403, body: {
+            error: 'Project is not active', message: `Cannot request revisions while project status is "${project.status}"`,
+          } } };
+        }
+        if (project.revisions_used >= project.total_revisions_allowed) {
+          return { conflict: { statusCode: 400, body: {
+            error: 'Revision quota exceeded',
+            message: `You have used all ${project.total_revisions_allowed} revisions. Contact support to request additional revisions.`,
+            code: 'QUOTA_EXCEEDED',
+          } } };
+        }
         const revisionResult = await txClient.query(
           `INSERT INTO revision_requests
-             (deliverable_id, project_id, requested_by, feedback_text, timestamped_comments, issue_categories, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+             (deliverable_id, project_id, requested_by, feedback_text, timestamped_comments, issue_categories, reviewed_file_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
            RETURNING id, created_at`,
           [
             deliverableId,
             deliverable.project_id,
             userId,
             feedbackText,
-            timestampedComments ? JSON.stringify(timestampedComments) : null,
+            timestampedComments ? JSON.stringify(timestampedComments.map(comment => ({
+              ...comment, userId, userName, resolved: false, createdAt: new Date().toISOString(),
+            }))) : null,
             issueCategories || null,
+            reviewedFileId || null,
           ]
         );
 
@@ -294,8 +294,15 @@ export const handler = compose(
           revisionRequestId,
           revisionCreatedAt: revisionResult.rows[0].created_at,
           adminsRows: adminsResult.rows,
+          revisionsUsed: project.revisions_used + 1,
+          revisionsAllowed: project.total_revisions_allowed,
         };
       });
+
+      if ('conflict' in outcome) {
+        return { statusCode: outcome.conflict.statusCode, headers, body: JSON.stringify(outcome.conflict.body) };
+      }
+      const { revisionRequestId, revisionCreatedAt, adminsRows, revisionsUsed, revisionsAllowed } = outcome;
 
       // 6. Send email notification to admins (outside transaction)
       const emailResults: EmailDeliveryResult[] = [];
@@ -330,7 +337,7 @@ export const handler = compose(
                   </div>
 
                   <p style="color: #6b7280; font-size: 14px;">
-                    Revision ${deliverable.revisions_used + 1} of ${deliverable.total_revisions_allowed} used.
+                    Revision ${revisionsUsed} of ${revisionsAllowed} used.
                   </p>
                 </div>
               `,
@@ -358,8 +365,8 @@ export const handler = compose(
           deliverableId,
           status: 'pending',
           createdAt: revisionCreatedAt,
-          revisionsUsed: deliverable.revisions_used + 1,
-          revisionsAllowed: deliverable.total_revisions_allowed,
+          revisionsUsed,
+          revisionsAllowed,
           ...(emailDelivery ? { emailDelivery } : {}),
         }),
       };

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { bootstrapDatabase } from '../database/bootstrap';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 
@@ -11,18 +11,7 @@ export function paymentTestPool() {
 }
 
 export async function initializePaymentDatabase(pool: pg.Pool) {
-  for (const file of [
-    'database/schema.sql',
-    'database/migrations/009_payment_webhook_logs.sql',
-    'database/migrations/012_create_project_team_tables.sql',
-    'database/migrations/016_rename_project_manager_to_support.sql',
-    'database/migrations/024_create_proposal_review_tokens.sql',
-  ]) {
-    const sql = (await readFile(file, 'utf8')).replace(/CREATE INDEX (?!IF NOT EXISTS)/g, 'CREATE INDEX IF NOT EXISTS ');
-    await pool.query(sql);
-  }
-  const receipts = await readFile('database/migrations/030_payment_receipts.sql', 'utf8');
-  await pool.query(receipts.split('-- DOWN')[0].replace('-- UP', ''));
+  await bootstrapDatabase(pool);
 }
 
 export async function seedPaymentProposal(pool: pg.Pool) {
@@ -49,4 +38,30 @@ export async function seedPendingPayment(pool: pg.Pool) {
   const { rows } = await pool.query(`INSERT INTO payments (proposal_id, payment_type, amount, currency, razorpay_order_id)
     VALUES ($1, 'advance', 100, 'INR', $2) RETURNING id`, [proposal.proposalId, orderId]);
   return { ...proposal, paymentId: rows[0].id as string, orderId };
+}
+
+export async function seedBalancePayment(pool: pg.Pool) {
+  const advance = await seedPendingPayment(pool);
+  const { acceptProposalAndCreateProject } = await import('../netlify/functions/_shared/proposal-payment-helpers');
+  const client = await pool.connect();
+  let projectId: string;
+  try {
+    await client.query('BEGIN');
+    await client.query(`UPDATE payments SET status = 'completed', paid_at = NOW(), razorpay_payment_id = $2
+      WHERE id = $1`, [advance.paymentId, `pay_${advance.orderId}`]);
+    const activation = await acceptProposalAndCreateProject(client, advance.paymentId);
+    assert(activation.projectId);
+    projectId = activation.projectId;
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+  const orderId = `order_test_${randomUUID().replaceAll('-', '')}`;
+  const { rows } = await pool.query(`INSERT INTO payments
+    (proposal_id, payment_type, amount, currency, razorpay_order_id)
+    VALUES ($1, 'balance', 100, 'INR', $2) RETURNING id`, [advance.proposalId, orderId]);
+  return { ...advance, advancePaymentId: advance.paymentId, projectId, paymentId: rows[0].id as string, orderId };
 }

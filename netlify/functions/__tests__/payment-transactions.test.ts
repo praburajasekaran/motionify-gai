@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { before, after, test } from 'node:test';
 import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { initializePaymentDatabase, paymentTestPool, seedPendingPayment } from '../../../scripts/payment-fixture';
+import { initializePaymentDatabase, paymentTestPool, seedPendingPayment, seedBalancePayment } from '../../../scripts/payment-fixture';
 import { closePool } from '../_shared/db';
 import { verifyRazorpayCheckoutSignature } from '../_shared/payment-verification';
 import { createRazorpayWebhookHandler } from '../razorpay-webhook';
@@ -10,7 +10,7 @@ import { createPaymentReceiptDelivery } from '../_shared/payment-receipts';
 import { sendEmail, type EmailSenderClient } from '../send-email';
 import { handler as handoff } from '../payment-handoff';
 import { handler as publicProposal } from '../public-proposal';
-import { handler as authenticatedPayments } from '../payments';
+import { handler as authenticatedPayments, createPaymentsHandler } from '../payments';
 import { handler as authMe } from '../auth-me';
 import { deactivateUserAccount } from '../users-delete';
 import { generateJWT, hashJWT } from '../_shared/jwt';
@@ -22,15 +22,6 @@ const webhook = createRazorpayWebhookHandler({
 });
 before(async () => {
   await initializePaymentDatabase(pool);
-  await pool.query(`CREATE TABLE IF NOT EXISTS magic_link_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL,
-    token TEXT UNIQUE NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    remember_me BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    used_at TIMESTAMPTZ
-  )`);
 });
 after(async () => { await closePool(); await pool.end(); });
 
@@ -477,4 +468,182 @@ test('migration excludes historical webhook receipts but preserves browser-first
   assert.equal((await runWebhook(webhookEvent(browserFirst.orderId), handler)).status, 200);
   assert.equal(provider.requests(), 1);
   assert.equal(provider.messages.size, 1);
+});
+
+test('balance capture links the existing project and sends its first receipt', async () => {
+  const payment = await seedBalancePayment(pool);
+  const before = await pool.query(`SELECT p.accepted_at, pt.* FROM proposals p
+    JOIN project_team pt ON pt.project_id = $2 WHERE p.id = $1 ORDER BY pt.user_id`, [payment.proposalId, payment.projectId]);
+  const result = await runWebhook(webhookEvent(payment.orderId));
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.processed, true);
+  const state = await pool.query(`SELECT p.status, p.amount, p.currency, p.project_id,
+    (SELECT count(*)::int FROM projects WHERE proposal_id = p.proposal_id) AS project_count,
+    (SELECT count(*)::int FROM payment_receipts WHERE payment_id = p.id AND status = 'sent') AS receipt_count
+    FROM payments p WHERE p.id = $1`, [payment.paymentId]);
+  assert.deepEqual(state.rows[0], { status: 'completed', amount: '100', currency: 'INR',
+    project_id: payment.projectId, project_count: 1, receipt_count: 1 });
+  const after = await pool.query(`SELECT p.accepted_at, pt.* FROM proposals p
+    JOIN project_team pt ON pt.project_id = $2 WHERE p.id = $1 ORDER BY pt.user_id`, [payment.proposalId, payment.projectId]);
+  assert.deepEqual(after.rows, before.rows);
+  assert.equal((await pool.query('SELECT status FROM payments WHERE id = $1', [payment.advancePaymentId])).rows[0].status, 'completed');
+});
+
+test('balance browser confirmation returns the existing project and replay keeps one receipt', async () => {
+  const payment = await seedBalancePayment(pool);
+  const cookie = await authenticatedCookie(payment.userId, payment.email);
+  const providerPaymentId = `pay_${payment.orderId}`;
+  const event = { httpMethod: 'POST', path: '/.netlify/functions/payments/verify',
+    headers: { cookie, 'x-requested-with': 'fetch' }, body: JSON.stringify({ paymentId: payment.paymentId,
+      razorpayOrderId: payment.orderId, razorpayPaymentId: providerPaymentId,
+      razorpaySignature: crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+        .update(`${payment.orderId}|${providerPaymentId}`).digest('hex') }) };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await authenticatedPayments(event);
+    assert.equal(response.statusCode, 200, response.body);
+    assert.deepEqual(JSON.parse(response.body).activation, { projectId: payment.projectId, created: false, activated: false });
+  }
+  const provider = receiptProvider();
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  const events = [webhookEvent(payment.orderId), webhookEvent(payment.orderId, { event: 'order.paid' })];
+  assert.deepEqual((await Promise.all(events.map(event => runWebhook(event, handler)))).map(r => r.status), [200, 200]);
+  await Promise.all(events.map(event => runWebhook(event, handler)));
+  assert.equal(provider.requests(), 1);
+  assert.equal(provider.messages.size, 1);
+});
+
+async function balanceOrderRequest(payment: Awaited<ReturnType<typeof seedPendingPayment>>) {
+  const cookie = await authenticatedCookie(payment.userId, payment.email);
+  return { httpMethod: 'POST', path: '/.netlify/functions/payments/create-order',
+    headers: { cookie, 'x-requested-with': 'fetch' },
+    body: JSON.stringify({ proposalId: payment.proposalId, paymentType: 'balance' }) };
+}
+
+test('balance order creation requires a paid project before contacting the provider', async () => {
+  const payment = await seedPendingPayment(pool);
+  let calls = 0;
+  const handler = createPaymentsHandler({ createOrder: async () => { calls++; return { id: 'order_ineligible' }; } });
+  const response = await handler(await balanceOrderRequest(payment));
+  assert.equal(response.statusCode, 409, response.body);
+  assert.equal(calls, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM payments WHERE proposal_id = $1 AND payment_type = 'balance'",
+    [payment.proposalId])).rows[0].count, 0);
+});
+
+test('concurrent balance orders reuse one project-linked order in exact minor units', async () => {
+  const payment = await seedBalancePayment(pool);
+  await pool.query('DELETE FROM payments WHERE id = $1', [payment.paymentId]);
+  await pool.query('UPDATE proposals SET balance_amount = 175, total_price = 275 WHERE id = $1', [payment.proposalId]);
+  const orders: object[] = [];
+  const handler = createPaymentsHandler({ createOrder: async order => { orders.push(order); return { id: `order_${crypto.randomUUID()}` }; } });
+  const event = await balanceOrderRequest(payment);
+  const responses = await Promise.all([handler(event), handler(event)]);
+  assert.deepEqual(responses.map(r => r.statusCode).sort(), [200, 201]);
+  assert.equal(orders.length, 1);
+  assert.equal((orders[0] as { amount: number }).amount, 175);
+  assert.equal((orders[0] as { currency: string }).currency, 'INR');
+  const payloads = responses.map(r => JSON.parse(r.body));
+  assert.equal(payloads[0].id, payloads[1].id);
+  assert.equal(payloads[0].project_id, payment.projectId);
+  assert.equal(payloads[0].amount, 175);
+  assert.equal(payloads[0].currency, 'INR');
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM payments WHERE proposal_id = $1 AND payment_type = 'balance'",
+    [payment.proposalId])).rows[0].count, 1);
+});
+
+test('failed balance permits a new legitimate order but completed balance prevents another charge', async () => {
+  const payment = await seedBalancePayment(pool);
+  assert.equal((await runWebhook(webhookEvent(payment.orderId, { event: 'payment.failed' }))).status, 200);
+  assert.equal((await pool.query('SELECT status FROM payments WHERE id = $1', [payment.paymentId])).rows[0].status, 'failed');
+  assert.equal((await pool.query('SELECT count(*)::int AS count FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0].count, 0);
+  let calls = 0;
+  const orderId = `order_${crypto.randomUUID()}`;
+  const handler = createPaymentsHandler({ createOrder: async () => { calls++; return { id: orderId }; } });
+  const event = await balanceOrderRequest(payment);
+  const order = await handler(event);
+  assert.equal(order.statusCode, 201, order.body);
+  assert.notEqual(JSON.parse(order.body).id, payment.paymentId);
+  assert.equal((await runWebhook(webhookEvent(orderId))).status, 200);
+  assert.equal((await handler(event)).statusCode, 409);
+  assert.equal(calls, 1);
+  assert.equal((await pool.query('SELECT count(*)::int AS count FROM projects WHERE proposal_id = $1', [payment.proposalId])).rows[0].count, 1);
+});
+
+test('balance capture rejects amount and currency mismatches without a receipt', async () => {
+  const payment = await seedBalancePayment(pool);
+  for (const invalid of [{ amount: 101 }, { currency: 'USD' }]) {
+    const result = await runWebhook(webhookEvent(payment.orderId, invalid));
+    assert.equal(result.body.processed, false);
+    assert.deepEqual((await pool.query('SELECT status, project_id FROM payments WHERE id = $1', [payment.paymentId])).rows[0],
+      { status: 'pending', project_id: null });
+  }
+  assert.equal((await pool.query('SELECT count(*)::int AS count FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0].count, 0);
+});
+
+test('balance verification denies unrelated clients, invalid signatures, and provider identity changes', async () => {
+  const payment = await seedBalancePayment(pool);
+  const unrelated = await seedPendingPayment(pool);
+  const cookie = await authenticatedCookie(payment.userId, payment.email);
+  const proof = { paymentId: payment.paymentId, razorpayOrderId: payment.orderId,
+    razorpayPaymentId: `pay_${payment.orderId}`, razorpaySignature: '0'.repeat(64) };
+  const verify = (body = proof, actorCookie = cookie) => authenticatedPayments({ httpMethod: 'POST',
+    path: '/.netlify/functions/payments/verify', headers: { cookie: actorCookie, 'x-requested-with': 'fetch' }, body: JSON.stringify(body) });
+  assert.equal((await verify()).statusCode, 400);
+  assert.equal((await verify(proof, await authenticatedCookie(unrelated.userId, unrelated.email))).statusCode, 403);
+  assert.equal((await pool.query('SELECT status FROM payments WHERE id = $1', [payment.paymentId])).rows[0].status, 'pending');
+  assert.equal((await runWebhook(webhookEvent(payment.orderId))).status, 200);
+  const changed = { ...proof, razorpayPaymentId: 'pay_different' };
+  changed.razorpaySignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+    .update(`${payment.orderId}|${changed.razorpayPaymentId}`).digest('hex');
+  assert.equal((await verify(changed)).statusCode, 409);
+  await runWebhook(webhookEvent(payment.orderId, { event: 'payment.failed' }));
+  assert.equal((await pool.query('SELECT status, razorpay_payment_id FROM payments WHERE id = $1', [payment.paymentId])).rows[0].razorpay_payment_id,
+    proof.razorpayPaymentId);
+  assert.equal((await pool.query('SELECT status FROM payments WHERE id = $1', [payment.paymentId])).rows[0].status, 'completed');
+});
+
+test('balance receipt survives provider and persistence failures with the same payload and key', async () => {
+  const payment = await seedBalancePayment(pool);
+  const provider = receiptProvider();
+  let failures = 1;
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt: createPaymentReceiptDelivery(data => {
+    if (failures-- > 0) return Promise.resolve({ status: 'failed', code: 'TEMPORARY', retryable: true });
+    return sendEmail(data, { client: provider.client });
+  }) });
+  const event = webhookEvent(payment.orderId);
+  assert.equal((await runWebhook(event, handler)).status, 503);
+  const receipt = (await pool.query('SELECT payload, status FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0];
+  assert.equal(receipt.status, 'pending');
+  assert.equal(receipt.payload.idempotencyKey, `payment-receipt/${payment.paymentId}`);
+  await pool.query(`CREATE FUNCTION reject_balance_receipt() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'Simulated receipt persistence failure'; END $$`);
+  await pool.query('CREATE TRIGGER reject_balance_receipt BEFORE UPDATE ON payment_receipts FOR EACH ROW EXECUTE FUNCTION reject_balance_receipt()');
+  try { assert.equal((await runWebhook(event, handler)).status, 503); }
+  finally {
+    await pool.query('DROP TRIGGER reject_balance_receipt ON payment_receipts');
+    await pool.query('DROP FUNCTION reject_balance_receipt()');
+  }
+  assert.equal((await runWebhook(event, handler)).status, 200);
+  assert.equal(provider.requests(), 2);
+  assert.equal(provider.messages.size, 1);
+  const after = (await pool.query('SELECT payload, status FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0];
+  assert.equal(after.status, 'sent');
+  assert.deepEqual(after.payload, receipt.payload);
+  assert.deepEqual((await pool.query('SELECT status, project_id FROM payments WHERE id = $1', [payment.paymentId])).rows[0],
+    { status: 'completed', project_id: payment.projectId });
+});
+
+test('expired balance receipts require reconciliation without contacting the email provider', async () => {
+  const payment = await seedBalancePayment(pool);
+  const event = webhookEvent(payment.orderId);
+  const interrupted = createRazorpayWebhookHandler({ deliverPaymentReceipt: async () => { throw new Error('Interrupted'); } });
+  assert.equal((await runWebhook(event, interrupted)).status, 503);
+  await pool.query("UPDATE payment_receipts SET created_at = NOW() - INTERVAL '24 hours' WHERE payment_id = $1", [payment.paymentId]);
+  const provider = receiptProvider();
+  const handler = createRazorpayWebhookHandler({ deliverPaymentReceipt:
+    createPaymentReceiptDelivery(data => sendEmail(data, { client: provider.client })) });
+  assert.equal((await runWebhook(event, handler)).status, 503);
+  assert.equal(provider.requests(), 0);
+  assert.equal((await pool.query('SELECT status FROM payment_receipts WHERE payment_id = $1', [payment.paymentId])).rows[0].status, 'pending');
 });

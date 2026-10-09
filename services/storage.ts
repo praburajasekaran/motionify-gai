@@ -28,7 +28,8 @@ export const storageService = {
         folder: 'beta' | 'final' | 'misc' = 'misc',
         onProgress?: (progress: number) => void,
         customKey?: string,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        deliverableId?: string
     ): Promise<string> {
         try {
             // 1. Get presigned URL
@@ -39,6 +40,7 @@ export const storageService = {
                 projectId,
                 folder,
                 customKey,
+                deliverableId,
             };
             console.log('[Storage] Presign request:', requestBody);
 

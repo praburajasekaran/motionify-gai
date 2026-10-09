@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { ShieldCheck, AlertTriangle, CheckCircle2, FileText, ChevronRight, Loader2 } from 'lucide-react';
-import { Card, CardContent, Button, Separator } from '../ui/design-system';
+import { Card, CardContent, Button } from '../ui/design-system';
 import { Project } from '../../types';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { isClientPrimaryContact } from '../../utils/deliverablePermissions';
 import { useToast } from '../ui/design-system';
+import { formatDateTime } from '../../utils/dateFormatting';
 
 interface TermsBannerProps {
     project: Project;
-    onTermsAccepted: () => void;
+    onTermsAccepted: (acceptance: Pick<Project, 'termsAcceptedAt' | 'termsAcceptedBy'>) => void;
 }
 
 export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccepted }) => {
@@ -17,9 +18,22 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
     const [isAccepting, setIsAccepting] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // If already accepted, return null (or could show a small "Terms Accepted" badge if desired, but spec says banner disappears)
     if (project.termsAcceptedAt) {
-        return null;
+        const acceptedBy = project.team.find(member => member.id === project.termsAcceptedBy);
+        return (
+            <Card role="status" className="border-emerald-200 bg-emerald-50/50 shadow-sm mb-6">
+                <CardContent className="p-4 flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-emerald-900">Terms accepted</h3>
+                        <p className="text-sm text-emerald-800">
+                            {acceptedBy ? `Accepted by ${acceptedBy.name} on ` : 'Accepted on '}
+                            <time dateTime={project.termsAcceptedAt}>{formatDateTime(project.termsAcceptedAt)}</time>
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
     }
 
     // Check if user is the primary contact
@@ -51,8 +65,8 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                 throw new Error(errorData?.message || errorData?.error || 'Failed to accept terms');
             }
 
-            // Trigger callback to update parent state
-            onTermsAccepted();
+            const acceptance: Pick<Project, 'termsAcceptedAt' | 'termsAcceptedBy'> = await response.json();
+            onTermsAccepted(acceptance);
 
             addToast({
                 title: "Terms Accepted",

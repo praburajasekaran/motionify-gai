@@ -114,6 +114,11 @@ export const ApprovalTimeline: React.FC<ApprovalTimelineProps> = ({
 
             {/* Body */}
             <div className="p-4 space-y-4">
+              {approval.action === 'rejected' && (
+                <p className="text-xs text-muted-foreground">
+                  Reviewed file: {approval.reviewedFileName || 'Unknown file version (legacy feedback)'}
+                </p>
+              )}
               {/* General Feedback */}
               {approval.feedback && (
                 <div className="space-y-2">

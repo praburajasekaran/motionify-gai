@@ -255,7 +255,6 @@ export const ProjectDetail = () => {
 
     const activeTab = getActiveTab();
     const activeTabIndex = TAB_INDEX_MAP[activeTab];
-    const [termsAccepted, setTermsAccepted] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{ open: boolean; taskId: string | null }>({ open: false, taskId: null });
@@ -339,11 +338,6 @@ export const ProjectDetail = () => {
     const invalidateTasks = () => {
         if (project?.id) queryClient.invalidateQueries({ queryKey: taskKeys.list(project.id) });
     };
-
-    // Sync termsAccepted from project data once it loads
-    useEffect(() => {
-        if (project?.termsAcceptedAt) setTermsAccepted(true);
-    }, [project?.termsAcceptedAt]);
 
     // Check if current user is Primary Contact for this project
     const isPrimaryContact = user && isClientPrimaryContact(user, project?.id || '');
@@ -705,19 +699,21 @@ export const ProjectDetail = () => {
         { name: 'Payments', icon: CreditCard, index: 7 },
     ];
 
-    // Handle terms acceptance - update local state to hide banner
-    const handleTermsAccepted = () => {
-        // In a real app using SWR/React Query, we'd invalidate the query.
-        // For mock setup, we use local state to immediately hide the banner
-        setTermsAccepted(true);
+    const handleTermsAccepted = (acceptance: Pick<Project, 'termsAcceptedAt' | 'termsAcceptedBy'>) => {
+        queryClient.setQueryData<Project | null>(['project', id], previous => previous ? {
+            ...previous,
+            termsAcceptedAt: acceptance.termsAcceptedAt,
+            termsAcceptedBy: acceptance.termsAcceptedBy ?? previous.termsAcceptedBy,
+        } : previous);
+        queryClient.invalidateQueries({ queryKey: ['project', id] });
+        invalidateActivities(project.id);
     };
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-16">
             <ProjectSectionHeader />
 
-            {/* Terms Acceptance Banner - Shows if not accepted */}
-            {!termsAccepted && <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />}
+            <TermsBanner project={project} onTermsAccepted={handleTermsAccepted} />
 
             <Tabs
                 value={activeTab}

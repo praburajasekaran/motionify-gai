@@ -79,7 +79,7 @@ async function notifyStatusChange(
       `SELECT
         p.id,
         p.inquiry_id,
-        p.client_user_id,
+        i.client_user_id,
         i.inquiry_number,
         i.contact_name as client_name,
         i.contact_email as client_email,
@@ -532,8 +532,8 @@ export const handler = compose(
           LEFT JOIN LATERAL (
             SELECT id, full_name, email
             FROM users
-            WHERE id = p.client_user_id OR LOWER(email) = LOWER(i.contact_email)
-            ORDER BY CASE WHEN id = p.client_user_id THEN 0 ELSE 1 END
+            WHERE id = i.client_user_id OR LOWER(email) = LOWER(i.contact_email)
+            ORDER BY CASE WHEN id = i.client_user_id THEN 0 ELSE 1 END
             LIMIT 1
           ) client_user ON TRUE
           WHERE p.status = 'accepted'
@@ -556,11 +556,10 @@ export const handler = compose(
           LEFT JOIN projects pr ON pr.proposal_id = p.id
           LEFT JOIN project_team pt
             ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
-          WHERE p.client_user_id = $1
-             OR i.client_user_id = $1
+          WHERE i.client_user_id = $1
              OR LOWER(i.contact_email) = LOWER($2)
              OR pr.client_user_id = $1
-             OR pt.user_id = $1
+             OR (pt.user_id = $1 AND pt.role IN ('team_member', 'support', 'super_admin'))
           ORDER BY p.created_at DESC
         `;
         params.push(auth!.user!.userId, auth!.user!.email);

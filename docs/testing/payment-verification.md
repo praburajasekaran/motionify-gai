@@ -34,7 +34,26 @@ Set `PAYMENT_TEST_EVIDENCE_FILE` to save the evidence as JSON. The evidence omit
 credentials, signatures, and contact details. This test does not exercise
 Razorpay's external webhook delivery or production funds.
 
-## Verified test receipt
+## Verify project balance payments
+
+Run `rtk proxy npx playwright test --config playwright.payment-readiness.config.ts` for the production frontend with real authenticated handlers and disposable PostgreSQL. The checkout provider and email provider are synthetic. This command checks desktop and mobile history, cancellation, declined attempts, concurrent successful events, confirmation retry, and real 20-second timeout recovery. It writes screenshots and persisted-state evidence under `.scratch/production-readiness/evidence/P03/`.
+
+Run `rtk proxy node --import tsx scripts/payment-sandbox.ts --perf` with `PAYMENT_PERF_OUTPUT` set to a JSON output path. Set `PAYMENT_CODE_ROOT` to an archived source root for a baseline comparison. Both sources use the same installed SDK and a synthetic SDK POST transport with a fixed 10 ms delay. The report measures warm handler processing and excludes initialization and external network latency.
+
+To prepare user-driven balance checkout, save only the two Razorpay Test Mode settings in an owner-only file. Set `PAYMENT_TEST_ENV_FILE` to its absolute path. The runner rejects live key IDs, extra settings, and group or world access before starting PostgreSQL.
+
+1. Run `rtk proxy node --import tsx scripts/payment-sandbox.ts --serve --balance --check-credentials`.
+2. Run `rtk npm run build -- --outDir dist-payment-readiness` with `VITE_API_URL=/api`.
+3. Run `rtk proxy node --import tsx scripts/payment-sandbox.ts --serve --balance` with `PAYMENT_TEST_EVIDENCE_FILE` set to an output path.
+4. Open `http://127.0.0.1:8903/__payment/login`.
+5. Open **Pay balance** and verify the ₹1.00 balance and Razorpay Test Mode.
+6. Complete checkout yourself with a Razorpay test instrument.
+7. Open `http://127.0.0.1:8903/__payment/provider-state` to inspect the provider capture, amount, currency, and application payment identity.
+8. Stop the server with Ctrl+C to save evidence before its disposable database is removed.
+
+The advance is synthetic fixture data. The new balance order uses Razorpay Test Mode. This local check does not establish hosted-preview behavior or external webhook delivery. It sends no receipt email. Synthetic webhook and proof endpoints are unavailable while this server uses real Test Mode credentials.
+
+## Verified advance test receipt
 
 On 2026-09-30, manual checkout captured 100 paise in INR through Razorpay test
 order `order_TiJ1fjj9y2Coef` and payment `pay_TiJ5B4zULPFlEd`. The provider API

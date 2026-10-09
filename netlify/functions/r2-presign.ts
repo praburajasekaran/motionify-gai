@@ -1,10 +1,14 @@
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from 'node:crypto';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
 import { SCHEMAS } from './_shared/schemas';
 import { getCorsHeaders } from "./_shared/cors";
 import { query as dbQuery } from './_shared/db';
 import { getR2Client, getR2Config } from './_shared/r2';
+import { getDeliverableFileAccess } from './_shared/deliverable-file-access';
+import { requireDeliverableUpload } from './_shared/deliverable-upload';
+import { isAdminLike } from './_shared/roles';
 import {
     AuthorizationError,
     createAuthorizationResponse,
@@ -46,17 +50,27 @@ export async function authorizeR2DownloadKey(
     dependencies: R2DownloadAuthorizationDependencies = defaultDownloadAuthorizationDependencies
 ): Promise<boolean> {
     const deliverableResult = await dependencies.query(`
-        SELECT d.id, d.project_id, d.status, p.client_user_id
+        SELECT d.*, p.client_user_id,
+            (d.final_file_key = $1 OR EXISTS (
+                SELECT 1 FROM deliverable_files df
+                WHERE df.deliverable_id = d.id AND (df.file_key = $1 OR df.thumbnail_key = $1) AND df.is_final = true
+            )) AS is_final
         FROM deliverables d
         JOIN projects p ON d.project_id = p.id
         WHERE d.beta_file_key = $1 OR d.final_file_key = $1
+           OR EXISTS (
+               SELECT 1 FROM deliverable_files df
+               WHERE df.deliverable_id = d.id AND (df.file_key = $1 OR df.thumbnail_key = $1)
+           )
     `, [key]);
 
     if (deliverableResult.rows.length > 0) {
-        await dependencies.requireDeliverable(user, deliverableResult.rows[0].id, {
+        const deliverable = deliverableResult.rows[0];
+        await dependencies.requireDeliverable(user, deliverable.id, {
             operation: 'r2.downloadDeliverable',
         });
-        return true;
+        const access = await getDeliverableFileAccess(user, deliverable, dependencies.query);
+        return deliverable.is_final ? access.final : access.beta;
     }
 
     const attachmentResult = await dependencies.query(`
@@ -192,7 +206,7 @@ export const handler = compose(
                 return validation.response;
             }
 
-            const { fileName, fileType, fileSize, commentId, projectId, folder, revisionRequestId } = validation.data as any;
+            const { fileName, fileType, fileSize, commentId, projectId, folder, revisionRequestId, deliverableId } = validation.data as any;
 
             // Generate secure key
             const timestamp = Date.now();
@@ -218,7 +232,19 @@ export const handler = compose(
                     operation: 'r2.uploadRevisionAttachment',
                 });
                 key = `revisions/${revisionRequestId}/${timestamp}-${sanitizedFileName}`;
+            } else if (deliverableId) {
+                if (!['beta', 'final'].includes(folder)) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'A deliverable upload requires beta or final folder' }) };
+                }
+                const deliverable = await requireDeliverableUpload(auth?.user, deliverableId, folder === 'final');
+                if (projectId !== deliverable.project_id) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Deliverable project does not match' }) };
+                }
+                key = `projects/${projectId}/deliverables/${deliverableId}/${folder}/${timestamp}-${randomUUID()}-${sanitizedFileName}`;
             } else if (projectId && folder) {
+                if (['beta', 'final'].includes(folder) && !isAdminLike(auth?.user?.role)) {
+                    throw new AuthorizationError(403, 'FORBIDDEN', 'Deliverable');
+                }
                 await requireProjectAccess(auth?.user, projectId, { operation: 'r2.uploadProjectFile' });
                 key = `projects/${projectId}/${folder}/${timestamp}-${sanitizedFileName}`;
             } else {
