@@ -23,6 +23,55 @@ test.beforeEach(async ({ browser, request }) => {
 });
 test.afterEach(async () => { for (const context of Object.values(contexts)) await context.close(); });
 
+for (const actor of ['primary', 'secondary'] as const) {
+  test(`fresh magic-link login restores ${actor} permissions without reload`, async ({ browser, request }) => {
+    const loginFixture = await (await request.post('/__readiness/fixture', { data: { magicLinkActor: actor } })).json();
+    const context = await browser.newContext({ baseURL: 'http://127.0.0.1:8901' });
+    try {
+      const page = await context.newPage();
+      const next = `/projects/${loginFixture.projectId}/4`;
+      await page.goto(`/portal/login?token=${encodeURIComponent(loginFixture.magicLink.token)}&email=${encodeURIComponent(loginFixture.magicLink.email)}&next=${encodeURIComponent(next)}`);
+      await expect(page.getByRole('heading', { name: 'Synthetic delivery project', exact: true })).toBeVisible();
+      if (actor === 'primary') {
+        await expect(page.getByRole('button', { name: 'Accept Terms & Start Project', exact: true })).toBeVisible();
+      } else {
+        await expect(page.getByText('Waiting for Primary Contact to accept', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Accept Terms & Start Project', exact: true })).toHaveCount(0);
+      }
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('terms summary uses the saved count for populated and empty projects', async () => {
+  for (const [actor, projectId, count] of [
+    ['primary', fixture.projectId, 1],
+    ['unrelated', fixture.otherProjectId, 0],
+  ] as const) {
+    const detail = await success(contexts[actor].request, 'GET', `projects/${projectId}`);
+    expect(detail.deliverables_count).toBe(count);
+    const page = await contexts[actor].newPage();
+    await page.goto(`/portal/projects/${projectId}`);
+    await page.getByRole('button', { name: 'View Summary', exact: true }).click();
+    await expect(page.getByText(`Production of ${count} deliverables`, { exact: true })).toBeVisible();
+  }
+});
+
+for (const [suffix, index, selected] of [
+  ['?tab=deliverables', 3, 'Deliverables'],
+  ['?tab=files', 4, 'Files'],
+  ['?tab=unknown', 1, 'Overview'],
+  ['/4?tab=deliverables', 4, 'Files'],
+] as const) {
+  test(`project query link ${suffix} selects ${selected}`, async () => {
+    const page = await contexts.primary.newPage();
+    await page.goto(`/portal/projects/${fixture.projectId}${suffix}`);
+    await expect(page.getByRole('tab', { name: selected, exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(new RegExp(`/portal/projects/${fixture.projectId}/${index}(?:\\?|$)`));
+  });
+}
+
 test('signed-out browser returns to login and protected direct requests return no private data', async ({ page, request }) => {
   for (const endpoint of [`projects/${fixture.projectId}`, `deliverable-files?deliverableId=${fixture.deliverableId}`,
     `comments?proposalId=${fixture.proposalId}`, `payments?projectId=${fixture.projectId}`]) {

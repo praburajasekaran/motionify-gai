@@ -105,7 +105,7 @@ try {
     fixturePool = readinessPool();
     await initializeReadinessDatabase(fixturePool);
     const fixture = await seedReadinessFixture(fixturePool);
-    const names = ['auth-me', 'projects', 'projects-accept-terms', 'tasks', 'deliverables', 'deliverable-files',
+    const names = ['auth-me', 'auth-verify-magic-link', 'projects', 'projects-accept-terms', 'tasks', 'deliverables', 'deliverable-files',
       'public-proposal', 'revision-requests', 'deliverable-feedback', 'r2-presign', 'activities', 'notifications', 'project-team', 'payments', 'users-settings', 'users-list',
       'proposals', 'inquiries', 'comments', 'project-invitations-create', 'invitations-list', 'invitations-revoke', 'users-update', 'users-delete'];
     const handlers: Record<string, Handler> = {};
@@ -125,6 +125,15 @@ try {
           if (request.method === 'POST') {
             let body = '';
             for await (const chunk of request) body += chunk;
+            const magicLinkActor = body && JSON.parse(body).magicLinkActor;
+            if (magicLinkActor === 'primary' || magicLinkActor === 'secondary') {
+              const actor = selectedFixture.actors[magicLinkActor];
+              const token = randomBytes(32).toString('hex');
+              await fixturePool!.query(`INSERT INTO magic_link_tokens (email, token, expires_at, remember_me)
+                VALUES ($1, $2, NOW() + INTERVAL '1 hour', false)`, [actor.email, token]);
+              response.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+              response.end(JSON.stringify({ ...selectedFixture, magicLink: { token, email: actor.email } })); return;
+            }
             if (body && JSON.parse(body).proposalReview === true) {
               const proposal = await seedPaymentProposal(fixturePool!);
               await fixturePool!.query("UPDATE proposals SET status = 'sent' WHERE id = $1", [proposal.proposalId]);

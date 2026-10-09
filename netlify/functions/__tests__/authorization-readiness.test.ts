@@ -27,7 +27,7 @@ import { handler as globalInvite } from '../invitations-create';
 import { handler as verifyLink } from '../auth-verify-magic-link';
 
 type Scenario = {
-  name: string; handler: Handler; method: string; endpoint: string;
+  name: string; handler: Handler | typeof verifyLink; method: string; endpoint: string;
   data?: Record<string, unknown>; query?: Record<string, string>;
   allowed: ReadinessActorName[]; success: number;
 };
@@ -73,7 +73,7 @@ after(async () => { await closePool(); await pool.end(); });
 async function request(scenario: Pick<Scenario, 'handler' | 'method' | 'endpoint' | 'data' | 'query'>, actor: ReadinessActor | null) {
   const result = await scenario.handler({ httpMethod: scenario.method, path: `/.netlify/functions/${scenario.endpoint}`,
     headers: { 'x-requested-with': 'fetch', ...(actor ? { cookie: `auth_token=${actor.token}` } : {}) },
-    body: scenario.data ? JSON.stringify(scenario.data) : null, queryStringParameters: scenario.query });
+    body: scenario.data ? JSON.stringify(scenario.data) : null, queryStringParameters: scenario.query ?? {} });
   return { status: result.statusCode, body: JSON.parse(result.body), headers: result.headers };
 }
 
@@ -105,6 +105,65 @@ function readScenarios(): Scenario[] {
   ];
   return scenarios.map(item => ({ ...item, method: 'GET', success: 200 }));
 }
+
+isolatedTest('magic-link verification returns authoritative active project memberships', async () => {
+  for (const name of ['primary', 'secondary'] as const) {
+    const actor = fixture.actors[name];
+    const token = randomUUID();
+    await pool.query(`INSERT INTO magic_link_tokens (email, token, expires_at)
+      VALUES ($1, $2, NOW() + INTERVAL '1 hour')`, [actor.email, token]);
+    const result = await request({ handler: verifyLink, method: 'POST', endpoint: 'auth-verify-magic-link',
+      data: { token, email: actor.email } }, null);
+    assert.equal(result.status, 200);
+    const memberships = result.body.data.user.projectTeamMemberships;
+    assert.deepEqual(Object.keys(memberships), [fixture.projectId]);
+    assert.equal(memberships[fixture.projectId].projectId, fixture.projectId);
+    assert.equal(memberships[fixture.projectId].isPrimaryContact, name === 'primary');
+    assert(!Number.isNaN(Date.parse(memberships[fixture.projectId].joinedAt)));
+  }
+});
+
+isolatedTest('magic-link verification excludes removed memberships', async () => {
+  const actor = fixture.actors.primary;
+  await pool.query('UPDATE project_team SET removed_at = NOW() WHERE user_id = $1', [actor.id]);
+  const token = randomUUID();
+  await pool.query(`INSERT INTO magic_link_tokens (email, token, expires_at)
+    VALUES ($1, $2, NOW() + INTERVAL '1 hour')`, [actor.email, token]);
+  const result = await request({ handler: verifyLink, method: 'POST', endpoint: 'auth-verify-magic-link',
+    data: { token, email: actor.email } }, null);
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.data.user.projectTeamMemberships, {});
+});
+
+isolatedTest('membership lookup failure rolls back magic-link consumption and session creation', async () => {
+  const actor = fixture.actors.primary;
+  const token = randomUUID();
+  await pool.query(`INSERT INTO magic_link_tokens (email, token, expires_at)
+    VALUES ($1, $2, NOW() + INTERVAL '1 hour')`, [actor.email, token]);
+  const before = (await pool.query('SELECT COUNT(*)::int AS count FROM sessions')).rows[0].count;
+  await pool.query('ALTER TABLE project_team RENAME TO project_team_unavailable');
+  try {
+    const result = await request({ handler: verifyLink, method: 'POST', endpoint: 'auth-verify-magic-link',
+      data: { token, email: actor.email } }, null);
+    assert.equal(result.status, 500);
+    assert.equal(result.headers['Set-Cookie'], undefined);
+    assert.equal((await pool.query('SELECT used_at FROM magic_link_tokens WHERE token = $1', [token])).rows[0].used_at, null);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM sessions')).rows[0].count, before);
+  } finally {
+    await pool.query('ALTER TABLE project_team_unavailable RENAME TO project_team');
+  }
+});
+
+isolatedTest('project detail returns saved deliverable counts including zero', async () => {
+  for (const [id, actor, count] of [
+    [fixture.projectId, fixture.actors.primary, 1],
+    [fixture.otherProjectId, fixture.actors.unrelated, 0],
+  ] as const) {
+    const result = await request({ handler: projects, method: 'GET', endpoint: `projects/${id}` }, actor);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.deliverables_count, count);
+  }
+});
 
 isolatedTest('allowed-role read matrix covers ten resource families through persisted sessions', async t => {
   for (const scenario of readScenarios()) for (const name of Object.keys(fixture.actors) as ReadinessActorName[]) {
