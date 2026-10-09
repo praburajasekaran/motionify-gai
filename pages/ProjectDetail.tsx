@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     Calendar, Users, FileVideo, MessageSquare, CheckSquare,
     Edit2, Clock, CheckCircle2, AlertTriangle, FileBox,
@@ -230,23 +230,25 @@ const RevisionBattery: React.FC<{ used: number; max: number }> = ({ used, max })
 
 export const ProjectDetail = () => {
     const { id, tab } = useParams<{ id: string; tab?: string }>();
+    const [searchParams] = useSearchParams();
+    const requestedTab = tab || searchParams.get('tab');
     const navigate = useNavigate();
     const { user } = useAuthContext();
 
     // Convert tab parameter: could be number (1,2,3) or name (overview, tasks)
     // Support both for backward compatibility during transition
     const getActiveTab = (): TabName => {
-        if (!tab) return 'overview'; // Default when no tab specified
+        if (!requestedTab) return 'overview';
 
         // Check if it's a numeric index
-        const numericTab = parseInt(tab);
+        const numericTab = parseInt(requestedTab);
         if (!isNaN(numericTab) && INDEX_TAB_MAP[numericTab as TabIndex]) {
             return INDEX_TAB_MAP[numericTab as TabIndex];
         }
 
         // Check if it's a tab name (backward compatibility)
-        if (Object.keys(TAB_INDEX_MAP).includes(tab)) {
-            return tab as TabName;
+        if (Object.keys(TAB_INDEX_MAP).includes(requestedTab)) {
+            return requestedTab as TabName;
         }
 
         // Invalid tab, default to overview
@@ -296,7 +298,7 @@ export const ProjectDetail = () => {
                 tasks: [],
                 deliverables: [],
                 files: [],
-                deliverablesCount: 0,
+                deliverablesCount: data.deliverables_count ?? 0,
                 revisionCount: data.revisions_used ?? 0,
                 maxRevisions: data.total_revisions_allowed ?? 2,
                 activityLog: [],
@@ -361,11 +363,9 @@ export const ProjectDetail = () => {
         });
     }, [activities, user?.id]);
 
-    // Handle invalid tab URLs and redirect to tab 1 if no tab specified
     useEffect(() => {
         if (!tab) {
-            // No tab specified, redirect to overview (index 1)
-            navigate(`/projects/${id}/1`, { replace: true });
+            navigate(`/projects/${id}/${activeTabIndex}`, { replace: true });
         } else {
             const numericTab = parseInt(tab);
             const isValidNumeric = !isNaN(numericTab) && INDEX_TAB_MAP[numericTab as TabIndex];
@@ -376,7 +376,7 @@ export const ProjectDetail = () => {
                 navigate(`/projects/${id}/1`, { replace: true });
             }
         }
-    }, [tab, id, navigate]);
+    }, [tab, id, activeTabIndex, navigate]);
 
     if (projectLoading) {
         return (

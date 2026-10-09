@@ -1,6 +1,7 @@
 import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult, type NetlifyResponse } from './_shared/middleware';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { query } from './_shared/db';
+import { readProjectMemberships } from './_shared/project-memberships';
 
 export const handler = compose(
     withCORS(['GET']),
@@ -23,43 +24,23 @@ export const handler = compose(
     }> = {};
 
     try {
-        const queries = [
+        const [profileResult, preferencesResult, memberships] = await Promise.all([
             query('SELECT email, full_name, role FROM users WHERE id = $1', [auth!.user!.userId]),
             query('SELECT timezone FROM user_preferences WHERE user_id = $1', [auth!.user!.userId]),
-            query(
-                `SELECT project_id, is_primary_contact, added_at
-                 FROM project_team
-                 WHERE user_id = $1 AND removed_at IS NULL`,
-                [auth!.user!.userId]
-            ),
-        ];
+            readProjectMemberships(auth!.user!.userId),
+        ]);
 
-        const results = await Promise.all(queries);
-
-        if (results[0].rows.length > 0) {
+        if (profileResult.rows.length > 0) {
             profile = {
-                email: results[0].rows[0].email,
-                role: results[0].rows[0].role,
-                name: results[0].rows[0].full_name,
+                email: profileResult.rows[0].email,
+                role: profileResult.rows[0].role,
+                name: profileResult.rows[0].full_name,
             };
         }
-        if (results[1].rows.length > 0) {
-            timezone = results[1].rows[0].timezone;
+        if (preferencesResult.rows.length > 0) {
+            timezone = preferencesResult.rows[0].timezone;
         }
-        projectTeamMemberships = Object.fromEntries(
-            (results[2]?.rows || []).map((row: any) => [
-                row.project_id,
-                {
-                    projectId: row.project_id,
-                    isPrimaryContact: row.is_primary_contact === true,
-                    ...(row.added_at && {
-                        joinedAt: row.added_at instanceof Date
-                            ? row.added_at.toISOString()
-                            : String(row.added_at),
-                    }),
-                },
-            ])
-        );
+        projectTeamMemberships = memberships;
         if (auth!.user!.role === 'client') {
             projectCount = Object.keys(projectTeamMemberships).length;
         }

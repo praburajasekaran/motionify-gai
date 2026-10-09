@@ -155,7 +155,7 @@ export const TermsBanner: React.FC<TermsBannerProps> = ({ project, onTermsAccept
                                     Scope of Work
                                 </h4>
                                 <ul className="space-y-2 text-sm text-muted-foreground pl-6 list-disc marker:text-amber-400">
-                                    <li>Production of {project.deliverables.length} deliverables</li>
+                                    <li>Production of {project.deliverablesCount} deliverables</li>
                                     <li>Includes {project.description}</li>
                                     <li>Timeline: {new Date(project.startDate).toLocaleDateString()} - {new Date(project.dueDate).toLocaleDateString()}</li>
                                 </ul>
