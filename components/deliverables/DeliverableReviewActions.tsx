@@ -26,6 +26,8 @@ import { Button, Textarea } from '../ui/design-system';
 import { FileUploadZone } from './FileUploadZone';
 import { RevisionSubmitConfirmation } from './RevisionSubmitConfirmation';
 import { useDeliverables } from './DeliverableContext';
+import { storageService } from '../../services/storage';
+import { toast } from 'sonner';
 import {
   Deliverable,
   DeliverableApproval,
@@ -84,6 +86,7 @@ export const DeliverableReviewActions: React.FC<DeliverableReviewActionsProps> =
 }) => {
   const { state, dispatch } = useDeliverables();
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { revisionFeedback } = state;
   const minCharacters = 20;
@@ -96,6 +99,25 @@ export const DeliverableReviewActions: React.FC<DeliverableReviewActionsProps> =
   const handleSubmitClick = () => {
     if (!isNotesValid) return;
     setShowConfirmation(true);
+  };
+
+  const handleFinalDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Final files could not be loaded');
+      const files: { file_key: string; is_final: boolean; uploaded_at: string }[] = await response.json();
+      const finalFile = files.filter(file => file.is_final).sort((a, b) =>
+        new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+      const key = finalFile?.file_key || deliverable.finalFileKey;
+      const url = key ? await storageService.getDownloadUrl(key) : deliverable.finalFileUrl;
+      if (!url) throw new Error('No final file is available');
+      window.open(url, '_blank');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Final download failed');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleConfirmSubmit = () => {
@@ -128,10 +150,11 @@ export const DeliverableReviewActions: React.FC<DeliverableReviewActionsProps> =
             variant="gradient"
             size="lg"
             className="w-full gap-2"
-            onClick={() => window.open(deliverable.finalFileUrl, '_blank')}
+            onClick={handleFinalDownload}
+            disabled={isDownloading}
           >
             <Download className="h-5 w-5" />
-            Download Final Files
+            {isDownloading ? 'Preparing Download...' : 'Download Final File'}
           </Button>
         ) : (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">

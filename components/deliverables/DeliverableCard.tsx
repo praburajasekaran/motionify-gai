@@ -141,34 +141,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     }
   };
 
-  // Load thumbnail if video
   React.useEffect(() => {
-    const loadThumbnail = async () => {
-      // Determine key: beta or final
-      const key = deliverable.finalFileKey || deliverable.betaFileKey;
-
-      if (deliverable.type === 'Video' && key) {
-        // Assume thumbnail convention: key-thumb.jpg
-        // e.g. .mp4 -> -thumb.jpg
-        const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-
-        try {
-          // If final, try public URL first (faster)
-          if (deliverable.status === 'final_delivered') {
-            setThumbnailUrl(storageService.getPublicUrl(thumbKey));
-          } else {
-            // For beta/private, get signed URL
-            const url = await storageService.getDownloadUrl(thumbKey);
-            if (url) setThumbnailUrl(url);
-          }
-        } catch (e) {
-          console.warn('Failed to load thumbnail', e);
-        }
-      }
-    };
-
-    loadThumbnail();
-  }, [deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, deliverable.type]);
+    let cancelled = false;
+    setThumbnailUrl(null);
+    if (deliverable.thumbnailKey) storageService.getDownloadUrl(deliverable.thumbnailKey)
+      .then(url => { if (!cancelled) setThumbnailUrl(url); })
+      .catch(error => console.warn('Failed to load thumbnail', error));
+    return () => { cancelled = true; };
+  }, [deliverable.thumbnailKey, deliverable.status]);
 
   const handleUploadClick = (type: 'beta' | 'final', e: React.MouseEvent) => {
     e.stopPropagation();
@@ -216,38 +196,33 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         folder,
         (progress) => setUploadProgress(progress),
         undefined,
-        controller.signal
+        controller.signal,
+        deliverable.id
       );
 
       console.log(`Uploaded ${uploadTypeRef.current} file:`, key);
 
-      // 3. If Video, Generate and Upload Thumbnail
+      let thumbnailKey: string | undefined;
       if (file.type.startsWith('video/')) {
         try {
-          console.log('Generating thumbnail...');
           const thumbnailFile = await generateThumbnail(file);
           if (thumbnailFile && !controller.signal.aborted) {
-            const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-            await storageService.uploadFile(
-              thumbnailFile,
-              deliverable.projectId,
-              folder,
-              undefined, // no progress tracking for thumb
-              thumbKey, // Force specific key to match video
-              controller.signal
-            );
-            console.log('Thumbnail uploaded:', thumbKey);
-
-            // Optimistically set thumbnail URL
-            setThumbnailUrl(URL.createObjectURL(thumbnailFile));
+            thumbnailKey = await storageService.uploadFile(thumbnailFile, deliverable.projectId, folder,
+              undefined, undefined, controller.signal, deliverable.id);
           }
-        } catch (thumbErr) {
-          console.error('Thumbnail generation failed:', thumbErr);
-          // Non-fatal error, proceed
-        }
+        } catch (error) { console.warn('Thumbnail generation failed', error); }
       }
 
       if (controller.signal.aborted) return;
+
+      const savedFile = await fetch('/api/deliverable-files', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ deliverable_id: deliverable.id, file_key: key, thumbnail_key: thumbnailKey,
+          file_name: file.name, file_size: file.size, mime_type: file.type,
+          file_category: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'document',
+          is_final: folder === 'final' }),
+      });
+      if (!savedFile.ok) throw new Error('Failed to save uploaded file');
 
       // Save key to database
       const updateData = uploadTypeRef.current === 'beta'
@@ -294,14 +269,6 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
         : deliverable.betaFileKey;
 
       if (key) {
-        // Use CDN Public URL for final delivered files
-        if (deliverable.status === 'final_delivered') {
-          const url = storageService.getPublicUrl(key);
-          window.open(url, '_blank');
-          return;
-        }
-
-        // Use Presigned URL for private/beta files
         const url = await storageService.getDownloadUrl(key);
         window.open(url, '_blank');
         return;

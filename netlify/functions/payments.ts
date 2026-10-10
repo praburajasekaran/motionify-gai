@@ -294,7 +294,11 @@ async function handleAdminPayments(
   };
 }
 
-export const handler = compose(
+export function createPaymentsHandler(options: {
+  createOrder?: (order: { amount: number; currency: string; receipt: string }) => Promise<{ id: string }>;
+} = {}) {
+  const createOrder = options.createOrder || ((order) => getRazorpayClient().orders.create(order));
+  return compose(
   withCORS(['GET', 'POST']),
   withAuth(),
   withRateLimit(RATE_LIMITS.apiStrict, 'payments')
@@ -339,7 +343,7 @@ export const handler = compose(
           LEFT JOIN projects pr ON pr.id = pay.project_id OR pr.proposal_id = p.id
           LEFT JOIN project_team pt
             ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
-          WHERE p.client_user_id = $1
+          WHERE i.client_user_id = $1
              OR pr.client_user_id = $1
              OR LOWER(i.contact_email) = LOWER($2)
              OR pt.user_id = $1
@@ -429,6 +433,21 @@ export const handler = compose(
               [`payment-order:${proposalId}:${paymentType}`]
             );
 
+            let projectId: string | null = null;
+            if (paymentType === 'balance') {
+              const eligibleProject = await client.query(
+                `SELECT pr.id FROM projects pr JOIN proposals p ON p.id = pr.proposal_id
+                 WHERE pr.proposal_id = $1 AND p.status = 'accepted'
+                 AND EXISTS (SELECT 1 FROM payments pay WHERE pay.proposal_id = p.id
+                   AND pay.payment_type = 'advance' AND pay.status = 'completed')`,
+                [proposalId]
+              );
+              if (eligibleProject.rows.length !== 1) {
+                throw createPaymentError(409, 'Balance payment requires an accepted proposal and a paid project');
+              }
+              projectId = eligibleProject.rows[0].id;
+            }
+
             const completedPayment = await client.query(
               `SELECT id FROM payments
                WHERE proposal_id = $1
@@ -455,17 +474,22 @@ export const handler = compose(
               [proposalId, paymentType, amount, proposal.currency]
             );
             if (reusablePayment.rows.length > 0) {
+              if (projectId && !reusablePayment.rows[0].project_id) {
+                await client.query('UPDATE payments SET project_id = $1 WHERE id = $2',
+                  [projectId, reusablePayment.rows[0].id]);
+                reusablePayment.rows[0].project_id = projectId;
+              }
               return { payment: reusablePayment.rows[0], statusCode: 200 };
             }
 
             console.log('Creating Razorpay order:', orderOptions);
-            const razorpayOrder = await getRazorpayClient().orders.create(orderOptions);
+            const razorpayOrder = await createOrder(orderOptions);
             const result = await client.query(
               `INSERT INTO payments (
-                  proposal_id, payment_type, amount, currency, status, razorpay_order_id
-                ) VALUES ($1, $2, $3, $4, 'pending', $5)
+                  proposal_id, payment_type, amount, currency, status, razorpay_order_id, project_id
+                ) VALUES ($1, $2, $3, $4, 'pending', $5, $6)
                 RETURNING *`,
-              [proposalId, paymentType, amount, proposal.currency, razorpayOrder.id]
+              [proposalId, paymentType, amount, proposal.currency, razorpayOrder.id, projectId]
             );
 
             return { payment: result.rows[0], statusCode: 201 };
@@ -477,7 +501,7 @@ export const handler = compose(
             body: JSON.stringify(buildPaymentOrderPayload(order.payment, {
               amount,
               currency: proposal.currency,
-              description: "Project Payment",
+              description: paymentType === 'balance' ? 'Balance Payment' : 'Project Payment',
             })),
           };
         } catch (err: any) {
@@ -929,3 +953,6 @@ export const handler = compose(
     };
   }
 });
+}
+
+export const handler = createPaymentsHandler();

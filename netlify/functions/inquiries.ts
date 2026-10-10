@@ -136,8 +136,8 @@ export const handler = compose(
       if (clientUserId) {
         sql = `
           SELECT i.* FROM inquiries i
-          LEFT JOIN proposals p ON i.id = p.inquiry_id
-          WHERE i.client_user_id = $1 OR (p.client_user_id = $1 AND i.client_user_id IS NULL)
+          LEFT JOIN projects pr ON pr.inquiry_id = i.id
+          WHERE i.client_user_id = $1 OR (pr.client_user_id = $1 AND i.client_user_id IS NULL)
           ORDER BY i.created_at DESC
         `;
         params.push(clientUserId);
@@ -150,10 +150,9 @@ export const handler = compose(
           LEFT JOIN project_team pt
             ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
           WHERE i.client_user_id = $1
-             OR p.client_user_id = $1
              OR pr.client_user_id = $1
              OR LOWER(i.contact_email) = LOWER($2)
-             OR pt.user_id = $1
+             OR (pt.user_id = $1 AND pt.role IN ('team_member', 'support', 'super_admin'))
           ORDER BY i.created_at DESC
         `;
         params.push(userId, auth!.user!.email);

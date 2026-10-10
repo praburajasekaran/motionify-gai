@@ -59,7 +59,7 @@ export async function acceptProposalAndCreateProject(
 
   // Fetch payment
   const paymentResult = await client.query(
-    `SELECT id, proposal_id, payment_type FROM payments WHERE id = $1`,
+    `SELECT id, proposal_id, project_id, payment_type FROM payments WHERE id = $1`,
     [paymentId]
   );
 
@@ -70,9 +70,17 @@ export async function acceptProposalAndCreateProject(
 
   const payment = paymentResult.rows[0];
 
-  // Only advance payments trigger proposal acceptance and project creation
-  if (payment.payment_type !== 'advance') {
-    return { projectId: null, created: false, activated: false };
+  if (payment.payment_type === 'balance') {
+    const project = await client.query(
+      `SELECT id FROM projects WHERE proposal_id = $1
+       AND ($2::uuid IS NULL OR id = $2)`,
+      [payment.proposal_id, payment.project_id]
+    );
+    if (project.rows.length !== 1) throw new Error('Balance payment requires its existing project');
+    const projectId = project.rows[0].id;
+    await client.query('UPDATE payments SET project_id = $1 WHERE id = $2 AND project_id IS NULL',
+      [projectId, paymentId]);
+    return { projectId, created: false, activated: false };
   }
 
   const proposalId = payment.proposal_id;

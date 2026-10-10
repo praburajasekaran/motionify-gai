@@ -20,6 +20,8 @@ npm run verify:runtime-retirement
 npm run build
 ```
 
+Initialize an empty database with `npm run db:bootstrap`. Upgrade an existing database with `npm run db:migrate`. Verify it with `npm run db:verify-contract` before publishing functions. Follow [database initialization](database-initialization.md).
+
 See [production-flip.md](production-flip.md) for Slice C smoke checks and rollback notes.
 
 ## Prerequisites

@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createIPX, ipxFSStorage } from 'ipx';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'motionify-tooling-'));
+const evidenceDirectory = process.env.TOOLING_EVIDENCE_DIR ? path.resolve(process.env.TOOLING_EVIDENCE_DIR) : undefined;
+if (evidenceDirectory) await mkdir(evidenceDirectory, { recursive: true });
 let csvRequests = 0;
 const server = http.createServer((request, response) => {
   if (request.url === '/csv/local') csvRequests++;
@@ -23,6 +25,7 @@ async function runArtillery(name, config) {
   const child = spawn(process.execPath, ['node_modules/artillery/bin/run', 'run', filename, '--output', output], {
     env: { ...process.env, ARTILLERY_DISABLE_TELEMETRY: 'true' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const started = performance.now();
   let log = '';
   child.stdout.on('data', data => { log += data; });
   child.stderr.on('data', data => { log += data; });
@@ -33,6 +36,9 @@ async function runArtillery(name, config) {
     const report = JSON.parse(await readFile(output, 'utf8'));
     assert.equal(report.aggregate.counters['vusers.completed'], 1, log);
     assert.equal(report.aggregate.counters['vusers.failed'], 0, log);
+    if (evidenceDirectory) await writeFile(path.join(evidenceDirectory, `${name}-result.json`), JSON.stringify({
+      node: process.version, arch: process.arch, elapsedMs: performance.now() - started, report,
+    }, null, 2));
     return report.aggregate.counters;
   } finally {
     clearTimeout(timeout);
@@ -44,6 +50,10 @@ try {
   assert.equal(image.format, 'png');
   assert(Buffer.isBuffer(image.data));
   assert.equal(image.data.readUInt32BE(16), 16);
+  if (evidenceDirectory) {
+    await writeFile(path.join(evidenceDirectory, 'ipx-16.png'), image.data);
+    await writeFile(path.join(evidenceDirectory, 'ipx-result.json'), JSON.stringify({ format: image.format, width: 16, bytes: image.data.length }));
+  }
   await writeFile(path.join(directory, 'payload.csv'), 'name\nlocal\n');
   const base = { target: origin, phases: [{ duration: 1, arrivalCount: 1 }] };
   const counters = await runArtillery('csv', {
@@ -52,10 +62,12 @@ try {
   });
   assert.equal(counters['http.codes.200'], 1);
   assert.equal(csvRequests, 1);
+  const screenshot = evidenceDirectory ? `await page.screenshot({ path: ${JSON.stringify(path.join(evidenceDirectory, 'artillery-browser.png'))}, fullPage: true });` : '';
   await writeFile(path.join(directory, 'browser.cjs'), `exports.smoke = async function(page, context) {
     await page.goto(context.vars.target);
     const heading = await page.getByRole('heading').innerText();
     if (heading !== 'Local tooling works') throw new Error('Browser engine did not load the page');
+    ${screenshot}
   };`);
   await runArtillery('browser', {
     config: { ...base, engines: { playwright: {} }, processor: 'browser.cjs' },

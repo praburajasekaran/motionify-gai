@@ -36,6 +36,8 @@ export interface DeliverableMetadataSidebarProps {
   project: Project;
   onSendForReview?: () => void;
   isSendingForReview?: boolean;
+  onAssignmentChange?: (userId: string | null) => void;
+  isAssigning?: boolean;
 }
 
 export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProps> = ({
@@ -43,6 +45,8 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
   project,
   onSendForReview,
   isSendingForReview,
+  onAssignmentChange,
+  isAssigning,
 }) => {
   const permissions = useDeliverablePermissions({
     deliverable,
@@ -63,6 +67,19 @@ export const DeliverableMetadataSidebar: React.FC<DeliverableMetadataSidebarProp
         <Separator />
 
         <div className="space-y-3">
+          {onAssignmentChange && permissions.canEdit && (
+            <div>
+              <label htmlFor="deliverable-assignee" className="block text-xs text-muted-foreground mb-1">Assigned staff</label>
+              <select id="deliverable-assignee" className="w-full rounded-md border border-border bg-background p-2 text-sm"
+                value={deliverable.assignedTo || ''} disabled={isAssigning}
+                onChange={event => onAssignmentChange(event.target.value || null)}>
+                <option value="">Unassigned</option>
+                {project.team.filter(member => member.role === 'team_member').map(member => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <p className="text-xs text-muted-foreground mb-1">Type</p>
             {deliverable.type ? (

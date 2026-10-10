@@ -87,16 +87,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     // Clients cannot see files when deliverable is still in beta_ready (not yet sent for review)
     const filesHiddenForClient = currentUser && isClient(currentUser) && deliverable.status === 'beta_ready';
 
-    // Helper to open file
-    const handleDownload = async (key: string | undefined, isFinal: boolean) => {
+    const handleDownload = async (key: string | undefined) => {
         if (!key) return;
         try {
-            let url;
-            if (isFinal) {
-                url = storageService.getPublicUrl(key);
-            } else {
-                url = await storageService.getDownloadUrl(key);
-            }
+            const url = await storageService.getDownloadUrl(key);
             if (url) window.open(url, '_blank');
         } catch (e) {
             console.error("Failed to get download URL", e);
@@ -222,15 +216,17 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         fetchFiles();
     };
 
-    // Auto-expand first video file on load
     useEffect(() => {
         if (fileItems.length > 0 && !activeFileKey && onVideoFileSelect) {
-            const firstVideo = fileItems.find(f => f.category === 'video');
-            if (firstVideo) {
-                onVideoFileSelect(firstVideo.key, firstVideo.name);
+            const latestVideo = fileItems.filter(f => f.category === 'video').sort((a, b) =>
+                (deliverable.status === 'final_delivered' ? Number(b.isFinal) - Number(a.isFinal) : 0) ||
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0];
+            if (latestVideo) {
+                onVideoFileSelect(latestVideo.key, latestVideo.name);
             }
         }
-    }, [fileItems.length]);
+    }, [fileItems]);
 
     useEffect(() => {
         (window as any).__refreshDeliverableFiles = refreshFiles;
@@ -319,7 +315,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
+                                                        <h4 aria-label={file.name} className="text-sm font-medium text-foreground">
+                                                          {canPreview ? <button type="button" aria-label={`Preview ${file.name}`} aria-pressed={isActive}
+                                                            className="text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{file.name}</button> : file.name}
+                                                        </h4>
                                                         {isActive && (
                                                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
                                                                 <Play className="h-2.5 w-2.5 fill-current" />
@@ -337,7 +336,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(file.key, file.isFinal); }}>
+                                                <Button variant="ghost" size="sm" aria-label={`Download ${file.name}`} onClick={(e) => { e.stopPropagation(); handleDownload(file.key); }}>
                                                     <Download className="h-4 w-4" />
                                                 </Button>
                                                 {canUploadBeta && (

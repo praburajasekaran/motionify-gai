@@ -187,6 +187,7 @@ export async function requireProposalAccess<T = any>(
   const result = await runner.query<T>(
     `SELECT p.*,
             i.contact_email,
+            i.client_user_id AS inquiry_client_user_id,
             pr.id AS project_id,
             pr.client_user_id AS project_client_user_id
      FROM proposals p
@@ -207,7 +208,7 @@ export async function requireProposalAccess<T = any>(
 
   if (
     isClientLike(role) &&
-    (proposal.project_client_user_id === userId ||
+    (proposal.inquiry_client_user_id === userId || proposal.project_client_user_id === userId ||
       (email && proposal.contact_email?.toLowerCase() === email))
   ) {
     return proposal;
@@ -253,7 +254,7 @@ export async function requireInquiryAccess<T = any>(
 
   if (
     isClientLike(role) &&
-    (inquiry.project_client_user_id === userId ||
+    (inquiry.client_user_id === userId || inquiry.project_client_user_id === userId ||
       (email && inquiry.contact_email?.toLowerCase() === email))
   ) {
     return inquiry;

@@ -1,4 +1,28 @@
 export const canonicalColumns = [
+  ['pending_inquiry_verifications', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['pending_inquiry_verifications', 'email', 'character varying', 'varchar', null, 'NO'],
+  ['pending_inquiry_verifications', 'token', 'character varying', 'varchar', null, 'NO'],
+  ['pending_inquiry_verifications', 'payload', 'jsonb', 'jsonb', null, 'NO'],
+  ['pending_inquiry_verifications', 'expires_at', 'timestamp with time zone', 'timestamptz', null, 'NO'],
+  ['pending_inquiry_verifications', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
+  ['inquiries', 'client_user_id', 'uuid', 'uuid', null, 'YES'],
+  ['magic_link_tokens', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['magic_link_tokens', 'email', 'character varying', 'varchar', null, 'NO'],
+  ['magic_link_tokens', 'token', 'character varying', 'varchar', null, 'NO'],
+  ['magic_link_tokens', 'expires_at', 'timestamp with time zone', 'timestamptz', null, 'NO'],
+  ['magic_link_tokens', 'remember_me', 'boolean', 'bool', 'false', 'NO'],
+  ['magic_link_tokens', 'used_at', 'timestamp with time zone', 'timestamptz', null, 'YES'],
+  ['magic_link_tokens', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
+  ['deliverable_files', 'thumbnail_key', 'text', 'text', null, 'YES'],
+  ['deliverable_feedback', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['deliverable_feedback', 'deliverable_id', 'uuid', 'uuid', null, 'NO'],
+  ['deliverable_feedback', 'file_id', 'uuid', 'uuid', null, 'NO'],
+  ['deliverable_feedback', 'parent_id', 'uuid', 'uuid', null, 'YES'],
+  ['deliverable_feedback', 'author_id', 'uuid', 'uuid', null, 'NO'],
+  ['deliverable_feedback', 'body', 'text', 'text', null, 'NO'],
+  ['deliverable_feedback', 'video_timestamp', 'double precision', 'float8', null, 'YES'],
+  ['deliverable_feedback', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
+  ['revision_requests', 'reviewed_file_id', 'uuid', 'uuid', null, 'YES'],
   ['payment_receipts', 'payment_id', 'uuid', 'uuid', null, 'NO'],
   ['payment_receipts', 'payload', 'jsonb', 'jsonb', null, 'NO'],
   ['payment_receipts', 'status', 'text', 'text', "'pending'::text", 'NO'],
@@ -6,6 +30,32 @@ export const canonicalColumns = [
   ['payment_receipts', 'sent_at', 'timestamp with time zone', 'timestamptz', null, 'YES'],
   ['payment_receipts', 'message_id', 'text', 'text', null, 'YES'],
   ['users', 'id', 'uuid', 'uuid', null, 'NO'],
+  ['users', 'profile_picture_url', 'text', 'text', null, 'YES'],
+  ['users', 'last_login_at', 'timestamp with time zone', 'timestamptz', null, 'YES'],
+  ['deliverables', 'final_delivered_at', 'timestamp with time zone', 'timestamptz', null, 'YES'],
+  ['deliverables', 'files_expired', 'boolean', 'bool', 'false', 'YES'],
+  ['deliverables', 'assigned_to', 'uuid', 'uuid', null, 'YES'],
+  ['comment_attachments', 'r2_key', 'text', 'text', null, 'YES'],
+  ['tasks', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['tasks', 'project_id', 'uuid', 'uuid', null, 'NO'],
+  ['tasks', 'title', 'character varying', 'varchar', null, 'NO'],
+  ['tasks', 'description', 'text', 'text', null, 'YES'],
+  ['tasks', 'stage', 'USER-DEFINED', 'task_stage', "'pending'::task_stage", 'NO'],
+  ['tasks', 'is_client_visible', 'boolean', 'bool', 'false', 'NO'],
+  ['tasks', 'assigned_to', 'uuid', 'uuid', null, 'YES'],
+  ['tasks', 'due_date', 'date', 'date', null, 'YES'],
+  ['tasks', 'position', 'integer', 'int4', '0', 'YES'],
+  ['tasks', 'created_by', 'uuid', 'uuid', null, 'YES'],
+  ['tasks', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'YES'],
+  ['tasks', 'updated_at', 'timestamp with time zone', 'timestamptz', 'now()', 'YES'],
+  ['task_comments', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['task_comments', 'task_id', 'uuid', 'uuid', null, 'NO'],
+  ['task_comments', 'user_id', 'uuid', 'uuid', null, 'YES'],
+  ['task_comments', 'user_name', 'character varying', 'varchar', null, 'YES'],
+  ['task_comments', 'content', 'text', 'text', null, 'NO'],
+  ['task_comments', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'YES'],
+  ['task_followers', 'task_id', 'uuid', 'uuid', null, 'NO'],
+  ['task_followers', 'user_id', 'uuid', 'uuid', null, 'NO'],
   ['project_requests', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
   ['project_requests', 'request_number', 'character varying', 'varchar', null, 'NO'],
   ['project_requests', 'client_user_id', 'uuid', 'uuid', null, 'NO'],
@@ -64,6 +114,15 @@ export const canonicalColumns = [
 }));
 
 export const canonicalConstraints = [
+  { table_name: 'magic_link_tokens', constraint_name: 'magic_link_tokens_token_key', constraint_type: 'u', definition: 'UNIQUE (token)' },
+  { table_name: 'pending_inquiry_verifications', constraint_name: 'pending_inquiry_verifications_token_key', constraint_type: 'u', definition: 'UNIQUE (token)' },
+  { table_name: 'deliverable_feedback', constraint_name: 'feedback_file_identity', constraint_type: 'f', definition: 'FOREIGN KEY (file_id, deliverable_id) REFERENCES deliverable_files(id, deliverable_id)' },
+  { table_name: 'deliverable_feedback', constraint_name: 'feedback_parent_identity', constraint_type: 'f', definition: 'FOREIGN KEY (parent_id, file_id, deliverable_id) REFERENCES deliverable_feedback(id, file_id, deliverable_id)' },
+  { table_name: 'revision_requests', constraint_name: 'revision_reviewed_file_identity', constraint_type: 'f', definition: 'FOREIGN KEY (reviewed_file_id, deliverable_id) REFERENCES deliverable_files(id, deliverable_id)' },
+  { table_name: 'tasks', constraint_name: 'tasks_project_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE' },
+  { table_name: 'task_comments', constraint_name: 'task_comments_task_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE' },
+  { table_name: 'task_followers', constraint_name: 'task_followers_task_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE' },
+  { table_name: 'task_followers', constraint_name: 'task_followers_user_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (user_id) REFERENCES users(id)' },
   { table_name: 'payment_receipts', constraint_name: 'payment_receipts_pkey', constraint_type: 'p', definition: 'PRIMARY KEY (payment_id)' },
   { table_name: 'payment_receipts', constraint_name: 'payment_receipts_payment_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (payment_id) REFERENCES payments(id)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_pkey', constraint_type: 'p', definition: 'PRIMARY KEY (id)' },
@@ -83,14 +142,17 @@ export const canonicalIndexes = [
 ];
 
 export const canonicalMigrations = [
-  { version: '030', name: 'payment_receipts' },
+  { version: '035', name: 'authentication_runtime' },
 ];
+
+export const canonicalStages = ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed'].map(enumlabel => ({ enumlabel }));
 
 export function createContractRunner(overrides: {
   columns?: typeof canonicalColumns;
   constraints?: typeof canonicalConstraints;
   indexes?: typeof canonicalIndexes;
   migrations?: typeof canonicalMigrations;
+  stages?: typeof canonicalStages;
 } = {}) {
   const calls: string[] = [];
   const rows = {
@@ -98,6 +160,7 @@ export function createContractRunner(overrides: {
     constraints: overrides.constraints ?? canonicalConstraints,
     indexes: overrides.indexes ?? canonicalIndexes,
     migrations: overrides.migrations ?? canonicalMigrations,
+    stages: overrides.stages ?? canonicalStages,
   };
 
   return {
@@ -106,6 +169,7 @@ export function createContractRunner(overrides: {
       calls.push(text);
       if (/information_schema\.columns/.test(text)) return { rows: rows.columns };
       if (/pg_constraint/.test(text)) return { rows: rows.constraints };
+      if (/pg_enum/.test(text)) return { rows: rows.stages };
       if (/pg_indexes/.test(text)) return { rows: rows.indexes };
       if (/FROM migrations/.test(text)) return { rows: rows.migrations };
       throw new Error(`Unexpected contract query: ${text}`);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -24,8 +25,6 @@ export function ConfirmDialog({
   variant = 'warning',
   isLoading = false,
 }: ConfirmDialogProps) {
-  if (!isOpen) return null;
-
   const variantStyles = {
     warning: {
       icon: 'bg-primary/10 text-primary',
@@ -40,16 +39,8 @@ export function ConfirmDialog({
   const styles = variantStyles[variant];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Dialog */}
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-lg bg-card border border-border text-left transition-all sm:my-8 sm:w-full sm:max-w-lg">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel={title} showCloseButton={false} size="sm" className="max-w-lg rounded-lg">
+        <div className="relative overflow-hidden rounded-lg bg-card border border-border text-left">
           {/* Close button */}
           <button
             onClick={onClose}
@@ -103,7 +94,6 @@ export function ConfirmDialog({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

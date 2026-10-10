@@ -7,7 +7,7 @@ This document provides a comprehensive checklist for deploying the Motionify Stu
 ### 1. Database Setup
 
 - [ ] Production database created (Neon PostgreSQL)
-- [ ] Database schema applied (`database/schema.sql`)
+- [ ] Database initialized or upgraded and contract verified. See [database initialization](database-initialization.md).
 - [ ] Database connections use **pooled** connection strings
 - [ ] SSL/TLS enabled (sslmode=require)
 - [ ] Connection limits configured for serverless
@@ -120,21 +120,16 @@ aws ses get-send-quota
    pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql
    ```
 
-2. **Apply schema to production database:**
+2. **Initialize or upgrade the intended database.**
+   For an empty database, run `npm run db:bootstrap`. For an existing database, inspect `npm run db:migrate:status` and run `npm run db:migrate`. Follow [database initialization](database-initialization.md). Do not replay historical migrations over the schema snapshot.
+
+3. **Verify the database contract.**
    ```bash
-   psql $DATABASE_URL_DIRECT < database/schema.sql
+   npm run db:verify-contract
    ```
 
-3. **Verify schema:**
-   ```bash
-   node scripts/check-user-tokens.js
-   ```
-
-4. **Create admin user:**
-   ```sql
-   INSERT INTO users (email, full_name, role)
-   VALUES ('admin@yourdomain.com', 'Admin User', 'admin');
-   ```
+4. **Provision the approved administrator.**
+   Bootstrap creates no accounts. Use the approved account email and canonical `super_admin` role. Verify sign-in before inviting clients.
 
 ### Step 2: Configure Netlify
 

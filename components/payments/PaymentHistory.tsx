@@ -5,33 +5,52 @@ import { Payment, Project } from '../../types';
 import { fetchPaymentsForProject } from '../../services/paymentApi';
 import { formatTimestamp, formatDateTime } from '../../utils/dateFormatting';
 import { formatCurrency } from '../../utils/format';
+import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { getProposalById } from '../../lib/proposals';
 
 interface PaymentHistoryProps {
     project: Project;
 }
 
 export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
+    const navigate = useNavigate();
+    const { user } = useAuthContext();
+    const primaryClient = user?.role === 'client' && user.projectTeamMemberships?.[project.id]?.isPrimaryContact === true;
+    const [balanceAmount, setBalanceAmount] = useState<number | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let active = true;
         const loadPayments = async () => {
             if (!project.id) return;
             try {
                 setLoading(true);
-                const data = await fetchPaymentsForProject(project.id);
+                setError(null);
+                const [data, proposal] = await Promise.all([
+                    fetchPaymentsForProject(project.id),
+                    primaryClient && project.proposal_id ? getProposalById(project.proposal_id) : Promise.resolve(null),
+                ]);
+                if (!active) return;
                 setPayments(data);
+                setBalanceAmount(proposal?.status === 'accepted' ? proposal.balanceAmount : null);
             } catch (err) {
                 console.error('Failed to load payments:', err);
-                setError('Failed to load payment history.');
+                if (active) setError('Failed to load payment history.');
             } finally {
-                setLoading(false);
+                if (active) setLoading(false);
             }
         };
 
         loadPayments();
-    }, [project.id]);
+        return () => { active = false; };
+    }, [project.id, project.proposal_id, primaryClient]);
+
+    const canPayBalance = primaryClient && project.proposal_id && balanceAmount !== null && balanceAmount > 0
+        && payments.some(payment => payment.payment_type === 'advance' && payment.status === 'completed')
+        && !payments.some(payment => payment.payment_type === 'balance' && payment.status === 'completed');
 
     const paidByCurrency = new Map<string, number>();
     for (const payment of payments) {
@@ -77,6 +96,11 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({ project }) => {
 
     return (
         <div className="space-y-6">
+            {canPayBalance && (
+                <Button onClick={() => navigate(`/payment/${project.proposal_id}?paymentType=balance`)}>
+                    Pay balance
+                </Button>
+            )}
             <div className="grid grid-cols-1 gap-4">
                 <Card className="bg-card border-border">
                     <CardContent className="p-6">
