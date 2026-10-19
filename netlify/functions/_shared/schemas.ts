@@ -112,6 +112,7 @@ export const createDeliverableSchema = z.object({
 );
 
 export const updateDeliverableSchema = z.object({
+    assigned_to: uuidSchema.nullable().optional(),
     name: nameSchema.optional(),
     description: z.string().max(2000).optional(),
     estimatedCompletionWeek: z.number().int().min(1).max(52).optional(),
@@ -333,6 +334,7 @@ export const r2PresignSchema = z.object({
 // File type validation is relaxed - security is enforced on download (r2-presign GET)
 // This allows video/audio/image files and common deliverable formats
 export const r2PresignDeliverableSchema = z.object({
+    deliverableId: uuidSchema.optional(),
     fileName: z.string().min(1).max(255),
     fileType: z.string().min(1).max(100).refine(
         (type) => {
@@ -386,6 +388,8 @@ export const revisionAttachmentSchema = z.object({
 
 export const createRevisionRequestSchema = z.object({
     deliverableId: uuidSchema,
+    reviewedFileId: uuidSchema.optional(),
+    reviewedLatestFileId: uuidSchema.optional(),
     feedbackText: z.string().min(20).max(10000),
     timestampedComments: z.array(timestampedCommentSchema).optional(),
     issueCategories: z.array(z.enum(['color', 'audio', 'timing', 'editing', 'content', 'other'])).optional(),

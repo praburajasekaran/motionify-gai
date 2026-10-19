@@ -9,13 +9,24 @@ import {
 } from './fixtures/database-contract';
 
 describe('database contract verifier', () => {
+  it('rejects missing delivery schema and task review stages', async () => {
+    const result = await verifyDatabaseContract(createContractRunner({
+      columns: canonicalColumns.filter(column => column.table_name !== 'tasks'
+        && !(column.table_name === 'deliverables' && column.column_name === 'files_expired')),
+      stages: [{ enumlabel: 'pending' }],
+    }));
+    assert.equal(result.ready, false);
+    assert.ok(result.issues.some(issue => issue.code === 'missing_table' && issue.object === 'tasks'));
+    assert.ok(result.issues.some(issue => issue.code === 'missing_column' && issue.object === 'deliverables.files_expired'));
+    assert.ok(result.issues.some(issue => issue.code === 'invalid_constraint' && issue.object === 'task_stage.awaiting_approval'));
+  });
   it('accepts the reconciled production contract using read-only catalog queries', async () => {
     const runner = createContractRunner();
     const result = await verifyDatabaseContract(runner);
 
     assert.equal(result.ready, true);
     assert.deepEqual(result.issues, []);
-    assert.equal(result.latestMigration, '030_payment_receipts');
+    assert.equal(result.latestMigration, '035_authentication_runtime');
     assert.ok(runner.calls.length >= 4);
     for (const statement of runner.calls) {
       assert.match(statement.trim(), /^SELECT/i);

@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { z } from 'zod';
 import type { RazorpayOptions, RazorpayResponse } from '../types/razorpay';
 
-type PaymentAccess = { proposalId: string; token: string } | { proposalId: string; token?: never };
+type PaymentAccess =
+  | { proposalId: string; token: string; paymentType?: never }
+  | { proposalId: string; token?: never; paymentType?: 'advance' | 'balance' };
 type PaymentProof = { paymentId: string; response: RazorpayResponse };
 type CheckoutState =
   | { status: 'idle'; error?: string }
@@ -85,7 +87,9 @@ export function usePaymentCheckout(access: PaymentAccess, prefill: RazorpayOptio
     try {
       await loadCheckout();
       setState({ status: 'opening', phase: 'order' });
-      const data = await paymentRequest(`${endpoint}/create-order`, access.token ? access : { proposalId: access.proposalId, paymentType: 'advance' });
+      const data = await paymentRequest(`${endpoint}/create-order`, access.token ? access : {
+        proposalId: access.proposalId, paymentType: access.paymentType || 'advance',
+      });
       const order = orderSchema.safeParse(data);
       if (!order.success) throw new Error('Payment service is temporarily unavailable. Please try again.');
       const checkout = new window.Razorpay({

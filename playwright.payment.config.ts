@@ -10,7 +10,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/payment-*.spec.ts',
+  testMatch: ['**/payment-flow.spec.ts', '**/payment-history.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1, // Retry once for payment tests

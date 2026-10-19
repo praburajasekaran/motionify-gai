@@ -92,6 +92,9 @@ export interface DeliverableApproval {
   id: string;
   deliverableId: string;
   action: 'approved' | 'rejected';
+  reviewedFileId?: string;
+  reviewedLatestFileId?: string;
+  reviewedFileName?: string;
   timestamp: Date;
   userId: string;
   userName: string;
@@ -171,6 +174,7 @@ export interface Deliverable {
   projectId: string;
   title: string; // e.g., "Final Video", "Script & Concept"
   description: string;
+  assignedTo?: string | null;
   type: DeliverableType;
 
   // Status & Progress
@@ -180,6 +184,7 @@ export interface Deliverable {
 
   // Beta Delivery
   betaFileUrl?: string; // URL to beta file (watermarked)
+  thumbnailKey?: string;
   betaFileKey?: string; // R2 storage key
   watermarked: boolean; // Whether current file has watermark
   duration?: string; // Video duration (e.g., "2:45")

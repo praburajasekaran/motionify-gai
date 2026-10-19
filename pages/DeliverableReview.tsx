@@ -21,6 +21,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
+import { FileFeedbackPanel } from '@/components/deliverables/FileFeedbackPanel';
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
 import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
@@ -55,6 +56,7 @@ const DeliverableReviewContent: React.FC = () => {
   const [isSendingForReview, setIsSendingForReview] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Upload progress state (passed to DeliverableFilesList for inline display)
   const [isUploading, setIsUploading] = useState(false);
@@ -65,6 +67,8 @@ const DeliverableReviewContent: React.FC = () => {
   // Active video file state (connects video player to files list)
   const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
   const [activeVideoFileName, setActiveVideoFileName] = useState('');
+  const [reviewFiles, setReviewFiles] = useState<Array<{ id: string; file_key: string; file_name: string; is_final: boolean; uploaded_at: string }>>([]);
+  const [reviewSnapshot, setReviewSnapshot] = useState<{ reviewedFileId?: string; reviewedLatestFileId?: string }>({});
 
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
@@ -78,6 +82,16 @@ const DeliverableReviewContent: React.FC = () => {
     deliverable: deliverable || undefined,
     project: currentProject,
   });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setReviewFiles([]);
+    if (deliverable) fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, { credentials: 'include', signal: controller.signal })
+      .then(async response => { if (response.ok) setReviewFiles(await response.json()); })
+      .catch(error => { if (error.name !== 'AbortError') console.error('Could not load review file identities', error); });
+    return () => controller.abort();
+  }, [deliverable?.id, deliverable?.status, activeVideoFileKey]);
+  const activeReviewFile = reviewFiles.find(file => file.file_key === activeVideoFileKey);
 
   // Handle back navigation
   const handleBack = () => {
@@ -114,6 +128,21 @@ const DeliverableReviewContent: React.FC = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+  };
+
+  const handleAssignment = async (userId: string | null) => {
+    if (!deliverable) return;
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned_to: userId }),
+      });
+      if (!response.ok) throw new Error((await response.json()).error || 'Failed to assign staff');
+      await refreshCurrentDeliverable();
+      showSuccess('Staff assignment saved.');
+    } catch (error) { showError(error, 'Failed to assign staff'); }
+    finally { setIsAssigning(false); }
   };
 
   // Handle send for client review (beta_ready → awaiting_approval)
@@ -161,6 +190,13 @@ const DeliverableReviewContent: React.FC = () => {
 
   // Handle request revision button click
   const handleRequestRevisionClick = () => {
+    const betaFiles = reviewFiles.filter(file => !file.is_final).sort((a, b) =>
+      new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime() || b.id.localeCompare(a.id));
+    if (!activeReviewFile || activeReviewFile.is_final || !betaFiles[0]) {
+      showError(new Error('Select an uploaded beta file and wait for it to load before requesting a revision.'), 'Select a review file');
+      return;
+    }
+    setReviewSnapshot({ reviewedFileId: activeReviewFile.id, reviewedLatestFileId: betaFiles[0].id });
     setShowRevisionForm(true);
   };
 
@@ -173,7 +209,7 @@ const DeliverableReviewContent: React.FC = () => {
   // Handle revision submission
   const handleSubmitRevision = async (approval: DeliverableApproval) => {
     try {
-      await rejectDeliverable(approval.deliverableId, approval);
+      await rejectDeliverable(approval.deliverableId, { ...approval, ...reviewSnapshot });
       showSuccess('Revision request submitted successfully! The team will review within 2-3 business days.');
       setShowRevisionForm(false);
       dispatch({ type: 'RESET_REVISION_FORM' });
@@ -237,22 +273,24 @@ const DeliverableReviewContent: React.FC = () => {
         folder,
         (p) => setUploadProgress(p),
         undefined,
-        controller.signal
+        controller.signal,
+        deliverable.id
       );
 
+      let thumbnailKey: string | undefined;
       // Generate thumbnail if video
       if (file.type.startsWith('video/')) {
         try {
           const thumbnailFile = await generateThumbnail(file);
           if (thumbnailFile && !controller.signal.aborted) {
-            const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-            await storageService.uploadFile(
+            thumbnailKey = await storageService.uploadFile(
               thumbnailFile,
               deliverable.projectId,
               folder,
               undefined,
-              thumbKey,
-              controller.signal
+              undefined,
+              controller.signal,
+              deliverable.id
             );
           }
         } catch (err) {
@@ -280,6 +318,7 @@ const DeliverableReviewContent: React.FC = () => {
         body: JSON.stringify({
           deliverable_id: deliverable.id,
           file_key: key,
+          thumbnail_key: thumbnailKey,
           file_name: file.name,
           file_size: file.size,
           mime_type: file.type,
@@ -293,15 +332,22 @@ const DeliverableReviewContent: React.FC = () => {
         throw new Error('Failed to save file record');
       }
 
-      // If status is 'pending', update to 'beta_ready'
-      if (deliverable.status === 'pending') {
-        await fetch(`/api/deliverables/${deliverable.id}`, {
+      if (file.type.startsWith('video/')) {
+        setActiveVideoFileKey(key);
+        setActiveVideoFileName(file.name);
+      }
+
+      if (['pending', 'in_progress', 'revision_requested'].includes(deliverable.status)) {
+        const statusResponse = await fetch(`/api/deliverables/${deliverable.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ status: 'beta_ready' }),
           signal: controller.signal
         });
+        if (!statusResponse.ok) {
+          throw new Error('File uploaded, but its review status could not be updated. Reload and try again.');
+        }
       }
 
       // Refresh file list
@@ -466,6 +512,7 @@ const DeliverableReviewContent: React.FC = () => {
             uploadingFileName={uploadingFileName}
             activeFileKey={activeVideoFileKey}
             onVideoFileSelect={(key, name) => {
+              if (showRevisionForm) handleCancelRevision();
               if (key === activeVideoFileKey) {
                 setActiveVideoFileKey(undefined);
                 setActiveVideoFileName('');
@@ -488,6 +535,7 @@ const DeliverableReviewContent: React.FC = () => {
                 onUpload={handleUpload}
                 selectedFileKey={activeVideoFileKey}
                 selectedFileName={activeVideoFileName}
+                selectedFileId={activeReviewFile?.id}
                 onActiveFileChange={(key, name) => {
                   setActiveVideoFileKey(key);
                   setActiveVideoFileName(name);
@@ -495,7 +543,12 @@ const DeliverableReviewContent: React.FC = () => {
               />
             }
             reviewActions={
-              <DeliverableReviewActions
+              <>
+                {activeReviewFile && (
+                  <FileFeedbackPanel key={activeReviewFile.id} deliverableId={deliverable.id}
+                    fileId={activeReviewFile.id} fileName={activeReviewFile.file_name} canComment={permissions.canComment} />
+                )}
+                <DeliverableReviewActions
                 deliverable={deliverable}
                 isRevisionMode={showRevisionForm}
                 canApprove={permissions.canApprove}
@@ -514,6 +567,7 @@ const DeliverableReviewContent: React.FC = () => {
                 currentUserName={currentUser?.name || ''}
                 currentUserEmail={currentUser?.email || ''}
               />
+              </>
             }
           />
 
@@ -533,6 +587,8 @@ const DeliverableReviewContent: React.FC = () => {
             project={currentProject}
             onSendForReview={() => setShowSendForReviewDialog(true)}
             isSendingForReview={isSendingForReview}
+            onAssignmentChange={handleAssignment}
+            isAssigning={isAssigning}
           />
         </div>
       </div>

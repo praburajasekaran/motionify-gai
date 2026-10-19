@@ -506,13 +506,33 @@ CREATE TABLE user_preferences (
 );
 
 -- ============================================================================
--- SEED DATA (Admin user for testing)
+-- TASKS
 -- ============================================================================
 
-INSERT INTO users (email, full_name, role) VALUES
-  ('admin@motionify.com', 'Motionify Studio Admin', 'super_admin'),
-  ('saravanan@motionify.co', 'Saravanan', 'super_admin')
-ON CONFLICT (email) DO NOTHING;
+CREATE TYPE task_stage AS ENUM ('pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed');
+
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL, description TEXT,
+  stage task_stage NOT NULL DEFAULT 'pending',
+  is_client_visible BOOLEAN NOT NULL DEFAULT false,
+  assigned_to UUID REFERENCES users(id), due_date DATE, position INTEGER DEFAULT 0,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE task_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id), user_name VARCHAR(255), content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE task_followers (
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id), PRIMARY KEY (task_id, user_id)
+);
 
 -- ============================================================================
 -- SCHEMA COMPLETE

@@ -49,6 +49,7 @@ export interface DeliverableVideoSectionProps {
   onUpload?: (file: File) => void;
   selectedFileKey?: string;
   selectedFileName?: string;
+  selectedFileId?: string;
   onActiveFileChange?: (fileKey: string, fileName: string) => void;
 }
 
@@ -65,14 +66,22 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   onUpload,
   selectedFileKey,
   selectedFileName,
+  selectedFileId,
   onActiveFileChange,
 }) => {
   const [generatedUrl, setGeneratedUrl] = React.useState<string | null>(null);
   const [resolvedFileKey, setResolvedFileKey] = React.useState<string | undefined>(undefined);
-  const currentFileKeyRef = React.useRef<string | undefined>(undefined);
+  const [loadError, setLoadError] = React.useState(false);
+  const [isLoadingMedia, setIsLoadingMedia] = React.useState(false);
+  const [retry, setRetry] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    setGeneratedUrl(null);
+    setLoadError(false);
+    setIsLoadingMedia(true);
     const loadUrl = async () => {
       const isFinal = deliverable.status === 'final_delivered';
       let key: string | undefined;
@@ -92,27 +101,27 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
         if (!key) {
           try {
             const res = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
-              credentials: 'include',
+              credentials: 'include', signal: controller.signal,
             });
             if (res.ok) {
               const files = await res.json();
-              const videoFile = files.find((f: any) => f.file_category === 'video') || files[0];
+              const videoFile = files.filter((f: { file_category: string }) => f.file_category === 'video')
+                .sort((a: { is_final: boolean; uploaded_at: string }, b: { is_final: boolean; uploaded_at: string }) =>
+                  (isFinal ? Number(b.is_final) - Number(a.is_final) : 0) ||
+                  new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0] || files[0];
               if (videoFile?.file_key) {
                 key = videoFile.file_key;
                 fileName = videoFile.label || videoFile.file_name;
               }
             }
           } catch (e) {
-            console.error("Failed to fetch deliverable files", e);
+            if (!controller.signal.aborted) console.error('Failed to fetch deliverable files', e);
           }
         }
       }
 
-      if (!key) return;
-
-      // Skip if the same file is already loaded
-      if (key === currentFileKeyRef.current) return;
-      currentFileKeyRef.current = key;
+      if (cancelled) return;
+      if (!key) { setIsLoadingMedia(false); return; }
 
       setResolvedFileKey(key);
 
@@ -120,19 +129,15 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       onActiveFileChange?.(key, fileName || '');
 
       try {
-        if (isFinal && !selectedFileKey) {
-          const url = storageService.getPublicUrl(key);
-          setGeneratedUrl(url);
-        } else {
-          const url = await storageService.getDownloadUrl(key);
-          setGeneratedUrl(url);
-        }
+        const url = await storageService.getDownloadUrl(key);
+        if (!cancelled) setGeneratedUrl(url);
       } catch (e) {
-        console.error("Failed to load file URL", e);
-      }
+        if (!cancelled) { setLoadError(true); console.error('Failed to load file URL', e); }
+      } finally { if (!cancelled) setIsLoadingMedia(false); }
     };
     loadUrl();
-  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, selectedFileKey]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [deliverable.id, deliverable.betaFileKey, deliverable.finalFileKey, deliverable.status, selectedFileKey, retry]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -148,9 +153,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
   };
 
   const isFinalDelivered = deliverable.status === 'final_delivered';
-  const fileUrl = generatedUrl || (isFinalDelivered
-    ? deliverable.finalFileUrl || deliverable.betaFileUrl
-    : deliverable.betaFileUrl);
+  const fileUrl = generatedUrl;
 
   // Detect actual media type from the resolved file key
   const fileKey = resolvedFileKey || (isFinalDelivered
@@ -163,10 +166,13 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
       {/* Media Preview Section */}
       <div>
         {/* Video, Image, or Empty State */}
-        {fileUrl && detectedMediaType === 'video' ? (
-        (isRevisionMode || canRequestRevision === false) && canComment ? (
-          // Interactive commenting: gated behind revision mode for client PM,
-          // always available for team members (canComment && !canRequestRevision)
+        {loadError ? (
+          <div role="alert" className="rounded-lg border border-border p-4 space-y-2">
+            <p className="text-sm">Could not load this file. Check your access or try again.</p>
+            <button type="button" onClick={() => setRetry(value => value + 1)} className="text-sm underline">Retry loading file</button>
+          </div>
+        ) : isLoadingMedia ? <p role="status" className="p-4 text-sm text-muted-foreground">Loading file...</p> : fileUrl && detectedMediaType === 'video' ? (
+        isRevisionMode && canComment ? (
           <VideoCommentTimeline
             videoUrl={fileUrl}
             comments={comments}
@@ -181,7 +187,7 @@ export const DeliverableVideoSection: React.FC<DeliverableVideoSectionProps> = (
             src={fileUrl}
             watermarked={deliverable.watermarked && !isFinalDelivered}
             className="w-full aspect-video"
-            comments={deliverable.approvalHistory.flatMap((a) => a.timestampedComments || [])}
+            comments={deliverable.approvalHistory.filter(a => selectedFileId && a.reviewedFileId === selectedFileId).flatMap(a => a.timestampedComments || [])}
           />
         )
       ) : fileUrl && detectedMediaType === 'image' ? (

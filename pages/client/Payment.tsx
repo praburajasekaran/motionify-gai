@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { getProposalById, type Proposal } from '../../lib/proposals';
 import { getInquiryById } from '../../lib/inquiries';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -10,13 +10,15 @@ import { usePaymentCheckout } from '../../hooks/usePaymentCheckout';
 export function Payment() {
     const { proposalId } = useParams<{ proposalId: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const paymentType = searchParams.get('paymentType') === 'balance' ? 'balance' : 'advance';
     const { user, isLoading: authLoading } = useAuthContext();
 
     const [proposal, setProposal] = useState<Proposal | null>(null);
     const [inquiryNumber, setInquiryNumber] = useState<string>('');
     const [inquiryEmail, setInquiryEmail] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
-    const checkout = usePaymentCheckout({ proposalId: proposalId || '' }, { name: user?.name || '', email: user?.email || '', contact: '' });
+    const checkout = usePaymentCheckout({ proposalId: proposalId || '', paymentType }, { name: user?.name || '', email: user?.email || '', contact: '' });
     const isProcessing = checkout.processing;
     const paymentComplete = checkout.state.status === 'complete';
     const activatedProjectId = checkout.state.status === 'complete' ? checkout.state.projectId : null;
@@ -72,6 +74,10 @@ export function Payment() {
                     <button
                         onClick={() => {
                             if (activatedProjectId) {
+                                if (paymentType === 'balance') {
+                                    navigate(`/projects/${activatedProjectId}/7`);
+                                    return;
+                                }
                                 const params = new URLSearchParams({
                                     projectId: activatedProjectId,
                                     ...(clientEmail ? { email: clientEmail } : {}),
@@ -96,6 +102,7 @@ export function Payment() {
             currency: currency,
         }).format(amount / 100);
     };
+    const amountDue = paymentType === 'balance' ? proposal.balanceAmount : proposal.advanceAmount;
 
     return (
         <div className="min-h-screen bg-muted py-12 px-4 sm:px-6 lg:px-8">
@@ -113,7 +120,7 @@ export function Payment() {
                     <div className="md:col-span-2 space-y-6">
                         <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                             <div className="p-6 border-b border-border">
-                                <h2 className="text-xl font-bold text-foreground">Payment Details</h2>
+                                <h2 className="text-xl font-bold text-foreground">{paymentType === 'balance' ? 'Balance Payment' : 'Payment Details'}</h2>
                                 <p className="text-sm text-muted-foreground mt-1">Proposal for Inquiry {inquiryNumber}</p>
                             </div>
                             <div className="p-6 space-y-4">
@@ -127,7 +134,7 @@ export function Payment() {
                                 </div>
                                 <div className="flex justify-between items-center py-3">
                                     <span className="text-lg font-medium text-foreground">Amount Due Now</span>
-                                    <span className="text-2xl font-bold text-violet-600">{formatCurrency(proposal.advanceAmount, proposal.currency)}</span>
+                                    <span className="text-2xl font-bold text-violet-600">{formatCurrency(amountDue, proposal.currency)}</span>
                                 </div>
                             </div>
                         </div>
@@ -158,7 +165,7 @@ export function Payment() {
                                         ) : (
                                             <>
                                                 <Lock className="w-4 h-4 mr-2" />
-                                                {checkout.state.status === 'unconfirmed' ? 'Retry payment confirmation' : `Pay ${formatCurrency(proposal.advanceAmount, proposal.currency)}`}
+                                                {checkout.state.status === 'unconfirmed' ? 'Retry payment confirmation' : `Pay ${formatCurrency(amountDue, proposal.currency)}`}
                                             </>
                                         )}
                                     </button>

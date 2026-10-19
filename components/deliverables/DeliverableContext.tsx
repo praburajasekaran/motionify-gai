@@ -11,6 +11,8 @@
  */
 
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { projectKeys } from '@/shared/hooks/useProjects';
 import {
   Deliverable,
   DeliverableApproval,
@@ -57,6 +59,7 @@ function deriveTypeFromFileCategory(category: string | null | undefined): 'Video
 
 // Raw API response shape for deliverables
 interface RawDeliverableResponse {
+  assigned_to?: string | null;
   id: string;
   project_id: string;
   name?: string;
@@ -65,6 +68,7 @@ interface RawDeliverableResponse {
   dominant_file_category?: string | null;
   status?: string;
   estimated_completion_week?: number;
+  thumbnail_key?: string;
   beta_file_key?: string;
   final_file_key?: string;
   revision_count?: number;
@@ -84,6 +88,7 @@ function transformApiDeliverable(d: RawDeliverableResponse): Deliverable {
     projectId: d.project_id,
     title: d.name || d.title || 'Untitled',
     description: d.description || '',
+    assignedTo: d.assigned_to,
     type: deriveTypeFromFileCategory(d.dominant_file_category),
     status,
     progress: STATUS_PROGRESS_MAP[status] ?? 0,
@@ -92,6 +97,7 @@ function transformApiDeliverable(d: RawDeliverableResponse): Deliverable {
       : new Date().toISOString(),
     betaFileUrl: d.beta_file_key ? `/api/deliverables/${d.id}/download?type=beta` : undefined,
     betaFileKey: d.beta_file_key,
+    thumbnailKey: d.thumbnail_key,
     watermarked: !!d.beta_file_key && !d.final_file_key,
     finalFileUrl: d.final_file_key ? `/api/deliverables/${d.id}/download?type=final` : undefined,
     finalFileKey: d.final_file_key,
@@ -465,6 +471,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   currentProject,
   onConvertToTask,
 }) => {
+  const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -652,6 +659,8 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       credentials: 'include',
       body: JSON.stringify({
         deliverableId,
+        reviewedFileId: approval.reviewedFileId,
+        reviewedLatestFileId: approval.reviewedLatestFileId,
         feedbackText: approval.feedback || '',
         timestampedComments: approval.timestampedComments?.map(c => ({
           id: c.id,
@@ -677,6 +686,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
       id: deliverableId,
       approval,
     });
+    await queryClient.invalidateQueries({ queryKey: projectKeys.detail(currentProject.id) });
   };
 
   /**

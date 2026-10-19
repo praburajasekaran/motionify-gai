@@ -93,13 +93,8 @@ export const DeliverableListItem: React.FC<DeliverableListItemProps> = ({
         : deliverable.betaFileKey;
 
       if (key) {
-        if (deliverable.status === 'final_delivered') {
-          const url = storageService.getPublicUrl(key);
-          window.open(url, '_blank');
-        } else {
-          const url = await storageService.getDownloadUrl(key);
-          window.open(url, '_blank');
-        }
+        const url = await storageService.getDownloadUrl(key);
+        window.open(url, '_blank');
       }
     } catch (err) {
       console.error('Download error', err);
