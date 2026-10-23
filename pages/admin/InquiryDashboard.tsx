@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/design-system';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
+import { ProjectRequestQueue } from './ProjectRequestQueue';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -159,6 +160,7 @@ export function InquiryDashboard() {
   return (
     <div className="space-y-6 pb-20">
       <InquirySectionHeader onNewInquiry={() => setIsModalOpen(true)} />
+      {!isClient(user) && <ProjectRequestQueue searchTerm={searchTerm} />}
   
       {/* Filters */}
       <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">

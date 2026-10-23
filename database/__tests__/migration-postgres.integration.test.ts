@@ -89,7 +89,7 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
       await bootstrapDatabase(pool);
       assert.equal((await pool.query('SELECT count(*) FROM users')).rows[0].count, '0');
       assert.equal((await verifyDatabaseContract(pool)).ready, true);
-      assert.equal((await pool.query('SELECT count(*) FROM migrations')).rows[0].count, '35');
+      assert.equal((await pool.query('SELECT count(*) FROM migrations')).rows[0].count, '36');
       for (let attempt = 0; attempt < 2; attempt++) {
         execFileSync(process.execPath, ['--import', 'tsx', 'database/migrate.ts', 'up'], {
           env: { ...process.env, DATABASE_URL: pool.options.connectionString, DATABASE_SSL: 'false' }, stdio: 'pipe',
@@ -103,7 +103,7 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
       await assert.rejects(bootstrapDatabase(pool), /empty public schema/);
       assert.equal((await pool.query('SELECT content FROM task_comments')).rows[0].content, 'Persisted comment');
       assert.equal((await pool.query('SELECT count(*) FROM task_followers')).rows[0].count, '1');
-      assert.equal((await pool.query('SELECT count(*) FROM migrations')).rows[0].count, '35');
+      assert.equal((await pool.query('SELECT count(*) FROM migrations')).rows[0].count, '36');
     } finally { await pool.end(); }
   });
 
@@ -417,6 +417,9 @@ describe('migration 028 PostgreSQL execution', { skip: !postgresAvailable }, () 
         await pool.query(await readFile(new URL('../migrations/034_private_thumbnails.sql', import.meta.url), 'utf8'));
         await pool.query('CREATE TABLE IF NOT EXISTS inquiries (id UUID PRIMARY KEY DEFAULT gen_random_uuid())');
         await pool.query(await readFile(new URL('../migrations/035_authentication_runtime.sql', import.meta.url), 'utf8'));
+        const requestLink = await readFile(new URL('../migrations/036_link_project_requests_to_inquiries.sql', import.meta.url), 'utf8');
+        await pool.query(requestLink);
+        await pool.query(requestLink);
         await recordMigration(pool);
 
         const result = await verifyDatabaseContract(pool);

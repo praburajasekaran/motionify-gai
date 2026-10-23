@@ -26,7 +26,7 @@ describe('database contract verifier', () => {
 
     assert.equal(result.ready, true);
     assert.deepEqual(result.issues, []);
-    assert.equal(result.latestMigration, '035_authentication_runtime');
+    assert.equal(result.latestMigration, '036_link_project_requests_to_inquiries');
     assert.ok(runner.calls.length >= 4);
     for (const statement of runner.calls) {
       assert.match(statement.trim(), /^SELECT/i);
@@ -80,5 +80,17 @@ describe('database contract verifier', () => {
       result.issues.filter((issue) => issue.code === 'missing_index').map((issue) => issue.object).sort(),
       ['project_files.r2_key', 'sessions.jwt_token_hash']
     );
+  });
+
+  it('requires a unique linked inquiry for each client request', async () => {
+    const result = await verifyDatabaseContract(createContractRunner({
+      columns: canonicalColumns.filter(column => !(column.table_name === 'project_requests' && column.column_name === 'inquiry_id')),
+      constraints: canonicalConstraints.filter(constraint => constraint.constraint_name !== 'project_requests_inquiry_id_fkey'),
+      indexes: canonicalIndexes.filter(index => index.index_name !== 'idx_project_requests_inquiry_id'),
+    }));
+    assert.equal(result.ready, false);
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id' && issue.code === 'missing_column'));
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id_fkey' && issue.code === 'missing_constraint'));
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id' && issue.code === 'missing_index'));
   });
 });
