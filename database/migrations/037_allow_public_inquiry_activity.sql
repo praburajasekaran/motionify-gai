@@ -1,0 +1,2 @@
+-- UP
+ALTER TABLE activities ALTER COLUMN user_id DROP NOT NULL;

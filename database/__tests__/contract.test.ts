@@ -26,7 +26,7 @@ describe('database contract verifier', () => {
 
     assert.equal(result.ready, true);
     assert.deepEqual(result.issues, []);
-    assert.equal(result.latestMigration, '036_link_project_requests_to_inquiries');
+    assert.equal(result.latestMigration, '037_allow_public_inquiry_activity');
     assert.ok(runner.calls.length >= 4);
     for (const statement of runner.calls) {
       assert.match(statement.trim(), /^SELECT/i);

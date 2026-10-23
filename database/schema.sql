@@ -473,7 +473,7 @@ CREATE TRIGGER update_user_invitations_updated_at
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type VARCHAR(100) NOT NULL,
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID REFERENCES users(id),
   user_name VARCHAR(255) NOT NULL,
   target_user_id UUID REFERENCES users(id),
   target_user_name VARCHAR(255),

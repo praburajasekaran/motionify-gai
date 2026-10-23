@@ -107,6 +107,37 @@ function readScenarios(): Scenario[] {
   return scenarios.map(item => ({ ...item, method: 'GET', success: 200 }));
 }
 
+isolatedTest('public quiz inquiry saves the selected answers', async () => {
+  const quizAnswers = {
+    niche: 'Tech',
+    audience: 'Businesses',
+    style: 'Animation',
+    mood: 'Bold',
+    duration: 'Explainer',
+  };
+  const created = await request({
+    handler: inquiries,
+    method: 'POST',
+    endpoint: 'inquiries',
+    data: {
+      name: 'Quiz client',
+      email: 'quiz-client@example.test',
+      message: 'We need an animated product explainer.',
+      projectType: 'Animated Explainer',
+      quizAnswers,
+    },
+  }, null);
+
+  assert.equal(created.status, 201);
+  const saved = await pool.query('SELECT quiz_answers, recommended_video_type FROM inquiries WHERE id = $1', [created.body.id]);
+  assert.deepEqual(saved.rows[0].quiz_answers, quizAnswers);
+  assert.equal(saved.rows[0].recommended_video_type, 'Animated Explainer');
+  const activity = await pool.query('SELECT user_id, user_name FROM activities WHERE inquiry_id = $1 AND type = $2', [created.body.id, 'INQUIRY_CREATED']);
+  assert.equal(activity.rows.length, 1);
+  assert.equal(activity.rows[0].user_id, null);
+  assert.equal(activity.rows[0].user_name, 'Quiz client');
+});
+
 isolatedTest('magic-link verification returns authoritative active project memberships', async () => {
   for (const name of ['primary', 'secondary'] as const) {
     const actor = fixture.actors[name];

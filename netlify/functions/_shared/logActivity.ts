@@ -7,7 +7,7 @@ import { query } from './db';
  */
 export async function logActivity(params: {
   type: string;
-  userId: string;
+  userId: string | null;
   userName: string;
   projectId?: string;
   inquiryId?: string;

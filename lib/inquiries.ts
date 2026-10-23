@@ -139,6 +139,7 @@ export async function createInquiry(data: {
     company: data.contactInfo.companyName?.trim(),
     message: data.contactInfo.projectNotes?.trim() || data.recommendedVideoType,
     projectType: data.recommendedVideoType,
+    quizAnswers: data.quizAnswers,
   };
 
   const response = await fetch(`${API_BASE_URL}/inquiries`, {

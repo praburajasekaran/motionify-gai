@@ -146,6 +146,7 @@ export const canonicalIndexes = [
 
 export const canonicalMigrations = [
   { version: '036', name: 'link_project_requests_to_inquiries' },
+  { version: '037', name: 'allow_public_inquiry_activity' },
 ];
 
 export const canonicalStages = ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed'].map(enumlabel => ({ enumlabel }));

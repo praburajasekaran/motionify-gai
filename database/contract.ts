@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '036',
-  name: 'link_project_requests_to_inquiries',
+  version: '037',
+  name: 'allow_public_inquiry_activity',
 } as const;
 
 export interface DatabaseContractQueryRunner {
