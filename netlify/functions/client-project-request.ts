@@ -1,7 +1,8 @@
-import { query as dbQuery } from './_shared/db';
+import { query as dbQuery, transaction } from './_shared/db';
 import { compose, withCORS, withAuth, withRateLimit, type NetlifyEvent, type AuthResult } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
+import { logActivity } from './_shared/logActivity';
 
 interface CreateProjectRequestPayload {
     title: string;
@@ -9,6 +10,8 @@ interface CreateProjectRequestPayload {
     tentativeDeadline: string; // ISO date string
     clientUserId?: string; // Only used by admin/support acting on behalf of client
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const generateRequestNumber = async (): Promise<string> => {
     const year = new Date().getFullYear();
@@ -33,7 +36,7 @@ const generateRequestNumber = async (): Promise<string> => {
 };
 
 export const handler = compose(
-    withCORS(['GET', 'POST', 'OPTIONS']),
+    withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
     withAuth(),
     withRateLimit(RATE_LIMITS.apiStrict, 'client_project_request')
 )(async (event: NetlifyEvent, auth?: AuthResult) => {
@@ -54,27 +57,21 @@ export const handler = compose(
     try {
         // GET: Fetch project requests
         if (event.httpMethod === 'GET') {
-            // Clients can only see their own requests (derived from token)
-            // Admin/support can view any client's requests via query param
-            let targetUserId: string;
-            if (userRole === 'client') {
-                targetUserId = userId;
-            } else {
-                const { clientUserId } = event.queryStringParameters || {};
-                if (!clientUserId) {
-                    return {
-                        statusCode: 400,
-                        headers,
-                        body: JSON.stringify({ error: 'clientUserId query parameter is required for admin access' }),
-                    };
-                }
-                targetUserId = clientUserId;
+            const targetUserId = userRole === 'client'
+                ? userId
+                : event.queryStringParameters?.clientUserId || null;
+            if (targetUserId && !UUID_PATTERN.test(targetUserId)) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid clientUserId' }) };
             }
 
             const result = await dbQuery(
-                `SELECT * FROM project_requests
-         WHERE client_user_id = $1
-         ORDER BY created_at DESC`,
+                `SELECT pr.*, u.full_name AS client_name, u.email AS client_email,
+                        i.inquiry_number
+                   FROM project_requests pr
+                   JOIN users u ON u.id = pr.client_user_id
+                   LEFT JOIN inquiries i ON i.id = pr.inquiry_id
+                  WHERE ($1::uuid IS NULL OR pr.client_user_id = $1)
+                  ORDER BY pr.created_at DESC`,
                 [targetUserId]
             );
 
@@ -83,6 +80,101 @@ export const handler = compose(
                 headers,
                 body: JSON.stringify(result.rows),
             };
+        }
+
+        if (event.httpMethod === 'PUT') {
+            if (!['super_admin', 'support'].includes(userRole)) {
+                return { statusCode: 403, headers, body: JSON.stringify({ error: 'Admin access required' }) };
+            }
+
+            const { requestId } = JSON.parse(event.body || '{}');
+            if (typeof requestId !== 'string' || !UUID_PATTERN.test(requestId)) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Valid requestId is required' }) };
+            }
+
+            const conversion = await transaction(async (client) => {
+                const requestResult = await client.query(
+                    `SELECT pr.*, to_char(pr.tentative_deadline, 'YYYY-MM-DD') AS deadline,
+                            u.full_name AS client_name, u.email AS client_email
+                       FROM project_requests pr
+                       JOIN users u ON u.id = pr.client_user_id
+                      WHERE pr.id = $1
+                      FOR UPDATE OF pr`,
+                    [requestId]
+                );
+                const request = requestResult.rows[0];
+                if (!request) return { error: 'Project request not found', statusCode: 404 };
+
+                if (request.inquiry_id) {
+                    const linked = await client.query(
+                        'SELECT id, inquiry_number FROM inquiries WHERE id = $1',
+                        [request.inquiry_id]
+                    );
+                    return { inquiryId: linked.rows[0].id, inquiryNumber: linked.rows[0].inquiry_number, created: false };
+                }
+                if (['rejected', 'cancelled', 'converted'].includes(request.status)) {
+                    return { error: 'This request cannot be reviewed', statusCode: 409 };
+                }
+
+                await client.query("SELECT pg_advisory_xact_lock(hashtext('client-request-inquiry-number'))");
+                const year = new Date().getFullYear();
+                const latest = await client.query(
+                    `SELECT COALESCE(MAX(substring(inquiry_number FROM '[0-9]+$')::integer), 0) AS last_number
+                       FROM inquiries
+                      WHERE inquiry_number ~ $1`,
+                    [`^INQ-${year}-[0-9]+$`]
+                );
+                const sequence = Number(latest.rows[0].last_number) + 1;
+                const inquiryNumber = `INQ-${year}-${String(sequence).padStart(3, '0')}`;
+                const inquiry = await client.query(
+                    `INSERT INTO inquiries (
+                        inquiry_number, contact_name, contact_email, project_notes,
+                        quiz_answers, recommended_video_type, client_user_id
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING id`,
+                    [
+                        inquiryNumber,
+                        request.client_name || request.client_email,
+                        request.client_email,
+                        `${request.title}\n\n${request.description}\n\nTentative deadline: ${request.deadline}`,
+                        JSON.stringify({
+                            source: 'client_project_request',
+                            niche: 'Not specified',
+                            audience: 'Not specified',
+                            style: 'Not specified',
+                            mood: 'Not specified',
+                            duration: 'Not specified',
+                        }),
+                        'Custom project',
+                        request.client_user_id,
+                    ]
+                );
+                await client.query(
+                    `UPDATE project_requests
+                        SET status = 'converted', inquiry_id = $2
+                      WHERE id = $1`,
+                    [requestId, inquiry.rows[0].id]
+                );
+                return { inquiryId: inquiry.rows[0].id, inquiryNumber, created: true };
+            });
+
+            if ('error' in conversion) {
+                return { statusCode: conversion.statusCode, headers, body: JSON.stringify({ error: conversion.error }) };
+            }
+            if (conversion.created) {
+                try {
+                    await logActivity({
+                        type: 'INQUIRY_CREATED',
+                        userId,
+                        userName: auth!.user!.fullName || 'Motionify Studio',
+                        inquiryId: conversion.inquiryId,
+                        details: { inquiryNumber: conversion.inquiryNumber, source: 'client_project_request' },
+                    });
+                } catch (error) {
+                    console.error('Failed to log project request conversion:', error);
+                }
+            }
+            return { statusCode: 200, headers, body: JSON.stringify(conversion) };
         }
 
         // POST: Create new project request

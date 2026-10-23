@@ -231,8 +231,8 @@ export const handler = compose(
 
         const inquiryNumber = await generateInquiryNumber();
 
-        // Create default quiz answers for public form submissions
-        const defaultQuizAnswers = {
+        // Contact forms have no quiz; quiz submissions carry their actual selections.
+        const quizAnswers = payload.quizAnswers || {
           niche: payload.projectType || 'General',
           audience: 'General',
           style: 'Professional',
@@ -253,7 +253,7 @@ export const handler = compose(
             payload.company || null,
             null, // contact_phone - schema doesn't include phone
             payload.message || null,
-            JSON.stringify(defaultQuizAnswers),
+            JSON.stringify(quizAnswers),
             payload.projectType || 'Explainer Video',
           ]
         );
@@ -261,7 +261,7 @@ export const handler = compose(
         // Log activity for public form
         await logActivity({
           type: 'INQUIRY_CREATED',
-          userId: '',
+          userId: null,
           userName: payload.name,
           inquiryId: result.rows[0].id,
           details: { inquiryNumber, source: 'public' },

@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '035',
-  name: 'authentication_runtime',
+  version: '037',
+  name: 'allow_public_inquiry_activity',
 } as const;
 
 export interface DatabaseContractQueryRunner {
@@ -143,6 +143,7 @@ const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
     description: { type: 'text', nullable: false },
     tentative_deadline: { type: 'date', nullable: false },
     status: { type: 'character varying', nullable: false, defaultPattern: /'pending'/i },
+    inquiry_id: { type: 'uuid' },
     created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)|current_timestamp/i },
     updated_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)|current_timestamp/i },
   },
@@ -334,6 +335,10 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
   if (!projectRequestForeignKey || !normalizeSql(projectRequestForeignKey.definition).includes('references users(id)')) {
     issues.push({ code: 'missing_constraint', object: 'project_requests.client_user_id_fkey' });
   }
+  const projectRequestInquiryForeignKey = find('project_requests', 'f', 'foreign key (inquiry_id)');
+  if (!projectRequestInquiryForeignKey || !normalizeSql(projectRequestInquiryForeignKey.definition).includes('references inquiries(id)')) {
+    issues.push({ code: 'missing_constraint', object: 'project_requests.inquiry_id_fkey' });
+  }
 
   const projectRequestStatus = constraints.find((constraint) =>
     constraint.table_name === 'project_requests'
@@ -382,6 +387,15 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
 }
 
 function addIndexIssues(indexes: IndexRow[], issues: DatabaseContractIssue[]): void {
+  const requestInquiryUniqueIndex = indexes.find((index) =>
+    index.table_name === 'project_requests'
+    && normalizeSql(index.index_definition).includes('unique')
+    && normalizeSql(index.index_definition).includes('(inquiry_id)')
+  );
+  if (!requestInquiryUniqueIndex) {
+    issues.push({ code: 'missing_index', object: 'project_requests.inquiry_id' });
+  }
+
   const projectTeamUniqueIndex = indexes.find((index) =>
     index.table_name === 'project_team'
     && normalizeSql(index.index_definition).includes('unique')

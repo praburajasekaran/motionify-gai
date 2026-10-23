@@ -160,6 +160,7 @@ CREATE TABLE project_requests (
   description TEXT NOT NULL,
   tentative_deadline DATE NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  inquiry_id UUID REFERENCES inquiries(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (status IN ('pending', 'reviewing', 'approved', 'rejected', 'converted', 'cancelled'))
@@ -311,6 +312,7 @@ CREATE INDEX idx_projects_number ON projects(project_number);
 CREATE INDEX idx_project_requests_client ON project_requests(client_user_id);
 CREATE INDEX idx_project_requests_status ON project_requests(status);
 CREATE INDEX idx_project_requests_created_at ON project_requests(created_at DESC);
+CREATE UNIQUE INDEX idx_project_requests_inquiry_id ON project_requests(inquiry_id) WHERE inquiry_id IS NOT NULL;
 
 -- Project Files
 CREATE INDEX idx_project_files_project_id ON project_files(project_id);
@@ -471,7 +473,7 @@ CREATE TRIGGER update_user_invitations_updated_at
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type VARCHAR(100) NOT NULL,
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID REFERENCES users(id),
   user_name VARCHAR(255) NOT NULL,
   target_user_id UUID REFERENCES users(id),
   target_user_name VARCHAR(255),

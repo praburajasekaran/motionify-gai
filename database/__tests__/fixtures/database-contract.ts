@@ -63,6 +63,7 @@ export const canonicalColumns = [
   ['project_requests', 'description', 'text', 'text', null, 'NO'],
   ['project_requests', 'tentative_deadline', 'date', 'date', null, 'NO'],
   ['project_requests', 'status', 'character varying', 'varchar', "'pending'::character varying", 'NO'],
+  ['project_requests', 'inquiry_id', 'uuid', 'uuid', null, 'YES'],
   ['project_requests', 'created_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
   ['project_requests', 'updated_at', 'timestamp with time zone', 'timestamptz', 'now()', 'NO'],
   ['project_files', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
@@ -128,6 +129,7 @@ export const canonicalConstraints = [
   { table_name: 'project_requests', constraint_name: 'project_requests_pkey', constraint_type: 'p', definition: 'PRIMARY KEY (id)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_request_number_key', constraint_type: 'u', definition: 'UNIQUE (request_number)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_client_user_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (client_user_id) REFERENCES users(id) ON DELETE CASCADE' },
+  { table_name: 'project_requests', constraint_name: 'project_requests_inquiry_id_fkey', constraint_type: 'f', definition: 'FOREIGN KEY (inquiry_id) REFERENCES inquiries(id)' },
   { table_name: 'project_requests', constraint_name: 'project_requests_status_check', constraint_type: 'c', definition: "CHECK (status IN ('pending', 'reviewing', 'approved', 'rejected', 'converted', 'cancelled'))" },
   { table_name: 'projects', constraint_name: 'projects_status_check', constraint_type: 'c', definition: "CHECK (status IN ('draft', 'active', 'in_review', 'awaiting_payment', 'on_hold', 'completed', 'archived', 'cancelled'))" },
   { table_name: 'project_invitations', constraint_name: 'project_invitations_role_check', constraint_type: 'c', definition: "CHECK (role IN ('client', 'team_member'))" },
@@ -136,13 +138,15 @@ export const canonicalConstraints = [
 ];
 
 export const canonicalIndexes = [
+  { table_name: 'project_requests', index_name: 'idx_project_requests_inquiry_id', index_definition: 'CREATE UNIQUE INDEX idx_project_requests_inquiry_id ON public.project_requests USING btree (inquiry_id) WHERE (inquiry_id IS NOT NULL)' },
   { table_name: 'project_team', index_name: 'idx_project_team_user_project', index_definition: 'CREATE UNIQUE INDEX idx_project_team_user_project ON public.project_team USING btree (user_id, project_id)' },
   { table_name: 'sessions', index_name: 'idx_sessions_jwt_token_hash', index_definition: 'CREATE UNIQUE INDEX idx_sessions_jwt_token_hash ON public.sessions USING btree (jwt_token_hash) WHERE (jwt_token_hash IS NOT NULL)' },
   { table_name: 'project_files', index_name: 'idx_project_files_r2_key', index_definition: 'CREATE UNIQUE INDEX idx_project_files_r2_key ON public.project_files USING btree (r2_key)' },
 ];
 
 export const canonicalMigrations = [
-  { version: '035', name: 'authentication_runtime' },
+  { version: '036', name: 'link_project_requests_to_inquiries' },
+  { version: '037', name: 'allow_public_inquiry_activity' },
 ];
 
 export const canonicalStages = ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed'].map(enumlabel => ({ enumlabel }));

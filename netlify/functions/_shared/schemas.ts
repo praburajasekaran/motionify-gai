@@ -293,6 +293,13 @@ export const createInquirySchema = z.object({
     message: z.string().min(10).max(2000),
     projectType: z.string().max(100).optional(),
     budget: z.string().max(50).optional(),
+    quizAnswers: z.object({
+        niche: z.string().min(1).max(100),
+        audience: z.string().min(1).max(100),
+        style: z.string().min(1).max(100),
+        mood: z.string().min(1).max(100),
+        duration: z.string().min(1).max(100),
+    }).optional(),
 });
 
 // Schema for admin-created inquiries (NewInquiryModal)

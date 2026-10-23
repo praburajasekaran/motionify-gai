@@ -25,6 +25,7 @@ import { handler as updateUser } from '../users-update';
 import { handler as deleteUser } from '../users-delete';
 import { handler as globalInvite } from '../invitations-create';
 import { handler as verifyLink } from '../auth-verify-magic-link';
+import { handler as projectRequests } from '../client-project-request';
 
 type Scenario = {
   name: string; handler: Handler | typeof verifyLink; method: string; endpoint: string;
@@ -106,6 +107,37 @@ function readScenarios(): Scenario[] {
   return scenarios.map(item => ({ ...item, method: 'GET', success: 200 }));
 }
 
+isolatedTest('public quiz inquiry saves the selected answers', async () => {
+  const quizAnswers = {
+    niche: 'Tech',
+    audience: 'Businesses',
+    style: 'Animation',
+    mood: 'Bold',
+    duration: 'Explainer',
+  };
+  const created = await request({
+    handler: inquiries,
+    method: 'POST',
+    endpoint: 'inquiries',
+    data: {
+      name: 'Quiz client',
+      email: 'quiz-client@example.test',
+      message: 'We need an animated product explainer.',
+      projectType: 'Animated Explainer',
+      quizAnswers,
+    },
+  }, null);
+
+  assert.equal(created.status, 201);
+  const saved = await pool.query('SELECT quiz_answers, recommended_video_type FROM inquiries WHERE id = $1', [created.body.id]);
+  assert.deepEqual(saved.rows[0].quiz_answers, quizAnswers);
+  assert.equal(saved.rows[0].recommended_video_type, 'Animated Explainer');
+  const activity = await pool.query('SELECT user_id, user_name FROM activities WHERE inquiry_id = $1 AND type = $2', [created.body.id, 'INQUIRY_CREATED']);
+  assert.equal(activity.rows.length, 1);
+  assert.equal(activity.rows[0].user_id, null);
+  assert.equal(activity.rows[0].user_name, 'Quiz client');
+});
+
 isolatedTest('magic-link verification returns authoritative active project memberships', async () => {
   for (const name of ['primary', 'secondary'] as const) {
     const actor = fixture.actors[name];
@@ -163,6 +195,57 @@ isolatedTest('project detail returns saved deliverable counts including zero', a
     assert.equal(result.status, 200);
     assert.equal(result.body.deliverables_count, count);
   }
+});
+
+isolatedTest('client request enters the inquiry workflow once under admin review', async () => {
+  const created = await request({
+    handler: projectRequests, method: 'POST', endpoint: 'client-project-request',
+    data: { title: 'Payment activation test', description: 'Verify activation after the advance payment.', tentativeDeadline: '2099-01-01' },
+  }, fixture.actors.primary);
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const requestId = created.body.projectRequest.id;
+
+  const clientList = await request({ handler: projectRequests, method: 'GET', endpoint: 'client-project-request' }, fixture.actors.primary);
+  const otherList = await request({ handler: projectRequests, method: 'GET', endpoint: 'client-project-request' }, fixture.actors.secondary);
+  const adminList = await request({ handler: projectRequests, method: 'GET', endpoint: 'client-project-request' }, fixture.actors.admin);
+  assert.equal(clientList.body.length, 1);
+  assert.equal(otherList.body.length, 0);
+  assert.equal(adminList.body[0].id, requestId);
+  assert.equal(adminList.body[0].client_email, fixture.actors.primary.email);
+
+  const denied = await request({ handler: projectRequests, method: 'PUT', endpoint: 'client-project-request', data: { requestId } }, fixture.actors.primary);
+  assert.equal(denied.status, 403);
+  const converted = await request({ handler: projectRequests, method: 'PUT', endpoint: 'client-project-request', data: { requestId } }, fixture.actors.admin);
+  assert.equal(converted.status, 200, JSON.stringify(converted.body));
+  assert.match(converted.body.inquiryNumber, /^INQ-\d{4}-\d+$/);
+
+  const repeated = await request({ handler: projectRequests, method: 'PUT', endpoint: 'client-project-request', data: { requestId } }, fixture.actors.admin);
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.body.inquiryId, converted.body.inquiryId);
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM inquiries WHERE id = $1', [converted.body.inquiryId])).rows[0].count, 1);
+  const linked = (await pool.query('SELECT status, inquiry_id FROM project_requests WHERE id = $1', [requestId])).rows[0];
+  assert.deepEqual(linked, { status: 'converted', inquiry_id: converted.body.inquiryId });
+  const inquiry = (await pool.query('SELECT client_user_id, project_notes FROM inquiries WHERE id = $1', [converted.body.inquiryId])).rows[0];
+  assert.equal(inquiry.client_user_id, fixture.actors.primary.id);
+  assert.match(inquiry.project_notes, /Payment activation test/);
+});
+
+isolatedTest('two client requests converted together receive distinct inquiry numbers', async () => {
+  const create = (title: string) => request({
+    handler: projectRequests, method: 'POST', endpoint: 'client-project-request',
+    data: { title, description: 'Verify a concurrent request conversion.', tentativeDeadline: '2099-01-01' },
+  }, fixture.actors.primary);
+  const first = await create('First request');
+  const second = await create('Second request');
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  const [a, b] = await Promise.all([first, second].map((created) => request({
+    handler: projectRequests, method: 'PUT', endpoint: 'client-project-request',
+    data: { requestId: created.body.projectRequest.id },
+  }, fixture.actors.admin)));
+  assert.equal(a.status, 200, JSON.stringify(a.body));
+  assert.equal(b.status, 200, JSON.stringify(b.body));
+  assert.notEqual(a.body.inquiryNumber, b.body.inquiryNumber);
 });
 
 isolatedTest('allowed-role read matrix covers ten resource families through persisted sessions', async t => {
