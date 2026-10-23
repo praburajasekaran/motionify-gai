@@ -8,7 +8,7 @@ Clients open a proposal review link, review scope/pricing, request changes or de
 - `proposal-changes` opens/cancels feedback and submits a sufficiently detailed change request.
 - `proposal-decline` records a decline and its resulting state.
 - `proposal-accept-pay` carries the review token into payment.
-- `payment-sandbox` verifies the payment and activated project; `project-open` follows its access path.
+- `payment-sandbox` verifies the payment and activated project; `payment-retry-confirmation` retries a failed confirmation without starting another checkout; `project-open` follows its access path.
 - `proposal-invalid` and `payment-invalid` show unavailable-link states.
 
 ## How to get to it (user POV)
@@ -28,6 +28,7 @@ Preconditions: an owned disposable full stack, real issued proposal links from a
 - **Decline.** With a different untouched `sent` fixture, click `page.getByRole('button', { name: 'Decline', exact: true })`, observe the real update response, reload, and require the already-responded message. Confirm rejection from the admin view as well.
 - **Accept and navigate.** With another untouched fixture, click `page.getByRole('button', { name: 'Accept & Pay', exact: true })`. Require `/payment/`, the `Complete Your Advance Payment` heading, correct advance amount, and preserved review token. This button navigates to payment; do not report acceptance/project activation before successful payment verification.
 - **Sandbox checkout.** Click `page.getByRole('button', { name: /^Pay / })`, observe the real `payment-handoff/create-order` response, and use Razorpay's documented test checkout. Capture the resulting `payment-handoff/verify` response, `Payment Successful` heading, stored payment amount/status, and activated project from a read-only second view. Do not replace Razorpay's verification response with a success mock or use live keys.
+- **Confirmation retry.** With a disposable sandbox payment, abort only the browser's first `payment-handoff/verify` request after Razorpay returns its payment proof. Require the alert `We could not confirm your payment yet. Retry confirmation without paying again.` and the `Retry payment confirmation` button. Click it and observe a real successful verification response. Require `Payment Successful`, the same payment and project from a read-only second view, and no second `payment-handoff/create-order` request or Razorpay checkout. Keep the payment proof and token out of shareable evidence.
 - **Open Project.** Click `page.getByRole('button', { name: 'Open Project', exact: true })`; require `/portal/project-access`, the correct project, and then its usable workspace through the real access/login path. Capture both the button action and destination.
 - **Invalid-link branches.** Against the owned full-stack instance, visit `/proposal/00000000-0000-0000-0000-000000000000` and require `Proposal Not Found`; visit `/payment/00000000-0000-0000-0000-000000000000` and require `Payment Not Found`. Capture real API error responses. A network failure rendering the same heading does not prove invalid-token handling.
 
@@ -35,6 +36,6 @@ Preconditions: an owned disposable full stack, real issued proposal links from a
 
 - Proposal tokens, pending status, role, payment state, and fixture expiry matter. Reusing an already-responded proposal cannot prove another response branch.
 - Accept & Pay navigates; the irreversible business side effects occur through order/payment verification. Observe which writes and emails actually happen.
-- PublicPaymentPage loads Razorpay's external script on entry. A test label is not proof of zero external traffic; record requests and confirm test credentials before clicking Pay.
+- PublicPaymentPage loads Razorpay's external script when Pay is clicked, before it creates the order. Record the script request and confirm test credentials before completing checkout. If the script fails, the Pay button returns with an error and no order request.
 - Backend email and payment operations can affect other users if data is shared. Require disposable records/inboxes and retain evidence; do not reset shared data.
 - A base64 `?data=` proposal or injected auth session can render a screen without proving the issued-link access path, persistence, or payment activation.
