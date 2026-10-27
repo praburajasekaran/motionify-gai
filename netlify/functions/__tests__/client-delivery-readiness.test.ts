@@ -294,8 +294,14 @@ test('terms, revision feedback, resubmission, approval and final download form a
   const approved = await request(deliverables, fixture.actors.primary, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'approved' });
   assert.equal(approved.status, 200, JSON.stringify(approved.body));
   assert.equal(approved.body.approved_by, fixture.actors.primary.id);
+  const prematureDelivery = await request(deliverables, fixture.actors.manager, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'final_delivered' });
+  assert.equal(prematureDelivery.status, 409);
+  assert.equal(prematureDelivery.body.error, 'Upload a final file before delivery');
   const finalContent = Buffer.from('synthetic approved final content');
   const finalFile = await uploadFile('approved-final.pdf', finalContent, true);
+  const unpaidDelivery = await request(deliverables, fixture.actors.manager, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'final_delivered' });
+  assert.equal(unpaidDelivery.status, 409);
+  assert.equal(unpaidDelivery.body.error, 'Complete the balance payment before final delivery');
   await pool.query(`INSERT INTO payments (proposal_id, project_id, payment_type, amount, currency, status)
     VALUES ($1, $2, 'balance', 100, 'INR', 'completed')`, [fixture.proposalId, fixture.projectId]);
   await setStatus('final_delivered');
@@ -357,14 +363,13 @@ test('client final download requires both release and full completed payment', a
   await setStatus('approved');
   let signed = await request(presign, fixture.actors.primary, 'GET', 'r2-presign', undefined, { key: file.file_key });
   assert.equal(signed.status, 403);
-  await setStatus('final_delivered');
-  signed = await request(presign, fixture.actors.primary, 'GET', 'r2-presign', undefined, { key: file.file_key });
-  assert.equal(signed.status, 403);
   await pool.query(`INSERT INTO payments (proposal_id, project_id, payment_type, amount, currency, status)
     VALUES ($1, $2, 'balance', 100, 'INR', 'pending')`, [fixture.proposalId, fixture.projectId]);
+  assert.equal((await request(deliverables, fixture.actors.manager, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'final_delivered' })).status, 409);
   signed = await request(presign, fixture.actors.primary, 'GET', 'r2-presign', undefined, { key: file.file_key });
   assert.equal(signed.status, 403);
   await pool.query("UPDATE payments SET status = 'completed' WHERE project_id = $1", [fixture.projectId]);
+  await setStatus('final_delivered');
   signed = await request(presign, fixture.actors.primary, 'GET', 'r2-presign', undefined, { key: file.file_key });
   assert.equal(signed.status, 200, JSON.stringify(signed.body));
 });

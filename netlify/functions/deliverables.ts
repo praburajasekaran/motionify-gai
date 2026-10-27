@@ -313,6 +313,33 @@ export const handler = compose(
       if (updates.status === 'approved') updates.approved_by = auth!.user!.userId;
       else delete updates.approved_by;
 
+      if (updates.status === 'final_delivered') {
+        if (!['approved', 'payment_pending'].includes(oldDeliverableStatus)) {
+          return { statusCode: 409, headers, body: JSON.stringify({ error: 'Client approval is required before final delivery' }) };
+        }
+        const readiness = await dbQuery(`
+          SELECT
+            (d.final_file_key IS NOT NULL OR EXISTS (
+              SELECT 1 FROM deliverable_files df WHERE df.deliverable_id = d.id AND df.is_final = true
+            )) AS has_final_file,
+            (p.proposal_id IS NULL OR COALESCE((
+              SELECT SUM(pay.amount) FROM payments pay
+              WHERE (pay.project_id = p.id OR pay.proposal_id = p.proposal_id)
+                AND pay.status = 'completed' AND pay.currency = proposal.currency
+            ), 0) >= proposal.total_price) AS fully_paid
+          FROM deliverables d
+          JOIN projects p ON p.id = d.project_id
+          LEFT JOIN proposals proposal ON proposal.id = p.proposal_id
+          WHERE d.id = $1
+        `, [id]);
+        if (!readiness.rows[0]?.has_final_file) {
+          return { statusCode: 409, headers, body: JSON.stringify({ error: 'Upload a final file before delivery' }) };
+        }
+        if (!readiness.rows[0]?.fully_paid) {
+          return { statusCode: 409, headers, body: JSON.stringify({ error: 'Complete the balance payment before final delivery' }) };
+        }
+      }
+
       if (updates.assigned_to) {
         const assignee = await dbQuery(`SELECT u.id FROM users u JOIN project_team pt ON pt.user_id = u.id
           WHERE pt.project_id = $1 AND u.id = $2 AND pt.removed_at IS NULL
