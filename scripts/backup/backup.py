@@ -63,7 +63,9 @@ def backup():
     env = {key: value for key, value in os.environ.items() if not key.startswith('PG')}
     env.pop('BACKUP_DATABASE_URL')
     env.update({'PGHOST': database_url.hostname, 'PGDATABASE': unquote(database_url.path[1:]),
-                'PGSSLMODE': ssl_modes[0] if ssl_modes else 'require'})
+                'PGSSLMODE': 'verify-full'})
+    if os.environ.get('BACKUP_TLS_CA_FILE'):
+        env['PGSSLROOTCERT'] = os.environ['BACKUP_TLS_CA_FILE']
     if database_url.port:
         env['PGPORT'] = str(database_url.port)
     if database_url.username:

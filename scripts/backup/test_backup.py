@@ -143,6 +143,7 @@ elif name == 'curl':
         subprocess.run(['initdb', '-D', str(data), '-U', 'backup_test', '-A', 'trust', '--no-locale'],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(['openssl', 'req', '-new', '-x509', '-nodes', '-days', '1', '-subj', '/CN=localhost',
+                        '-addext', 'subjectAltName=DNS:localhost',
                         '-keyout', str(data / 'server.key'), '-out', str(data / 'server.crt')],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         (data / 'server.key').chmod(0o600)
@@ -156,16 +157,25 @@ elif name == 'curl':
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.addCleanup(subprocess.run, ['pg_ctl', '-D', str(data), '-m', 'immediate', 'stop'],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        source = f'postgresql://backup_test@127.0.0.1:{port}/postgres?sslmode=require'
-        pg_env = os.environ | {'PGHOST': '127.0.0.1', 'PGPORT': str(port), 'PGUSER': 'backup_test',
+        source = f'postgresql://backup_test@localhost:{port}/postgres?sslmode=require'
+        pg_env = os.environ | {'PGHOST': 'localhost', 'PGPORT': str(port), 'PGUSER': 'backup_test',
                                'PGDATABASE': 'postgres', 'PGSSLMODE': 'require'}
         subprocess.run(['psql', '-X', '-c', "CREATE TABLE backup_proof (value text); INSERT INTO backup_proof VALUES ('saved');"],
                        env=pg_env, check=True, stdout=subprocess.DEVNULL)
         subprocess.run(['psql', '-X', '-c', 'CREATE ROLE backup_reader LOGIN; GRANT pg_read_all_data TO backup_reader;'],
                        env=pg_env, check=True, stdout=subprocess.DEVNULL)
         self.env['BACKUP_DATABASE_URL'] = source.replace('backup_test@', 'backup_reader@')
-        self.env['BACKUP_EXPECTED_HOST'] = '127.0.0.1'
+        self.env['BACKUP_EXPECTED_HOST'] = 'localhost'
         self.env['BACKUP_EXPECTED_DATABASE'] = 'postgres'
+        self.env['BACKUP_TLS_CA_FILE'] = str(self.root / 'missing-ca.crt')
+        self.assertNotEqual(self.run_backup().returncode, 0)
+        self.assertFalse(list(self.store.rglob('*.json')))
+        self.env['BACKUP_TLS_CA_FILE'] = str(data / 'server.crt')
+        tls_check = subprocess.run(['psql', '-X', '-tAc', 'SELECT 1'],
+                                   env=pg_env | {'PGUSER': 'backup_reader', 'PGSSLMODE': 'verify-full',
+                                                 'PGSSLROOTCERT': str(data / 'server.crt')},
+                                   capture_output=True, text=True)
+        self.assertEqual(tls_check.returncode, 0, tls_check.stderr)
         real_age = os.environ.get('BACKUP_TEST_AGE')
         if real_age:
             (self.bin / 'age').unlink()

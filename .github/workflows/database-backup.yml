@@ -24,6 +24,7 @@ jobs:
       BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
       BACKUP_EXPECTED_HOST: ${{ vars.BACKUP_EXPECTED_HOST }}
       BACKUP_EXPECTED_DATABASE: ${{ vars.BACKUP_EXPECTED_DATABASE }}
+      BACKUP_TLS_CA_FILE: /etc/ssl/certs/ca-certificates.crt
       R2_ENDPOINT: ${{ vars.BACKUP_R2_ENDPOINT }}
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
       BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
