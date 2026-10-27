@@ -84,6 +84,10 @@ const DeliverableReviewContent: React.FC = () => {
     deliverable: deliverable || undefined,
     project: currentProject,
   });
+  const canUploadBeta = !!deliverable && permissions.canUploadBeta &&
+    ['pending', 'in_progress', 'beta_ready', 'revision_requested'].includes(deliverable.status);
+  const canUploadFinal = !!deliverable && permissions.canUploadFinal &&
+    ['approved', 'payment_pending'].includes(deliverable.status);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -542,8 +546,8 @@ const DeliverableReviewContent: React.FC = () => {
           {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
-            canUploadBeta={permissions.canUploadBeta && ['pending', 'in_progress', 'beta_ready', 'revision_requested'].includes(deliverable.status)}
-            canUploadFinal={permissions.canUploadFinal && ['approved', 'payment_pending'].includes(deliverable.status)}
+            canUploadBeta={canUploadBeta}
+            canUploadFinal={canUploadFinal}
             onUpload={handleUpload}
             onUploadFinal={(file) => handleUpload(file, true)}
             onCancelUpload={handleCancelUpload}
@@ -567,7 +571,7 @@ const DeliverableReviewContent: React.FC = () => {
                 isRevisionMode={showRevisionForm}
                 canRequestRevision={permissions.canReject}
                 canComment={permissions.canComment}
-                canUploadBeta={permissions.canUploadBeta}
+                canUploadBeta={canUploadBeta}
                 comments={state.revisionFeedback.timestampedComments}
                 onAddComment={handleAddComment}
                 onRemoveComment={handleRemoveComment}
@@ -610,7 +614,7 @@ const DeliverableReviewContent: React.FC = () => {
               </>
             }
           />
-          {permissions.canUploadFinal && ['approved', 'payment_pending'].includes(deliverable.status) && (
+          {canUploadFinal && (
             <Button variant="default" onClick={() => setShowDeliverFinalDialog(true)} disabled={isUploading}>
               Deliver Final File
             </Button>
