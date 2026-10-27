@@ -524,6 +524,9 @@ isolatedTest('active login link creates a persisted session once and inactive ac
 });
 
 isolatedTest('manager and super-admin overrides retain the authenticated approval actor', async () => {
+  await pool.query("UPDATE deliverables SET final_file_key = 'projects/test/final.mp4' WHERE id = $1", [fixture.deliverableId]);
+  await pool.query(`INSERT INTO payments (proposal_id, project_id, payment_type, amount, currency, status)
+    VALUES ($1, $2, 'balance', 100, 'INR', 'completed')`, [fixture.proposalId, fixture.projectId]);
   for (const name of ['manager', 'admin'] as const) {
     await pool.query("UPDATE deliverables SET status = 'awaiting_approval', approved_by = NULL, approved_at = NULL WHERE id = $1", [fixture.deliverableId]);
     const actor = fixture.actors[name];

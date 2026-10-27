@@ -14,6 +14,7 @@ export interface DeliverableFilesListProps {
     canUploadBeta: boolean;
     canUploadFinal?: boolean;
     onUpload: (file: File) => void;
+    onUploadFinal?: (file: File) => void;
     onFilesChange?: () => void;
     isUploading?: boolean;
     uploadProgress?: number;
@@ -66,6 +67,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     canUploadBeta,
     canUploadFinal,
     onUpload,
+    onUploadFinal,
     onFilesChange,
     isUploading = false,
     uploadProgress = 0,
@@ -78,6 +80,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 }) => {
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const finalFileInputRef = useRef<HTMLInputElement>(null);
     const [fileItems, setFileItems] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -108,6 +111,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             onUpload(file);
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleFinalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) onUploadFinal?.(file);
+        e.target.value = '';
     };
 
     const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -265,12 +274,21 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                     accept="video/*,image/*,application/pdf"
                 />
             )}
+            {canUploadFinal && (
+                <input
+                    type="file"
+                    ref={finalFileInputRef}
+                    className="hidden"
+                    onChange={handleFinalFileChange}
+                    accept="video/*,image/*,application/pdf"
+                />
+            )}
 
             {isLoading ? (
                 <div className="text-center py-12 bg-muted rounded-lg border border-border">
                     <p className="text-muted-foreground text-sm">Loading files...</p>
                 </div>
-            ) : fileItems.length === 0 && !canUploadBeta ? (
+            ) : fileItems.length === 0 && !canUploadBeta && !canUploadFinal ? (
                 <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed border-border">
                     <div className="flex justify-center mb-3">
                         {deliverable.status === 'pending' || deliverable.status === 'in_progress' ? (
@@ -433,6 +451,17 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 </div>
                             )}
                         </div>
+                    )}
+                    {canUploadFinal && (
+                        <Button
+                            variant="outline"
+                            onClick={() => finalFileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="w-full gap-2"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Upload Final
+                        </Button>
                     )}
                 </>
             )}

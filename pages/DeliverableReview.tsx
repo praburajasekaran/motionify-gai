@@ -56,6 +56,8 @@ const DeliverableReviewContent: React.FC = () => {
   const [isSendingForReview, setIsSendingForReview] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showDeliverFinalDialog, setShowDeliverFinalDialog] = useState(false);
+  const [isDeliveringFinal, setIsDeliveringFinal] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
   // Upload progress state (passed to DeliverableFilesList for inline display)
@@ -82,6 +84,10 @@ const DeliverableReviewContent: React.FC = () => {
     deliverable: deliverable || undefined,
     project: currentProject,
   });
+  const canUploadBeta = !!deliverable && permissions.canUploadBeta &&
+    ['pending', 'in_progress', 'beta_ready', 'revision_requested'].includes(deliverable.status);
+  const canUploadFinal = !!deliverable && permissions.canUploadFinal &&
+    ['approved', 'payment_pending'].includes(deliverable.status);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -178,13 +184,37 @@ const DeliverableReviewContent: React.FC = () => {
     try {
       await approveDeliverable(deliverable.id);
       setShowApproveDialog(false);
-      showSuccess('Deliverable approved successfully! Payment link will be sent to your email.');
+      showSuccess('Deliverable approved. Open the Payments tab to pay the balance.');
       await refreshCurrentDeliverable();
     } catch (error) {
       setShowApproveDialog(false);
       showError(error, 'Failed to approve deliverable');
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleDeliverFinal = async () => {
+    if (!deliverable) return;
+    setIsDeliveringFinal(true);
+    try {
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'final_delivered' }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || 'Final delivery failed');
+      setShowDeliverFinalDialog(false);
+      showSuccess(result.emailDelivery?.status === 'failed'
+        ? 'Final file is available, but the delivery email failed. Contact the client directly.'
+        : 'Final file delivered to the client.');
+      await refreshCurrentDeliverable();
+    } catch (error) {
+      showError(error, 'Final delivery failed');
+    } finally {
+      setIsDeliveringFinal(false);
     }
   };
 
@@ -252,7 +282,7 @@ const DeliverableReviewContent: React.FC = () => {
     });
   };
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, isFinal = false) => {
     if (!deliverable) return;
 
     const controller = new AbortController();
@@ -264,7 +294,7 @@ const DeliverableReviewContent: React.FC = () => {
       setUploadProgress(0);
       setUploadingFileName(file.name);
 
-      const folder = 'beta'; // Default for empty state upload
+      const folder = isFinal ? 'final' : 'beta';
 
       // Upload file to R2 with progress tracking
       const key = await storageService.uploadFile(
@@ -323,7 +353,7 @@ const DeliverableReviewContent: React.FC = () => {
           file_size: file.size,
           mime_type: file.type,
           file_category: getFileCategory(file.type),
-          is_final: false,
+          is_final: isFinal,
         }),
         signal: controller.signal
       });
@@ -337,7 +367,7 @@ const DeliverableReviewContent: React.FC = () => {
         setActiveVideoFileName(file.name);
       }
 
-      if (['pending', 'in_progress', 'revision_requested'].includes(deliverable.status)) {
+      if (!isFinal && ['pending', 'in_progress', 'revision_requested'].includes(deliverable.status)) {
         const statusResponse = await fetch(`/api/deliverables/${deliverable.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -358,7 +388,7 @@ const DeliverableReviewContent: React.FC = () => {
       // Also refresh deliverables for status update
       await refreshCurrentDeliverable();
 
-      showSuccess('File uploaded successfully!');
+      showSuccess(isFinal ? 'Final file uploaded. Deliver it after the balance payment is complete.' : 'File uploaded successfully!');
     } catch (error) {
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
         console.log("Upload aborted by user");
@@ -466,11 +496,23 @@ const DeliverableReviewContent: React.FC = () => {
         onClose={() => setShowApproveDialog(false)}
         onConfirm={handleApprove}
         title={`Approve "${deliverable?.title}"?`}
-        message="After approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours."
+        message="After approval, open the Payments tab to complete the balance payment. The team will deliver final files after payment."
         confirmLabel="Approve Deliverable"
         cancelLabel="Cancel"
         variant="warning"
         isLoading={isApproving}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeliverFinalDialog}
+        onClose={() => setShowDeliverFinalDialog(false)}
+        onConfirm={handleDeliverFinal}
+        title="Deliver Final File?"
+        message="This releases the uploaded final file to the client and sends a delivery email. The balance payment must be complete."
+        confirmLabel="Deliver Final"
+        cancelLabel="Cancel"
+        variant="warning"
+        isLoading={isDeliveringFinal}
       />
 
       {/* Header */}
@@ -504,8 +546,10 @@ const DeliverableReviewContent: React.FC = () => {
           {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
-            canUploadBeta={permissions.canUploadBeta}
+            canUploadBeta={canUploadBeta}
+            canUploadFinal={canUploadFinal}
             onUpload={handleUpload}
+            onUploadFinal={(file) => handleUpload(file, true)}
             onCancelUpload={handleCancelUpload}
             isUploading={isUploading}
             uploadProgress={uploadProgress}
@@ -527,7 +571,7 @@ const DeliverableReviewContent: React.FC = () => {
                 isRevisionMode={showRevisionForm}
                 canRequestRevision={permissions.canReject}
                 canComment={permissions.canComment}
-                canUploadBeta={permissions.canUploadBeta}
+                canUploadBeta={canUploadBeta}
                 comments={state.revisionFeedback.timestampedComments}
                 onAddComment={handleAddComment}
                 onRemoveComment={handleRemoveComment}
@@ -570,6 +614,11 @@ const DeliverableReviewContent: React.FC = () => {
               </>
             }
           />
+          {canUploadFinal && (
+            <Button variant="default" onClick={() => setShowDeliverFinalDialog(true)} disabled={isUploading}>
+              Deliver Final File
+            </Button>
+          )}
 
           {/* Approval History */}
           {deliverable.approvalHistory.length > 0 && (
