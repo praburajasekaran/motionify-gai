@@ -1,0 +1,71 @@
+name: Database backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:17 Asia/Kolkata (21:47 UTC on the previous day).
+    - cron: '47 21 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.event_name == 'workflow_dispatch' || vars.BACKUP_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container: postgres:17-bookworm
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+      BACKUP_EXPECTED_HOST: ${{ vars.BACKUP_EXPECTED_HOST }}
+      BACKUP_EXPECTED_DATABASE: ${{ vars.BACKUP_EXPECTED_DATABASE }}
+      BACKUP_TLS_CA_FILE: /etc/ssl/certs/ca-certificates.crt
+      R2_ENDPOINT: ${{ vars.BACKUP_R2_ENDPOINT }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      BACKUP_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install backup tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends age awscli ca-certificates curl python3
+      - name: Create and verify encrypted backup
+        run: python3 scripts/backup/backup.py
+
+  notify-failure:
+    needs: backup
+    if: ${{ failure() && needs.backup.result == 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    env:
+      BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+    steps:
+      - name: Notify monitor of failed workflow
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          import urllib.request
+
+          url = os.environ.get('BACKUP_HEARTBEAT_URL', '')
+          if not re.fullmatch(r'https://[A-Za-z0-9./_-]+', url):
+              print('Failure notification URL is missing or invalid.', file=sys.stderr)
+              sys.exit(1)
+          try:
+              with urllib.request.urlopen(url.rstrip('/') + '/fail', timeout=15) as response:
+                  if response.status != 200:
+                      raise ValueError('Unexpected response')
+          except Exception:
+              print('Failure notification could not be sent.', file=sys.stderr)
+              sys.exit(1)
+          PY
