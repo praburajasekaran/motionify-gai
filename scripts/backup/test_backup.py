@@ -1,10 +1,14 @@
 import os
+import hashlib
+import json
 import pathlib
 import shutil
 import socket
 import subprocess
 import tempfile
+import textwrap
 import unittest
+from unittest import mock
 
 SCRIPT = pathlib.Path(__file__).with_name('backup.py')
 
@@ -24,6 +28,8 @@ import os, pathlib, shutil, sys
 name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
 if os.environ.get('FAIL_COMMAND') == name: sys.exit(2)
+if name == 'pg_dump' and args != ['--version'] and os.environ.get('FAIL_DUMP'): sys.exit(2)
+if name == 'aws' and os.environ.get('FAIL_UPLOAD') and args[-1].startswith('s3://') and args[-1].endswith(os.environ['FAIL_UPLOAD']): sys.exit(2)
 if name == 'pg_dump':
     if args == ['--version']: print('pg_dump (PostgreSQL) 17.6')
     else: pathlib.Path(args[args.index('--file')+1]).write_bytes(b'postgres archive')
@@ -66,9 +72,15 @@ elif name == 'curl':
         archives = [p for p in objects if p.name.endswith('.dump.age')]
         self.assertEqual(len(archives), 1)
         self.assertTrue(archives[0].read_bytes().startswith(b'encrypted:'))
-        self.assertEqual(len([p for p in objects if p.name.endswith('.json')]), 1)
+        manifests = [p for p in objects if p.name.endswith('.json')]
+        self.assertEqual(len(manifests), 1)
+        manifest = json.loads(manifests[0].read_text())
+        self.assertEqual(manifest['object_key'], archives[0].relative_to(self.store / 'backup-bucket').as_posix())
+        self.assertEqual(manifest['archive_bytes'], archives[0].stat().st_size)
+        self.assertEqual(manifest['archive_sha256'], hashlib.sha256(archives[0].read_bytes()).hexdigest())
         self.assertNotIn('secret', result.stdout + result.stderr)
-        self.assertIn('monitor.invalid/secret', (self.root / 'heartbeats').read_text())
+        self.assertEqual((self.root / 'heartbeats').read_text().strip(),
+                         'url = "https://monitor.invalid/secret"')
         self.assertFalse(list(self.root.glob('motionify-backup-*')))
 
     def test_corrupt_upload_fails_and_never_reports_success(self):
@@ -80,12 +92,24 @@ elif name == 'curl':
         self.assertFalse(list(self.root.glob('motionify-backup-*')))
 
     def test_dump_failure_reports_failure_and_cleans_up(self):
-        self.env['FAIL_COMMAND'] = 'pg_dump'
+        self.env['FAIL_DUMP'] = '1'
         result = self.run_backup()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('/fail', (self.root / 'heartbeats').read_text())
         self.assertFalse(list(self.store.rglob('*.json')))
         self.assertFalse(list(self.root.glob('motionify-backup-*')))
+
+    def test_upload_failure_reports_failure_and_cleans_up(self):
+        for suffix in ('.dump.age', '.json'):
+            with self.subTest(suffix=suffix):
+                self.env['FAIL_UPLOAD'] = suffix
+                (self.root / 'heartbeats').unlink(missing_ok=True)
+                result = self.run_backup()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual((self.root / 'heartbeats').read_text().count('url = '), 1)
+                self.assertIn('/fail', (self.root / 'heartbeats').read_text())
+                self.assertFalse(list(self.store.rglob('*.json')))
+                self.assertFalse(list(self.root.glob('motionify-backup-*')))
 
     def test_insecure_database_uri_is_rejected(self):
         self.env['BACKUP_DATABASE_URL'] += '?sslmode=disable'
@@ -98,6 +122,17 @@ elif name == 'curl':
         result = self.run_backup()
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(list(self.store.rglob('*.json')))
+
+    def test_workflow_failure_notifier_sends_failure_signal(self):
+        workflow = SCRIPT.parents[2] / '.github/workflows/database-backup.yml'
+        content = workflow.read_text()
+        code = textwrap.dedent(content.split("          python3 - <<'PY'\n", 1)[1].split('          PY\n', 1)[0])
+        response = mock.MagicMock()
+        response.__enter__.return_value.status = 200
+        with mock.patch.dict(os.environ, {'BACKUP_HEARTBEAT_URL': 'https://monitor.invalid/secret'}), \
+             mock.patch('urllib.request.urlopen', return_value=response) as request:
+            exec(compile(code, str(workflow), 'exec'), {})
+        request.assert_called_once_with('https://monitor.invalid/secret/fail', timeout=15)
 
     @unittest.skipUnless(all(shutil.which(x) for x in ('initdb', 'pg_ctl', 'psql', 'pg_dump', 'pg_restore', 'openssl')),
                          'local PostgreSQL and OpenSSL are required')

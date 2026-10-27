@@ -39,3 +39,32 @@ jobs:
           apt-get install -y --no-install-recommends age awscli ca-certificates curl python3
       - name: Create and verify encrypted backup
         run: python3 scripts/backup/backup.py
+
+  notify-failure:
+    needs: backup
+    if: ${{ failure() && needs.backup.result == 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    env:
+      BACKUP_HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+    steps:
+      - name: Notify monitor of failed workflow
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          import urllib.request
+
+          url = os.environ.get('BACKUP_HEARTBEAT_URL', '')
+          if not re.fullmatch(r'https://[A-Za-z0-9./_-]+', url):
+              print('Failure notification URL is missing or invalid.', file=sys.stderr)
+              sys.exit(1)
+          try:
+              with urllib.request.urlopen(url.rstrip('/') + '/fail', timeout=15) as response:
+                  if response.status != 200:
+                      raise ValueError('Unexpected response')
+          except Exception:
+              print('Failure notification could not be sent.', file=sys.stderr)
+              sys.exit(1)
+          PY
