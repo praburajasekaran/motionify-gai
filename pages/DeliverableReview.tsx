@@ -18,6 +18,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
 import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
@@ -37,13 +38,15 @@ import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ProjectSectionHeader } from '@/components/portal/ProjectSectionHeader';
+import { deliverableFileKeys, useDeliverableFiles, type DeliverableFile } from '@/shared/hooks/useDeliverableFiles';
 
-const DeliverableReviewContent: React.FC = () => {
+const DeliverableReviewContent: React.FC<{ filesQuery: ReturnType<typeof useDeliverableFiles> }> = ({ filesQuery }) => {
   const { id: projectId, deliverableId } = useParams<{
     id: string;
     deliverableId: string;
   }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading } =
     useDeliverables();
 
@@ -69,7 +72,7 @@ const DeliverableReviewContent: React.FC = () => {
   // Active video file state (connects video player to files list)
   const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
   const [activeVideoFileName, setActiveVideoFileName] = useState('');
-  const [reviewFiles, setReviewFiles] = useState<Array<{ id: string; file_key: string; file_name: string; is_final: boolean; uploaded_at: string }>>([]);
+  const reviewFiles = filesQuery.isError ? [] : filesQuery.data ?? [];
   const [reviewSnapshot, setReviewSnapshot] = useState<{ reviewedFileId?: string; reviewedLatestFileId?: string }>({});
 
   // Load deliverable from URL - Re-run when deliverables are loaded
@@ -89,14 +92,6 @@ const DeliverableReviewContent: React.FC = () => {
   const canUploadFinal = !!deliverable && permissions.canUploadFinal &&
     ['approved', 'payment_pending'].includes(deliverable.status);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setReviewFiles([]);
-    if (deliverable) fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, { credentials: 'include', signal: controller.signal })
-      .then(async response => { if (response.ok) setReviewFiles(await response.json()); })
-      .catch(error => { if (error.name !== 'AbortError') console.error('Could not load review file identities', error); });
-    return () => controller.abort();
-  }, [deliverable?.id, deliverable?.status, activeVideoFileKey]);
   const activeReviewFile = reviewFiles.find(file => file.file_key === activeVideoFileKey);
 
   // Handle back navigation
@@ -106,7 +101,10 @@ const DeliverableReviewContent: React.FC = () => {
 
   // Shared helper: refresh deliverables and reload current one
   const refreshCurrentDeliverable = async () => {
-    await refreshDeliverables();
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: deliverableFileKeys.list(currentUser?.id, deliverableId) }),
+      refreshDeliverables(),
+    ]);
     if (deliverableId) {
       dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
     }
@@ -380,11 +378,6 @@ const DeliverableReviewContent: React.FC = () => {
         }
       }
 
-      // Refresh file list
-      if ((window as any).__refreshDeliverableFiles) {
-        (window as any).__refreshDeliverableFiles();
-      }
-
       // Also refresh deliverables for status update
       await refreshCurrentDeliverable();
 
@@ -546,6 +539,19 @@ const DeliverableReviewContent: React.FC = () => {
           {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
+            files={reviewFiles}
+            filesLoading={filesQuery.isPending}
+            filesError={filesQuery.isError}
+            onRetryFiles={() => { void filesQuery.refetch(); }}
+            onFileDeleted={(fileId) => {
+              const key = deliverableFileKeys.list(currentUser?.id, deliverableId);
+              if (activeReviewFile?.id === fileId) {
+                setActiveVideoFileKey(undefined);
+                setActiveVideoFileName('');
+              }
+              queryClient.setQueryData<DeliverableFile[]>(key, files => files?.filter(file => file.id !== fileId));
+              void queryClient.invalidateQueries({ queryKey: key });
+            }}
             canUploadBeta={canUploadBeta}
             canUploadFinal={canUploadFinal}
             onUpload={handleUpload}
@@ -650,8 +656,9 @@ const DeliverableReviewContent: React.FC = () => {
  */
 export const DeliverableReview: React.FC = () => {
   const { user } = useAuthContext();
-  const { id: projectId } = useParams<{ id: string }>();
+  const { id: projectId, deliverableId } = useParams<{ id: string; deliverableId: string }>();
   const { data: currentProject, isLoading } = useProject(projectId);
+  const filesQuery = useDeliverableFiles(user?.id, deliverableId);
 
   if (isLoading) {
     return <DetailPageHeaderSkeleton />;
@@ -667,7 +674,7 @@ export const DeliverableReview: React.FC = () => {
 
   return (
     <DeliverableProvider currentUser={user} currentProject={currentProject}>
-      <DeliverableReviewContent />
+      <DeliverableReviewContent filesQuery={filesQuery} />
     </DeliverableProvider>
   );
 };
