@@ -72,7 +72,8 @@ try {
 
   const objects = new Map<string, Buffer>();
   const objectServer = http.createServer(async (request, response) => {
-    const key = new URL(request.url || '/', 'http://127.0.0.1').pathname;
+    const objectUrl = new URL(request.url || '/', 'http://127.0.0.1');
+    const key = objectUrl.pathname;
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
     response.setHeader('Access-Control-Allow-Headers', '*');
@@ -85,6 +86,9 @@ try {
     }
     if (request.method === 'DELETE') { objects.delete(key); response.writeHead(204); response.end(); return; }
     const object = objects.get(key);
+    if (objectUrl.searchParams.get('response-content-disposition') === 'attachment') {
+      response.setHeader('Content-Disposition', 'attachment');
+    }
     response.writeHead(object ? 200 : 404, { 'Content-Type': 'application/octet-stream' });
     response.end(object || 'Object not found');
   });

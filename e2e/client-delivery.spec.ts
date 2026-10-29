@@ -47,16 +47,27 @@ test('released final file downloads through the signed review action', async () 
     deliverable_id: fixture.deliverableId, file_key: signed.key, file_name: 'readiness-final.mp4',
     file_size: content.length, mime_type: 'video/mp4', file_category: 'video', is_final: true,
   });
+  await api(primary.request, 'POST', 'projects-accept-terms', { projectId: fixture.projectId, accepted: true });
+  await api(manager.request, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'awaiting_approval' });
+  await api(primary.request, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'approved' });
   await api(manager.request, 'PATCH', `deliverables/${fixture.deliverableId}`, { status: 'final_delivered' });
   const page = await primary.newPage();
   await page.goto(`/portal/projects/${fixture.projectId}/deliverables/${fixture.deliverableId}`);
   await expect(page.getByRole('heading', { name: 'readiness-final.mp4', exact: true }).locator('..').getByText('Now Playing', { exact: true })).toBeVisible();
-  const signing = page.waitForResponse(response => response.url().includes('/r2-presign?'));
+  await page.route('**/r2-presign?*attachment=1*', route => route.fulfill({
+    status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Download temporarily unavailable' } }),
+  }), { times: 1 });
+  await page.getByRole('button', { name: 'Download Final File', exact: true }).click();
+  await expect(page.getByText('Download temporarily unavailable')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download Final File', exact: true })).toBeEnabled();
+  const signing = page.waitForResponse(response => response.url().includes('/r2-presign?') && response.url().includes('attachment=1'));
+  const fileDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download Final File', exact: true }).click();
   const downloadUrl = await signing;
   expect(downloadUrl.status()).toBe(200);
-  const download = await primary.request.get((await downloadUrl.json()).url);
-  expect(await download.body()).toEqual(content);
+  const download = await fileDownload;
+  expect(await readFile((await download.path())!)).toEqual(content);
+  await expect(page.getByRole('button', { name: 'Download Final File', exact: true })).toBeVisible();
   await page.screenshot({ path: '.scratch/production-readiness/evidence/P01/lane-09.png', fullPage: true });
 });
 test.afterEach(async () => { await primary.close(); await manager.close(); });

@@ -110,9 +110,9 @@ export const DeliverableReviewActions: React.FC<DeliverableReviewActionsProps> =
       const finalFile = files.filter(file => file.is_final).sort((a, b) =>
         new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
       const key = finalFile?.file_key || deliverable.finalFileKey;
-      const url = key ? await storageService.getDownloadUrl(key) : deliverable.finalFileUrl;
+      const url = key ? await storageService.getDownloadUrl(key, { attachment: true }) : deliverable.finalFileUrl;
       if (!url) throw new Error('No final file is available');
-      window.open(url, '_blank');
+      window.location.assign(url);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Final download failed');
     } finally {

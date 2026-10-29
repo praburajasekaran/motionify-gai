@@ -176,6 +176,7 @@ export const handler = compose(
             const command = new GetObjectCommand({
                 Bucket: r2Config.bucketName,
                 Key: key,
+                ...(event.queryStringParameters?.attachment === '1' ? { ResponseContentDisposition: 'attachment' } : {}),
             });
 
             const signedUrl = await getSignedUrl(getR2Client(r2Config), command, { expiresIn: 3600 });
