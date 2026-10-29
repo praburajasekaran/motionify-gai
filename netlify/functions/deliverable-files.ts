@@ -12,6 +12,7 @@ import {
 import { isAdminLike } from './_shared/roles';
 import { getDeliverableFileAccess } from './_shared/deliverable-file-access';
 import { requireDeliverableUpload } from './_shared/deliverable-upload';
+import { measureStage, withServerTiming } from './_shared/server-timing';
 
 // Validation schema for creating a deliverable file
 const createFileSchema = z.object({
@@ -27,6 +28,7 @@ const createFileSchema = z.object({
 });
 
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'deliverable-files')
@@ -49,17 +51,19 @@ export const handler = compose(
         };
       }
 
-      const deliverable = await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'deliverable-files.list' });
-      const access = await getDeliverableFileAccess(auth?.user, deliverable);
+      const access = await measureStage(event, 'access', async () => {
+        const deliverable = await requireDeliverableAccess(auth?.user, deliverableId, { operation: 'deliverable-files.list' });
+        return getDeliverableFileAccess(auth?.user, deliverable);
+      });
 
       // First validate user can access this deliverable
-      const deliverableResult = await dbQuery(
+      const deliverableResult = await measureStage(event, 'deliverable_lookup', () => dbQuery(
         `SELECT d.id, d.project_id, p.client_user_id
          FROM deliverables d
          JOIN projects p ON d.project_id = p.id
          WHERE d.id = $1`,
         [deliverableId]
-      );
+      ));
 
       if (deliverableResult.rows.length === 0) {
         return {
@@ -72,14 +76,14 @@ export const handler = compose(
       const { project_id, client_user_id } = deliverableResult.rows[0];
 
       // Fetch files for this deliverable
-      const filesResult = await dbQuery(
+      const filesResult = await measureStage(event, 'files_query', () => dbQuery(
         `SELECT id, deliverable_id, file_key, file_name, file_size, mime_type,
                 file_category, is_final, label, sort_order, uploaded_at, uploaded_by, thumbnail_key
          FROM deliverable_files
          WHERE deliverable_id = $1
          ORDER BY sort_order, uploaded_at`,
         [deliverableId]
-      );
+      ));
 
       return {
         statusCode: 200,

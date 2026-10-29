@@ -20,6 +20,7 @@ import {
 } from './_shared/authorization';
 import { isAdminLike } from './_shared/roles';
 import { requireDeliverableUpload } from './_shared/deliverable-upload';
+import { withServerTiming } from './_shared/server-timing';
 
 // Correlated subquery to determine dominant file category by priority (video > image > document > script)
 const DOMINANT_FILE_CATEGORY_SQL = `
@@ -64,6 +65,7 @@ const APPROVAL_HISTORY_SQL = `
     ) history), '[]'::jsonb) AS approval_history`;
 
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'deliverables')

@@ -8,9 +8,15 @@ import { isClient } from '@/utils/deliverablePermissions';
 import { formatTimestamp, formatDateTime } from '@/utils/dateFormatting';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
+import type { DeliverableFile } from '@/shared/hooks/useDeliverableFiles';
 
 export interface DeliverableFilesListProps {
     deliverable: Deliverable;
+    files: DeliverableFile[];
+    filesLoading: boolean;
+    filesError: boolean;
+    onRetryFiles: () => void;
+    onFileDeleted: (fileId: string) => void;
     canUploadBeta: boolean;
     canUploadFinal?: boolean;
     onUpload: (file: File) => void;
@@ -24,22 +30,6 @@ export interface DeliverableFilesListProps {
     onCancelUpload?: () => void;
     videoPlayer?: React.ReactNode;
     reviewActions?: React.ReactNode;
-}
-
-// Database file record from deliverable_files table
-interface DeliverableFile {
-    id: string;
-    deliverable_id: string;
-    file_key: string;
-    file_name: string;
-    file_size: number | null;
-    mime_type: string | null;
-    file_category: 'video' | 'script' | 'document' | 'image' | 'audio' | 'asset';
-    is_final: boolean;
-    label: string | null;
-    sort_order: number;
-    uploaded_at: string;
-    uploaded_by: string | null;
 }
 
 interface FileItem {
@@ -64,6 +54,11 @@ const FILE_TYPE_CONFIG: Record<string, { icon: typeof FileVideo; bgColor: string
 
 export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     deliverable,
+    files,
+    filesLoading,
+    filesError,
+    onRetryFiles,
+    onFileDeleted,
     canUploadBeta,
     canUploadFinal,
     onUpload,
@@ -81,8 +76,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const finalFileInputRef = useRef<HTMLInputElement>(null);
-    const [fileItems, setFileItems] = useState<FileItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [fileIdPendingDelete, setFileIdPendingDelete] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -159,7 +152,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 throw new Error('Failed to delete file');
             }
 
-            setFileItems(prev => prev.filter(f => f.id !== fileId));
+            onFileDeleted(fileId);
             onFilesChange?.();
             setFileIdPendingDelete(null);
         } catch (e) {
@@ -169,43 +162,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             setDeletingId(null);
         }
     };
-
-    // Fetch files from deliverable_files table
-    const fetchFiles = async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch files');
-            }
-
-            const files: DeliverableFile[] = await response.json();
-
-            // Transform to FileItem format (no thumbnails needed)
-            const items: FileItem[] = files.map(f => ({
-                id: f.id,
-                key: f.file_key,
-                name: f.label || f.file_name,
-                category: f.file_category,
-                isFinal: f.is_final,
-                date: f.uploaded_at,
-                size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
-            }));
-
-            setFileItems(items);
-        } catch (e) {
-            console.error("Failed to fetch deliverable files", e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchFiles();
-    }, [deliverable.id]);
 
     // Helper to format file size
     const formatFileSize = (bytes: number): string => {
@@ -220,10 +176,15 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         return FILE_TYPE_CONFIG[category] || FILE_TYPE_CONFIG.asset;
     };
 
-    // Expose refresh method for parent
-    const refreshFiles = () => {
-        fetchFiles();
-    };
+    const fileItems: FileItem[] = files.map(f => ({
+        id: f.id,
+        key: f.file_key,
+        name: f.label || f.file_name,
+        category: f.file_category,
+        isFinal: f.is_final,
+        date: f.uploaded_at,
+        size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
+    }));
 
     useEffect(() => {
         if (fileItems.length > 0 && !activeFileKey && onVideoFileSelect) {
@@ -235,14 +196,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 onVideoFileSelect(latestVideo.key, latestVideo.name);
             }
         }
-    }, [fileItems]);
-
-    useEffect(() => {
-        (window as any).__refreshDeliverableFiles = refreshFiles;
-        return () => {
-            delete (window as any).__refreshDeliverableFiles;
-        };
-    }, [deliverable.id]);
+    }, [files]);
 
     if (filesHiddenForClient) {
         return (
@@ -262,7 +216,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 
     return (
         <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Files ({fileItems.length})</h3>
+            <h3 className="text-lg font-semibold text-foreground">Files{!filesLoading && !filesError && ` (${fileItems.length})`}</h3>
 
             {/* Hidden file input */}
             {canUploadBeta && (
@@ -284,9 +238,14 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 />
             )}
 
-            {isLoading ? (
+            {filesLoading ? (
                 <div className="text-center py-12 bg-muted rounded-lg border border-border">
-                    <p className="text-muted-foreground text-sm">Loading files...</p>
+                    <p role="status" className="text-muted-foreground text-sm">Loading files...</p>
+                </div>
+            ) : filesError ? (
+                <div role="alert" className="text-center py-12 bg-muted rounded-lg border border-border">
+                    <p className="text-muted-foreground text-sm">Could not load files.</p>
+                    <Button variant="outline" size="sm" onClick={onRetryFiles} className="mt-3">Try again</Button>
                 </div>
             ) : fileItems.length === 0 && !canUploadBeta && !canUploadFinal ? (
                 <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed border-border">

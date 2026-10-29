@@ -13,6 +13,7 @@ import { clearAuthSession } from '@/lib/auth';
 import { API_BASE } from '@/lib/api-config';
 import { setUserTimezone } from '@/utils/dateFormatting';
 import { useAuth, authKeys } from '@/shared/hooks/useAuth';
+import { deliverableFileKeys } from '@/shared/hooks/useDeliverableFiles';
 
 interface AuthContextType {
     user: User | null;
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             queryClient.setQueryData(authKeys.session(), newUser);
             setUserTimezone(newUser.timezone || null);
         } else {
+            queryClient.removeQueries({ queryKey: deliverableFileKeys.all });
             clearAuthSession();
             queryClient.setQueryData(authKeys.session(), null);
             setUserTimezone(null);
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.error('Logout API call failed:', error);
         }
         clearAuthSession();
+        queryClient.removeQueries({ queryKey: deliverableFileKeys.all });
         queryClient.setQueryData(authKeys.session(), null);
         setUserTimezone(null);
         navigate('/login', { replace: true });
