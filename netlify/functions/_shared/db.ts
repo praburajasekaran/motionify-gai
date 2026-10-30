@@ -120,11 +120,11 @@ export async function query<T = any>(
     return pool.query(text, params);
 }
 
-export async function queryWithTiming<T = any>(event: object, text: string, params?: any[]): Promise<pg.QueryResult<T>> {
+export async function queryWithTiming<T = any>(event: object, text: string, params?: any[], stagePrefix = 'db'): Promise<pg.QueryResult<T>> {
     if (!hasServerTiming(event)) return query<T>(text, params);
-    const client = await measureStage(event, 'db_acquire', () => getPool().connect());
+    const client = await measureStage(event, `${stagePrefix}_acquire`, () => getPool().connect());
     try {
-        const result = await measureStage(event, 'db_query', () => client.query<T>(text, params));
+        const result = await measureStage(event, `${stagePrefix}_query`, () => client.query<T>(text, params));
         client.release();
         return result;
     } catch (error) {

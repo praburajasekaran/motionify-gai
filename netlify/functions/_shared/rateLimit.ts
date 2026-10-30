@@ -5,7 +5,6 @@
  * - Per-IP rate limiting for anonymous requests
  * - Per-user rate limiting for authenticated requests
  * - Configurable time windows and limits
- * - Automatic cleanup of old entries
  */
 
 import { query } from './db';
@@ -95,9 +94,6 @@ export async function checkRateLimit(
             return { allowed: false, remaining: 0, resetAt: row.reset_at, retryAfter: row.retry_after ?? 60 };
         }
 
-        cleanupOldEntries(config.windowMs).catch(err => {
-            logger.error('Rate limit cleanup failed', err);
-        });
         return { allowed: true, remaining: row.remaining, resetAt: row.reset_at };
 
     } catch (error) {
@@ -110,19 +106,6 @@ export async function checkRateLimit(
             retryAfter: 60,
         };
     }
-}
-
-/**
- * Cleanup old rate limit entries
- */
-async function cleanupOldEntries(windowMs: number): Promise<void> {
-    const longestWindow = Math.max(windowMs, ...Object.values(RATE_LIMITS).map(limit => limit.windowMs));
-    const cutoff = new Date(Date.now() - longestWindow * 2);
-
-    await query(
-        `DELETE FROM rate_limit_entries WHERE created_at < $1`,
-        [cutoff]
-    );
 }
 
 /**

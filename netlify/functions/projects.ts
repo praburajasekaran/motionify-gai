@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { query as dbQuery, transaction } from './_shared/db';
+import { query as dbQuery, queryWithTiming, transaction } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
 import { linkProposalActivitiesToProject } from './_shared/proposal-activity-link';
 import { compose, withCORS, withAuth, withRateLimit, type AuthResult, type NetlifyEvent } from './_shared/middleware';
@@ -192,7 +192,7 @@ export const handler = compose(
         params.push(requesterId);
       }
 
-      const result = await dbQuery(sql, params);
+      const result = await queryWithTiming(event, sql, params, 'project_db');
 
       return {
         statusCode: 200,

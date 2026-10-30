@@ -102,6 +102,19 @@ isolatedTest('protected read timings preserve responses without exposing request
   }
 });
 
+isolatedTest('project list timings separate connection acquisition from the query without changing scope', async () => {
+  for (const actor of [fixture.actors.admin, fixture.actors.primary]) {
+    const result = await request({ handler: projects, method: 'GET', endpoint: 'projects' }, actor);
+    assert.equal(result.status, 200);
+    const expected = actor.role === 'super_admin' ? [fixture.projectId, fixture.otherProjectId] : [fixture.projectId];
+    assert.deepEqual(result.body.map((project: { id: string }) => project.id).sort(), expected.sort());
+    const timing = result.headers['Server-Timing'];
+    assert.match(timing, /project_db_acquire;dur=\d+\.\d/);
+    assert.match(timing, /project_db_query;dur=\d+\.\d/);
+    assert.doesNotMatch(timing, /@|SELECT|cookie|token/i);
+  }
+});
+
 isolatedTest('file lists return an empty array only for an accessible deliverable', async () => {
   await pool.query('DELETE FROM deliverable_files WHERE deliverable_id = $1', [fixture.deliverableId]);
   const query = { deliverableId: fixture.deliverableId };

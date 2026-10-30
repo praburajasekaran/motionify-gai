@@ -100,6 +100,7 @@ try {
 
   if (!serve) {
     const childArgs = process.argv.includes('--rate-limit') ? ['--test', 'netlify/functions/__tests__/rate-limit-performance.test.ts'] :
+      process.argv.includes('--rate-limit-connections') ? ['scripts/rate-limit-connection-probe.ts'] :
       process.argv.includes('--portal-perf') ? ['scripts/portal-read-probe.ts'] :
       process.argv.includes('--authorization-perf') ? ['scripts/authorization-probe.ts'] :
       process.argv.includes('--perf') ? ['scripts/readiness-probe.ts'] :

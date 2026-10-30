@@ -1,0 +1,237 @@
+{
+  "environment": "Local authenticated project handler; 18 synthetic projects; PostgreSQL without TLS; delayed loopback TCP; no Netlify or browser timing",
+  "oneWayDelayMs": 100,
+  "summary": [
+    {
+      "mode": "cold-pool",
+      "variant": "baseline",
+      "count": 5,
+      "failures": 0,
+      "medianMs": 1202.0721660000004,
+      "minMs": 1169.0817079999997,
+      "maxMs": 1207.476208,
+      "connections": [
+        2
+      ]
+    },
+    {
+      "mode": "cold-pool",
+      "variant": "candidate",
+      "count": 5,
+      "failures": 0,
+      "medianMs": 934.5030830000005,
+      "minMs": 928.5345830000006,
+      "maxMs": 944.1775829999988,
+      "connections": [
+        1
+      ]
+    },
+    {
+      "mode": "warm-pool",
+      "variant": "baseline",
+      "count": 5,
+      "failures": 0,
+      "medianMs": 617.6881250000006,
+      "minMs": 615.3762079999979,
+      "maxMs": 620.1851669999996,
+      "connections": [
+        2
+      ]
+    },
+    {
+      "mode": "warm-pool",
+      "variant": "candidate",
+      "count": 5,
+      "failures": 0,
+      "medianMs": 619.3112079999992,
+      "minMs": 610.2516670000005,
+      "maxMs": 619.5157089999993,
+      "connections": [
+        1
+      ]
+    }
+  ],
+  "proxyErrors": [],
+  "samples": [
+    {
+      "variant": "baseline",
+      "mode": "cold-pool",
+      "elapsedMs": 1202.0721660000004,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=226.2, db_query;dur=249.7, auth;dur=477.4, rate_limit;dur=244.5, total;dur=1201.8"
+    },
+    {
+      "variant": "candidate",
+      "mode": "cold-pool",
+      "elapsedMs": 934.5030830000005,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=226.6, db_query;dur=247.7, auth;dur=475.0, rate_limit;dur=239.8, project_db_acquire;dur=0.1, project_db_query;dur=218.7, total;dur=934.4"
+    },
+    {
+      "variant": "baseline",
+      "mode": "cold-pool",
+      "elapsedMs": 1169.0817079999997,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=224.6, db_query;dur=242.5, auth;dur=468.0, rate_limit;dur=239.3, total;dur=1169.0"
+    },
+    {
+      "variant": "candidate",
+      "mode": "cold-pool",
+      "elapsedMs": 932.0218750000004,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=228.6, db_query;dur=249.4, auth;dur=478.4, rate_limit;dur=235.9, project_db_acquire;dur=0.1, project_db_query;dur=217.3, total;dur=932.0"
+    },
+    {
+      "variant": "baseline",
+      "mode": "cold-pool",
+      "elapsedMs": 1204.353333,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=226.4, db_query;dur=243.5, auth;dur=470.5, rate_limit;dur=246.7, total;dur=1204.3"
+    },
+    {
+      "variant": "candidate",
+      "mode": "cold-pool",
+      "elapsedMs": 934.933833000001,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=222.2, db_query;dur=248.2, auth;dur=471.0, rate_limit;dur=245.9, project_db_acquire;dur=0.0, project_db_query;dur=217.4, total;dur=934.9"
+    },
+    {
+      "variant": "baseline",
+      "mode": "cold-pool",
+      "elapsedMs": 1200.8799999999992,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=226.1, db_query;dur=247.3, auth;dur=475.4, rate_limit;dur=244.0, total;dur=1200.8"
+    },
+    {
+      "variant": "candidate",
+      "mode": "cold-pool",
+      "elapsedMs": 944.1775829999988,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=228.9, db_query;dur=249.1, auth;dur=478.8, rate_limit;dur=246.2, project_db_acquire;dur=0.1, project_db_query;dur=218.6, total;dur=944.1"
+    },
+    {
+      "variant": "baseline",
+      "mode": "cold-pool",
+      "elapsedMs": 1207.476208,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=228.5, db_query;dur=249.6, auth;dur=478.6, rate_limit;dur=247.1, total;dur=1207.4"
+    },
+    {
+      "variant": "candidate",
+      "mode": "cold-pool",
+      "elapsedMs": 928.5345830000006,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=229.4, db_query;dur=236.2, auth;dur=466.4, rate_limit;dur=240.2, project_db_acquire;dur=0.1, project_db_query;dur=221.5, total;dur=928.5"
+    },
+    {
+      "variant": "baseline",
+      "mode": "warm-pool",
+      "elapsedMs": 618.8645830000005,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=205.9, auth;dur=206.7, rate_limit;dur=206.7, total;dur=618.8"
+    },
+    {
+      "variant": "candidate",
+      "mode": "warm-pool",
+      "elapsedMs": 619.3826250000002,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=204.6, auth;dur=205.3, rate_limit;dur=207.2, project_db_acquire;dur=0.1, project_db_query;dur=206.3, total;dur=619.3"
+    },
+    {
+      "variant": "baseline",
+      "mode": "warm-pool",
+      "elapsedMs": 620.1851669999996,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=205.4, auth;dur=206.6, rate_limit;dur=206.7, total;dur=620.1"
+    },
+    {
+      "variant": "candidate",
+      "mode": "warm-pool",
+      "elapsedMs": 618.7413339999985,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=204.3, auth;dur=205.0, rate_limit;dur=206.3, project_db_acquire;dur=0.2, project_db_query;dur=206.0, total;dur=618.7"
+    },
+    {
+      "variant": "baseline",
+      "mode": "warm-pool",
+      "elapsedMs": 617.6881250000006,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=205.5, auth;dur=206.2, rate_limit;dur=205.6, total;dur=617.6"
+    },
+    {
+      "variant": "candidate",
+      "mode": "warm-pool",
+      "elapsedMs": 619.5157089999993,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=205.3, auth;dur=206.1, rate_limit;dur=207.6, project_db_acquire;dur=0.1, project_db_query;dur=205.3, total;dur=619.4"
+    },
+    {
+      "variant": "baseline",
+      "mode": "warm-pool",
+      "elapsedMs": 615.3762079999979,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=204.6, auth;dur=205.2, rate_limit;dur=204.5, total;dur=615.3"
+    },
+    {
+      "variant": "candidate",
+      "mode": "warm-pool",
+      "elapsedMs": 619.3112079999992,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=204.5, auth;dur=205.3, rate_limit;dur=207.2, project_db_acquire;dur=0.1, project_db_query;dur=206.2, total;dur=619.2"
+    },
+    {
+      "variant": "baseline",
+      "mode": "warm-pool",
+      "elapsedMs": 617.5358749999978,
+      "status": 200,
+      "correct": true,
+      "connections": 2,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=205.4, auth;dur=206.4, rate_limit;dur=205.0, total;dur=617.5"
+    },
+    {
+      "variant": "candidate",
+      "mode": "warm-pool",
+      "elapsedMs": 610.2516670000005,
+      "status": 200,
+      "correct": true,
+      "connections": 1,
+      "serverTiming": "db_acquire;dur=0.1, db_query;dur=203.8, auth;dur=204.5, rate_limit;dur=202.3, project_db_acquire;dur=0.0, project_db_query;dur=203.3, total;dur=610.2"
+    }
+  ]
+}
