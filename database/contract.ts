@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '037',
-  name: 'allow_public_inquiry_activity',
+  version: '038',
+  name: 'atomic_rate_limit',
 } as const;
 
 export interface DatabaseContractQueryRunner {
@@ -16,6 +16,7 @@ export type DatabaseContractIssueCode =
   | 'missing_constraint'
   | 'invalid_constraint'
   | 'missing_index'
+  | 'missing_function'
   | 'missing_migration'
   | 'verification_error';
 
@@ -65,6 +66,12 @@ interface ColumnRequirement {
 }
 
 const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
+  rate_limit_entries: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    identifier: { type: 'character varying', nullable: false },
+    action: { type: 'character varying', nullable: false },
+    created_at: { type: 'timestamp with time zone', defaultPattern: /now\s*\(\s*\)|current_timestamp/i },
+  },
   magic_link_tokens: {
     id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
     email: { type: 'character varying', nullable: false },
@@ -387,6 +394,10 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
 }
 
 function addIndexIssues(indexes: IndexRow[], issues: DatabaseContractIssue[]): void {
+  if (!indexes.some(index => index.table_name === 'rate_limit_entries'
+    && normalizeSql(index.index_definition).includes('(identifier, action, created_at)'))) {
+    issues.push({ code: 'missing_index', object: 'rate_limit_entries.lookup' });
+  }
   const requestInquiryUniqueIndex = indexes.find((index) =>
     index.table_name === 'project_requests'
     && normalizeSql(index.index_definition).includes('unique')
@@ -436,7 +447,7 @@ export async function verifyDatabaseContract(
 
   try {
     const tableNames = Object.keys(REQUIRED_COLUMNS);
-    const [columnsResult, constraintsResult, indexesResult, stagesResult] = await Promise.all([
+    const [columnsResult, constraintsResult, indexesResult, stagesResult, rateLimitFunctionResult] = await Promise.all([
       runner.query(
         `SELECT table_name, column_name, data_type, udt_name, column_default, is_nullable
          FROM information_schema.columns
@@ -468,11 +479,15 @@ export async function verifyDatabaseContract(
       runner.query(`SELECT e.enumlabel FROM pg_enum e
         JOIN pg_type t ON t.oid = e.enumtypid JOIN pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'public' AND t.typname = 'task_stage'`),
+      runner.query("SELECT to_regprocedure('public.consume_rate_limit(text,text,integer,integer)') IS NOT NULL AS present"),
     ]);
 
     addColumnIssues(columnsResult.rows as ColumnRow[], issues);
     addConstraintIssues(constraintsResult.rows as ConstraintRow[], issues);
     addIndexIssues(indexesResult.rows as IndexRow[], issues);
+    if (!rateLimitFunctionResult.rows[0]?.present) {
+      issues.push({ code: 'missing_function', object: 'public.consume_rate_limit' });
+    }
     const stages = new Set(stagesResult.rows.map(row => row.enumlabel));
     for (const stage of ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed']) {
       if (!stages.has(stage)) issues.push({ code: 'invalid_constraint', object: `task_stage.${stage}` });

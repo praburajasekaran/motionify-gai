@@ -1,4 +1,8 @@
 export const canonicalColumns = [
+  ['rate_limit_entries', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
+  ['rate_limit_entries', 'identifier', 'character varying', 'varchar', null, 'NO'],
+  ['rate_limit_entries', 'action', 'character varying', 'varchar', null, 'NO'],
+  ['rate_limit_entries', 'created_at', 'timestamp with time zone', 'timestamptz', 'CURRENT_TIMESTAMP', 'YES'],
   ['pending_inquiry_verifications', 'id', 'uuid', 'uuid', 'gen_random_uuid()', 'NO'],
   ['pending_inquiry_verifications', 'email', 'character varying', 'varchar', null, 'NO'],
   ['pending_inquiry_verifications', 'token', 'character varying', 'varchar', null, 'NO'],
@@ -138,6 +142,7 @@ export const canonicalConstraints = [
 ];
 
 export const canonicalIndexes = [
+  { table_name: 'rate_limit_entries', index_name: 'idx_rate_limit_lookup', index_definition: 'CREATE INDEX idx_rate_limit_lookup ON public.rate_limit_entries USING btree (identifier, action, created_at)' },
   { table_name: 'project_requests', index_name: 'idx_project_requests_inquiry_id', index_definition: 'CREATE UNIQUE INDEX idx_project_requests_inquiry_id ON public.project_requests USING btree (inquiry_id) WHERE (inquiry_id IS NOT NULL)' },
   { table_name: 'project_team', index_name: 'idx_project_team_user_project', index_definition: 'CREATE UNIQUE INDEX idx_project_team_user_project ON public.project_team USING btree (user_id, project_id)' },
   { table_name: 'sessions', index_name: 'idx_sessions_jwt_token_hash', index_definition: 'CREATE UNIQUE INDEX idx_sessions_jwt_token_hash ON public.sessions USING btree (jwt_token_hash) WHERE (jwt_token_hash IS NOT NULL)' },
@@ -147,6 +152,7 @@ export const canonicalIndexes = [
 export const canonicalMigrations = [
   { version: '036', name: 'link_project_requests_to_inquiries' },
   { version: '037', name: 'allow_public_inquiry_activity' },
+  { version: '038', name: 'atomic_rate_limit' },
 ];
 
 export const canonicalStages = ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed'].map(enumlabel => ({ enumlabel }));
@@ -157,6 +163,7 @@ export function createContractRunner(overrides: {
   indexes?: typeof canonicalIndexes;
   migrations?: typeof canonicalMigrations;
   stages?: typeof canonicalStages;
+  rateLimitFunctionPresent?: boolean;
 } = {}) {
   const calls: string[] = [];
   const rows = {
@@ -176,6 +183,7 @@ export function createContractRunner(overrides: {
       if (/pg_enum/.test(text)) return { rows: rows.stages };
       if (/pg_indexes/.test(text)) return { rows: rows.indexes };
       if (/FROM migrations/.test(text)) return { rows: rows.migrations };
+      if (/to_regprocedure/.test(text)) return { rows: [{ present: overrides.rateLimitFunctionPresent ?? true }] };
       throw new Error(`Unexpected contract query: ${text}`);
     },
   };
