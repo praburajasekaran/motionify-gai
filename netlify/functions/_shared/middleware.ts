@@ -14,6 +14,7 @@ import { checkRateLimit, createRateLimitResponse, getClientIP, type RateLimitCon
 import { validateRequest } from './validation';
 import { getCorsHeaders, validateCors } from './cors';
 import { createLogger } from './logger';
+import { measureStage } from './server-timing';
 
 const logger = createLogger('middleware');
 
@@ -98,7 +99,7 @@ function checkCSRF(event: NetlifyEvent): NetlifyResponse | null {
  */
 export function withAuth(): Middleware {
     return (handler: Handler) => async (event: NetlifyEvent) => {
-        const auth = await requireAuthFromCookie(event);
+        const auth = await measureStage(event, 'auth', () => requireAuthFromCookie(event));
 
         if (!auth.authorized) {
             const origin = event.headers.origin || event.headers.Origin;
@@ -175,7 +176,7 @@ export function withRateLimit(config: RateLimitConfig, action?: string): Middlew
         }
 
         const actionName = action || event.path || 'api';
-        const result = await checkRateLimit(identifier, actionName, config);
+        const result = await measureStage(event, 'rate_limit', () => checkRateLimit(identifier, actionName, config));
 
         if (!result.allowed) {
             return createRateLimitResponse(result, headers);

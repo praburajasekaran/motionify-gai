@@ -1,6 +1,6 @@
 export const LATEST_SCHEMA_MIGRATION = {
-  version: '030',
-  name: 'payment_receipts',
+  version: '037',
+  name: 'allow_public_inquiry_activity',
 } as const;
 
 export interface DatabaseContractQueryRunner {
@@ -59,11 +59,42 @@ interface MigrationRow {
 
 interface ColumnRequirement {
   type: string | readonly string[];
+  udt?: string;
   nullable?: boolean;
   defaultPattern?: RegExp;
 }
 
 const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
+  magic_link_tokens: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    email: { type: 'character varying', nullable: false },
+    token: { type: 'character varying', nullable: false },
+    expires_at: { type: 'timestamp with time zone', nullable: false },
+    remember_me: { type: 'boolean', nullable: false, defaultPattern: /false/i },
+    used_at: { type: 'timestamp with time zone' },
+    created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)/i },
+  },
+  pending_inquiry_verifications: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    email: { type: 'character varying', nullable: false },
+    token: { type: 'character varying', nullable: false },
+    payload: { type: 'jsonb', nullable: false },
+    expires_at: { type: 'timestamp with time zone', nullable: false },
+    created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)/i },
+  },
+  inquiries: { client_user_id: { type: 'uuid' } },
+  deliverable_files: { thumbnail_key: { type: 'text' } },
+  deliverable_feedback: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    deliverable_id: { type: 'uuid', nullable: false },
+    file_id: { type: 'uuid', nullable: false },
+    parent_id: { type: 'uuid' },
+    author_id: { type: 'uuid', nullable: false },
+    body: { type: 'text', nullable: false },
+    video_timestamp: { type: 'double precision' },
+    created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)/i },
+  },
+  revision_requests: { reviewed_file_id: { type: 'uuid' } },
   payment_receipts: {
     payment_id: { type: 'uuid', nullable: false },
     payload: { type: 'jsonb', nullable: false },
@@ -74,7 +105,36 @@ const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
   },
   users: {
     id: { type: 'uuid', nullable: false },
+    profile_picture_url: { type: 'text' },
+    last_login_at: { type: 'timestamp with time zone' },
   },
+  tasks: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    project_id: { type: 'uuid', nullable: false },
+    title: { type: 'character varying', nullable: false },
+    description: { type: 'text' },
+    stage: { type: 'user-defined', udt: 'task_stage', nullable: false, defaultPattern: /'pending'/i },
+    is_client_visible: { type: 'boolean', nullable: false, defaultPattern: /false/i },
+    assigned_to: { type: 'uuid' },
+    due_date: { type: 'date' },
+    position: { type: 'integer' },
+    created_by: { type: 'uuid' },
+    created_at: { type: 'timestamp with time zone' },
+    updated_at: { type: 'timestamp with time zone' },
+  },
+  task_comments: {
+    id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    task_id: { type: 'uuid', nullable: false },
+    user_id: { type: 'uuid' },
+    user_name: { type: 'character varying' },
+    content: { type: 'text', nullable: false },
+    created_at: { type: 'timestamp with time zone' },
+  },
+  task_followers: {
+    task_id: { type: 'uuid', nullable: false },
+    user_id: { type: 'uuid', nullable: false },
+  },
+  comment_attachments: { r2_key: { type: 'text' } },
   project_requests: {
     id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
     request_number: { type: 'character varying', nullable: false },
@@ -83,6 +143,7 @@ const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
     description: { type: 'text', nullable: false },
     tentative_deadline: { type: 'date', nullable: false },
     status: { type: 'character varying', nullable: false, defaultPattern: /'pending'/i },
+    inquiry_id: { type: 'uuid' },
     created_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)|current_timestamp/i },
     updated_at: { type: 'timestamp with time zone', nullable: false, defaultPattern: /now\s*\(\s*\)|current_timestamp/i },
   },
@@ -93,6 +154,9 @@ const REQUIRED_COLUMNS: Record<string, Record<string, ColumnRequirement>> = {
   },
   deliverables: {
     id: { type: 'uuid', nullable: false, defaultPattern: /gen_random_uuid\s*\(\s*\)/i },
+    final_delivered_at: { type: 'timestamp with time zone' },
+    files_expired: { type: 'boolean', defaultPattern: /false/i },
+    assigned_to: { type: 'uuid' },
   },
   projects: {
     status: { type: 'character varying', nullable: false, defaultPattern: /'active'/i },
@@ -202,7 +266,7 @@ function addColumnIssues(columns: ColumnRow[], issues: DatabaseContractIssue[]):
       const acceptedTypes = typeof requirement.type === 'string'
         ? [requirement.type]
         : requirement.type;
-      if (!acceptedTypes.includes(column.data_type.toLowerCase())) {
+      if (!acceptedTypes.includes(column.data_type.toLowerCase()) || (requirement.udt && column.udt_name !== requirement.udt)) {
         issues.push({ code: 'invalid_type', object });
       }
       if (requirement.nullable !== undefined) {
@@ -225,6 +289,34 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
     && normalizeSql(constraint.definition).includes(fragment)
   );
 
+  for (const table of ['magic_link_tokens', 'pending_inquiry_verifications']) {
+    if (!find(table, 'u', 'unique (token)')) {
+      issues.push({ code: 'missing_constraint', object: `${table}.token_unique` });
+    }
+  }
+
+  for (const [table, column, target] of [
+    ['tasks', 'project_id', 'projects'],
+    ['task_comments', 'task_id', 'tasks'],
+    ['task_followers', 'task_id', 'tasks'],
+    ['task_followers', 'user_id', 'users'],
+  ]) {
+    const foreignKey = find(table, 'f', `foreign key (${column})`);
+    if (!foreignKey || !normalizeSql(foreignKey.definition).includes(`references ${target}(id)`)) {
+      issues.push({ code: 'missing_constraint', object: `${table}.${column}_fkey` });
+    }
+  }
+
+  for (const [table, columns, target] of [
+    ['deliverable_feedback', 'file_id, deliverable_id', 'deliverable_files(id, deliverable_id)'],
+    ['deliverable_feedback', 'parent_id, file_id, deliverable_id', 'deliverable_feedback(id, file_id, deliverable_id)'],
+    ['revision_requests', 'reviewed_file_id, deliverable_id', 'deliverable_files(id, deliverable_id)'],
+  ]) {
+    const constraint = find(table, 'f', `foreign key (${columns})`);
+    if (!constraint || !normalizeSql(constraint.definition).includes(`references ${target}`)) {
+      issues.push({ code: 'missing_constraint', object: `${table}.${columns.replaceAll(', ', '_')}_fkey` });
+    }
+  }
   if (!find('payment_receipts', 'p', 'primary key (payment_id)')) {
     issues.push({ code: 'missing_constraint', object: 'payment_receipts.primary_key' });
   }
@@ -242,6 +334,10 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
   const projectRequestForeignKey = find('project_requests', 'f', 'foreign key (client_user_id)');
   if (!projectRequestForeignKey || !normalizeSql(projectRequestForeignKey.definition).includes('references users(id)')) {
     issues.push({ code: 'missing_constraint', object: 'project_requests.client_user_id_fkey' });
+  }
+  const projectRequestInquiryForeignKey = find('project_requests', 'f', 'foreign key (inquiry_id)');
+  if (!projectRequestInquiryForeignKey || !normalizeSql(projectRequestInquiryForeignKey.definition).includes('references inquiries(id)')) {
+    issues.push({ code: 'missing_constraint', object: 'project_requests.inquiry_id_fkey' });
   }
 
   const projectRequestStatus = constraints.find((constraint) =>
@@ -291,6 +387,15 @@ function addConstraintIssues(constraints: ConstraintRow[], issues: DatabaseContr
 }
 
 function addIndexIssues(indexes: IndexRow[], issues: DatabaseContractIssue[]): void {
+  const requestInquiryUniqueIndex = indexes.find((index) =>
+    index.table_name === 'project_requests'
+    && normalizeSql(index.index_definition).includes('unique')
+    && normalizeSql(index.index_definition).includes('(inquiry_id)')
+  );
+  if (!requestInquiryUniqueIndex) {
+    issues.push({ code: 'missing_index', object: 'project_requests.inquiry_id' });
+  }
+
   const projectTeamUniqueIndex = indexes.find((index) =>
     index.table_name === 'project_team'
     && normalizeSql(index.index_definition).includes('unique')
@@ -331,7 +436,7 @@ export async function verifyDatabaseContract(
 
   try {
     const tableNames = Object.keys(REQUIRED_COLUMNS);
-    const [columnsResult, constraintsResult, indexesResult] = await Promise.all([
+    const [columnsResult, constraintsResult, indexesResult, stagesResult] = await Promise.all([
       runner.query(
         `SELECT table_name, column_name, data_type, udt_name, column_default, is_nullable
          FROM information_schema.columns
@@ -360,11 +465,18 @@ export async function verifyDatabaseContract(
          ORDER BY tablename, indexname`,
         [tableNames]
       ),
+      runner.query(`SELECT e.enumlabel FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public' AND t.typname = 'task_stage'`),
     ]);
 
     addColumnIssues(columnsResult.rows as ColumnRow[], issues);
     addConstraintIssues(constraintsResult.rows as ConstraintRow[], issues);
     addIndexIssues(indexesResult.rows as IndexRow[], issues);
+    const stages = new Set(stagesResult.rows.map(row => row.enumlabel));
+    for (const stage of ['pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed']) {
+      if (!stages.has(stage)) issues.push({ code: 'invalid_constraint', object: `task_stage.${stage}` });
+    }
 
     const hasMigrationsTable = (columnsResult.rows as ColumnRow[]).some(
       (column) => column.table_name === 'migrations'

@@ -8,12 +8,19 @@ import { isClient } from '@/utils/deliverablePermissions';
 import { formatTimestamp, formatDateTime } from '@/utils/dateFormatting';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
+import type { DeliverableFile } from '@/shared/hooks/useDeliverableFiles';
 
 export interface DeliverableFilesListProps {
     deliverable: Deliverable;
+    files: DeliverableFile[];
+    filesLoading: boolean;
+    filesError: boolean;
+    onRetryFiles: () => void;
+    onFileDeleted: (fileId: string) => void;
     canUploadBeta: boolean;
     canUploadFinal?: boolean;
     onUpload: (file: File) => void;
+    onUploadFinal?: (file: File) => void;
     onFilesChange?: () => void;
     isUploading?: boolean;
     uploadProgress?: number;
@@ -23,22 +30,6 @@ export interface DeliverableFilesListProps {
     onCancelUpload?: () => void;
     videoPlayer?: React.ReactNode;
     reviewActions?: React.ReactNode;
-}
-
-// Database file record from deliverable_files table
-interface DeliverableFile {
-    id: string;
-    deliverable_id: string;
-    file_key: string;
-    file_name: string;
-    file_size: number | null;
-    mime_type: string | null;
-    file_category: 'video' | 'script' | 'document' | 'image' | 'audio' | 'asset';
-    is_final: boolean;
-    label: string | null;
-    sort_order: number;
-    uploaded_at: string;
-    uploaded_by: string | null;
 }
 
 interface FileItem {
@@ -63,9 +54,15 @@ const FILE_TYPE_CONFIG: Record<string, { icon: typeof FileVideo; bgColor: string
 
 export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     deliverable,
+    files,
+    filesLoading,
+    filesError,
+    onRetryFiles,
+    onFileDeleted,
     canUploadBeta,
     canUploadFinal,
     onUpload,
+    onUploadFinal,
     onFilesChange,
     isUploading = false,
     uploadProgress = 0,
@@ -78,8 +75,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 }) => {
     const { currentUser } = useDeliverables();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [fileItems, setFileItems] = useState<FileItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const finalFileInputRef = useRef<HTMLInputElement>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [fileIdPendingDelete, setFileIdPendingDelete] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -87,16 +83,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
     // Clients cannot see files when deliverable is still in beta_ready (not yet sent for review)
     const filesHiddenForClient = currentUser && isClient(currentUser) && deliverable.status === 'beta_ready';
 
-    // Helper to open file
-    const handleDownload = async (key: string | undefined, isFinal: boolean) => {
+    const handleDownload = async (key: string | undefined) => {
         if (!key) return;
         try {
-            let url;
-            if (isFinal) {
-                url = storageService.getPublicUrl(key);
-            } else {
-                url = await storageService.getDownloadUrl(key);
-            }
+            const url = await storageService.getDownloadUrl(key);
             if (url) window.open(url, '_blank');
         } catch (e) {
             console.error("Failed to get download URL", e);
@@ -114,6 +104,12 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             onUpload(file);
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleFinalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) onUploadFinal?.(file);
+        e.target.value = '';
     };
 
     const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -156,7 +152,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                 throw new Error('Failed to delete file');
             }
 
-            setFileItems(prev => prev.filter(f => f.id !== fileId));
+            onFileDeleted(fileId);
             onFilesChange?.();
             setFileIdPendingDelete(null);
         } catch (e) {
@@ -166,43 +162,6 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
             setDeletingId(null);
         }
     };
-
-    // Fetch files from deliverable_files table
-    const fetchFiles = async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch(`/api/deliverable-files?deliverableId=${deliverable.id}`, {
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch files');
-            }
-
-            const files: DeliverableFile[] = await response.json();
-
-            // Transform to FileItem format (no thumbnails needed)
-            const items: FileItem[] = files.map(f => ({
-                id: f.id,
-                key: f.file_key,
-                name: f.label || f.file_name,
-                category: f.file_category,
-                isFinal: f.is_final,
-                date: f.uploaded_at,
-                size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
-            }));
-
-            setFileItems(items);
-        } catch (e) {
-            console.error("Failed to fetch deliverable files", e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchFiles();
-    }, [deliverable.id]);
 
     // Helper to format file size
     const formatFileSize = (bytes: number): string => {
@@ -217,27 +176,27 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
         return FILE_TYPE_CONFIG[category] || FILE_TYPE_CONFIG.asset;
     };
 
-    // Expose refresh method for parent
-    const refreshFiles = () => {
-        fetchFiles();
-    };
+    const fileItems: FileItem[] = files.map(f => ({
+        id: f.id,
+        key: f.file_key,
+        name: f.label || f.file_name,
+        category: f.file_category,
+        isFinal: f.is_final,
+        date: f.uploaded_at,
+        size: f.file_size ? formatFileSize(f.file_size) : 'Unknown',
+    }));
 
-    // Auto-expand first video file on load
     useEffect(() => {
         if (fileItems.length > 0 && !activeFileKey && onVideoFileSelect) {
-            const firstVideo = fileItems.find(f => f.category === 'video');
-            if (firstVideo) {
-                onVideoFileSelect(firstVideo.key, firstVideo.name);
+            const latestVideo = fileItems.filter(f => f.category === 'video').sort((a, b) =>
+                (deliverable.status === 'final_delivered' ? Number(b.isFinal) - Number(a.isFinal) : 0) ||
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            )[0];
+            if (latestVideo) {
+                onVideoFileSelect(latestVideo.key, latestVideo.name);
             }
         }
-    }, [fileItems.length]);
-
-    useEffect(() => {
-        (window as any).__refreshDeliverableFiles = refreshFiles;
-        return () => {
-            delete (window as any).__refreshDeliverableFiles;
-        };
-    }, [deliverable.id]);
+    }, [files]);
 
     if (filesHiddenForClient) {
         return (
@@ -257,7 +216,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
 
     return (
         <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Files ({fileItems.length})</h3>
+            <h3 className="text-lg font-semibold text-foreground">Files{!filesLoading && !filesError && ` (${fileItems.length})`}</h3>
 
             {/* Hidden file input */}
             {canUploadBeta && (
@@ -269,12 +228,26 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                     accept="video/*,image/*,application/pdf"
                 />
             )}
+            {canUploadFinal && (
+                <input
+                    type="file"
+                    ref={finalFileInputRef}
+                    className="hidden"
+                    onChange={handleFinalFileChange}
+                    accept="video/*,image/*,application/pdf"
+                />
+            )}
 
-            {isLoading ? (
+            {filesLoading ? (
                 <div className="text-center py-12 bg-muted rounded-lg border border-border">
-                    <p className="text-muted-foreground text-sm">Loading files...</p>
+                    <p role="status" className="text-muted-foreground text-sm">Loading files...</p>
                 </div>
-            ) : fileItems.length === 0 && !canUploadBeta ? (
+            ) : filesError ? (
+                <div role="alert" className="text-center py-12 bg-muted rounded-lg border border-border">
+                    <p className="text-muted-foreground text-sm">Could not load files.</p>
+                    <Button variant="outline" size="sm" onClick={onRetryFiles} className="mt-3">Try again</Button>
+                </div>
+            ) : fileItems.length === 0 && !canUploadBeta && !canUploadFinal ? (
                 <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed border-border">
                     <div className="flex justify-center mb-3">
                         {deliverable.status === 'pending' || deliverable.status === 'in_progress' ? (
@@ -319,7 +292,10 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <h4 className="text-sm font-medium text-foreground">{file.name}</h4>
+                                                        <h4 aria-label={file.name} className="text-sm font-medium text-foreground">
+                                                          {canPreview ? <button type="button" aria-label={`Preview ${file.name}`} aria-pressed={isActive}
+                                                            className="text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{file.name}</button> : file.name}
+                                                        </h4>
                                                         {isActive && (
                                                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
                                                                 <Play className="h-2.5 w-2.5 fill-current" />
@@ -337,7 +313,7 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownload(file.key, file.isFinal); }}>
+                                                <Button variant="ghost" size="sm" aria-label={`Download ${file.name}`} onClick={(e) => { e.stopPropagation(); handleDownload(file.key); }}>
                                                     <Download className="h-4 w-4" />
                                                 </Button>
                                                 {canUploadBeta && (
@@ -434,6 +410,17 @@ export const DeliverableFilesList: React.FC<DeliverableFilesListProps> = ({
                                 </div>
                             )}
                         </div>
+                    )}
+                    {canUploadFinal && (
+                        <Button
+                            variant="outline"
+                            onClick={() => finalFileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="w-full gap-2"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Upload Final
+                        </Button>
                     )}
                 </>
             )}

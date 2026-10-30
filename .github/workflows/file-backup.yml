@@ -1,0 +1,71 @@
+name: Project file backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 05:17 Asia/Kolkata (23:47 UTC on the previous day).
+    - cron: '47 23 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-file-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: vars.FILE_BACKUP_IMMUTABLE_READY == 'true' && (github.event_name == 'workflow_dispatch' || vars.FILE_BACKUP_SCHEDULE_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container: python:3.12-bookworm
+    env:
+      FILE_SOURCE_BUCKET: ${{ vars.FILE_SOURCE_BUCKET }}
+      FILE_BACKUP_BUCKET: ${{ vars.FILE_BACKUP_BUCKET }}
+      FILE_R2_ENDPOINT: ${{ vars.FILE_R2_ENDPOINT }}
+      FILE_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      FILE_SOURCE_ACCESS_KEY_ID: ${{ secrets.FILE_SOURCE_ACCESS_KEY_ID }}
+      FILE_SOURCE_SECRET_ACCESS_KEY: ${{ secrets.FILE_SOURCE_SECRET_ACCESS_KEY }}
+      FILE_TARGET_ACCESS_KEY_ID: ${{ secrets.FILE_TARGET_ACCESS_KEY_ID }}
+      FILE_TARGET_SECRET_ACCESS_KEY: ${{ secrets.FILE_TARGET_SECRET_ACCESS_KEY }}
+      FILE_BACKUP_HEARTBEAT_URL: ${{ secrets.FILE_BACKUP_HEARTBEAT_URL }}
+      FILE_BACKUP_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install backup tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends age ca-certificates curl
+          pip install 'boto3==1.40.0'
+      - name: Copy and verify encrypted files
+        run: python3 scripts/backup/file_backup.py
+
+  notify-failure:
+    needs: backup
+    if: ${{ failure() && needs.backup.result == 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    env:
+      FILE_BACKUP_HEARTBEAT_URL: ${{ secrets.FILE_BACKUP_HEARTBEAT_URL }}
+    steps:
+      - name: Notify monitor of failed workflow
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          import urllib.request
+
+          url = os.environ.get('FILE_BACKUP_HEARTBEAT_URL', '')
+          if not re.fullmatch(r'https://[A-Za-z0-9./_-]+', url):
+              print('Failure notification URL is missing or invalid.', file=sys.stderr)
+              sys.exit(1)
+          try:
+              with urllib.request.urlopen(url.rstrip('/') + '/fail', timeout=15) as response:
+                  if response.status != 200:
+                      raise ValueError('Unexpected response')
+          except Exception:
+              print('Failure notification could not be sent.', file=sys.stderr)
+              sys.exit(1)
+          PY

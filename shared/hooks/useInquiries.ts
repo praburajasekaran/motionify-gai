@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../utils/api.client';
 import type { Inquiry, CreateInquiryDto } from '../contracts';
+import { portalInquiryKeys } from './usePortalInquiries';
 
 export const inquiryKeys = {
   all: ['inquiries'] as const,
@@ -36,6 +37,7 @@ export function useCreateInquiry() {
     mutationFn: (data: CreateInquiryDto) => api.inquiries.create(data),
     onSuccess: (newInquiry) => {
       queryClient.invalidateQueries({ queryKey: inquiryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: portalInquiryKeys.all });
       queryClient.setQueryData(inquiryKeys.detail(newInquiry.id), newInquiry);
     },
   });
@@ -64,6 +66,7 @@ export function useUpdateInquiry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inquiryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: portalInquiryKeys.all });
     },
   });
 }

@@ -160,6 +160,7 @@ CREATE TABLE project_requests (
   description TEXT NOT NULL,
   tentative_deadline DATE NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  inquiry_id UUID REFERENCES inquiries(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (status IN ('pending', 'reviewing', 'approved', 'rejected', 'converted', 'cancelled'))
@@ -311,6 +312,7 @@ CREATE INDEX idx_projects_number ON projects(project_number);
 CREATE INDEX idx_project_requests_client ON project_requests(client_user_id);
 CREATE INDEX idx_project_requests_status ON project_requests(status);
 CREATE INDEX idx_project_requests_created_at ON project_requests(created_at DESC);
+CREATE UNIQUE INDEX idx_project_requests_inquiry_id ON project_requests(inquiry_id) WHERE inquiry_id IS NOT NULL;
 
 -- Project Files
 CREATE INDEX idx_project_files_project_id ON project_files(project_id);
@@ -471,7 +473,7 @@ CREATE TRIGGER update_user_invitations_updated_at
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type VARCHAR(100) NOT NULL,
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID REFERENCES users(id),
   user_name VARCHAR(255) NOT NULL,
   target_user_id UUID REFERENCES users(id),
   target_user_name VARCHAR(255),
@@ -506,13 +508,33 @@ CREATE TABLE user_preferences (
 );
 
 -- ============================================================================
--- SEED DATA (Admin user for testing)
+-- TASKS
 -- ============================================================================
 
-INSERT INTO users (email, full_name, role) VALUES
-  ('admin@motionify.com', 'Motionify Studio Admin', 'super_admin'),
-  ('saravanan@motionify.co', 'Saravanan', 'super_admin')
-ON CONFLICT (email) DO NOTHING;
+CREATE TYPE task_stage AS ENUM ('pending', 'in_progress', 'review', 'awaiting_approval', 'revision_requested', 'completed');
+
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL, description TEXT,
+  stage task_stage NOT NULL DEFAULT 'pending',
+  is_client_visible BOOLEAN NOT NULL DEFAULT false,
+  assigned_to UUID REFERENCES users(id), due_date DATE, position INTEGER DEFAULT 0,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE task_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id), user_name VARCHAR(255), content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE task_followers (
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id), PRIMARY KEY (task_id, user_id)
+);
 
 -- ============================================================================
 -- SCHEMA COMPLETE

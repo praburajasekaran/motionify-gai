@@ -10,7 +10,7 @@ import { getCorsHeaders } from './cors';
 import { verifyJWT as verifyJWTFromLib, extractTokenFromCookie, hashJWT } from './jwt';
 import { createLogger } from './logger';
 import { normalizeRole, type CanonicalUserRole } from './roles';
-import { query } from './db';
+import { queryWithTiming } from './db';
 
 const logger = createLogger('auth-middleware');
 
@@ -77,7 +77,7 @@ export interface SessionQueryRunner {
  */
 export async function requireAuthFromCookie(
     event: NetlifyEvent,
-    runner: SessionQueryRunner = { query }
+    runner: SessionQueryRunner = { query: (text, params) => queryWithTiming(event, text, params) }
 ): Promise<CookieAuthResult> {
     const cookieHeader = event.headers.cookie || event.headers.Cookie;
     const token = extractTokenFromCookie(cookieHeader);

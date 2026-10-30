@@ -28,7 +28,8 @@ export const storageService = {
         folder: 'beta' | 'final' | 'misc' = 'misc',
         onProgress?: (progress: number) => void,
         customKey?: string,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        deliverableId?: string
     ): Promise<string> {
         try {
             // 1. Get presigned URL
@@ -39,6 +40,7 @@ export const storageService = {
                 projectId,
                 folder,
                 customKey,
+                deliverableId,
             };
             console.log('[Storage] Presign request:', requestBody);
 
@@ -145,11 +147,11 @@ export const storageService = {
      * @param key The storage key of the file
      * @returns The signed URL
      */
-    async getDownloadUrl(key: string): Promise<string> {
+    async getDownloadUrl(key: string, options?: { attachment?: boolean }): Promise<string> {
         try {
             if (!key) return '';
 
-            const queryString = new URLSearchParams({ key }).toString();
+            const queryString = new URLSearchParams({ key, ...(options?.attachment ? { attachment: '1' } : {}) }).toString();
             const response = await fetch(`/.netlify/functions/r2-presign?${queryString}`, {
                 credentials: 'include', // Required for cookie-based auth
             });

@@ -262,3 +262,21 @@ test('checkout script failure is recoverable before any order is created', async
   await expect(page.getByRole('dialog')).toHaveText('Checkout loaded after retry');
   expect(orders).toBe(1);
 });
+
+test('authenticated balance checkout shows the balance and requests a project payment', async ({ page }) => {
+  await setup(page, true);
+  await page.route('**/.netlify/functions/proposal-detail/**', route => route.fulfill({
+    json: { ...proposal, status: 'accepted', balance_amount: 175, total_price: 275 },
+  }));
+  await page.route('**/.netlify/functions/payments/create-order', route => route.fulfill({
+    status: 201, json: { ...order, amount: 175, description: 'Balance Payment' },
+  }));
+  await page.goto(`/portal/payment/${proposalId}?paymentType=balance`);
+  await expect(page.getByRole('heading', { name: 'Balance Payment', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Pay .*1[.,]75/ })).toBeEnabled();
+  const request = page.waitForRequest('**/.netlify/functions/payments/create-order');
+  await page.getByRole('button', { name: /Pay .*1[.,]75/ }).click();
+  expect((await request).postDataJSON()).toEqual({ proposalId, paymentType: 'balance' });
+  await page.getByRole('button', { name: 'Complete test payment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Payment Successful!' })).toBeVisible();
+});

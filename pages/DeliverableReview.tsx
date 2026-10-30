@@ -18,9 +18,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@/shared/utils/api.client';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
-import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
+import { DeliverableProvider, useDeliverables, type RawDeliverableResponse } from '@/components/deliverables/DeliverableContext';
+import { FileFeedbackPanel } from '@/components/deliverables/FileFeedbackPanel';
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
 import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
 import { DeliverableMetadataSidebar } from '@/components/deliverables/DeliverableMetadataSidebar';
@@ -36,14 +39,16 @@ import { storageService } from '@/services/storage';
 import { generateThumbnail } from '@/utils/thumbnail';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ProjectSectionHeader } from '@/components/portal/ProjectSectionHeader';
+import { deliverableFileKeys, useDeliverableFiles, type DeliverableFile } from '@/shared/hooks/useDeliverableFiles';
 
-const DeliverableReviewContent: React.FC = () => {
+const DeliverableReviewContent: React.FC<{ filesQuery: ReturnType<typeof useDeliverableFiles> }> = ({ filesQuery }) => {
   const { id: projectId, deliverableId } = useParams<{
     id: string;
     deliverableId: string;
   }>();
   const navigate = useNavigate();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading } =
+  const queryClient = useQueryClient();
+  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading, error: deliverablesError } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -55,6 +60,9 @@ const DeliverableReviewContent: React.FC = () => {
   const [isSendingForReview, setIsSendingForReview] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showDeliverFinalDialog, setShowDeliverFinalDialog] = useState(false);
+  const [isDeliveringFinal, setIsDeliveringFinal] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Upload progress state (passed to DeliverableFilesList for inline display)
   const [isUploading, setIsUploading] = useState(false);
@@ -65,6 +73,8 @@ const DeliverableReviewContent: React.FC = () => {
   // Active video file state (connects video player to files list)
   const [activeVideoFileKey, setActiveVideoFileKey] = useState<string | undefined>();
   const [activeVideoFileName, setActiveVideoFileName] = useState('');
+  const reviewFiles = filesQuery.isError ? [] : filesQuery.data ?? [];
+  const [reviewSnapshot, setReviewSnapshot] = useState<{ reviewedFileId?: string; reviewedLatestFileId?: string }>({});
 
   // Load deliverable from URL - Re-run when deliverables are loaded
   useEffect(() => {
@@ -78,6 +88,12 @@ const DeliverableReviewContent: React.FC = () => {
     deliverable: deliverable || undefined,
     project: currentProject,
   });
+  const canUploadBeta = !!deliverable && permissions.canUploadBeta &&
+    ['pending', 'in_progress', 'beta_ready', 'revision_requested'].includes(deliverable.status);
+  const canUploadFinal = !!deliverable && permissions.canUploadFinal &&
+    ['approved', 'payment_pending'].includes(deliverable.status);
+
+  const activeReviewFile = reviewFiles.find(file => file.file_key === activeVideoFileKey);
 
   // Handle back navigation
   const handleBack = () => {
@@ -86,7 +102,10 @@ const DeliverableReviewContent: React.FC = () => {
 
   // Shared helper: refresh deliverables and reload current one
   const refreshCurrentDeliverable = async () => {
-    await refreshDeliverables();
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: deliverableFileKeys.list(currentUser?.id, deliverableId) }),
+      refreshDeliverables(),
+    ]);
     if (deliverableId) {
       dispatch({ type: 'LOAD_DELIVERABLE_BY_ID', deliverableId });
     }
@@ -114,6 +133,21 @@ const DeliverableReviewContent: React.FC = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+  };
+
+  const handleAssignment = async (userId: string | null) => {
+    if (!deliverable) return;
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned_to: userId }),
+      });
+      if (!response.ok) throw new Error((await response.json()).error || 'Failed to assign staff');
+      await refreshCurrentDeliverable();
+      showSuccess('Staff assignment saved.');
+    } catch (error) { showError(error, 'Failed to assign staff'); }
+    finally { setIsAssigning(false); }
   };
 
   // Handle send for client review (beta_ready → awaiting_approval)
@@ -149,7 +183,7 @@ const DeliverableReviewContent: React.FC = () => {
     try {
       await approveDeliverable(deliverable.id);
       setShowApproveDialog(false);
-      showSuccess('Deliverable approved successfully! Payment link will be sent to your email.');
+      showSuccess('Deliverable approved. Open the Payments tab to pay the balance.');
       await refreshCurrentDeliverable();
     } catch (error) {
       setShowApproveDialog(false);
@@ -159,8 +193,39 @@ const DeliverableReviewContent: React.FC = () => {
     }
   };
 
+  const handleDeliverFinal = async () => {
+    if (!deliverable) return;
+    setIsDeliveringFinal(true);
+    try {
+      const response = await fetch(`/api/deliverables/${deliverable.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'final_delivered' }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || 'Final delivery failed');
+      setShowDeliverFinalDialog(false);
+      showSuccess(result.emailDelivery?.status === 'failed'
+        ? 'Final file is available, but the delivery email failed. Contact the client directly.'
+        : 'Final file delivered to the client.');
+      await refreshCurrentDeliverable();
+    } catch (error) {
+      showError(error, 'Final delivery failed');
+    } finally {
+      setIsDeliveringFinal(false);
+    }
+  };
+
   // Handle request revision button click
   const handleRequestRevisionClick = () => {
+    const betaFiles = reviewFiles.filter(file => !file.is_final).sort((a, b) =>
+      new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime() || b.id.localeCompare(a.id));
+    if (!activeReviewFile || activeReviewFile.is_final || !betaFiles[0]) {
+      showError(new Error('Select an uploaded beta file and wait for it to load before requesting a revision.'), 'Select a review file');
+      return;
+    }
+    setReviewSnapshot({ reviewedFileId: activeReviewFile.id, reviewedLatestFileId: betaFiles[0].id });
     setShowRevisionForm(true);
   };
 
@@ -173,7 +238,7 @@ const DeliverableReviewContent: React.FC = () => {
   // Handle revision submission
   const handleSubmitRevision = async (approval: DeliverableApproval) => {
     try {
-      await rejectDeliverable(approval.deliverableId, approval);
+      await rejectDeliverable(approval.deliverableId, { ...approval, ...reviewSnapshot });
       showSuccess('Revision request submitted successfully! The team will review within 2-3 business days.');
       setShowRevisionForm(false);
       dispatch({ type: 'RESET_REVISION_FORM' });
@@ -216,7 +281,7 @@ const DeliverableReviewContent: React.FC = () => {
     });
   };
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, isFinal = false) => {
     if (!deliverable) return;
 
     const controller = new AbortController();
@@ -228,7 +293,7 @@ const DeliverableReviewContent: React.FC = () => {
       setUploadProgress(0);
       setUploadingFileName(file.name);
 
-      const folder = 'beta'; // Default for empty state upload
+      const folder = isFinal ? 'final' : 'beta';
 
       // Upload file to R2 with progress tracking
       const key = await storageService.uploadFile(
@@ -237,22 +302,24 @@ const DeliverableReviewContent: React.FC = () => {
         folder,
         (p) => setUploadProgress(p),
         undefined,
-        controller.signal
+        controller.signal,
+        deliverable.id
       );
 
+      let thumbnailKey: string | undefined;
       // Generate thumbnail if video
       if (file.type.startsWith('video/')) {
         try {
           const thumbnailFile = await generateThumbnail(file);
           if (thumbnailFile && !controller.signal.aborted) {
-            const thumbKey = key.replace(/\.[^/.]+$/, '-thumb.jpg');
-            await storageService.uploadFile(
+            thumbnailKey = await storageService.uploadFile(
               thumbnailFile,
               deliverable.projectId,
               folder,
               undefined,
-              thumbKey,
-              controller.signal
+              undefined,
+              controller.signal,
+              deliverable.id
             );
           }
         } catch (err) {
@@ -280,11 +347,12 @@ const DeliverableReviewContent: React.FC = () => {
         body: JSON.stringify({
           deliverable_id: deliverable.id,
           file_key: key,
+          thumbnail_key: thumbnailKey,
           file_name: file.name,
           file_size: file.size,
           mime_type: file.type,
           file_category: getFileCategory(file.type),
-          is_final: false,
+          is_final: isFinal,
         }),
         signal: controller.signal
       });
@@ -293,26 +361,28 @@ const DeliverableReviewContent: React.FC = () => {
         throw new Error('Failed to save file record');
       }
 
-      // If status is 'pending', update to 'beta_ready'
-      if (deliverable.status === 'pending') {
-        await fetch(`/api/deliverables/${deliverable.id}`, {
+      if (file.type.startsWith('video/')) {
+        setActiveVideoFileKey(key);
+        setActiveVideoFileName(file.name);
+      }
+
+      if (!isFinal && ['pending', 'in_progress', 'revision_requested'].includes(deliverable.status)) {
+        const statusResponse = await fetch(`/api/deliverables/${deliverable.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ status: 'beta_ready' }),
           signal: controller.signal
         });
-      }
-
-      // Refresh file list
-      if ((window as any).__refreshDeliverableFiles) {
-        (window as any).__refreshDeliverableFiles();
+        if (!statusResponse.ok) {
+          throw new Error('File uploaded, but its review status could not be updated. Reload and try again.');
+        }
       }
 
       // Also refresh deliverables for status update
       await refreshCurrentDeliverable();
 
-      showSuccess('File uploaded successfully!');
+      showSuccess(isFinal ? 'Final file uploaded. Deliver it after the balance payment is complete.' : 'File uploaded successfully!');
     } catch (error) {
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Aborted')) {
         console.log("Upload aborted by user");
@@ -339,8 +409,16 @@ const DeliverableReviewContent: React.FC = () => {
     );
   }
 
-  // Only show "not found" if deliverables have loaded and this ID isn't in the list
-  if (!deliverable && state.deliverables.length > 0) {
+  if (deliverablesError) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <p className="text-muted-foreground">Could not load deliverables.</p>
+        <Button variant="outline" onClick={() => { void refreshDeliverables(); }}>Try again</Button>
+      </div>
+    );
+  }
+
+  if (!deliverable && (state.deliverables.length === 0 || !state.deliverables.some(item => item.id === deliverableId))) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
@@ -420,11 +498,23 @@ const DeliverableReviewContent: React.FC = () => {
         onClose={() => setShowApproveDialog(false)}
         onConfirm={handleApprove}
         title={`Approve "${deliverable?.title}"?`}
-        message="After approval, you'll receive a payment link to complete the balance payment, and final files will be delivered within 24 hours."
+        message="After approval, open the Payments tab to complete the balance payment. The team will deliver final files after payment."
         confirmLabel="Approve Deliverable"
         cancelLabel="Cancel"
         variant="warning"
         isLoading={isApproving}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeliverFinalDialog}
+        onClose={() => setShowDeliverFinalDialog(false)}
+        onConfirm={handleDeliverFinal}
+        title="Deliver Final File?"
+        message="This releases the uploaded final file to the client and sends a delivery email. The balance payment must be complete."
+        confirmLabel="Deliver Final"
+        cancelLabel="Cancel"
+        variant="warning"
+        isLoading={isDeliveringFinal}
       />
 
       {/* Header */}
@@ -458,14 +548,30 @@ const DeliverableReviewContent: React.FC = () => {
           {/* File List with inline video accordion */}
           <DeliverableFilesList
             deliverable={deliverable}
-            canUploadBeta={permissions.canUploadBeta}
+            files={reviewFiles}
+            filesLoading={filesQuery.isPending}
+            filesError={filesQuery.isError}
+            onRetryFiles={() => { void filesQuery.refetch(); }}
+            onFileDeleted={(fileId) => {
+              const key = deliverableFileKeys.list(currentUser?.id, deliverableId);
+              if (activeReviewFile?.id === fileId) {
+                setActiveVideoFileKey(undefined);
+                setActiveVideoFileName('');
+              }
+              queryClient.setQueryData<DeliverableFile[]>(key, files => files?.filter(file => file.id !== fileId));
+              void queryClient.invalidateQueries({ queryKey: key });
+            }}
+            canUploadBeta={canUploadBeta}
+            canUploadFinal={canUploadFinal}
             onUpload={handleUpload}
+            onUploadFinal={(file) => handleUpload(file, true)}
             onCancelUpload={handleCancelUpload}
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadingFileName={uploadingFileName}
             activeFileKey={activeVideoFileKey}
             onVideoFileSelect={(key, name) => {
+              if (showRevisionForm) handleCancelRevision();
               if (key === activeVideoFileKey) {
                 setActiveVideoFileKey(undefined);
                 setActiveVideoFileName('');
@@ -480,7 +586,7 @@ const DeliverableReviewContent: React.FC = () => {
                 isRevisionMode={showRevisionForm}
                 canRequestRevision={permissions.canReject}
                 canComment={permissions.canComment}
-                canUploadBeta={permissions.canUploadBeta}
+                canUploadBeta={canUploadBeta}
                 comments={state.revisionFeedback.timestampedComments}
                 onAddComment={handleAddComment}
                 onRemoveComment={handleRemoveComment}
@@ -488,6 +594,7 @@ const DeliverableReviewContent: React.FC = () => {
                 onUpload={handleUpload}
                 selectedFileKey={activeVideoFileKey}
                 selectedFileName={activeVideoFileName}
+                selectedFileId={activeReviewFile?.id}
                 onActiveFileChange={(key, name) => {
                   setActiveVideoFileKey(key);
                   setActiveVideoFileName(name);
@@ -495,7 +602,12 @@ const DeliverableReviewContent: React.FC = () => {
               />
             }
             reviewActions={
-              <DeliverableReviewActions
+              <>
+                {activeReviewFile && (
+                  <FileFeedbackPanel key={activeReviewFile.id} deliverableId={deliverable.id}
+                    fileId={activeReviewFile.id} fileName={activeReviewFile.file_name} canComment={permissions.canComment} />
+                )}
+                <DeliverableReviewActions
                 deliverable={deliverable}
                 isRevisionMode={showRevisionForm}
                 canApprove={permissions.canApprove}
@@ -514,8 +626,14 @@ const DeliverableReviewContent: React.FC = () => {
                 currentUserName={currentUser?.name || ''}
                 currentUserEmail={currentUser?.email || ''}
               />
+              </>
             }
           />
+          {canUploadFinal && (
+            <Button variant="default" onClick={() => setShowDeliverFinalDialog(true)} disabled={isUploading}>
+              Deliver Final File
+            </Button>
+          )}
 
           {/* Approval History */}
           {deliverable.approvalHistory.length > 0 && (
@@ -533,6 +651,8 @@ const DeliverableReviewContent: React.FC = () => {
             project={currentProject}
             onSendForReview={() => setShowSendForReviewDialog(true)}
             isSendingForReview={isSendingForReview}
+            onAssignmentChange={handleAssignment}
+            isAssigning={isAssigning}
           />
         </div>
       </div>
@@ -545,10 +665,23 @@ const DeliverableReviewContent: React.FC = () => {
  */
 export const DeliverableReview: React.FC = () => {
   const { user } = useAuthContext();
-  const { id: projectId } = useParams<{ id: string }>();
+  const { id: projectId, deliverableId } = useParams<{ id: string; deliverableId: string }>();
   const { data: currentProject, isLoading } = useProject(projectId);
+  const filesQuery = useDeliverableFiles(user?.id, deliverableId);
+  const deliverablesQuery = useQuery({
+    queryKey: ['deliverables', user?.id, user?.role, projectId],
+    enabled: !!user && !!projectId,
+    queryFn: async ({ signal }): Promise<RawDeliverableResponse[]> => {
+      const response = await fetch(`/api/deliverables?projectId=${encodeURIComponent(projectId!)}`, { credentials: 'include', signal });
+      if (!response.ok) throw new ApiError(response.status, 'Failed to load deliverables');
+      return response.json();
+    },
+    staleTime: 0,
+    retry: false,
+    throwOnError: false,
+  });
 
-  if (isLoading) {
+  if (isLoading || (currentProject && currentProject.id !== projectId)) {
     return <DetailPageHeaderSkeleton />;
   }
 
@@ -561,8 +694,8 @@ export const DeliverableReview: React.FC = () => {
   }
 
   return (
-    <DeliverableProvider currentUser={user} currentProject={currentProject}>
-      <DeliverableReviewContent />
+    <DeliverableProvider key={`${user.id}:${currentProject.id}`} currentUser={user} currentProject={currentProject} earlyDeliverables={deliverablesQuery}>
+      <DeliverableReviewContent filesQuery={filesQuery} />
     </DeliverableProvider>
   );
 };

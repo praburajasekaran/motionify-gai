@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { getInquiries, getInquiriesByClientUserId, type Inquiry, type InquiryStatus } from '../../lib/inquiries';
+import { type InquiryStatus } from '../../lib/inquiries';
+import { usePortalInquiries } from '@/shared/hooks/usePortalInquiries';
 import { Search, Filter, Plus, Calendar, User, Mail, TrendingUp, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Permissions, isClient } from '../../lib/permissions';
@@ -10,6 +11,7 @@ import { Button } from '../../components/ui/design-system';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
+import { ProjectRequestQueue } from './ProjectRequestQueue';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -68,42 +70,14 @@ export function InquiryDashboard() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthContext();
   const inquiryBasePath = isClient(user) ? '/inquiries' : '/admin/inquiries';
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([]);
+  const inquiryQuery = usePortalInquiries(user);
+  const inquiries = inquiryQuery.isError ? [] : inquiryQuery.data ?? [];
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const loadInquiries = () => { void inquiryQuery.refetch(); };
 
-  const loadInquiries = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const allInquiries = isClient(user)
-        ? await getInquiriesByClientUserId(user.id)
-        : await getInquiries();
-
-      setInquiries(allInquiries);
-      setFilteredInquiries(allInquiries);
-    } catch (err) {
-      console.error('Failed to load inquiries:', err);
-      setError('Failed to load inquiries. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadInquiries();
-  }, [user]);
-
-  // Apply filters
-  useEffect(() => {
+  const filteredInquiries = (() => {
     let filtered = inquiries;
   
     // Filter by status
@@ -122,8 +96,8 @@ export function InquiryDashboard() {
       );
     }
   
-    setFilteredInquiries(filtered);
-  }, [inquiries, searchTerm, statusFilter]);
+    return filtered;
+  })();
 
 
   // Wait for auth to load before checking permissions
@@ -159,6 +133,7 @@ export function InquiryDashboard() {
   return (
     <div className="space-y-6 pb-20">
       <InquirySectionHeader onNewInquiry={() => setIsModalOpen(true)} />
+      {!isClient(user) && <ProjectRequestQueue searchTerm={searchTerm} />}
   
       {/* Filters */}
       <div className="bg-card rounded-xl p-4 ring-1 ring-border shadow-sm">
@@ -201,14 +176,14 @@ export function InquiryDashboard() {
       </div>
   
       {/* Loading State */}
-      {loading ? (
+      {inquiryQuery.isPending ? (
         <div className="bg-card rounded-xl ring-1 ring-border shadow-sm p-12 text-center">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
           <p className="text-foreground">Loading inquiries...</p>
         </div>
-      ) : error ? (
+      ) : inquiryQuery.isError ? (
         <div className="bg-card rounded-xl ring-1 ring-border shadow-sm">
-          <ErrorState error={error} onRetry={loadInquiries} />
+          <ErrorState error="Failed to load inquiries. Please try again." onRetry={loadInquiries} />
         </div>
       ) : (
         <>

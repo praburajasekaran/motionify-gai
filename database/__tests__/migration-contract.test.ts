@@ -12,6 +12,14 @@ const nullabilityMigrationPath = fileURLToPath(new URL(
   '../migrations/029_reconcile_membership_nullability.sql',
   import.meta.url
 ));
+const requestLinkMigrationPath = fileURLToPath(new URL(
+  '../migrations/036_link_project_requests_to_inquiries.sql',
+  import.meta.url
+));
+const publicActivityMigrationPath = fileURLToPath(new URL(
+  '../migrations/037_allow_public_inquiry_activity.sql',
+  import.meta.url
+));
 const schemaPath = fileURLToPath(new URL('../schema.sql', import.meta.url));
 const driftFixturePath = fileURLToPath(new URL(
   './fixtures/pre-028-production-drift.sql',
@@ -20,6 +28,8 @@ const driftFixturePath = fileURLToPath(new URL(
 
 const migrationSql = readFileSync(migrationPath, 'utf8');
 const nullabilityMigrationSql = readFileSync(nullabilityMigrationPath, 'utf8');
+const requestLinkMigrationSql = readFileSync(requestLinkMigrationPath, 'utf8');
+const publicActivityMigrationSql = readFileSync(publicActivityMigrationPath, 'utf8');
 const schemaSql = readFileSync(schemaPath, 'utf8');
 const driftFixtureSql = readFileSync(driftFixturePath, 'utf8');
 
@@ -51,6 +61,15 @@ describe('runtime contract reconciliation migration', () => {
     assert.match(nullabilityMigrationSql, /project_team[\s\S]*added_at SET NOT NULL/i);
     assert.match(nullabilityMigrationSql, /project_invitations[\s\S]*status SET NOT NULL/i);
     assert.doesNotMatch(nullabilityMigrationSql, /DROP\s+(?:TABLE|COLUMN)/i);
+  });
+
+  it('links a client request to one inquiry without changing existing requests', () => {
+    assert.match(requestLinkMigrationSql, /ADD COLUMN IF NOT EXISTS inquiry_id UUID REFERENCES inquiries\(id\)/i);
+    assert.match(requestLinkMigrationSql, /CREATE UNIQUE INDEX IF NOT EXISTS idx_project_requests_inquiry_id/i);
+    assert.match(schemaSql, /inquiry_id UUID REFERENCES inquiries\(id\)/i);
+    assert.match(schemaSql, /CREATE UNIQUE INDEX idx_project_requests_inquiry_id/i);
+    assert.doesNotMatch(requestLinkMigrationSql, /DROP\s+(?:TABLE|COLUMN)/i);
+    assert.match(publicActivityMigrationSql, /ALTER TABLE activities ALTER COLUMN user_id DROP NOT NULL/i);
   });
 
   it('retains a fixture with the production-shaped pre-migration drift', () => {

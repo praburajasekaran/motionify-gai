@@ -10,6 +10,8 @@ import { INQUIRY_STATUS_CONFIG } from '../../lib/status-config';
 import { absoluteProposalReviewUrl } from '../../lib/canonical-links';
 import { InquirySectionHeader } from '../../components/portal/InquirySectionHeader';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { portalInquiryKeys } from '@/shared/hooks/usePortalInquiries';
 
 const STATUS_COLORS: Record<InquiryStatus, string> = {
   new: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
@@ -30,6 +32,7 @@ const STATUS_COLORS: Record<InquiryStatus, string> = {
 export function InquiryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isLoading } = useAuthContext();
   const [copied, setCopied] = useState(false);
 
@@ -146,6 +149,7 @@ export function InquiryDetail() {
       });
 
       setInquiry(updated);
+      void queryClient.invalidateQueries({ queryKey: portalInquiryKeys.all });
       setShowEditModal(false);
     } catch (error) {
       console.error('Error updating inquiry:', error);

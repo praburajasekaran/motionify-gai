@@ -16,6 +16,8 @@ landing-page-new/.next
 .env.development.local
 .env.test.local
 .env.production.local
+.env.payment-test
+.env.payment-test-delivery
 
 # Vite portal build output copied for Next.js
 landing-page-new/public/portal/
@@ -27,10 +29,23 @@ landing-page-new/public/portal/
 data/state_store.db/
 data/stream_store/
 graphify-out/
+playwright-readiness-report/
+playwright-readiness-results/
+playwright-permissions-report/
+playwright-permissions-results/
+/.scratch/production-readiness/baseline/
+/.scratch/production-readiness/clean-baseline/
+/.scratch/production-readiness/clean-candidate/
+/.scratch/production-readiness/private-evidence/
 
 # Git worktrees
 worktrees/
 .worktrees/
+
+dist-readiness/
+dist-payment-readiness/
+playwright-payment-readiness-report/
+playwright-payment-readiness-results/
 
 # Verification instances and retained local proof
 .scratch/verify-motionify/

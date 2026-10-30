@@ -9,13 +9,24 @@ import {
 } from './fixtures/database-contract';
 
 describe('database contract verifier', () => {
+  it('rejects missing delivery schema and task review stages', async () => {
+    const result = await verifyDatabaseContract(createContractRunner({
+      columns: canonicalColumns.filter(column => column.table_name !== 'tasks'
+        && !(column.table_name === 'deliverables' && column.column_name === 'files_expired')),
+      stages: [{ enumlabel: 'pending' }],
+    }));
+    assert.equal(result.ready, false);
+    assert.ok(result.issues.some(issue => issue.code === 'missing_table' && issue.object === 'tasks'));
+    assert.ok(result.issues.some(issue => issue.code === 'missing_column' && issue.object === 'deliverables.files_expired'));
+    assert.ok(result.issues.some(issue => issue.code === 'invalid_constraint' && issue.object === 'task_stage.awaiting_approval'));
+  });
   it('accepts the reconciled production contract using read-only catalog queries', async () => {
     const runner = createContractRunner();
     const result = await verifyDatabaseContract(runner);
 
     assert.equal(result.ready, true);
     assert.deepEqual(result.issues, []);
-    assert.equal(result.latestMigration, '030_payment_receipts');
+    assert.equal(result.latestMigration, '037_allow_public_inquiry_activity');
     assert.ok(runner.calls.length >= 4);
     for (const statement of runner.calls) {
       assert.match(statement.trim(), /^SELECT/i);
@@ -69,5 +80,17 @@ describe('database contract verifier', () => {
       result.issues.filter((issue) => issue.code === 'missing_index').map((issue) => issue.object).sort(),
       ['project_files.r2_key', 'sessions.jwt_token_hash']
     );
+  });
+
+  it('requires a unique linked inquiry for each client request', async () => {
+    const result = await verifyDatabaseContract(createContractRunner({
+      columns: canonicalColumns.filter(column => !(column.table_name === 'project_requests' && column.column_name === 'inquiry_id')),
+      constraints: canonicalConstraints.filter(constraint => constraint.constraint_name !== 'project_requests_inquiry_id_fkey'),
+      indexes: canonicalIndexes.filter(index => index.index_name !== 'idx_project_requests_inquiry_id'),
+    }));
+    assert.equal(result.ready, false);
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id' && issue.code === 'missing_column'));
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id_fkey' && issue.code === 'missing_constraint'));
+    assert.ok(result.issues.some(issue => issue.object === 'project_requests.inquiry_id' && issue.code === 'missing_index'));
   });
 });

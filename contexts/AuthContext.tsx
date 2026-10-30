@@ -5,14 +5,14 @@
  * Internally uses React Query via useAuth() hook for caching and background refresh.
  */
 
-import React, { createContext, useContext, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { User } from '@/types';
 import { clearAuthSession } from '@/lib/auth';
 import { API_BASE } from '@/lib/api-config';
 import { setUserTimezone } from '@/utils/dateFormatting';
-import { useAuth, authKeys } from '@/shared/hooks/useAuth';
+import { useAuth, authKeys, clearPrivateQueries } from '@/shared/hooks/useAuth';
 
 interface AuthContextType {
     user: User | null;
@@ -34,15 +34,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { data: user, isLoading } = useAuth();
+    const previousSession = useRef<User | null | undefined>(user);
+
+    useEffect(() => {
+        const previous = previousSession.current;
+        if (previous && (!user || previous.id !== user.id || previous.role !== user.role)) clearPrivateQueries(queryClient);
+        previousSession.current = user;
+    }, [user, queryClient]);
 
     /**
      * Set user — updates the React Query cache directly
      */
     const setUser = useCallback((newUser: User | null) => {
         if (newUser) {
+            const previousUser = queryClient.getQueryData<User | null>(authKeys.session());
+            if (!previousUser || previousUser.id !== newUser.id || previousUser.role !== newUser.role) clearPrivateQueries(queryClient);
+            previousSession.current = newUser;
             queryClient.setQueryData(authKeys.session(), newUser);
             setUserTimezone(newUser.timezone || null);
         } else {
+            clearPrivateQueries(queryClient);
+            previousSession.current = null;
             clearAuthSession();
             queryClient.setQueryData(authKeys.session(), null);
             setUserTimezone(null);
@@ -63,6 +75,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.error('Logout API call failed:', error);
         }
         clearAuthSession();
+        clearPrivateQueries(queryClient);
+        previousSession.current = null;
         queryClient.setQueryData(authKeys.session(), null);
         setUserTimezone(null);
         navigate('/login', { replace: true });

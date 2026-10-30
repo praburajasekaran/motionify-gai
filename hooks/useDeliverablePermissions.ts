@@ -75,7 +75,7 @@ export function useDeliverablePermissions({
       canViewHistory: canViewApprovalHistory(user, project),
 
       // Upload permissions
-      canUploadBeta: canUploadBetaFiles(user, project, task),
+      canUploadBeta: canUploadBetaFiles(user, project, task, deliverable),
       canUploadFinal: canUploadFinalFiles(user, project),
 
       // Approval permissions

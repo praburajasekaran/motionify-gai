@@ -17,6 +17,7 @@ import {
   requireProposalAccess,
 } from './_shared/authorization';
 import { isAdminLike } from './_shared/roles';
+import { withServerTiming } from './_shared/server-timing';
 
 const { types } = pg;
 
@@ -52,6 +53,7 @@ const generateProjectNumber = async (runner: QueryRunner = { query: dbQuery }): 
 };
 
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'projects')
@@ -75,7 +77,8 @@ export const handler = compose(
 
         // Fetch project from main projects table
         const result = await dbQuery(
-          `SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone
+          `SELECT p.*, u.full_name as client_name, u.email as client_email, u.phone as client_phone,
+           (SELECT COUNT(*) FROM deliverables d WHERE d.project_id = p.id)::int as deliverables_count
            FROM projects p
            LEFT JOIN users u ON p.client_user_id = u.id
            WHERE p.id = $1`,
@@ -114,7 +117,7 @@ export const handler = compose(
 
         return {
           statusCode: 200,
-          headers: { ...headers, 'Cache-Control': 'private, max-age=30' },
+          headers: { ...headers, 'Cache-Control': 'private, no-store' },
           body: JSON.stringify(project),
         };
       }

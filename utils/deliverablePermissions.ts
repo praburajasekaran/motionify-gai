@@ -9,6 +9,7 @@ import { User, DeliverableStatus, Project, ProjectStatus, Task } from '@/types';
 import type { DeliverableStatus as ReviewStatus } from '@/types/deliverable.types';
 
 export interface DeliverablePermissionTarget {
+  assignedTo?: string | null;
   status: DeliverableStatus | ReviewStatus;
   expiresAt?: string | Date;
 }
@@ -56,7 +57,7 @@ export function isClientPrimaryContact(user: User, projectId: string): boolean {
 export function isAssignedToTask(user: User, task?: Task): boolean {
   if (!task) return false;
 
-  // Check both single assignee and multiple assignees
+  if (task.assigneeId === user.id) return true;
   if (task.assignee?.id === user.id) return true;
   if (task.assignees?.some(assignee => assignee.id === user.id)) return true;
 
@@ -101,7 +102,8 @@ export function canViewDeliverable(
 export function canUploadBetaFiles(
   user: User,
   project: Project,
-  task?: Task
+  task?: Task,
+  deliverable?: Deliverable
 ): boolean {
   // Paused or terminal projects accept uploads only from super admins.
   if (isWorkPaused(project.status)) {
@@ -115,6 +117,7 @@ export function canUploadBetaFiles(
 
   // Team member only if assigned to task
   if (user.role === 'team_member') {
+    if (deliverable) return deliverable.assignedTo === user.id && ['pending', 'in_progress', 'beta_ready', 'revision_requested'].includes(deliverable.status);
     return isAssignedToTask(user, task);
   }
 
@@ -417,8 +420,7 @@ export function canEditTask(user: User, task?: Task): boolean {
   // Team member can edit if assigned
   if (user.role === 'team_member') {
     if (!task) return false;
-    if (task.assignee?.id === user.id) return true;
-    if (task.assignees?.some(assignee => assignee.id === user.id)) return true;
+    if (isAssignedToTask(user, task)) return true;
     // Fall through to creator check below
   }
 

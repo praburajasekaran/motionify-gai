@@ -25,6 +25,7 @@ import type { PoolClient } from './_shared';
 import { generateJWT, createAuthCookie } from './_shared/jwt';
 import { appOriginFromEnv } from '../../shared/canonical-links';
 import { normalizeRole, type CanonicalUserRole } from './_shared/roles';
+import { readProjectMemberships } from './_shared/project-memberships';
 
 interface NetlifyEvent {
     httpMethod: string;
@@ -436,6 +437,10 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
             await client.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [userId]);
 
+            const projectTeamMemberships = await readProjectMemberships(
+                userId, (text, params) => client.query(text, params)
+            );
+
             logger.info('User authenticated', { userId, role: userRole });
 
             return {
@@ -445,6 +450,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
                     fullName: userFullName,
                     role: userRole,
                     avatarUrl: userAvatar,
+                    projectTeamMemberships,
                 },
                 token: jwtToken,
                 rememberMe: rememberMe,

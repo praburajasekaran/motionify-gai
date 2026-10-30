@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { API_BASE } from '@/lib/api-config';
 import { clearAuthSession, getStoredUser } from '@/lib/auth';
 import { setUserTimezone } from '@/utils/dateFormatting';
@@ -8,6 +8,10 @@ export const authKeys = {
   all: ['auth'] as const,
   session: () => [...authKeys.all, 'session'] as const,
 };
+
+export function clearPrivateQueries(queryClient: QueryClient) {
+  queryClient.removeQueries({ predicate: query => query.queryKey[0] !== authKeys.all[0] });
+}
 
 interface AuthMeResponse {
   success: boolean;

@@ -1,11 +1,12 @@
 import { query as dbQuery } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withRateLimit, type Middleware, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
-import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
+import { requireAuthFromCookie } from './_shared/auth';
+import { measureStage, withServerTiming } from './_shared/server-timing';
 import {
   AuthorizationError,
   assertAdminLike,
@@ -54,25 +55,30 @@ const generateInquiryNumber = async (): Promise<string> => {
   return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
 
+const withInquirySession: Middleware = handler => async event => {
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'PUT') return handler(event);
+  const auth = await measureStage(event, 'auth', () => requireAuthFromCookie(event));
+  return handler(event, auth);
+};
+
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+  withInquirySession,
   withRateLimit(RATE_LIMITS.api, 'inquiries')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
   try {
     // Conditional authentication: GET and PUT require auth, POST is public
-    let auth: CookieAuthResult | null = null;
     if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
-      auth = await requireAuthFromCookie(event);
-
-      if (!auth.authorized) {
+      if (!auth?.authorized) {
         return {
-          statusCode: auth.statusCode || 401,
+          statusCode: auth?.statusCode || 401,
           headers,
           body: JSON.stringify({
-            error: auth.error || 'Authentication required'
+            error: auth?.error || 'Authentication required'
           }),
         };
       }
@@ -136,8 +142,8 @@ export const handler = compose(
       if (clientUserId) {
         sql = `
           SELECT i.* FROM inquiries i
-          LEFT JOIN proposals p ON i.id = p.inquiry_id
-          WHERE i.client_user_id = $1 OR (p.client_user_id = $1 AND i.client_user_id IS NULL)
+          LEFT JOIN projects pr ON pr.inquiry_id = i.id
+          WHERE i.client_user_id = $1 OR (pr.client_user_id = $1 AND i.client_user_id IS NULL)
           ORDER BY i.created_at DESC
         `;
         params.push(clientUserId);
@@ -150,10 +156,9 @@ export const handler = compose(
           LEFT JOIN project_team pt
             ON pt.project_id = pr.id AND pt.user_id = $1 AND pt.removed_at IS NULL
           WHERE i.client_user_id = $1
-             OR p.client_user_id = $1
              OR pr.client_user_id = $1
              OR LOWER(i.contact_email) = LOWER($2)
-             OR pt.user_id = $1
+             OR (pt.user_id = $1 AND pt.role IN ('team_member', 'support', 'super_admin'))
           ORDER BY i.created_at DESC
         `;
         params.push(userId, auth!.user!.email);
@@ -232,8 +237,8 @@ export const handler = compose(
 
         const inquiryNumber = await generateInquiryNumber();
 
-        // Create default quiz answers for public form submissions
-        const defaultQuizAnswers = {
+        // Contact forms have no quiz; quiz submissions carry their actual selections.
+        const quizAnswers = payload.quizAnswers || {
           niche: payload.projectType || 'General',
           audience: 'General',
           style: 'Professional',
@@ -254,7 +259,7 @@ export const handler = compose(
             payload.company || null,
             null, // contact_phone - schema doesn't include phone
             payload.message || null,
-            JSON.stringify(defaultQuizAnswers),
+            JSON.stringify(quizAnswers),
             payload.projectType || 'Explainer Video',
           ]
         );
@@ -262,7 +267,7 @@ export const handler = compose(
         // Log activity for public form
         await logActivity({
           type: 'INQUIRY_CREATED',
-          userId: '',
+          userId: null,
           userName: payload.name,
           inquiryId: result.rows[0].id,
           details: { inquiryNumber, source: 'public' },
