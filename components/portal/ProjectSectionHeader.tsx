@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, Clock, FolderKanban, LayoutGrid } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { isMotionifyAdmin } from '../../lib/permissions';
+import { projectListUserId } from '../../lib/permissions';
 import { useProjects } from '../../shared/hooks/useProjects';
 import { PageHeader } from '../ui/PageHeader';
 
@@ -47,8 +47,7 @@ interface ProjectSectionHeaderProps {
 
 export function ProjectSectionHeader({ actions }: ProjectSectionHeaderProps) {
   const { user } = useAuthContext();
-  const projectListUserId = user ? (isMotionifyAdmin(user) ? null : user.id) : undefined;
-  const projectsQuery = useProjects(projectListUserId);
+  const projectsQuery = useProjects(projectListUserId(user));
   const projects = projectsQuery.isError ? undefined : projectsQuery.data;
 
   const visibleProjects = projects?.filter(project =>

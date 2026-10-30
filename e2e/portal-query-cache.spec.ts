@@ -1,6 +1,31 @@
 import { expect, test } from '@playwright/test';
 import { setupAuthSession } from './helpers/auth';
 
+for (const role of ['super_admin', 'support', 'client', 'team_member'] as const) {
+  test(`${role} reuses the project list prefetched from navigation`, async ({ page }) => {
+    const userId = `${role}-test`;
+    await setupAuthSession(page, { id: userId, name: 'Test user', email: 'user@example.test', role });
+    const requests: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    await page.route('**/.netlify/functions/projects*', async route => {
+      const url = new URL(route.request().url());
+      if (url.pathname !== '/.netlify/functions/projects') return route.continue();
+      requests.push(url.searchParams.get('userId') ?? 'all');
+      await gate;
+      await route.fulfill({ json: [{ id: 'project-1', name: 'Visible project', status: 'in_progress' }] });
+    });
+    await page.goto('/portal');
+    const link = page.getByRole('link', { name: 'Projects', exact: true });
+    await link.focus();
+    await expect.poll(() => requests.length).toBe(1);
+    await link.click();
+    release();
+    await expect(page.getByText('Visible project').first()).toBeVisible();
+    expect(requests).toEqual([role === 'super_admin' || role === 'support' ? 'all' : userId]);
+  });
+}
+
 for (const role of ['client', 'super_admin'] as const) {
   test(`${role} shares one inquiry request between the list and summary`, async ({ page }) => {
     await setupAuthSession(page, { id: `${role}-test`, name: 'Test user', email: 'user@example.test', role });

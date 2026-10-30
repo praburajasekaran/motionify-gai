@@ -3,6 +3,7 @@ import { Link, type LinkProps } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { prefetchForRoute } from '@/shared/utils/prefetch';
+import { projectListUserId } from '@/lib/permissions';
 
 const DEBOUNCE_MS = 100;
 
@@ -21,7 +22,7 @@ export function PrefetchLink({ to, children, onMouseEnter, onMouseLeave, onFocus
   const prefetch = useCallback(() => {
     if (!user) return;
     const path = typeof to === 'string' ? to : to.pathname ?? '';
-    prefetchForRoute(queryClient, path, user.id);
+    prefetchForRoute(queryClient, path, projectListUserId(user));
   }, [queryClient, to, user]);
 
   const handleMouseEnter = useCallback(() => {

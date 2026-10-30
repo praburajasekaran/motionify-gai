@@ -25,8 +25,8 @@ export function prefetchDashboard(queryClient: QueryClient) {
   });
 }
 
-export function prefetchProjectList(queryClient: QueryClient, userId?: string) {
-  if (!userId) return;
+export function prefetchProjectList(queryClient: QueryClient, userId?: string | null) {
+  if (userId === undefined) return;
   queryClient.prefetchQuery({
     queryKey: projectKeys.list(userId),
     queryFn: () => fetchProjects(userId),
@@ -44,7 +44,7 @@ export function prefetchProjectDetail(queryClient: QueryClient, projectId: strin
  * Match a route path to a prefetch action.
  * Used by PrefetchLink to determine what to prefetch on hover.
  */
-export function prefetchForRoute(queryClient: QueryClient, to: string, userId?: string) {
+export function prefetchForRoute(queryClient: QueryClient, to: string, userId?: string | null) {
   // Dashboard
   if (to === '/' || to === '/portal' || to === '/portal/') {
     prefetchDashboard(queryClient);
