@@ -32,5 +32,5 @@ This is the maintained map of Motionify Studio's user-facing verification paths.
 - [Public discovery](public-discovery.md): Work entry points, lazy video loading, mobile navigation, and contact links.
 - [Video quiz and inquiry](video-quiz.md): quiz entry points, recommendations, Back/reset, contact validation, submission, and tracking.
 - [Portal authentication](portal-authentication.md): login popup, protected redirects, real magic links, and logout.
-- [Project workspace](project-workspace.md): project search/view modes, tabs, and deliverable review entry points.
+- [Project workspace](project-workspace.md): project search/view modes, tabs, deliverable review, and final file handoff.
 - [Proposal and payment handoff](proposal-payment.md): proposal review links, change requests, decline, advance payment, and project access.
