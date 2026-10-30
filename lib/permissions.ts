@@ -19,6 +19,10 @@ export function isMotionifyAdmin(user: User | null): boolean {
   return user.role === 'super_admin' || user.role === 'support';
 }
 
+export function projectListUserId(user: User | null): string | null | undefined {
+  return user ? (isMotionifyAdmin(user) ? null : user.id) : undefined;
+}
+
 /**
  * Check if user is super admin
  */
