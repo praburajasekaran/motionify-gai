@@ -87,6 +87,33 @@ async function snapshot() {
   return result;
 }
 
+isolatedTest('protected read timings preserve responses without exposing request data', async () => {
+  for (const [handler, endpoint] of [[projects, `projects/${fixture.projectId}`], [inquiries, `inquiries/${inquiryId}`]] as const) {
+    const allowed = await request({ handler, method: 'GET', endpoint }, fixture.actors.primary);
+    assert.equal(allowed.status, 200);
+    const timing = allowed.headers['Server-Timing'];
+    assert.match(timing, /db_acquire;dur=\d+\.\d/);
+    assert.match(timing, /db_query;dur=\d+\.\d/);
+    assert.match(timing, /auth;dur=\d+\.\d/);
+    assert.match(timing, /rate_limit;dur=\d+\.\d/);
+    assert.equal((timing.match(/db_acquire;dur=/g) ?? []).length, 1);
+    assert.doesNotMatch(timing, /@|SELECT|cookie|token/i);
+    assert.equal((await request({ handler, method: 'GET', endpoint }, null)).status, 401);
+  }
+});
+
+isolatedTest('file lists return an empty array only for an accessible deliverable', async () => {
+  await pool.query('DELETE FROM deliverable_files WHERE deliverable_id = $1', [fixture.deliverableId]);
+  const query = { deliverableId: fixture.deliverableId };
+  const allowed = await request({ handler: files, method: 'GET', endpoint: 'deliverable-files', query }, fixture.actors.manager);
+  assert.equal(allowed.status, 200);
+  assert.deepEqual(allowed.body, []);
+  const denied = await request({ handler: files, method: 'GET', endpoint: 'deliverable-files', query }, fixture.actors.unrelated);
+  assert.equal(denied.status, 403);
+  const missing = await request({ handler: files, method: 'GET', endpoint: 'deliverable-files', query: { deliverableId: randomUUID() } }, fixture.actors.manager);
+  assert.equal(missing.status, 404);
+});
+
 function readScenarios(): Scenario[] {
   const scenarios: Omit<Scenario, 'method' | 'success'>[] = [
     { name: 'project detail', handler: projects, endpoint: `projects/${fixture.projectId}`, allowed: members },

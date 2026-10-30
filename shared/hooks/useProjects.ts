@@ -47,7 +47,6 @@ export function useProjects(userId: string | null | undefined) {
     queryKey: projectKeys.list(userId ?? null),
     queryFn: () => fetchProjects(userId ?? null),
     enabled: userId !== undefined,
-    placeholderData: keepPreviousData,
     throwOnError: false,
   });
 }

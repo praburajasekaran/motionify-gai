@@ -1,11 +1,12 @@
 import { query as dbQuery } from './_shared/db';
 import { logActivity } from './_shared/logActivity';
-import { compose, withCORS, withRateLimit, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
+import { compose, withCORS, withRateLimit, type Middleware, type NetlifyEvent, type NetlifyResponse } from './_shared/middleware';
 import { getCorsHeaders } from './_shared/cors';
 import { RATE_LIMITS } from './_shared/rateLimit';
 import { SCHEMAS } from './_shared/schemas';
 import { validateRequest } from './_shared/validation';
-import { requireAuthFromCookie, type CookieAuthResult } from './_shared/auth';
+import { requireAuthFromCookie } from './_shared/auth';
+import { measureStage, withServerTiming } from './_shared/server-timing';
 import {
   AuthorizationError,
   assertAdminLike,
@@ -54,25 +55,30 @@ const generateInquiryNumber = async (): Promise<string> => {
   return `INQ-${year}-${String(nextNumber).padStart(3, '0')}`;
 };
 
+const withInquirySession: Middleware = handler => async event => {
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'PUT') return handler(event);
+  const auth = await measureStage(event, 'auth', () => requireAuthFromCookie(event));
+  return handler(event, auth);
+};
+
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'PUT', 'OPTIONS']),
+  withInquirySession,
   withRateLimit(RATE_LIMITS.api, 'inquiries')
-)(async (event: NetlifyEvent) => {
+)(async (event: NetlifyEvent, auth) => {
   const origin = event.headers.origin || event.headers.Origin;
   const headers = getCorsHeaders(origin);
 
   try {
     // Conditional authentication: GET and PUT require auth, POST is public
-    let auth: CookieAuthResult | null = null;
     if (event.httpMethod === 'GET' || event.httpMethod === 'PUT') {
-      auth = await requireAuthFromCookie(event);
-
-      if (!auth.authorized) {
+      if (!auth?.authorized) {
         return {
-          statusCode: auth.statusCode || 401,
+          statusCode: auth?.statusCode || 401,
           headers,
           body: JSON.stringify({
-            error: auth.error || 'Authentication required'
+            error: auth?.error || 'Authentication required'
           }),
         };
       }

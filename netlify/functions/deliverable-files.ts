@@ -56,16 +56,18 @@ export const handler = compose(
         return getDeliverableFileAccess(auth?.user, deliverable);
       });
 
-      // First validate user can access this deliverable
-      const deliverableResult = await measureStage(event, 'deliverable_lookup', () => dbQuery(
-        `SELECT d.id, d.project_id, p.client_user_id
+      const filesResult = await measureStage(event, 'files_query', () => dbQuery(
+        `SELECT f.id, f.deliverable_id, f.file_key, f.file_name, f.file_size, f.mime_type,
+                f.file_category, f.is_final, f.label, f.sort_order, f.uploaded_at, f.uploaded_by, f.thumbnail_key
          FROM deliverables d
-         JOIN projects p ON d.project_id = p.id
-         WHERE d.id = $1`,
+         JOIN projects p ON p.id = d.project_id
+         LEFT JOIN deliverable_files f ON f.deliverable_id = d.id
+         WHERE d.id = $1
+         ORDER BY f.sort_order, f.uploaded_at`,
         [deliverableId]
       ));
 
-      if (deliverableResult.rows.length === 0) {
+      if (filesResult.rows.length === 0) {
         return {
           statusCode: 404,
           headers,
@@ -73,22 +75,10 @@ export const handler = compose(
         };
       }
 
-      const { project_id, client_user_id } = deliverableResult.rows[0];
-
-      // Fetch files for this deliverable
-      const filesResult = await measureStage(event, 'files_query', () => dbQuery(
-        `SELECT id, deliverable_id, file_key, file_name, file_size, mime_type,
-                file_category, is_final, label, sort_order, uploaded_at, uploaded_by, thumbnail_key
-         FROM deliverable_files
-         WHERE deliverable_id = $1
-         ORDER BY sort_order, uploaded_at`,
-        [deliverableId]
-      ));
-
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(filesResult.rows.filter(file => file.is_final ? access.final : access.beta)),
+        body: JSON.stringify(filesResult.rows.filter(file => file.id && (file.is_final ? access.final : access.beta))),
       };
     }
 

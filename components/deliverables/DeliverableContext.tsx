@@ -11,7 +11,7 @@
  */
 
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { projectKeys } from '@/shared/hooks/useProjects';
 import {
   Deliverable,
@@ -58,7 +58,7 @@ function deriveTypeFromFileCategory(category: string | null | undefined): 'Video
 }
 
 // Raw API response shape for deliverables
-interface RawDeliverableResponse {
+export interface RawDeliverableResponse {
   assigned_to?: string | null;
   id: string;
   project_id: string;
@@ -187,6 +187,9 @@ function deliverableReducer(state: DeliverableState, action: DeliverableAction):
       return {
         ...state,
         deliverables: action.deliverables,
+        selectedDeliverable: state.selectedDeliverable
+          ? action.deliverables.find(deliverable => deliverable.id === state.selectedDeliverable?.id) ?? null
+          : null,
       };
 
     case 'SET_QUOTA':
@@ -463,6 +466,7 @@ interface DeliverableProviderProps {
   currentUser: User | null;
   currentProject: Project;
   onConvertToTask?: (commentId: string, taskTitle: string, assigneeId: string) => void;
+  earlyDeliverables?: UseQueryResult<RawDeliverableResponse[], Error>;
 }
 
 export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
@@ -470,6 +474,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   currentUser,
   currentProject,
   onConvertToTask,
+  earlyDeliverables,
 }) => {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(deliverableReducer, initialState);
@@ -478,6 +483,13 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
 
   // Fetch deliverables from API when project changes
   useEffect(() => {
+    if (earlyDeliverables) {
+      setIsLoading(earlyDeliverables.isPending);
+      setError(earlyDeliverables.isError ? 'Failed to load deliverables' : null);
+      if (earlyDeliverables.isError) dispatch({ type: 'SET_DELIVERABLES', deliverables: [] });
+      else if (earlyDeliverables.data) dispatch({ type: 'SET_DELIVERABLES', deliverables: earlyDeliverables.data.map(transformApiDeliverable) });
+      return;
+    }
     const fetchDeliverables = async () => {
       if (!currentProject?.id) {
         setIsLoading(false);
@@ -510,7 +522,7 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
     };
 
     fetchDeliverables();
-  }, [currentProject?.id]);
+  }, [currentProject?.id, earlyDeliverables?.data, earlyDeliverables?.isPending, earlyDeliverables?.isError]);
 
   // Sync revision quota from project data
   useEffect(() => {
@@ -757,6 +769,11 @@ export const DeliverableProvider: React.FC<DeliverableProviderProps> = ({
   // Refresh function to reload deliverables
   const refreshDeliverables = async (): Promise<void> => {
     if (!currentProject?.id) return;
+
+    if (earlyDeliverables) {
+      await earlyDeliverables.refetch();
+      return;
+    }
 
     dispatch({ type: 'SET_DELIVERABLES', deliverables: [] });
     setIsLoading(true);

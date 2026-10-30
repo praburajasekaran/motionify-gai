@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { ApiError } from '@/shared/utils/api.client';
 
 export interface DeliverableFile {
   id: string;
@@ -29,7 +30,7 @@ export function useDeliverableFiles(userId: string | undefined, deliverableId: s
         credentials: 'include',
         signal,
       });
-      if (!response.ok) throw new Error('Failed to load files');
+      if (!response.ok) throw new ApiError(response.status, 'Failed to load files');
       return response.json();
     },
     enabled: !!userId && !!deliverableId,

@@ -99,7 +99,8 @@ try {
   if (!storage) process.env.R2_ACCOUNT_ID = `http://127.0.0.1:${storageAddress.port}`;
 
   if (!serve) {
-    const childArgs = process.argv.includes('--authorization-perf') ? ['scripts/authorization-probe.ts'] :
+    const childArgs = process.argv.includes('--portal-perf') ? ['scripts/portal-read-probe.ts'] :
+      process.argv.includes('--authorization-perf') ? ['scripts/authorization-probe.ts'] :
       process.argv.includes('--perf') ? ['scripts/readiness-probe.ts'] :
       ['--test', process.argv.includes('--authorization') ? 'netlify/functions/__tests__/authorization-readiness.test.ts' :
         'netlify/functions/__tests__/client-delivery-readiness.test.ts'];

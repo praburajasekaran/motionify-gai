@@ -7,7 +7,7 @@ import { PageHeader } from '../ui/PageHeader';
 
 interface SummaryCardProps {
   label: string;
-  value: number;
+  value: number | null;
   icon: React.ComponentType<{ className: string }>;
   color: 'blue' | 'amber' | 'green' | 'purple';
 }
@@ -31,7 +31,7 @@ function SummaryCard({ label, value, icon: Icon, color }: SummaryCardProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
+          <p className="text-2xl font-bold text-foreground mt-1" aria-label={value === null ? 'Count unavailable' : undefined}>{value ?? '—'}</p>
         </div>
         <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
           <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -49,9 +49,9 @@ export function ProjectSectionHeader({ actions }: ProjectSectionHeaderProps) {
   const { user } = useAuthContext();
   const projectListUserId = user ? (isMotionifyAdmin(user) ? null : user.id) : undefined;
   const projectsQuery = useProjects(projectListUserId);
-  const projects = projectsQuery.data ?? [];
+  const projects = projectsQuery.isError ? undefined : projectsQuery.data;
 
-  const visibleProjects = projects.filter(project =>
+  const visibleProjects = projects?.filter(project =>
     project.status !== 'Archived' && project.status !== 'Cancelled'
   );
 
@@ -59,15 +59,15 @@ export function ProjectSectionHeader({ actions }: ProjectSectionHeaderProps) {
     <div className="space-y-6">
       <PageHeader
         title="Projects"
-        description={`${visibleProjects.length} project${visibleProjects.length !== 1 ? 's' : ''}`}
+        description={visibleProjects ? `${visibleProjects.length} project${visibleProjects.length !== 1 ? 's' : ''}` : projectsQuery.isError ? 'Projects unavailable' : 'Loading projects...'}
         actions={actions}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard label="Total Projects" value={visibleProjects.length} icon={LayoutGrid} color="blue" />
-        <SummaryCard label="Active" value={visibleProjects.filter(project => project.status === 'Active').length} icon={FolderKanban} color="green" />
-        <SummaryCard label="In Review" value={visibleProjects.filter(project => project.status === 'In Review').length} icon={Clock} color="amber" />
-        <SummaryCard label="Completed" value={visibleProjects.filter(project => project.status === 'Completed').length} icon={CheckCircle} color="purple" />
+        <SummaryCard label="Total Projects" value={visibleProjects?.length ?? null} icon={LayoutGrid} color="blue" />
+        <SummaryCard label="Active" value={visibleProjects?.filter(project => project.status === 'Active').length ?? null} icon={FolderKanban} color="green" />
+        <SummaryCard label="In Review" value={visibleProjects?.filter(project => project.status === 'In Review').length ?? null} icon={Clock} color="amber" />
+        <SummaryCard label="Completed" value={visibleProjects?.filter(project => project.status === 'Completed').length ?? null} icon={CheckCircle} color="purple" />
       </div>
     </div>
   );

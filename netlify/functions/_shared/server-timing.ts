@@ -1,8 +1,12 @@
-import type { Middleware, NetlifyEvent } from './middleware';
+import type { Middleware } from './middleware';
 
-const timings = new WeakMap<NetlifyEvent, Array<{ name: string; duration: number }>>();
+const timings = new WeakMap<object, Array<{ name: string; duration: number }>>();
 
-export async function measureStage<T>(event: NetlifyEvent, name: string, work: () => Promise<T>): Promise<T> {
+export function hasServerTiming(event: object): boolean {
+  return timings.has(event);
+}
+
+export async function measureStage<T>(event: object, name: string, work: () => Promise<T>): Promise<T> {
   const stages = timings.get(event);
   if (!stages) return work();
   const start = performance.now();
