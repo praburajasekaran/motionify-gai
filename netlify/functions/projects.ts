@@ -17,6 +17,7 @@ import {
   requireProposalAccess,
 } from './_shared/authorization';
 import { isAdminLike } from './_shared/roles';
+import { withServerTiming } from './_shared/server-timing';
 
 const { types } = pg;
 
@@ -52,6 +53,7 @@ const generateProjectNumber = async (runner: QueryRunner = { query: dbQuery }): 
 };
 
 export const handler = compose(
+  withServerTiming(),
   withCORS(['GET', 'POST', 'PATCH', 'DELETE']),
   withAuth(),
   withRateLimit(RATE_LIMITS.api, 'projects')

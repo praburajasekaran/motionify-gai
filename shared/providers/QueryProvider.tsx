@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { ReactNode, lazy, Suspense } from 'react';
 import { ApiError } from '../utils/api.client';
-import { authKeys } from '../hooks/useAuth';
+import { authKeys, clearPrivateQueries } from '../hooks/useAuth';
 import { clearAuthSession } from '@/lib/auth';
 
 const ReactQueryDevtools = import.meta.env.DEV
@@ -38,6 +38,7 @@ queryClient.getQueryCache().subscribe((event) => {
     const error = event.action.error;
     if (error instanceof ApiError && error.status === 401) {
       // Clear auth cache and session
+      clearPrivateQueries(queryClient);
       queryClient.setQueryData(authKeys.session(), null);
       clearAuthSession();
       // Redirect to login (only if not already there)

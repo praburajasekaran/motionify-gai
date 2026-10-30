@@ -1,6 +1,55 @@
 import { expect, test } from '@playwright/test';
 import { setupAuthSession } from './helpers/auth';
 
+test('shows a retry when deliverables fail to load', async ({ page }) => {
+  await setupAuthSession(page);
+  await page.route('**/.netlify/functions/projects/loading-project', route => route.fulfill({ json: {
+    id: 'loading-project', name: 'Loading project', status: 'in_progress', team: [],
+  } }));
+  let calls = 0;
+  await page.route('**/api/deliverables?projectId=loading-project', route => {
+    calls++;
+    return calls === 1 ? route.fulfill({ status: 403 }) : route.fulfill({ json: [] });
+  });
+  await page.goto('/portal/projects/loading-project/deliverables/loading-deliverable');
+  await expect(page.getByRole('alert')).toContainText('Could not load deliverables.');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('Deliverable not found')).toBeVisible();
+  await expect(page.getByText('Loading deliverable...')).toHaveCount(0);
+});
+
+test('an expired deliverables session returns the user to sign-in', async ({ page }) => {
+  await setupAuthSession(page);
+  await page.route('**/.netlify/functions/projects/loading-project', route => route.fulfill({ json: {
+    id: 'loading-project', name: 'Loading project', status: 'in_progress', team: [],
+  } }));
+  await page.route('**/api/deliverables?projectId=loading-project', route => route.fulfill({ status: 401 }));
+  await page.goto('/portal/projects/loading-project/deliverables/loading-deliverable');
+  await expect(page).toHaveURL(/\/portal\/login\?session=expired/);
+  expect(await page.evaluate(() => localStorage.getItem('auth_user'))).toBeNull();
+});
+
+test('starts deliverables while the project request is still pending', async ({ page }) => {
+  await setupAuthSession(page);
+  let releaseProject!: () => void;
+  const projectGate = new Promise<void>(resolve => { releaseProject = resolve; });
+  await page.route('**/.netlify/functions/projects/loading-project', async route => {
+    await projectGate;
+    await route.fulfill({ json: { id: 'loading-project', name: 'Loading project', status: 'in_progress', team: [] } });
+  });
+  let calls = 0;
+  await page.route('**/api/deliverables?projectId=loading-project', route => {
+    calls++;
+    return route.fulfill({ json: [{ id: 'loading-deliverable', project_id: 'loading-project', name: 'Review', status: 'final_delivered' }] });
+  });
+  await page.route('**/api/deliverable-files?*', route => route.fulfill({ json: [] }));
+  await page.goto('/portal/projects/loading-project/deliverables/loading-deliverable');
+  await expect.poll(() => calls).toBe(1);
+  releaseProject();
+  await expect(page.getByRole('heading', { name: 'Review', exact: true })).toBeVisible();
+  expect(calls).toBe(1);
+});
+
 test('loads files alongside deliverables and shares the result with the review panel', async ({ page }) => {
   await setupAuthSession(page);
   await page.route('**/.netlify/functions/projects/loading-project', route => route.fulfill({ json: {

@@ -12,6 +12,7 @@
  */
 
 import pg from 'pg';
+import { hasServerTiming, measureStage } from './server-timing';
 
 const { Pool, Client } = pg;
 
@@ -117,6 +118,19 @@ export async function query<T = any>(
 ): Promise<pg.QueryResult<T>> {
     const pool = getPool();
     return pool.query(text, params);
+}
+
+export async function queryWithTiming<T = any>(event: object, text: string, params?: any[]): Promise<pg.QueryResult<T>> {
+    if (!hasServerTiming(event)) return query<T>(text, params);
+    const client = await measureStage(event, 'db_acquire', () => getPool().connect());
+    try {
+        const result = await measureStage(event, 'db_query', () => client.query<T>(text, params));
+        client.release();
+        return result;
+    } catch (error) {
+        client.release(error instanceof Error ? error : new Error('Database query failed'));
+        throw error;
+    }
 }
 
 /**

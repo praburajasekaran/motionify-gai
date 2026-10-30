@@ -63,7 +63,10 @@ export async function setupAuthSession(page: Page, user: E2EUser = E2E_SUPER_ADM
   } }));
 
   await page.addInitScript((userData) => {
-    window.localStorage.setItem('auth_user', JSON.stringify(userData));
-    window.localStorage.setItem('auth_expires', new Date(Date.now() + 86400000).toISOString());
+    if (!window.sessionStorage.getItem('e2e_session_initialized')) {
+      window.localStorage.setItem('auth_user', JSON.stringify(userData));
+      window.localStorage.setItem('auth_expires', new Date(Date.now() + 86400000).toISOString());
+      window.sessionStorage.setItem('e2e_session_initialized', '1');
+    }
   }, user);
 }

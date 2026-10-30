@@ -18,10 +18,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@/shared/utils/api.client';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button, Badge } from '@/components/ui/design-system';
-import { DeliverableProvider, useDeliverables } from '@/components/deliverables/DeliverableContext';
+import { DeliverableProvider, useDeliverables, type RawDeliverableResponse } from '@/components/deliverables/DeliverableContext';
 import { FileFeedbackPanel } from '@/components/deliverables/FileFeedbackPanel';
 import { DeliverableFilesList } from '@/components/deliverables/DeliverableFilesList';
 import { DeliverableVideoSection } from '@/components/deliverables/DeliverableVideoSection';
@@ -47,7 +48,7 @@ const DeliverableReviewContent: React.FC<{ filesQuery: ReturnType<typeof useDeli
   }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading } =
+  const { state, dispatch, approveDeliverable, rejectDeliverable, sendForReview, currentProject, currentUser, refreshDeliverables, isLoading: deliverablesLoading, error: deliverablesError } =
     useDeliverables();
 
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -408,8 +409,16 @@ const DeliverableReviewContent: React.FC<{ filesQuery: ReturnType<typeof useDeli
     );
   }
 
-  // Only show "not found" if deliverables have loaded and this ID isn't in the list
-  if (!deliverable && state.deliverables.length > 0) {
+  if (deliverablesError) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <p className="text-muted-foreground">Could not load deliverables.</p>
+        <Button variant="outline" onClick={() => { void refreshDeliverables(); }}>Try again</Button>
+      </div>
+    );
+  }
+
+  if (!deliverable && (state.deliverables.length === 0 || !state.deliverables.some(item => item.id === deliverableId))) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
@@ -659,8 +668,20 @@ export const DeliverableReview: React.FC = () => {
   const { id: projectId, deliverableId } = useParams<{ id: string; deliverableId: string }>();
   const { data: currentProject, isLoading } = useProject(projectId);
   const filesQuery = useDeliverableFiles(user?.id, deliverableId);
+  const deliverablesQuery = useQuery({
+    queryKey: ['deliverables', user?.id, user?.role, projectId],
+    enabled: !!user && !!projectId,
+    queryFn: async ({ signal }): Promise<RawDeliverableResponse[]> => {
+      const response = await fetch(`/api/deliverables?projectId=${encodeURIComponent(projectId!)}`, { credentials: 'include', signal });
+      if (!response.ok) throw new ApiError(response.status, 'Failed to load deliverables');
+      return response.json();
+    },
+    staleTime: 0,
+    retry: false,
+    throwOnError: false,
+  });
 
-  if (isLoading) {
+  if (isLoading || (currentProject && currentProject.id !== projectId)) {
     return <DetailPageHeaderSkeleton />;
   }
 
@@ -673,7 +694,7 @@ export const DeliverableReview: React.FC = () => {
   }
 
   return (
-    <DeliverableProvider currentUser={user} currentProject={currentProject}>
+    <DeliverableProvider key={`${user.id}:${currentProject.id}`} currentUser={user} currentProject={currentProject} earlyDeliverables={deliverablesQuery}>
       <DeliverableReviewContent filesQuery={filesQuery} />
     </DeliverableProvider>
   );

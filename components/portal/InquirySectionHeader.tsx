@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Calendar, CheckCircle, Clock, FileText, Mail, Plus, TrendingUp, User } from 'lucide-react';
-import { getInquiries, getInquiriesByClientUserId, type Inquiry } from '../../lib/inquiries';
+import { usePortalInquiries } from '@/shared/hooks/usePortalInquiries';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { isClient } from '../../lib/permissions';
 import { Button } from '../ui/design-system';
@@ -12,7 +12,7 @@ interface InquirySectionHeaderProps {
 
 interface SummaryCardProps {
   label: string;
-  value: number;
+  value: number | null;
   icon: React.ComponentType<{ className: string }>;
   color: 'blue' | 'amber' | 'purple' | 'green' | 'emerald';
 }
@@ -38,7 +38,7 @@ function SummaryCard({ label, value, icon: Icon, color }: SummaryCardProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
+          <p className="text-2xl font-bold text-foreground mt-1" aria-label={value === null ? 'Count unavailable' : undefined}>{value ?? '—'}</p>
         </div>
         <div className={`w-12 h-12 rounded-lg ${bgColors[color]} flex items-center justify-center`}>
           <Icon className={`w-6 h-6 ${iconColors[color]}`} />
@@ -51,28 +51,8 @@ function SummaryCard({ label, value, icon: Icon, color }: SummaryCardProps) {
 export function InquirySectionHeader({ onNewInquiry }: InquirySectionHeaderProps) {
   const { user } = useAuthContext();
   const userIsClient = isClient(user);
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    let cancelled = false;
-    const loadInquiries = async () => {
-      const data = userIsClient
-        ? await getInquiriesByClientUserId(user.id)
-        : await getInquiries();
-
-      if (!cancelled) setInquiries(data);
-    };
-
-    loadInquiries().catch(error => {
-      console.error('Failed to load inquiry summary:', error);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, userIsClient]);
+  const { data, isError } = usePortalInquiries(user);
+  const inquiries = isError ? undefined : data;
 
   return (
     <div className="space-y-6">
@@ -90,17 +70,17 @@ export function InquirySectionHeader({ onNewInquiry }: InquirySectionHeaderProps
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {userIsClient ? (
           <>
-            <SummaryCard label="Total Inquiries" value={inquiries.length} icon={TrendingUp} color="blue" />
-            <SummaryCard label="Pending Response" value={inquiries.filter(inquiry => inquiry.status === 'new' || inquiry.status === 'reviewing').length} icon={Clock} color="amber" />
-            <SummaryCard label="Proposal Received" value={inquiries.filter(inquiry => inquiry.status === 'proposal_sent').length} icon={FileText} color="purple" />
-            <SummaryCard label="Accepted" value={inquiries.filter(inquiry => inquiry.status === 'accepted').length} icon={CheckCircle} color="green" />
+            <SummaryCard label="Total Inquiries" value={inquiries?.length ?? null} icon={TrendingUp} color="blue" />
+            <SummaryCard label="Pending Response" value={inquiries?.filter(inquiry => inquiry.status === 'new' || inquiry.status === 'reviewing').length ?? null} icon={Clock} color="amber" />
+            <SummaryCard label="Proposal Received" value={inquiries?.filter(inquiry => inquiry.status === 'proposal_sent').length ?? null} icon={FileText} color="purple" />
+            <SummaryCard label="Accepted" value={inquiries?.filter(inquiry => inquiry.status === 'accepted').length ?? null} icon={CheckCircle} color="green" />
           </>
         ) : (
           <>
-            <SummaryCard label="Total Inquiries" value={inquiries.length} icon={TrendingUp} color="blue" />
-            <SummaryCard label="New" value={inquiries.filter(inquiry => inquiry.status === 'new').length} icon={Mail} color="emerald" />
-            <SummaryCard label="Proposal Sent" value={inquiries.filter(inquiry => inquiry.status === 'proposal_sent').length} icon={User} color="purple" />
-            <SummaryCard label="Converted" value={inquiries.filter(inquiry => inquiry.status === 'converted').length} icon={Calendar} color="green" />
+            <SummaryCard label="Total Inquiries" value={inquiries?.length ?? null} icon={TrendingUp} color="blue" />
+            <SummaryCard label="New" value={inquiries?.filter(inquiry => inquiry.status === 'new').length ?? null} icon={Mail} color="emerald" />
+            <SummaryCard label="Proposal Sent" value={inquiries?.filter(inquiry => inquiry.status === 'proposal_sent').length ?? null} icon={User} color="purple" />
+            <SummaryCard label="Converted" value={inquiries?.filter(inquiry => inquiry.status === 'converted').length ?? null} icon={Calendar} color="green" />
           </>
         )}
       </div>
