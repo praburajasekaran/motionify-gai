@@ -1,15 +1,37 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { setTimeout as delay } from 'node:timers/promises';
+import type { Context } from '@netlify/functions';
 import { initializeReadinessDatabase, readinessPool } from '../../../scripts/readiness-fixture';
-import { closePool } from '../_shared/db';
+import { closePool, getPool } from '../_shared/db';
 import { checkRateLimit, getRateLimitHeaders } from '../_shared/rateLimit';
+import scheduledCleanup from '../scheduled-token-cleanup';
 
 const pool = readinessPool();
 const config = { windowMs: 60_000, maxRequests: 10 };
 
 before(async () => { await initializeReadinessDatabase(pool); });
 after(async () => { await closePool(); await pool.end(); });
+
+test('rate-limit housekeeping does not occupy the connection needed by the next query', async () => {
+  await closePool();
+  await pool.query('TRUNCATE rate_limit_entries');
+  await pool.query(`INSERT INTO rate_limit_entries (identifier, action, created_at)
+    VALUES ('locked-expired-entry', 'api', clock_timestamp() - interval '3 hours')`);
+  const blocker = await pool.connect();
+  try {
+    await blocker.query('BEGIN');
+    await blocker.query("SELECT id FROM rate_limit_entries WHERE identifier = 'locked-expired-entry' FOR UPDATE");
+    const requestPool = getPool();
+    await requestPool.query('SELECT 1');
+    assert.equal((await checkRateLimit('connection-probe', 'api', config)).allowed, true);
+    assert.equal((await requestPool.query('SELECT 42 AS answer')).rows[0].answer, 42);
+    assert.equal(requestPool.totalCount, 1, 'housekeeping must leave the request connection available');
+  } finally {
+    await blocker.query('ROLLBACK');
+    blocker.release();
+    await closePool();
+  }
+});
 
 for (const withUniqueConstraint of [false, true]) {
   test(`enforces concurrent requests with unique constraint ${withUniqueConstraint}`, async () => {
@@ -31,19 +53,24 @@ for (const withUniqueConstraint of [false, true]) {
   });
 }
 
-test('short-window cleanup retains entries needed by longer windows', async () => {
+test('scheduled cleanup removes expired entries and retains entries needed by longer windows', async () => {
   await pool.query('TRUNCATE rate_limit_entries');
   await pool.query(`INSERT INTO rate_limit_entries (identifier, action, created_at) VALUES
-    ('long-window', 'magic_link', clock_timestamp() - interval '3 minutes'),
+    ('long-window', 'magic_link', clock_timestamp() - interval '59 minutes'),
     ('expired', 'magic_link', clock_timestamp() - interval '3 hours')`);
   assert.equal((await checkRateLimit('short-window', 'api', config)).allowed, true);
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const old = await pool.query('SELECT count(*)::int AS n FROM rate_limit_entries WHERE identifier = $1', ['expired']);
-    if (old.rows[0].n === 0) break;
-    await delay(20);
-  }
+  const invokeCleanup = () => scheduledCleanup(new Request('http://localhost/scheduled-token-cleanup', {
+    method: 'POST', body: JSON.stringify({ next_run: new Date().toISOString() }),
+  }), {} as Context);
+  const response = await invokeCleanup();
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).rateLimitEntriesDeleted, 1);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM rate_limit_entries WHERE identifier = $1', ['expired'])).rows[0].n, 0);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM rate_limit_entries WHERE identifier = $1', ['long-window'])).rows[0].n, 1);
+  assert.equal((await checkRateLimit('long-window', 'magic_link', { windowMs: 3_600_000, maxRequests: 1 })).allowed, false);
+  const repeated = await invokeCleanup();
+  assert.equal(repeated.status, 200);
+  assert.equal((await repeated.json()).rateLimitEntriesDeleted, 0);
 });
 
 test('expired entries do not consume the current window', async () => {
