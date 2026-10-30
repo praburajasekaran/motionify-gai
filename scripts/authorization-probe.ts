@@ -32,7 +32,7 @@ try {
   await initializeReadinessDatabase(fixturePool);
   for (const count of [1, 20]) {
     await fixturePool.query('TRUNCATE users, inquiries, projects CASCADE');
-    await fixturePool.query('DROP TABLE IF EXISTS rate_limit_entries');
+    await fixturePool.query('TRUNCATE rate_limit_entries');
     const fixture = await seedReadinessFixture(fixturePool);
     for (let i = 1; i < count; i++) {
       const project = (await fixturePool.query(`INSERT INTO projects (project_number, name, client_user_id)

@@ -16,7 +16,7 @@ let fixture: ReadinessFixture;
 before(async () => { await initializeReadinessDatabase(pool); });
 beforeEach(async () => {
   await pool.query('TRUNCATE users, inquiries, projects CASCADE');
-  await pool.query('DROP TABLE IF EXISTS rate_limit_entries');
+  await pool.query('TRUNCATE rate_limit_entries');
   fixture = await seedReadinessFixture(pool);
 });
 after(async () => { await closePool(); await pool.end(); });

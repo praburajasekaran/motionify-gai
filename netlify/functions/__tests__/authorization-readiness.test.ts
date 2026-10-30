@@ -48,7 +48,7 @@ const managers: ReadinessActorName[] = ['manager', 'admin'];
 before(async () => { await initializeReadinessDatabase(pool); });
 async function resetFixture() {
   await pool.query('TRUNCATE users, inquiries, projects CASCADE');
-  await pool.query('DROP TABLE IF EXISTS rate_limit_entries');
+  await pool.query('TRUNCATE rate_limit_entries');
   fixture = await seedReadinessFixture(pool);
   inquiryId = (await pool.query('SELECT inquiry_id FROM proposals WHERE id = $1', [fixture.proposalId])).rows[0].inquiry_id;
   taskId = (await pool.query(`INSERT INTO tasks (project_id, title, created_by, assigned_to, is_client_visible)

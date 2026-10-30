@@ -69,8 +69,7 @@ export function getClientIP(headers: Record<string, string>): string {
 }
 
 /**
- * Check rate limit using database
- * Creates rate_limit_entries table if it doesn't exist
+ * Check and record a request using the migrated database function.
  */
 export async function checkRateLimit(
     identifier: string,
@@ -78,83 +77,28 @@ export async function checkRateLimit(
     config: RateLimitConfig
 ): Promise<RateLimitResult> {
     const now = Date.now();
-    const windowStart = new Date(now - config.windowMs);
     const resetAt = new Date(now + config.windowMs);
 
     try {
-        // Ensure table exists (idempotent)
-        await query(`
-            CREATE TABLE IF NOT EXISTS rate_limit_entries (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                identifier VARCHAR(255) NOT NULL,
-                action VARCHAR(100) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT rate_limit_unique UNIQUE (identifier, action, created_at)
-            )
-        `);
-
-        // Create index if not exists
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_rate_limit_lookup
-            ON rate_limit_entries (identifier, action, created_at)
-        `);
-
-        // Count requests in current window
-        const countResult = await query<{ count: string }>(
-            `SELECT COUNT(*) as count FROM rate_limit_entries
-             WHERE identifier = $1 AND action = $2 AND created_at > $3`,
-            [identifier, action, windowStart]
+        const result = await query<{ allowed: boolean; remaining: number; reset_at: Date; retry_after: number | null }>(
+            'SELECT * FROM public.consume_rate_limit($1, $2, $3, $4)',
+            [identifier, action, config.windowMs, config.maxRequests]
         );
-
-        const currentCount = parseInt(countResult.rows[0].count, 10);
-        const remaining = Math.max(0, config.maxRequests - currentCount);
-
-        if (currentCount >= config.maxRequests) {
-            // Rate limited
-            const oldestInWindow = await query<{ created_at: Date }>(
-                `SELECT created_at FROM rate_limit_entries
-                 WHERE identifier = $1 AND action = $2 AND created_at > $3
-                 ORDER BY created_at ASC LIMIT 1`,
-                [identifier, action, windowStart]
-            );
-
-            let retryAfter = Math.ceil(config.windowMs / 1000);
-            if (oldestInWindow.rows.length > 0) {
-                const oldest = new Date(oldestInWindow.rows[0].created_at).getTime();
-                retryAfter = Math.ceil((oldest + config.windowMs - now) / 1000);
-            }
-
+        const row = result.rows[0];
+        if (!row) throw new Error('Rate limit returned no result');
+        if (!row.allowed) {
             logger.warn('Rate limit exceeded', {
                 identifier: identifier.includes('@') ? identifier.replace(/(.{2}).*@/, '$1***@') : identifier,
                 action,
-                currentCount,
                 limit: config.maxRequests,
             });
-
-            return {
-                allowed: false,
-                remaining: 0,
-                resetAt,
-                retryAfter,
-            };
+            return { allowed: false, remaining: 0, resetAt: row.reset_at, retryAfter: row.retry_after ?? 60 };
         }
 
-        // Record this request
-        await query(
-            `INSERT INTO rate_limit_entries (identifier, action) VALUES ($1, $2)`,
-            [identifier, action]
-        );
-
-        // Cleanup old entries (async, don't wait)
         cleanupOldEntries(config.windowMs).catch(err => {
             logger.error('Rate limit cleanup failed', err);
         });
-
-        return {
-            allowed: true,
-            remaining: remaining - 1,
-            resetAt,
-        };
+        return { allowed: true, remaining: row.remaining, resetAt: row.reset_at };
 
     } catch (error) {
         // Fail closed for security - deny requests when rate limit check fails
@@ -172,7 +116,8 @@ export async function checkRateLimit(
  * Cleanup old rate limit entries
  */
 async function cleanupOldEntries(windowMs: number): Promise<void> {
-    const cutoff = new Date(Date.now() - windowMs * 2); // Keep 2x window for safety
+    const longestWindow = Math.max(windowMs, ...Object.values(RATE_LIMITS).map(limit => limit.windowMs));
+    const cutoff = new Date(Date.now() - longestWindow * 2);
 
     await query(
         `DELETE FROM rate_limit_entries WHERE created_at < $1`,

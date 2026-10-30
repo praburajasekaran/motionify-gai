@@ -28,7 +28,7 @@ try {
   assert(Number.isInteger(rounds) && rounds > 0 && rounds <= 100);
   for (let round = -2; round < rounds; round++) {
     await pool.query('TRUNCATE users, inquiries, projects CASCADE');
-    await pool.query('DROP TABLE IF EXISTS rate_limit_entries');
+    await pool.query('TRUNCATE rate_limit_entries');
     const fixture = await seedReadinessFixture(pool);
     const warmup = round < 0;
     await measure('terms', warmup, terms, fixture.actors.primary, 'POST', 'projects-accept-terms', { projectId: fixture.projectId, accepted: true });

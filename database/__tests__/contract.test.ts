@@ -9,6 +9,11 @@ import {
 } from './fixtures/database-contract';
 
 describe('database contract verifier', () => {
+  it('rejects a missing atomic rate-limit function', async () => {
+    const result = await verifyDatabaseContract(createContractRunner({ rateLimitFunctionPresent: false }));
+    assert.equal(result.ready, false);
+    assert.ok(result.issues.some(issue => issue.code === 'missing_function' && issue.object === 'public.consume_rate_limit'));
+  });
   it('rejects missing delivery schema and task review stages', async () => {
     const result = await verifyDatabaseContract(createContractRunner({
       columns: canonicalColumns.filter(column => column.table_name !== 'tasks'
@@ -26,7 +31,7 @@ describe('database contract verifier', () => {
 
     assert.equal(result.ready, true);
     assert.deepEqual(result.issues, []);
-    assert.equal(result.latestMigration, '037_allow_public_inquiry_activity');
+    assert.equal(result.latestMigration, '038_atomic_rate_limit');
     assert.ok(runner.calls.length >= 4);
     for (const statement of runner.calls) {
       assert.match(statement.trim(), /^SELECT/i);
